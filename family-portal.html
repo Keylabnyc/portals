@@ -335,7 +335,7 @@ var GAS_URL = 'https://script.google.com/a/macros/keylab.nyc/s/AKfycbzY4K1XCbYZl
 function api(payload, cb){
   fetch(GAS_URL, {
     method:'POST',
-    headers:{'Content-Type':'text/plain;charset=utf-8'},
+    headers:{'Content-Type':'text/plain'},
     body: JSON.stringify(payload)
   })
   .then(function(res){ return res.json(); })

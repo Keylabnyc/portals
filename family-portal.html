@@ -335,14 +335,16 @@ function blankSlot(){ return {day:'',start:'',end:'',pref:''}; }
 // ============================================================
 // API
 // ============================================================
+var GAS_URL = 'https://script.google.com/a/macros/keylab.nyc/s/AKfycbzY4K1XCbYZlj4fXksfwEZ3Kxbeolr9abRuifT-_TY4hgfPZP9gbL1dSCn1_zeFRsvl3g/exec';
 function api(payload, cb){
-  google.script.run
-    .withSuccessHandler(function(r){
-      try{ cb(null, typeof r==='string'?JSON.parse(r):r); }
-      catch(e){ cb(e); }
-    })
-    .withFailureHandler(function(e){ cb(e); })
-    .callApi(JSON.stringify(payload));
+  fetch(GAS_URL, {
+    method:'POST',
+    headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body: JSON.stringify(payload)
+  })
+  .then(function(res){ return res.json(); })
+  .then(function(r){ cb(null, r); })
+  .catch(function(e){ cb(e); });
 }
 function fapi(action, data, cb){
   api({action:action, data:Object.assign({familyToken:TOKEN}, data)}, cb);
@@ -1991,13 +1993,6 @@ function doSubmitTC(studentId){
 // INIT
 // ============================================================
 function boot(){
-  if(typeof google==='undefined'||!google.script||!google.script.run){
-    PAGE='locked';
-    document.getElementById('app').innerHTML=
-      '<div class="brand">KEYLAB &nbsp;&nbsp; ENROLLMENT</div>'+
-      '<div class="msg me">Unable to connect to the enrollment system. Please make sure you\'re using the link provided by Keylab. If the problem continues, email us at <a href="mailto:info@keylab.nyc" style="color:var(--rt)">info@keylab.nyc</a>.</div>';
-    return;
-  }
   api({action:'getPublicConfig', data:{}}, function(e,r){
     if(!e&&r&&r.ok){
       publicCfg.availabilityOpen=r.availabilityOpen;

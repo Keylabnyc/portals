@@ -166,7 +166,9 @@ var SC = {
   loading:false,
   pendingChanges:false,
   isFirstSubmission:true,
-  teachers:[]
+  teachers:[],
+  splitLesson:false,
+  splitChild:{name:'',age:'',instrument:'',instrumentOther:'',notes:''}
 };
 
 // tc — keyed by studentId
@@ -335,7 +337,7 @@ var GAS_URL = 'https://script.google.com/a/macros/keylab.nyc/s/AKfycbzY4K1XCbYZl
 function api(payload, cb){
   fetch(GAS_URL, {
     method:'POST',
-    headers:{'Content-Type':'text/plain'},
+    headers:{'Content-Type':'text/plain;charset=utf-8'},
     body: JSON.stringify(payload)
   })
   .then(function(res){ return res.json(); })
@@ -789,7 +791,7 @@ function _rHomeQuickActions(){
     ['\ud83e\udd12','If your child is ill',
       'Keep them home and <a href="https://keylab.opus1.io/login" target="_blank">log in to your portal</a> to cancel the lesson and request a virtual lesson or a written assignment from your teacher.'],
     ['\ud83d\udcac','Contact your teacher',
-      'Use the messaging feature in the <a href="https://keylabnyc.github.io/portals/family-portal.html" target="_blank">Keylab family portal</a> to discuss educational or lesson-related topics with your child\'s teacher. Teachers do not manage scheduling or billing matters.'],
+      'Use the messaging feature in the <a href="[FAMILY_PORTAL_URL]" target="_blank">Keylab family portal</a> to discuss educational or lesson-related topics with your child\'s teacher. Teachers do not manage scheduling or billing matters.'],
     ['\ud83d\udce7','Contact admin',
       'For all scheduling, billing, and administrative questions, email us at <a href="mailto:info@keylab.nyc">info@keylab.nyc</a>.'],
     ['\ud83d\udcb3','Payment info &amp; invoices',
@@ -1060,6 +1062,50 @@ function rViewTchOpts(){
   return o;
 }
 
+function rSplitLessonSection(){
+  var has45=SC.durations.indexOf('45')>-1;
+  var has60=SC.durations.indexOf('60')>-1;
+  if(!has45&&!has60) return '';
+  var h='';
+  h+='<div class="card" style="margin-top:.75rem">';
+  h+='<h2 style="margin-bottom:.4rem">Split Lesson</h2>';
+  h+='<div class="field" style="margin-bottom:.5rem">';
+  h+='<label style="display:flex;align-items:flex-start;gap:.5rem;cursor:pointer;font-weight:400">';
+  h+='<input type="checkbox" style="margin-top:2px;flex-shrink:0"'+(SC.splitLesson?' checked':'')+' onchange="SC.splitLesson=this.checked;render()">';
+  h+='<span>Select this checkbox if you would like to split the duration between two children, and enter the 2nd child\'s information below.</span>';
+  h+='</label>';
+  h+='</div>';
+  if(SC.splitLesson){
+    if(has60){
+      h+='<div class="note" style="margin-bottom:.75rem">Please note: if you\'d like to split a 60-minute slot evenly (30 minutes per child), this will be scheduled as two separate back-to-back lessons and priced accordingly \u2014 not as a single shared lesson. If you\'d like an uneven split within one lesson, like splitting a 60 minute time slot into a 45 minute lesson and a short 15 minute lesson, a monthly surcharge of $30 will be added to the monthly price.</div>';
+    } else {
+      h+='<div class="note" style="margin-bottom:.75rem">A monthly surcharge of $20 will be added to the monthly price for split lessons.</div>';
+    }
+    h+='<div class="field"><label>Second child\'s full name<span class="req">*</span></label>';
+    h+='<input type="text" placeholder="Full name" value="'+esc(SC.splitChild.name)+'" oninput="SC.splitChild.name=this.value;render()"></div>';
+    var sc2Age=parseInt(SC.splitChild.age,10);
+    h+='<div class="field"><label>Second child\'s age<span class="req">*</span></label>';
+    h+='<input type="number" inputmode="numeric" min="1" max="18" placeholder="Age" value="'+esc(SC.splitChild.age)+'" oninput="SC.splitChild.age=this.value;render()"></div>';
+    if(SC.splitChild.age&&!isNaN(sc2Age)&&sc2Age<5){
+      var _sc2Name=SC.splitChild.name.trim()?esc(SC.splitChild.name.trim()):'your second child';
+      h+='<div class="note" style="margin-bottom:.75rem;color:var(--at)">Our lessons are designed for children ages 5 and up. If '+_sc2Name+' is younger than 5 and shows strong focus and musical aptitude, we\u2019d love to hear from you \u2014 we\u2019ll reach out to see if we can find the right fit.</div>';
+    }
+    var sc2InstrOpts='<option value="">Select...</option>'+INSTRUMENTS.map(function(x){
+      return '<option value="'+esc(x)+'"'+(SC.splitChild.instrument===x?' selected':'')+'>'+esc(x)+'</option>';
+    }).join('');
+    h+='<div class="field"><label>Second child\'s instrument<span class="req">*</span></label>';
+    h+='<select onchange="SC.splitChild.instrument=this.value;render()">'+sc2InstrOpts+'</select></div>';
+    if(SC.splitChild.instrument==='Other'){
+      h+='<div class="field"><label>Please describe the instrument<span class="req">*</span></label>';
+      h+='<input type="text" placeholder="e.g. Viola, Cello, Harp" value="'+esc(SC.splitChild.instrumentOther)+'" oninput="SC.splitChild.instrumentOther=this.value"></div>';
+    }
+    h+='<div class="field"><label>Tell us about your 2nd child<span class="req">*</span></label>';
+    h+='<textarea placeholder="Please tell us about your 2nd child and what you are looking for in a lesson experience for them." oninput="SC.splitChild.notes=this.value">'+esc(SC.splitChild.notes)+'</textarea></div>';
+  }
+  h+='</div>';
+  return h;
+}
+
 function rSchedViewMode(){
   var h='';
   // Header — submitted timestamp only, no global edit button
@@ -1092,6 +1138,9 @@ function rSchedViewMode(){
   h+='</div>';
 
   h+='</div>';
+
+  // Split lesson section
+  h+=rSplitLessonSection();
 
   // Time windows card — inline per-slot editing, all slots always visible
   h+='<div class="card"><h2>Your Available Times</h2>';
@@ -1236,6 +1285,9 @@ function rSchedForm(){
     h+='<div style="font-size:11px;color:var(--text4);margin-top:.4rem">Prices vary by day of week and teacher. See exact estimates under each time window below.</div>';
   }
   h+='</div>';
+
+  // Split lesson section
+  h+=rSplitLessonSection();
 
   // Step 2: Location
   var locMissing=!SC.locations.length;
@@ -1433,6 +1485,14 @@ function loadSchedSubmission(){
         if(d||s) slots.push({day:d||'',start:s||'',end:e||'',pref:p||''});
       }
       SC.slots=slots.length?slots:[blankSlot(),blankSlot(),blankSlot()];
+      SC.splitLesson=sub.splitLesson==='TRUE'||sub.splitLesson===true;
+      SC.splitChild={
+        name:sub.splitChildName||'',
+        age:sub.splitChildAge||'',
+        instrument:sub.splitChildInstrument||'',
+        instrumentOther:'',
+        notes:sub.splitChildNotes||''
+      };
     } else {
       SC.isFirstSubmission=true;
       SC.editMode=false;
@@ -1466,7 +1526,12 @@ function _saveSlotsAndDetails(cb){
     teacherPref:SC.teacherPref||'',
     slotNotes:notesPayload,
     deletedNotes:deletedNotes,
-    isEdit:isEdit
+    isEdit:isEdit,
+    splitLesson:SC.splitLesson?'TRUE':'FALSE',
+    splitChildName:SC.splitChild.name||'',
+    splitChildAge:SC.splitChild.age||'',
+    splitChildInstrument:SC.splitChild.instrument==='Other'?(SC.splitChild.instrumentOther||'Other'):SC.splitChild.instrument,
+    splitChildNotes:SC.splitChild.notes||''
   }, function(e,r){
     if(e||!r||!r.ok){
       showMsg((r&&r.error)||'Something went wrong. Please try again.','e');
@@ -1497,6 +1562,14 @@ function doSubmitSched(){
   if(missingEnd){showMsg('Please select an end time for each time window.','e');return;}
   var missingStart=activeSlots.some(function(s){return s.day&&!s.start&&s.end;});
   if(missingStart){showMsg('Please select a start time for each time window.','e');return;}
+  // Split lesson validation
+  if(SC.splitLesson){
+    if(!SC.splitChild.name.trim()){showMsg('Please enter the second child\'s full name.','e');return;}
+    if(!SC.splitChild.age){showMsg('Please enter the second child\'s age.','e');return;}
+    if(!SC.splitChild.instrument){showMsg('Please select an instrument for the second child.','e');return;}
+    if(SC.splitChild.instrument==='Other'&&!SC.splitChild.instrumentOther.trim()){showMsg('Please describe the second child\'s instrument.','e');return;}
+    if(!SC.splitChild.notes.trim()){showMsg('Please tell us about your second child in the split lesson section.','e');return;}
+  }
   // One window per day validation
   var daysSeen={};
   var dupDay=null;

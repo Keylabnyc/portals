@@ -1069,11 +1069,9 @@ function rSplitLessonSection(){
   var h='';
   h+='<div class="card" style="margin-top:.75rem">';
   h+='<h2 style="margin-bottom:.4rem">Split Lesson</h2>';
-  h+='<div class="field" style="margin-bottom:.5rem">';
-  h+='<label style="display:flex;align-items:flex-start;gap:.5rem;cursor:pointer;font-weight:400">';
-  h+='<input type="checkbox" style="width:auto;margin-top:2px;flex-shrink:0"'+(SC.splitLesson?' checked':'')+' onchange="SC.splitLesson=this.checked;render()">';
-  h+='<span>Select this checkbox if you would like to split the duration between two children, and enter the 2nd child\'s information below.</span>';
-  h+='</label>';
+  h+='<div class="agree-box" style="margin-bottom:.5rem">';
+  h+='<input type="checkbox" id="split-chk"'+(SC.splitLesson?' checked':'')+' onchange="SC.splitLesson=this.checked;render()">';
+  h+='<label class="agree-lbl" for="split-chk">Select this checkbox if you would like to split the duration between two children, and enter the 2nd child\'s information below.</label>';
   h+='</div>';
   if(SC.splitLesson){
     if(has60){
@@ -1273,9 +1271,11 @@ function rSchedForm(){
     var on=SC.durations.indexOf(d)>-1;
     return '<button class="db'+(on?' on':'')+'" onclick="toggleScDur(&apos;'+d+'&apos;);render()">'+d+' min</button>';
   }).join('')+'</div>';
+  var durNoteMissing=SC.durations.length>1&&!SC.durationNote.trim();
   if(SC.durations.length>1){
-    h+='<div class="field" style="margin-top:.5rem"><label>Context on your duration preference (optional)</label>'+
+    h+='<div class="field" style="margin-top:.5rem"><label>Context on your duration preference<span class="req">*</span></label>'+
       '<textarea oninput="SC.durationNote=this.value" style="min-height:55px" placeholder="e.g. prefer 45 min but open to 60 depending on cost">'+esc(SC.durationNote)+'</textarea></div>';
+    if(durNoteMissing) h+='<div style="font-size:12px;color:var(--at);margin-top:.25rem">\u26a0 Please add context on your duration preference.</div>';
   }
   if(durMissing){
     h+='<div style="font-size:12px;color:var(--at);margin-top:.5rem">\u26a0 Please select a lesson duration to see pricing and continue.</div>';
@@ -1300,9 +1300,11 @@ function rSchedForm(){
   if(locMissing){
     h+='<div style="font-size:12px;color:var(--at);margin-top:.5rem">\u26a0 Please select a lesson location.</div>';
   }
+  var locNoteMissing=SC.locations.length>1&&!SC.locationNote.trim();
   if(SC.locations.length>1){
-    h+='<div class="field" style="margin-top:.6rem"><label>Anything we should know about your location preference? (optional)</label>'+
+    h+='<div class="field" style="margin-top:.6rem"><label>Context on your location preference<span class="req">*</span></label>'+
       '<textarea oninput="SC.locationNote=this.value" style="min-height:55px" placeholder="e.g. prefer studio but in-home works for winter">'+esc(SC.locationNote)+'</textarea></div>';
+    if(locNoteMissing) h+='<div style="font-size:12px;color:var(--at);margin-top:.25rem">\u26a0 Please add context on your location preference.</div>';
   }
   if(SC.locations.indexOf('in-home')>-1){
     h+='<div class="note" style="margin-top:.65rem;margin-bottom:.65rem">In-home lessons are not guaranteed and are based on instructor availability.</div>';
@@ -1384,7 +1386,9 @@ function rSchedForm(){
   h+='</div>';
 
   // Submit
-  var missingRequired=durMissing||locMissing||!hasCompleteSlot||missingEndTime||missingStartTime;
+  var durNoteMissing=SC.durations.length>1&&!SC.durationNote.trim();
+  var locNoteMissing=SC.locations.length>1&&!SC.locationNote.trim();
+  var missingRequired=durMissing||locMissing||durNoteMissing||locNoteMissing||!hasCompleteSlot||missingEndTime||missingStartTime;
   var submitLbl=isEdit?'Save Changes':'Submit Availability';
   if(SC.busy){
     h+='<button class="btn btn-p btn-full" disabled><span class="spin">\u21bb</span> Saving...</button>';
@@ -1555,6 +1559,8 @@ function doSubmitSched(){
   if(!SC.studentId){showMsg('Please select a child.','e');return;}
   if(!SC.durations.length){showMsg('Please select at least one lesson duration.','e');return;}
   if(!SC.locations.length){showMsg('Please select at least one lesson location.','e');return;}
+  if(SC.durations.length>1&&!SC.durationNote.trim()){showMsg('Please add context on your duration preference.','e');return;}
+  if(SC.locations.length>1&&!SC.locationNote.trim()){showMsg('Please add context on your location preference.','e');return;}
   var activeSlots=SC.slots.filter(function(s,i){ return !SC.slotDeleted[i]; });
   var hasSlot=activeSlots.some(function(s){return s.day&&s.start&&s.end;});
   if(!hasSlot){showMsg('Please add at least one time window with a day, start time, and end time.','e');return;}

@@ -173,6 +173,28 @@ var SC = {
   splitChild:{name:'',age:'',instrument:'',instrumentOther:'',notes:''}
 };
 
+// instrument edit state — keyed by studentId: {editing:bool, val:'', other:'', busy:false}
+var _instrEdit = {};
+// sibling nudge: studentId of next unsubmitted sibling after a successful submit, or ''
+var _siblingNudgeId = '';
+
+// Full SC reset for a specific student, then navigate to scheduling tab.
+// Always use this instead of inline SC mutations on home-tab CTAs.
+function _gotoSchedulingForStudent(id) {
+  SC.studentId = id;
+  SC.loaded = false; SC.submitted = false; SC.isFirstSubmission = true;
+  SC.editMode = false; SC.slotEditing = {}; SC.slotDeleted = {}; SC.slotNotes = {};
+  SC.submittedAt = '';
+  SC.slots = [blankSlot(), blankSlot(), blankSlot()];
+  SC.durations = []; SC.locations = [];
+  SC.street = ''; SC.apt = ''; SC.city = ''; SC.state = 'NY'; SC.zip = '';
+  SC.instrumentNote = ''; SC.notes = ''; SC.locationNote = ''; SC.durationNote = '';
+  SC.teacherPref = ''; SC.pendingChanges = false;
+  SC.splitLesson = false;
+  SC.splitChild = {name:'', age:'', instrument:'', instrumentOther:'', notes:''};
+  gotoScheduling();
+}
+
 // tc — keyed by studentId
 var TC = {}; // {studentId: {checked:false, name:'', busy:false}}
 var _tcPolicyOpen = {}; // {studentId: bool}
@@ -777,6 +799,63 @@ function loadSchedTeachers(){
 }
 
 // ============================================================
+// INSTRUMENT EDIT (home tab student cards)
+// ============================================================
+function _rInstrEdit(s){
+  var ie=_instrEdit[s.studentId]||{editing:false,val:'',other:'',busy:false};
+  if(!ie.editing){
+    var instrDisplay=s.instrument?esc(s.instrument):'<span style="color:var(--text4)">No instrument selected</span>';
+    var linkLbl=s.instrument?'Change':'Add';
+    return '<div style="font-size:12px;color:var(--text3);margin-top:2px;margin-bottom:.1rem">'+
+      instrDisplay+
+      ' <a href="#" style="color:var(--acc);font-size:11px" onclick="event.preventDefault();'+
+      '_instrEdit[&apos;'+esc(s.studentId)+'&apos;]={editing:true,val:&apos;'+esc(s.instrument||'')+'&apos;,other:&apos;&apos;,busy:false};render()">'+
+      linkLbl+'</a></div>';
+  }
+  // Editing mode
+  var instOpts=INSTRUMENTS.map(function(x){
+    return '<option value="'+esc(x)+'"'+(ie.val===x?' selected':'')+'>'+esc(x)+'</option>';
+  }).join('');
+  var h='<div style="margin-top:.4rem;margin-bottom:.3rem">';
+  h+='<select style="margin-bottom:.35rem" onchange="_instrEdit[&apos;'+esc(s.studentId)+'&apos;].val=this.value;render()">'+
+    '<option value="">Select instrument...</option>'+instOpts+'</select>';
+  if(ie.val==='Other'){
+    h+='<input type="text" placeholder="e.g. Cello, Recorder, Harmonica..." style="margin-bottom:.35rem" value="'+esc(ie.other)+'" oninput="_instrEdit[&apos;'+esc(s.studentId)+'&apos;].other=this.value">';
+  }
+  h+='<div style="display:flex;gap:6px">';
+  if(ie.busy){
+    h+='<button class="btn btn-p btn-sm" disabled><span class="spin">\u21bb</span> Saving...</button>';
+  } else {
+    h+='<button class="btn btn-p btn-sm" onclick="_saveInstrument(&apos;'+esc(s.studentId)+'&apos;)">Save</button>';
+  }
+  h+='<button class="btn btn-s btn-sm" onclick="_instrEdit[&apos;'+esc(s.studentId)+'&apos;]={editing:false,val:&apos;&apos;,other:&apos;&apos;,busy:false};render()">Cancel</button>';
+  h+='</div></div>';
+  return h;
+}
+
+function _saveInstrument(id){
+  var ie=_instrEdit[id];
+  if(!ie||!ie.val){showMsg('Please select an instrument.','e');return;}
+  var finalVal=ie.val==='Other'?(ie.other.trim()||'Other'):ie.val;
+  if(ie.val==='Other'&&!ie.other.trim()){showMsg('Please describe the instrument.','e');return;}
+  ie.busy=true; render();
+  fapi('saveFamilyStudentInstrument',{studentId:id,instrument:finalVal},function(e,r){
+    if(e||!r||!r.ok){
+      showMsg((r&&r.error)||'Could not save instrument. Please try again.','e');
+      if(_instrEdit[id]) _instrEdit[id].busy=false;
+      render(); return;
+    }
+    // Patch local students array
+    for(var i=0;i<students.length;i++){
+      if(students[i].studentId===id){ students[i].instrument=finalVal; break; }
+    }
+    _instrEdit[id]={editing:false,val:'',other:'',busy:false};
+    showMsg('Instrument updated.','s');
+    render();
+  });
+}
+
+// ============================================================
 // HOME TAB
 // ============================================================
 function _rHomeQuickActions(){
@@ -889,7 +968,7 @@ function rHome(){
       h+='<div class="card-stu">';
       h+='<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:.6rem">';
       h+='<div><div style="font-weight:600;font-size:15px">'+esc(s.studentName)+'</div>';
-      if(s.instrument) h+='<div style="font-size:12px;color:var(--text4);margin-top:2px">'+esc(s.instrument)+'</div>';
+      h+=_rInstrEdit(s);
       h+='</div>';
       h+='<span class="chip '+lbl.cls+'">'+esc(lbl.text)+'</span>';
       h+='</div>';
@@ -920,10 +999,10 @@ function rHome(){
         ctas.push('<button class="btn btn-p btn-sm" onclick="gotoEnrollment()">Review and Accept Proposal</button>');
       }
       if(avOpen&&!avSubmitted&&!hasProp&&!hasTrial&&!isHolding&&!isWithdrawn&&!isEnrolled){
-        ctas.push('<button class="btn btn-p btn-sm" onclick="SC.studentId=&apos;'+esc(s.studentId)+'&apos;;SC.loaded=false;SC.submitted=false;gotoScheduling()">Submit availability</button>');
+        ctas.push('<button class="btn btn-p btn-sm" onclick="_gotoSchedulingForStudent(&apos;'+esc(s.studentId)+'&apos;)">Submit availability</button>');
       }
       if(avOpen&&avSubmitted&&(ph==='Leads'||ph==='Pending')){
-        ctas.push('<button class="btn btn-s btn-sm" onclick="SC.studentId=&apos;'+esc(s.studentId)+'&apos;;SC.loaded=false;SC.submitted=false;gotoScheduling()">Review / Edit Availability</button>');
+        ctas.push('<button class="btn btn-s btn-sm" onclick="_gotoSchedulingForStudent(&apos;'+esc(s.studentId)+'&apos;)">Review / Edit Availability</button>');
       }
       if(ctas.length) h+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:.5rem">'+ctas.join('')+'</div>';
       h+='</div>';
@@ -1017,16 +1096,14 @@ function rScheduling(){
     h+='</div>';
   }
 
-  if(students.length>1){
-    var opts=students.map(function(s){
-      return '<option value="'+esc(s.studentId)+'"'+(SC.studentId===s.studentId?' selected':'')+'>'+esc(s.studentName)+'</option>';
-    }).join('');
-    h+='<div class="field" style="margin-bottom:1rem"><label>Which child is this for?</label>'+
-      '<select onchange="SC.studentId=this.value;SC.loaded=false;SC.submitted=false;SC.isFirstSubmission=true;SC.editMode=false;SC.slotEditing={};SC.slotDeleted={};SC.slotNotes={};SC.submittedAt=&apos;&apos;;loadSchedSubmission()">'+opts+'</select></div>';
+  if(students.length>1&&SC.studentId){
+    var _scName='';
+    for(var _ni=0;_ni<students.length;_ni++){ if(students[_ni].studentId===SC.studentId){_scName=students[_ni].studentName;break;} }
+    if(_scName) h+='<div style="font-size:13px;color:var(--text3);margin-bottom:1rem">Submitting for: <strong style="color:var(--text)">'+esc(_scName)+'</strong> \u00b7 <a href="#" onclick="TAB=&apos;home&apos;;render();return false" style="color:var(--acc)">Back to home</a></div>';
   }
 
   if(!SC.studentId){
-    return h+'<p style="color:var(--text3)">Please select a child above.</p>';
+    return h+'<p style="color:var(--text3)">Please go back to the home tab and select a child to submit availability for.</p>';
   }
 
   // Loading submission from server — show spinner, never flash form
@@ -1036,11 +1113,24 @@ function rScheduling(){
 
   // VIEW MODE — returning family, not editing
   if(!SC.isFirstSubmission && !SC.editMode){
-    return h+rSchedViewMode();
+    return h+rSchedViewMode()+_rSiblingNudge();
   }
 
   // EDIT or FIRST SUBMISSION — full form
-  return h+rSchedForm();
+  return h+rSchedForm()+_rSiblingNudge();
+}
+
+function _rSiblingNudge(){
+  if(!_siblingNudgeId) return '';
+  var sib=null;
+  for(var i=0;i<students.length;i++){ if(students[i].studentId===_siblingNudgeId){sib=students[i];break;} }
+  if(!sib) return '';
+  var sibFirst=sib.studentName?(sib.studentName.trim().split(' ')[0]):'your other child';
+  return '<div class="card" style="margin-top:1.25rem;border:1.5px solid var(--green)">'+
+    '<div style="font-weight:600;font-size:14px;margin-bottom:.4rem">\u2713 Done! Submit for '+esc(sib.studentName)+'?</div>'+
+    '<p style="font-size:13px;color:var(--text3);margin-bottom:.75rem">You can also submit availability for '+esc(sibFirst)+' now, or come back any time.</p>'+
+    '<button class="btn btn-p btn-sm" onclick="_siblingNudgeId=&apos;&apos;;_gotoSchedulingForStudent(&apos;'+esc(sib.studentId)+'&apos;)">Submit for '+esc(sibFirst)+'</button>'+
+    '</div>';
 }
 
 function rViewLocPills(){
@@ -1501,8 +1591,16 @@ function loadSchedSubmission(){
         notes:sub.splitChildNotes||''
       };
     } else {
-      SC.isFirstSubmission=true;
-      SC.editMode=false;
+      SC.isFirstSubmission = true;
+      SC.editMode = false;
+      SC.submitted = false;
+      SC.slots = [blankSlot(), blankSlot(), blankSlot()];
+      SC.durations = []; SC.locations = [];
+      SC.street = ''; SC.apt = ''; SC.city = ''; SC.state = 'NY'; SC.zip = '';
+      SC.instrumentNote = ''; SC.notes = ''; SC.locationNote = ''; SC.durationNote = '';
+      SC.teacherPref = ''; SC.pendingChanges = false;
+      SC.splitLesson = false;
+      SC.splitChild = {name:'', age:'', instrument:'', instrumentOther:'', notes:''};
     }
     render();
   });
@@ -1596,6 +1694,21 @@ function doSubmitSched(){
       SC.editMode=false;
       SC.submitted=true;
       showMsg('Availability saved! We\'ll be in touch as soon as possible with an update on your request.','s');
+      // Check for unsubmitted siblings to nudge
+      _siblingNudgeId='';
+      var _avOpen=isTruthy(publicCfg.availabilityOpen);
+      if(_avOpen){
+        for(var _si=0;_si<students.length;_si++){
+          var _ss=students[_si];
+          if(_ss.studentId===SC.studentId) continue;
+          var _sph=_ss.phase||'';
+          var _submitted=isTruthy(_ss.availabilitySubmitted);
+          var _skip=_submitted||_sph==='Proposal'||_sph==='Confirmed to Enroll'||
+            _sph==='Enrolled'||_sph==='Enrollment Change'||
+            _sph==='Trial Booked'||_sph==='Holding'||_sph==='Withdrawn';
+          if(!_skip){ _siblingNudgeId=_ss.studentId; break; }
+        }
+      }
     }
     render();
   });

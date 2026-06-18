@@ -1879,7 +1879,7 @@ function rEnrollment(){
         }
 
         h+='</div>';
-      } else if(hasPrice){
+      } else if(hasPrice&&!isAccepted&&!isFullyEnrolled){
         h+='<div class="card"><h2>Lesson Policies</h2>';
         h+='<p>Please read through our policies below. Once you\'ve reviewed everything, accept and sign at the bottom. Once accepted, we will finish processing your enrollment on the admin side by scheduling your lessons for the school year, processing your first monthly payment, and setting up automatic monthly payments using your card on file. If you do not have a payment method on file, we\'ll contact you with instructions on how to add that to your account.</p>';
         h+=rPolicyText(isInHome);

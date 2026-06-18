@@ -164,7 +164,7 @@ var SC = {
   editMode:false,
   slotEditing:{},
   slotDeleted:{},
-  slotNotes:{},
+  slotNotes:{}, slotSaveAttempted:{},
   loading:false,
   pendingChanges:false,
   isFirstSubmission:true,
@@ -185,7 +185,7 @@ var _srOpen = {};
 function _gotoSchedulingForStudent(id) {
   SC.studentId = id;
   SC.loaded = false; SC.submitted = false; SC.isFirstSubmission = true;
-  SC.editMode = false; SC.slotEditing = {}; SC.slotDeleted = {}; SC.slotNotes = {};
+  SC.editMode = false; SC.slotEditing = {}; SC.slotDeleted = {}; SC.slotNotes = {}; SC.slotSaveAttempted = {};
   SC.submittedAt = '';
   SC.slots = [blankSlot(), blankSlot(), blankSlot()];
   SC.durations = []; SC.locations = [];
@@ -1273,7 +1273,7 @@ function rSchedViewMode(){
       h+='<div class="av-slot" style="margin-bottom:.6rem">';
       h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem">';
       h+='<div style="font-size:11px;color:var(--text4);text-transform:uppercase;letter-spacing:.08em;font-family:\'DM Mono\',monospace">Editing time window '+(i+1)+'</div>';
-      h+='<button class="btn btn-s btn-xs" onclick="SC.slotEditing['+i+']=false;render()">Cancel</button>';
+      h+='<button class="btn btn-s btn-xs" onclick="SC.slotSaveAttempted['+i+']=false;SC.slotEditing['+i+']=false;render()">Cancel</button>';
       h+='</div>';
       h+='<div class="g3" style="margin-bottom:.55rem">';
       h+='<div><label>Day</label><select id="slot-day-'+i+'" onchange="SC.slots['+i+'].day=this.value;SC.slots['+i+'].start=\'\';SC.slots['+i+'].end=\'\';render()">'+dayOpts+'</select></div>';
@@ -1284,12 +1284,16 @@ function rSchedViewMode(){
       h+='<div class="pref-btns">'+prefBtns+'</div>';
       h+='</div>';
       if(slot.day&&SC.durations.length) h+=rSlotPricing(slot.day);
-      if(slot.day&&!slot.start) h+='<div style="font-size:12px;color:var(--rt);margin-top:.35rem">\u26a0 Select the earliest time your child could start a lesson on this day.</div>';
-      if(slot.day&&slot.start&&!slot.end) h+='<div style="font-size:12px;color:var(--rt);margin-top:.35rem">\u26a0 Select the latest time your child\u2019s lesson could end on this day.</div>';
-      if(slot.day&&!slot.pref) h+='<div style="font-size:12px;color:var(--rt);margin-top:.35rem">\u26a0 Let us know how well this day works for your family by selecting a priority below.</div>';
+      if(SC.slotSaveAttempted[i]){
+        var _sd=document.getElementById('slot-day-'+i),_ss=document.getElementById('slot-start-'+i),_se=document.getElementById('slot-end-'+i);
+        var _day=_sd?_sd.value:slot.day,_start=_ss?_ss.value:slot.start,_end=_se?_se.value:slot.end;
+        if(_day&&!_start) h+='<div style="font-size:12px;color:var(--rt);margin-top:.35rem">\u26a0 Please select the earliest time your child could start a lesson on this day.</div>';
+        if(_day&&_start&&!_end) h+='<div style="font-size:12px;color:var(--rt);margin-top:.35rem">\u26a0 Please select the latest time your child\u2019s lesson could end on this day.</div>';
+        if(_day&&!slot.pref) h+='<div style="font-size:12px;color:var(--rt);margin-top:.35rem">\u26a0 Please select how well this day works for your family using the options above.</div>';
+      }
       h+='<div style="margin-top:.6rem">';
       h+='<label style="font-size:11px;color:var(--text3);margin-bottom:4px;display:block">Optional note for this window</label>';
-      h+='<input type="text" style="margin-bottom:.5rem" placeholder="e.g. This only works if school gets out early" value="'+esc(SC.slotNotes[i]||'')+'" oninput="SC.slotNotes['+i+']=this.value">';
+      h+='<input type="text" style="margin-bottom:.5rem" placeholder="Optional — e.g. ‘prefer 3:30 or later’, ‘early release from school on alternating Fridays’, or anything else we should know about this day" value="'+esc(SC.slotNotes[i]||'')+'" oninput="SC.slotNotes['+i+']=this.value">';
       h+='<button class="btn btn-p btn-sm" onclick="saveSlotLocal('+i+')">Save</button>';
       h+='</div>';
       h+='</div>';
@@ -1337,16 +1341,15 @@ function saveSlotLocal(i){
   var day=dayEl?dayEl.value:'';
   var start=startEl?startEl.value:'';
   var end=endEl?endEl.value:'';
+  SC.slots[i].day=day;
+  SC.slots[i].start=start;
+  SC.slots[i].end=end;
   if(day&&(!start||!end||!SC.slots[i].pref)){
-    SC.slots[i].day=day;
-    SC.slots[i].start=start;
-    SC.slots[i].end=end;
+    SC.slotSaveAttempted[i]=true;
     render();
     return;
   }
-  if(dayEl) SC.slots[i].day=day;
-  if(startEl) SC.slots[i].start=start;
-  if(endEl) SC.slots[i].end=end;
+  SC.slotSaveAttempted[i]=false;
   SC.slotEditing[i]=false;
   SC.pendingChanges=true;
   render();
@@ -1358,7 +1361,7 @@ function rSchedForm(){
   if(isEdit){
     h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">';
     h+='<div style="font-size:13px;color:var(--text3)">Editing your submission</div>';
-    h+='<button class="btn btn-s btn-sm" onclick="SC.editMode=false;SC.slotEditing={};SC.slotDeleted={};SC.slotNotes={};render()">Cancel</button>';
+    h+='<button class="btn btn-s btn-sm" onclick="SC.editMode=false;SC.slotEditing={};SC.slotDeleted={};SC.slotNotes={};SC.slotSaveAttempted={};render()">Cancel</button>';
     h+='</div>';
   }
 
@@ -1584,13 +1587,15 @@ function loadSchedSubmission(){
       SC.isFirstSubmission=false;
       SC.editMode=false;
       SC.pendingChanges=false;
-      SC.slotEditing={}; SC.slotDeleted={}; SC.slotNotes={};
+      SC.slotEditing={}; SC.slotDeleted={}; SC.slotNotes={}; SC.slotSaveAttempted={};
       var slots=[];
       for(var k=1;k<=6;k++){
         var d=sub['day'+k],s=sub['start'+k],e=sub['end'+k],p=sub['rank'+k];
         if(d||s) slots.push({day:d||'',start:s||'',end:e||'',pref:p||''});
       }
       SC.slots=slots.length?slots:[blankSlot(),blankSlot(),blankSlot()];
+      SC.slotNotes={};
+      for(var _n=0;_n<slots.length;_n++){var _nv=sub['note'+(_n+1)];if(_nv) SC.slotNotes[_n]=_nv;}
       SC.durationNote=sub.durationNote||''; SC.locationNote=sub.locationNote||'';
       SC.splitLesson=sub.splitLesson==='TRUE'||sub.splitLesson===true;
       SC.splitChild={
@@ -1657,7 +1662,7 @@ function _saveSlotsAndDetails(cb){
     SC.isFirstSubmission=false;
     SC.editMode=false;
     SC.pendingChanges=false;
-    SC.slotEditing={}; SC.slotDeleted={}; SC.slotNotes={};
+    SC.slotEditing={}; SC.slotDeleted={}; SC.slotNotes={}; SC.slotSaveAttempted={};
     SC.slots=activeSlots;
     var st=null;
     for(var i=0;i<students.length;i++){ if(students[i].studentId===SC.studentId){st=students[i];break;} }

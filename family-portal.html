@@ -1039,38 +1039,6 @@ function rScheduling(){
     return '<div style="text-align:center;padding:3rem"><span class="spin" style="font-size:20px">\u21bb</span></div>';
   }
 
-  // Enrolled families — read-only lesson summary, no availability form
-  var anyEnrolled=students.some(function(s){
-    var ph=s.phase||'';
-    return ph==='Enrolled'||ph==='Enrollment Change';
-  });
-  if(anyEnrolled){
-    var locMap={studio:'Keylab \u00b7 94 Luquer St, 11231','in-home':'In-home',virtual:'Virtual'};
-    var h='<h1>Your Schedule</h1>';
-    students.forEach(function(s){
-      var ph=s.phase||'';
-      var isEnrolled=(ph==='Enrolled'||ph==='Enrollment Change');
-      if(!isEnrolled) return;
-      if(students.length>1) h+='<h2 style="margin-top:1.25rem">'+esc(s.studentName)+'</h2>';
-      h+='<div class="card">';
-      var rows=[
-        ['Instrument',s.instrument],
-        ['Teacher',s.teacher],
-        ['Day',s.day],
-        ['Time',s.time||null],
-        ['Duration',s.durationBase?s.durationBase+' minutes':null],
-        ['Location',locMap[s.lessonLocation]||s.lessonLocation||null],
-        ['Start Date',s.startDate?_fmtFamilyDate(s.startDate):null]
-      ];
-      rows.forEach(function(row){
-        if(!row[1]) return;
-        h+='<div class="prop-row"><span class="prop-lbl">'+esc(row[0])+'</span><span class="prop-val">'+esc(row[1])+'</span></div>';
-      });
-      h+='</div>';
-    });
-    h+='<p style="font-size:12px;color:var(--text4)">Questions about your schedule? Email us at <a href="mailto:info@keylab.nyc">info@keylab.nyc</a>.</p>';
-    return h;
-  }
   // Determine enrollmentType for the selected student
   var _scStu=null;
   for(var _i=0;_i<students.length;_i++){ if(students[_i].studentId===SC.studentId){_scStu=students[_i];break;} }

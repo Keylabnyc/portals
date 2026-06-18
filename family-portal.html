@@ -926,6 +926,7 @@ function rHome(){
   }
   var avOpen=isTruthy(publicCfg.availabilityOpen);
   var locMap={studio:'Keylab \u00b7 94 Luquer St, 11231','in-home':'In-home',virtual:'Virtual'};
+  var hadDashboard=false;
   students.forEach(function(s){
     var lbl=phaseLabel(s.phase, s.availabilitySubmitted, avOpen, s.tcAcceptedAt);
     var ph=s.phase||'';
@@ -940,6 +941,7 @@ function rHome(){
     var showDashboard=(isEnrolled||(hasProp&&isAccepted));
 
     if(showDashboard){
+      hadDashboard=true;
       // ── Dashboard: accepted or enrolled ──
       h+='<div class="card">';
       h+='<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:.75rem">';
@@ -962,7 +964,6 @@ function rHome(){
       h+='<div style="margin-top:.6rem"><button class="btn btn-s btn-sm" onclick="gotoEnrollment()">View Proposal &amp; Policies</button></div>';
       h+='</div>';
       h+=_rHomeSelfRelease(s);
-      h+=_rHomeQuickActions();
     } else {
       // ── Non-dashboard states ──
       h+='<div class="card-stu">';
@@ -1008,6 +1009,7 @@ function rHome(){
       h+='</div>';
     }
   });
+  if(hadDashboard) h+=_rHomeQuickActions();
   h+='<hr class="divider">';
   h+='<p style="font-size:12px;color:var(--text4)">Questions? Email us at <a href="mailto:info@keylab.nyc">info@keylab.nyc</a>.</p>';
   return h;
@@ -1024,41 +1026,34 @@ function rScheduling(){
     return '<div style="text-align:center;padding:3rem"><span class="spin" style="font-size:20px">\u21bb</span></div>';
   }
 
-  // Enrolled families — read-only lesson summary, no availability form
-  var anyEnrolled=students.some(function(s){
-    var ph=s.phase||'';
-    return ph==='Enrolled'||ph==='Enrollment Change';
-  });
-  if(anyEnrolled){
+  // Determine selected student first
+  var _scStu=null;
+  for(var _i=0;_i<students.length;_i++){ if(students[_i].studentId===SC.studentId){_scStu=students[_i];break;} }
+
+  // If selected student is enrolled/in enrollment change, show their schedule (read-only)
+  if(_scStu && (_scStu.phase==='Enrolled'||_scStu.phase==='Enrollment Change')){
     var locMap={studio:'Keylab \u00b7 94 Luquer St, 11231','in-home':'In-home',virtual:'Virtual'};
     var h='<h1>Your Schedule</h1>';
-    students.forEach(function(s){
-      var ph=s.phase||'';
-      var isEnrolled=(ph==='Enrolled'||ph==='Enrollment Change');
-      if(!isEnrolled) return;
-      if(students.length>1) h+='<h2 style="margin-top:1.25rem">'+esc(s.studentName)+'</h2>';
-      h+='<div class="card">';
-      var rows=[
-        ['Instrument',s.instrument],
-        ['Teacher',s.teacher],
-        ['Day',s.day],
-        ['Time',s.time||null],
-        ['Duration',s.durationBase?s.durationBase+' minutes':null],
-        ['Location',locMap[s.lessonLocation]||s.lessonLocation||null],
-        ['Start Date',s.startDate?_fmtFamilyDate(s.startDate):null]
-      ];
-      rows.forEach(function(row){
-        if(!row[1]) return;
-        h+='<div class="prop-row"><span class="prop-lbl">'+esc(row[0])+'</span><span class="prop-val">'+esc(row[1])+'</span></div>';
-      });
-      h+='</div>';
+    if(students.length>1) h+='<p style="font-size:13px;color:var(--text3);margin-bottom:1rem">\u2713 '+esc(_scStu.studentName)+' is enrolled. <a href="#" onclick="TAB=&apos;home&apos;;render();return false" style="color:var(--acc)">Back to home</a></p>';
+    h+='<div class="card">';
+    var rows=[
+      ['Instrument',_scStu.instrument],
+      ['Teacher',_scStu.teacher],
+      ['Day',_scStu.day],
+      ['Time',_scStu.time||null],
+      ['Duration',_scStu.durationBase?_scStu.durationBase+' minutes':null],
+      ['Location',locMap[_scStu.lessonLocation]||_scStu.lessonLocation||null],
+      ['Start Date',_scStu.startDate?_fmtFamilyDate(_scStu.startDate):null]
+    ];
+    rows.forEach(function(row){
+      if(!row[1]) return;
+      h+='<div class="prop-row"><span class="prop-lbl">'+esc(row[0])+'</span><span class="prop-val">'+esc(row[1])+'</span></div>';
     });
+    h+='</div>';
     h+='<p style="font-size:12px;color:var(--text4)">Questions about your schedule? Email us at <a href="mailto:info@keylab.nyc">info@keylab.nyc</a>.</p>';
     return h;
   }
-  // Determine enrollmentType for the selected student
-  var _scStu=null;
-  for(var _i=0;_i<students.length;_i++){ if(students[_i].studentId===SC.studentId){_scStu=students[_i];break;} }
+
   var _enType=(_scStu&&_scStu.enrollmentType)||'';
   var _isReturning=_enType.toLowerCase().indexOf('returning')===0;
 

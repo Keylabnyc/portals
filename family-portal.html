@@ -1285,6 +1285,8 @@ function rSchedViewMode(){
       h+='</div>';
       if(slot.day&&SC.durations.length) h+=rSlotPricing(slot.day);
       h+='<div style="margin-top:.6rem">';
+      h+='<label style="font-size:11px;color:var(--text3);margin-bottom:4px;display:block">Optional note for this window</label>';
+      h+='<input type="text" style="margin-bottom:.5rem" placeholder="e.g. This only works if school gets out early" value="'+esc(SC.slotNotes[i]||'')+'" oninput="SC.slotNotes['+i+']=this.value">';
       h+='<button class="btn btn-p btn-sm" onclick="saveSlotLocal('+i+')">Save</button>';
       h+='</div>';
       h+='</div>';
@@ -1660,10 +1662,8 @@ function doSubmitSched(){
   var activeSlots=SC.slots.filter(function(s,i){ return !SC.slotDeleted[i]; });
   var hasSlot=activeSlots.some(function(s){return s.day&&s.start&&s.end;});
   if(!hasSlot){showMsg('Please add at least one time window with a day, start time, and end time.','e');return;}
-  var missingEnd=activeSlots.some(function(s){return s.day&&s.start&&!s.end;});
-  if(missingEnd){showMsg('Please select an end time for each time window.','e');return;}
-  var missingStart=activeSlots.some(function(s){return s.day&&!s.start&&s.end;});
-  if(missingStart){showMsg('Please select a start time for each time window.','e');return;}
+  var missingTime=activeSlots.some(function(s){return s.day&&(!s.start||!s.end);});
+  if(missingTime){showMsg('Please add a start and end time for each time window you\u2019ve added.','e');return;}
   // Split lesson validation
   if(SC.splitLesson){
     if(!SC.splitChild.name.trim()){showMsg('Please enter the second child\'s full name.','e');return;}

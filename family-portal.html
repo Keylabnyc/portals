@@ -1766,22 +1766,75 @@ function rEnrollment(){
 
       // ── Policies + acceptance section ──
       var tc=_tcState(sid);
-      if(isFullyEnrolled){
+      if(isFullyEnrolled||isAccepted){
         h+='<div class="card">';
-        if(s.tcAcceptedAt||s.tcAcceptedName){
-          h+='<div class="msg ms">\u2713 Policies accepted'+(s.tcAcceptedName?' by '+esc(s.tcAcceptedName):'')+
-            (s.tcAcceptedAt?' on '+esc(String(s.tcAcceptedAt)):'')+'.</div>';
+
+        // Accepted proposal header
+        h+='<div style="font-size:11px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.6rem">Accepted Proposal</div>';
+        h+='<div class="msg ms" style="margin-bottom:1.1rem">\u2713 Proposal accepted'+(s.tcAcceptedName?' by '+esc(s.tcAcceptedName):'')+
+          (s.tcAcceptedAt?' on '+esc(String(s.tcAcceptedAt)):'')+'.</div>';
+
+        // Tuition breakdown
+        h+='<div style="font-size:11px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem">Tuition</div>';
+        if(parseFloat(s.monthlyRaw)>0&&Math.round(parseFloat(s.monthlyRaw))!==Math.round(parseFloat(s.monthlyPrice))){
+          h+='<div class="prop-row"><span class="prop-lbl">Base monthly rate</span><span class="prop-val">$'+Math.round(parseFloat(s.monthlyRaw))+'</span></div>';
         }
-        h+='<p style="font-size:12px;color:var(--text4);margin-bottom:.5rem">The policies you agreed to are below for your records.</p>';
+        if(parseFloat(s.siblingDiscAmt)>0){
+          h+='<div class="prop-row"><span class="prop-lbl">Sibling discount'+(parseFloat(s.sibPct)>0?' ('+Math.round(parseFloat(s.sibPct))+'%)':'')+'</span>';
+          h+='<span class="prop-val" style="color:var(--green)">\u2212$'+Math.round(parseFloat(s.siblingDiscAmt))+'</span></div>';
+        }
+        if(parseFloat(s.pctDiscAmt)>0){
+          h+='<div class="prop-row"><span class="prop-lbl">Discount'+(parseFloat(s.pctDisc)>0?' ('+Math.round(parseFloat(s.pctDisc))+'%)':'')+(s.pctDiscountNote?' \u2014 '+esc(s.pctDiscountNote):'')+'</span>';
+          h+='<span class="prop-val" style="color:var(--green)">\u2212$'+Math.round(parseFloat(s.pctDiscAmt))+'</span></div>';
+        }
+        if(parseFloat(s.dollarDisc)>0){
+          h+='<div class="prop-row"><span class="prop-lbl">Discount'+(s.dollarDiscountNote?' \u2014 '+esc(s.dollarDiscountNote):'')+'</span>';
+          h+='<span class="prop-val" style="color:var(--green)">\u2212$'+Math.round(parseFloat(s.dollarDisc))+'</span></div>';
+        }
+        if(s.adjMonthly&&parseFloat(s.adjMonthly)!==0){
+          var _adj=parseFloat(s.adjMonthly);
+          var _adjSign=_adj<0?'\u2212':'+';
+          var _adjCol=_adj<0?'var(--green)':'var(--rt)';
+          var _adjAmt=_adjSign+'$'+String(Math.round(Math.abs(_adj)));
+          h+='<div class="prop-row"><span class="prop-lbl">Adjustment'+(s.adjustmentNote?' \u2014 '+esc(s.adjustmentNote):'')+'</span>';
+          h+='<span class="prop-val" style="color:'+_adjCol+'">'+_adjAmt+'</span></div>';
+        }
+        if(parseFloat(s.inHomeFee)>0){
+          h+='<div class="prop-row"><span class="prop-lbl">In-home lesson fee</span><span class="prop-val">+$'+Math.round(parseFloat(s.inHomeFee))+'/mo</span></div>';
+        }
+        h+='<div class="prop-row" style="margin-top:.4rem;padding-top:.7rem;border-top:1.5px solid var(--border2);border-bottom:none">';
+        h+='<span class="prop-lbl" style="font-weight:700;color:var(--text)">Monthly tuition</span>';
+        h+='<span class="price-big">'+displayPriceStr+'</span></div>';
+        if(s.isProrated&&parseFloat(s.proratedFirstMonth)>0){
+          h+='<div class="prop-row" style="border-bottom:none"><span class="prop-lbl">First month (prorated)</span>';
+          h+='<span class="prop-val">$'+Math.round(parseFloat(s.proratedFirstMonth))+'</span></div>';
+        }
+        if(parseFloat(s.subMonths)>0||parseFloat(s.lessonCount)>0){
+          var _yp=[];
+          if(parseFloat(s.subMonths)>0) _yp.push(Math.round(parseFloat(s.subMonths))+' billing months');
+          if(parseFloat(s.lessonCount)>0) _yp.push(Math.round(parseFloat(s.lessonCount))+' lessons scheduled');
+          h+='<div style="font-size:11px;color:var(--text4);margin-top:.35rem;text-align:right">'+_yp.join(' \u00b7 ')+'</div>';
+        }
+
+        // Next steps / managing enrollment
+        h+='<div style="border-top:1px solid var(--border);margin-top:1rem;padding-top:1rem">';
+        if(isFullyEnrolled){
+          h+='<div style="font-size:11px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem">Managing Your Enrollment</div>';
+          h+='<p style="font-size:13px;color:var(--text2);margin-bottom:.75rem">Your lesson schedule and billing live in your Keylab Opus account. Log in to view your full schedule, update your payment method, or cancel an individual lesson.</p>';
+          h+='<a href="https://keylab.opus1.io/login" target="_blank" class="btn btn-s btn-sm" style="display:inline-flex">Log in to Opus \u2192</a>';
+          h+='<p style="font-size:11px;color:var(--text4);margin-top:.75rem">Keylab uses two systems \u2014 this portal for enrollment, communication, and resources; Opus for your lesson schedule and billing.</p>';
+        } else {
+          h+='<div style="font-size:11px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem">What Happens Next</div>';
+          h+='<p style="font-size:13px;color:var(--text2)">We\u2019re finishing up \u2014 scheduling '+esc(firstName)+'\u2019s lessons, processing the first payment, and setting up monthly billing. We\u2019ll be in touch once everything is confirmed.</p>';
+        }
+        h+='</div>';
+
+        // Policies
+        h+='<div style="border-top:1px solid var(--border);margin-top:1rem;padding-top:.25rem">';
+        h+='<div style="font-size:11px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.08em;margin:.75rem 0 .5rem">Policies You Agreed To</div>';
         h+=rPolicyCollapsible(false, isInHome, sid);
         h+='</div>';
-      } else if(isAccepted){
-        h+='<div class="card">';
-        h+='<div class="msg ms">\u2713 Policies accepted'+(s.tcAcceptedName?' by '+esc(s.tcAcceptedName):'')+
-          (s.tcAcceptedAt?' on '+esc(String(s.tcAcceptedAt)):'')+'.</div>';
-        h+='<p>Thank you for accepting your proposal! We will finish processing your enrollment by scheduling '+esc(firstName)+'\u2019s lessons for the school year, processing your first monthly payment, and setting up automatic monthly payments using your card on file. If you do not have a payment method on file, we\u2019ll contact you with instructions on how to add that to your account. We\u2019ll let you know once your enrollment is complete and '+esc(firstName)+'\u2019s lessons have been scheduled.</p>';
-        h+='<p style="font-size:12px;color:var(--text4);margin-bottom:.5rem">The policies you agreed to are below for your records.</p>';
-        h+=rPolicyCollapsible(false, isInHome, sid);
+
         h+='</div>';
       } else if(hasPrice){
         h+='<div class="card"><h2>Lesson Policies</h2>';

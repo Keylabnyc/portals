@@ -177,6 +177,8 @@ var SC = {
 var _instrEdit = {};
 // sibling nudge: studentId of next unsubmitted sibling after a successful submit, or ''
 var _siblingNudgeId = '';
+// self-release expand state: keyed by studentId; true = expanded
+var _srOpen = {};
 
 // Full SC reset for a specific student, then navigate to scheduling tab.
 // Always use this instead of inline SC mutations on home-tab CTAs.

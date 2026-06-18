@@ -1804,19 +1804,17 @@ function rEnrollment(){
         h+='<button class="btn btn-p btn-sm" onclick="_enrExpanded[&apos;'+esc(sid)+'&apos;]=!_enrExpanded[&apos;'+esc(sid)+'&apos;];render()">'+(_exp?'Hide details':'Enrollment details')+'</button>';
         h+='</div>';
       }
-      h+='</div>';
 
       // ── Policies + acceptance section ──
       var tc=_tcState(sid);
       if(isFullyEnrolled||isAccepted){
-        // Always-visible: acceptance confirmation + policy review (independent of Enrollment details toggle)
-        h+='<div class="card">';
+        // Always-visible: acceptance confirmation + policy review (independent of Enrollment details toggle), same card as summary above
         if(s.tcAcceptedAt||s.tcAcceptedName){
-          h+='<div class="msg ms">';
-          h+='\u2713 Proposal accepted'+(s.tcAcceptedName?' by '+esc(s.tcAcceptedName):'')+
+          h+='<div class="msg ms" style="margin-top:1rem">';
+          h+='\u2713 Proposal and policies accepted'+(s.tcAcceptedName?' by '+esc(s.tcAcceptedName):'')+
             (s.tcAcceptedAt?' on '+esc(String(s.tcAcceptedAt)):'')+'.</div>';
         }
-        h+='<div style="font-size:11px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.08em;margin:.75rem 0 .5rem">Review Proposal and Policy Details</div>';
+        h+='<div style="font-size:11px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.08em;margin:.75rem 0 .5rem">Review Proposal and Policies</div>';
         h+=rPolicyCollapsible(false, isInHome, sid);
         h+='</div>';
 

@@ -43,6 +43,7 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 .btn{padding:6px 14px;border-radius:var(--r);font-size:12px;cursor:pointer;border:1px solid transparent;font-family:"Open Sans",sans-serif;transition:background .1s,opacity .1s;display:inline-flex;align-items:center;gap:5px;font-weight:600;line-height:1;letter-spacing:.01em;white-space:nowrap}
 .btn-p{background:#1a4fc4;color:#fff;border-color:#1a4fc4}.btn-p:hover{background:#1440a8;border-color:#1440a8}
 .btn-s{background:rgba(0,0,0,.12);color:var(--text2);border-color:var(--border2)}.btn-s:hover{background:rgba(0,0,0,.2);color:var(--text)}
+.btn-d{background:rgba(0,0,0,.06);color:var(--rt);border-color:var(--red)}.btn-d:hover{background:rgba(150,32,32,.12)}
 .btn-g{background:var(--gbg);color:var(--gt);border-color:var(--green)}
 .btn:disabled{opacity:.35;cursor:not-allowed}
 .btn-sm{padding:5px 11px;font-size:11px}
@@ -498,7 +499,7 @@ function rLookup(){
     return '<h1>You\'re in the right place!</h1>'+
       '<p>We don\'t have a record for "'+esc(LK.name)+'" yet. Fill out the form below and we\'ll be in touch within one to two business days.</p>'+
       '<button class="btn btn-p" style="margin-bottom:.75rem" onclick="PAGE=&apos;register&apos;;render()">Continue to Sign-Up Form</button>'+
-      '<br><button class="btn btn-s btn-sm" style="margin-top:.4rem" onclick="LK={name:&apos;&apos;,matches:[],done:false};render()">Try a different name</button>';
+      '<br><button class="btn btn-p btn-sm" style="margin-top:.4rem" onclick="LK={name:&apos;&apos;,matches:[],done:false};render()">Try a different name</button>';
   }
   var cards=LK.matches.map(function(m,i){
     var child=m.firstChildFirstName?'Child on file: '+esc(m.firstChildFirstName):(m.childCount+' student'+(m.childCount!==1?'s':'')+' on file');
@@ -511,7 +512,7 @@ function rLookup(){
   return '<h1>Is this your family?</h1>'+
     '<p>We found the following'+(LK.matches.length>1?' records':' record')+' for "'+esc(LK.name)+'":</p>'+
     cards+
-    '<button class="btn btn-s btn-sm" style="margin-top:.25rem" onclick="PAGE=&apos;register&apos;;render()">This isn\'t me -- start fresh</button>'+
+    '<button class="btn btn-p btn-sm" style="margin-top:.25rem" onclick="PAGE=&apos;register&apos;;render()">This isn\'t me -- start fresh</button>'+
     '<p style="font-size:12px;color:var(--text4);margin-top:.75rem">If nothing looks right, go ahead and start fresh. You can also email us at <a href="mailto:info@keylab.nyc">info@keylab.nyc</a>.</p>';
 }
 
@@ -603,7 +604,7 @@ function rStuBlock(st, i){
 
   var h='<div class="card" style="position:relative">';
   if(i>0){
-    h+='<button class="btn btn-s btn-sm" style="position:absolute;top:.75rem;right:.75rem;font-size:11px" onclick="RF.students.splice('+i+',1);render()">Remove</button>';
+    h+='<button class="btn btn-d btn-sm" style="position:absolute;top:.75rem;right:.75rem;font-size:11px" onclick="RF.students.splice('+i+',1);render()">Remove</button>';
   }
   h+='<h2>'+lbl+'</h2>';
   h+='<div class="field"><label>Child\'s full name<span class="req">*</span></label>'+
@@ -823,7 +824,7 @@ function _rInstrEdit(s){
   } else {
     h+='<button class="btn btn-p btn-sm" onclick="_saveInstrument(&apos;'+esc(s.studentId)+'&apos;)">Save</button>';
   }
-  h+='<button class="btn btn-s btn-sm" onclick="_instrEdit[&apos;'+esc(s.studentId)+'&apos;]={editing:false,val:&apos;&apos;,other:&apos;&apos;,busy:false};render()">Cancel</button>';
+  h+='<button class="btn btn-d btn-sm" onclick="_instrEdit[&apos;'+esc(s.studentId)+'&apos;]={editing:false,val:&apos;&apos;,other:&apos;&apos;,busy:false};render()">Cancel</button>';
   h+='</div></div>';
   return h;
 }
@@ -905,7 +906,7 @@ function _rHomeSelfRelease(s){
     h+='<span style="font-size:16px;color:var(--text4)">'+(open?'\u2039':'\u203a')+'</span>';
     h+='</div>';
   } else {
-    h+='<button class="btn btn-s" style="width:100%;justify-content:center;padding:11px 16px;font-size:12px;border-radius:20px" onclick="_srOpen[&apos;'+esc(s.studentId)+'&apos;]=!_srOpen[&apos;'+esc(s.studentId)+'&apos;];render()">Authorize self-release (for ages 10 and up)</button>';
+    h+='<button class="btn btn-p" style="width:100%;justify-content:center;padding:11px 16px;font-size:12px;border-radius:20px" onclick="_srOpen[&apos;'+esc(s.studentId)+'&apos;]=!_srOpen[&apos;'+esc(s.studentId)+'&apos;];render()">Authorize self-release (for ages 10 and up)</button>';
   }
   if(open){
     h+='<div style="padding:.5rem 0 .25rem">';
@@ -973,7 +974,7 @@ function rHome(){
       } else {
         h+='<div class="msg ms">\u2713 Thank you for accepting your proposal! We will finish processing your enrollment by scheduling '+esc(firstName)+'\u2019s lessons for the school year, processing your first monthly payment, and setting up automatic monthly payments using your card on file. If you do not have a payment method on file, we\u2019ll contact you with instructions on how to add that to your account. We\u2019ll let you know once your enrollment is complete and '+esc(firstName)+'\u2019s lessons have been scheduled. Scroll down for quick links and helpful information about managing your child\u2019s lessons.</div>';
       }
-      h+='<div style="margin-top:.6rem"><button class="btn btn-s btn-sm" onclick="gotoEnrollment()">View Proposal &amp; Policies</button></div>';
+      h+='<div style="margin-top:.6rem"><button class="btn btn-p btn-sm" onclick="gotoEnrollment()">View Proposal &amp; Policies</button></div>';
       h+=_rHomeSelfRelease(s);
       h+='</div>';
       hadDashboard=true;
@@ -1016,7 +1017,7 @@ function rHome(){
         ctas.push('<button class="btn btn-p btn-sm" onclick="_gotoSchedulingForStudent(&apos;'+esc(s.studentId)+'&apos;)">Submit availability</button>');
       }
       if(avOpen&&avSubmitted&&(ph==='Leads'||ph==='Pending')){
-        ctas.push('<button class="btn btn-s btn-sm" onclick="_gotoSchedulingForStudent(&apos;'+esc(s.studentId)+'&apos;)">Review / Edit Availability</button>');
+        ctas.push('<button class="btn btn-p btn-sm" onclick="_gotoSchedulingForStudent(&apos;'+esc(s.studentId)+'&apos;)">Review / Edit Availability</button>');
       }
       if(ctas.length) h+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:.5rem">'+ctas.join('')+'</div>';
       h+='</div>';
@@ -1095,7 +1096,7 @@ function rScheduling(){
     } else if(students.length===1){
       _btnHtml+='<button class="btn btn-p" onclick="_gotoSchedulingForStudent(&apos;'+esc(students[0].studentId)+'&apos;)">Submit availability for '+esc(students[0].studentName)+'</button>';
     } else {
-      _btnHtml+='<button class="btn btn-s" onclick="TAB=&apos;home&apos;;render()">Back to home</button>';
+      _btnHtml+='<button class="btn btn-p" onclick="TAB=&apos;home&apos;;render()">Back to home</button>';
     }
     _btnHtml+='</div>';
     return h+_btnHtml;
@@ -1273,7 +1274,7 @@ function rSchedViewMode(){
       h+='<div class="av-slot" style="margin-bottom:.6rem">';
       h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem">';
       h+='<div style="font-size:11px;color:var(--text4);text-transform:uppercase;letter-spacing:.08em;font-family:\'DM Mono\',monospace">Editing time window '+(i+1)+'</div>';
-      h+='<button class="btn btn-s btn-xs" onclick="SC.slotSaveAttempted['+i+']=false;SC.slotEditing['+i+']=false;render()">Cancel</button>';
+      h+='<button class="btn btn-d btn-xs" onclick="SC.slotSaveAttempted['+i+']=false;SC.slotEditing['+i+']=false;render()">Cancel</button>';
       h+='</div>';
       h+='<div class="g3" style="margin-bottom:.55rem">';
       h+='<div><label>Day</label><select id="slot-day-'+i+'" onchange="SC.slots['+i+'].day=this.value;SC.slots['+i+'].start=\'\';SC.slots['+i+'].end=\'\';render()">'+dayOpts+'</select></div>';
@@ -1311,15 +1312,15 @@ function rSchedViewMode(){
       if(SC.durations.length&&slot.day) h+=rSlotPricing(slot.day);
       h+='</div>';
       h+='<div style="display:flex;gap:.4rem;flex-shrink:0">';
-      h+='<button class="btn btn-s btn-sm" onclick="SC.slotEditing['+i+']=true;render()">Edit</button>';
-      h+='<button class="btn btn-s btn-sm" style="color:var(--rt)" onclick="SC.slotDeleted['+i+']=true;SC.pendingChanges=true;render()">Delete</button>';
+      h+='<button class="btn btn-p btn-sm" onclick="SC.slotEditing['+i+']=true;render()">Edit</button>';
+      h+='<button class="btn btn-d btn-sm" onclick="SC.slotDeleted['+i+']=true;SC.pendingChanges=true;render()">Delete</button>';
       h+='</div>';
       h+='</div>';
     }
   });
   if(!hasSlots) h+='<p style="color:var(--text3)">No time windows on file.</p>';
   // Add time window button
-  h+='<button class="btn btn-s btn-sm" style="margin-top:.5rem" onclick="var ni=SC.slots.length;SC.slots.push(blankSlot());SC.slotEditing[ni]=true;render()">+ Add a time window</button>';
+  h+='<button class="btn btn-p btn-sm" style="margin-top:.5rem" onclick="var ni=SC.slots.length;SC.slots.push(blankSlot());SC.slotEditing[ni]=true;render()">+ Add a time window</button>';
   h+='</div>';
 
   // Submit Changes footer — only shown when pending local changes exist
@@ -1361,7 +1362,7 @@ function rSchedForm(){
   if(isEdit){
     h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">';
     h+='<div style="font-size:13px;color:var(--text3)">Editing your submission</div>';
-    h+='<button class="btn btn-s btn-sm" onclick="SC.editMode=false;SC.slotEditing={};SC.slotDeleted={};SC.slotNotes={};SC.slotSaveAttempted={};render()">Cancel</button>';
+    h+='<button class="btn btn-d btn-sm" onclick="SC.editMode=false;SC.slotEditing={};SC.slotDeleted={};SC.slotNotes={};SC.slotSaveAttempted={};render()">Cancel</button>';
     h+='</div>';
   }
 
@@ -1475,7 +1476,7 @@ function rSchedForm(){
   });
 
   if(SC.slots.length<6){
-    h+='<button class="btn btn-s btn-sm" style="margin-bottom:.75rem" onclick="var ni=SC.slots.length;SC.slots.push(blankSlot());SC.slotEditing[ni]=true;render()">+ Add another time window</button>';
+    h+='<button class="btn btn-p btn-sm" style="margin-bottom:.75rem" onclick="var ni=SC.slots.length;SC.slots.push(blankSlot());SC.slotEditing[ni]=true;render()">+ Add another time window</button>';
   }
   if(!hasCompleteSlot){
     h+='<div style="font-size:12px;color:var(--rt);margin-bottom:.5rem">\u26a0 Please add at least one time window with a day, start time, and end time.</div>';
@@ -1529,8 +1530,8 @@ function rSlotLocked(slot, i){
   if(SC.durations.length&&slot.day) h+=rSlotPricing(slot.day);
   h+='</div>';
   h+='<div style="display:flex;gap:.4rem;flex-shrink:0">';
-  h+='<button class="btn btn-s btn-sm" onclick="SC.slotEditing['+i+']=true;render()">Edit</button>';
-  h+='<button class="btn btn-s btn-sm" style="color:var(--rt)" onclick="SC.slotDeleted['+i+']=true;SC.slotEditing['+i+']=false;render()">Delete</button>';
+  h+='<button class="btn btn-p btn-sm" onclick="SC.slotEditing['+i+']=true;render()">Edit</button>';
+  h+='<button class="btn btn-d btn-sm" onclick="SC.slotDeleted['+i+']=true;SC.slotEditing['+i+']=false;render()">Delete</button>';
   h+='</div>';
   h+='</div>';
   return h;
@@ -1551,8 +1552,8 @@ function rSlot(slot, i, isEdit){
   }).join('');
   var h='<div class="av-slot" style="margin-bottom:.6rem"><div class="av-slot-hd">';
   h+='<div class="av-slot-num">'+(SC.slots.length>1||isEdit?'Time window '+(i+1):'When are you free?')+'</div>';
-  if(!isEdit&&i>0) h+='<button class="btn btn-s btn-sm" style="font-size:10px;padding:2px 7px" onclick="SC.slots.splice('+i+',1);render()">Remove</button>';
-  if(isEdit) h+='<button class="btn btn-s btn-sm" style="font-size:10px;padding:2px 7px;color:var(--rt)" onclick="SC.slotDeleted['+i+']=true;SC.slotEditing['+i+']=false;render()">Delete</button>';
+  if(!isEdit&&i>0) h+='<button class="btn btn-d btn-sm" style="font-size:10px;padding:2px 7px" onclick="SC.slots.splice('+i+',1);render()">Remove</button>';
+  if(isEdit) h+='<button class="btn btn-d btn-sm" style="font-size:10px;padding:2px 7px" onclick="SC.slotDeleted['+i+']=true;SC.slotEditing['+i+']=false;render()">Delete</button>';
   h+='</div>';
   h+='<div class="g3" style="margin-bottom:.55rem">';
   h+='<div><label>Day</label><select onchange="SC.slots['+i+'].day=this.value;SC.slots['+i+'].start=&apos;&apos;;SC.slots['+i+'].end=&apos;&apos;;render()">'+dayOpts+'</select></div>';
@@ -1800,85 +1801,85 @@ function rEnrollment(){
       }
       if(isAccepted||isFullyEnrolled){
         h+='<div style="margin-top:1rem;border-top:1px solid var(--border);padding-top:.85rem">';
-        h+='<button class="btn btn-s btn-sm" onclick="_enrExpanded[&apos;'+esc(sid)+'&apos;]=!_enrExpanded[&apos;'+esc(sid)+'&apos;];render()">'+(_exp?'Hide details':'Enrollment details')+'</button>';
+        h+='<button class="btn btn-p btn-sm" onclick="_enrExpanded[&apos;'+esc(sid)+'&apos;]=!_enrExpanded[&apos;'+esc(sid)+'&apos;];render()">'+(_exp?'Hide details':'Enrollment details')+'</button>';
         h+='</div>';
       }
       h+='</div>';
 
       // ── Policies + acceptance section ──
       var tc=_tcState(sid);
-      if((isFullyEnrolled||isAccepted)&&_exp){
+      if(isFullyEnrolled||isAccepted){
+        // Always-visible: acceptance confirmation + policy review (independent of Enrollment details toggle)
         h+='<div class="card">';
-
-        // Tuition breakdown
-        h+='<div style="font-size:11px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem">Tuition</div>';
-        if(parseFloat(s.monthlyRaw)>0&&Math.round(parseFloat(s.monthlyRaw))!==Math.round(parseFloat(s.monthlyPrice))){
-          h+='<div class="prop-row"><span class="prop-lbl">Base monthly rate</span><span class="prop-val">$'+Math.round(parseFloat(s.monthlyRaw))+'</span></div>';
-        }
-        if(parseFloat(s.siblingDiscAmt)>0){
-          h+='<div class="prop-row"><span class="prop-lbl">Sibling discount'+(parseFloat(s.sibPct)>0?' ('+Math.round(parseFloat(s.sibPct))+'%)':'')+'</span>';
-          h+='<span class="prop-val" style="color:var(--green)">\u2212$'+Math.round(parseFloat(s.siblingDiscAmt))+'</span></div>';
-        }
-        if(parseFloat(s.pctDiscAmt)>0){
-          h+='<div class="prop-row"><span class="prop-lbl">Discount'+(parseFloat(s.pctDisc)>0?' ('+Math.round(parseFloat(s.pctDisc))+'%)':'')+(s.pctDiscountNote?' \u2014 '+esc(s.pctDiscountNote):'')+'</span>';
-          h+='<span class="prop-val" style="color:var(--green)">\u2212$'+Math.round(parseFloat(s.pctDiscAmt))+'</span></div>';
-        }
-        if(parseFloat(s.dollarDisc)>0){
-          h+='<div class="prop-row"><span class="prop-lbl">Discount'+(s.dollarDiscountNote?' \u2014 '+esc(s.dollarDiscountNote):'')+'</span>';
-          h+='<span class="prop-val" style="color:var(--green)">\u2212$'+Math.round(parseFloat(s.dollarDisc))+'</span></div>';
-        }
-        if(s.adjMonthly&&parseFloat(s.adjMonthly)!==0){
-          var _adj=parseFloat(s.adjMonthly);
-          var _adjSign=_adj<0?'\u2212':'+';
-          var _adjCol=_adj<0?'var(--green)':'var(--rt)';
-          var _adjAmt=_adjSign+'$'+String(Math.round(Math.abs(_adj)));
-          h+='<div class="prop-row"><span class="prop-lbl">Adjustment'+(s.adjustmentNote?' \u2014 '+esc(s.adjustmentNote):'')+'</span>';
-          h+='<span class="prop-val" style="color:'+_adjCol+'">'+_adjAmt+'</span></div>';
-        }
-        if(parseFloat(s.inHomeFee)>0){
-          h+='<div class="prop-row"><span class="prop-lbl">In-home lesson fee</span><span class="prop-val">+$'+Math.round(parseFloat(s.inHomeFee))+'/mo</span></div>';
-        }
-        h+='<div class="prop-row" style="margin-top:.4rem;padding-top:.7rem;border-top:1.5px solid var(--border2);border-bottom:none">';
-        h+='<span class="prop-lbl" style="font-weight:700;color:var(--text)">Monthly tuition</span>';
-        h+='<span class="price-big">'+displayPriceStr+'</span></div>';
-        if(s.isProrated&&parseFloat(s.proratedFirstMonth)>0){
-          h+='<div class="prop-row" style="border-bottom:none"><span class="prop-lbl">First month (prorated)</span>';
-          h+='<span class="prop-val">$'+Math.round(parseFloat(s.proratedFirstMonth))+'</span></div>';
-        }
-        if(parseFloat(s.subMonths)>0||parseFloat(s.lessonCount)>0){
-          var _yp=[];
-          if(parseFloat(s.subMonths)>0) _yp.push(Math.round(parseFloat(s.subMonths))+' billing months');
-          if(parseFloat(s.lessonCount)>0) _yp.push(Math.round(parseFloat(s.lessonCount))+' lessons scheduled');
-          h+='<div style="font-size:11px;color:var(--text4);margin-top:.35rem;text-align:right">'+_yp.join(' \u00b7 ')+'</div>';
-        }
-
-        // Next steps / managing enrollment
-        h+='<div style="border-top:1px solid var(--border);margin-top:1rem;padding-top:1rem">';
-        if(isFullyEnrolled){
-          h+='<div style="font-size:11px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem">Managing Your Enrollment</div>';
-          h+='<p style="font-size:13px;color:var(--text2);margin-bottom:.75rem">Your lesson schedule and billing live in your Keylab Opus account. Log in to view your full schedule, update your payment method, or cancel an individual lesson.</p>';
-          h+='<a href="https://keylab.opus1.io/login" target="_blank" class="btn btn-s btn-sm" style="display:inline-flex">Log in to Opus \u2192</a>';
-          h+='<p style="font-size:11px;color:var(--text4);margin-top:.75rem">Keylab uses two systems \u2014 this portal for enrollment, communication, and resources; Opus for your lesson schedule and billing.</p>';
-        } else {
-          h+='<div style="font-size:11px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem">What Happens Next</div>';
-          h+='<p style="font-size:13px;color:var(--text2)">We\u2019re finishing up \u2014 scheduling '+esc(firstName)+'\u2019s lessons, processing the first payment, and setting up monthly billing. We\u2019ll be in touch once everything is confirmed.</p>';
-        }
-        h+='</div>';
-
-        // Policies
-        h+='<div style="border-top:1px solid var(--border);margin-top:1.25rem;padding-top:.25rem">';
-        h+='<div style="font-size:11px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.08em;margin:.75rem 0 .5rem">Policies Agreed To</div>';
-        h+=rPolicyCollapsible(false, isInHome, sid);
-        h+='</div>';
-
-        // Acceptance confirmation at bottom
         if(s.tcAcceptedAt||s.tcAcceptedName){
-          h+='<div class="msg ms" style="margin-top:1.25rem">';
+          h+='<div class="msg ms">';
           h+='\u2713 Proposal accepted'+(s.tcAcceptedName?' by '+esc(s.tcAcceptedName):'')+
             (s.tcAcceptedAt?' on '+esc(String(s.tcAcceptedAt)):'')+'.</div>';
         }
-
+        h+='<div style="font-size:11px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.08em;margin:.75rem 0 .5rem">Review Proposal and Policy Details</div>';
+        h+=rPolicyCollapsible(false, isInHome, sid);
         h+='</div>';
+
+        if(_exp){
+          h+='<div class="card">';
+
+          // Tuition breakdown
+          h+='<div style="font-size:11px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem">Tuition</div>';
+          if(parseFloat(s.monthlyRaw)>0&&Math.round(parseFloat(s.monthlyRaw))!==Math.round(parseFloat(s.monthlyPrice))){
+            h+='<div class="prop-row"><span class="prop-lbl">Base monthly rate</span><span class="prop-val">$'+Math.round(parseFloat(s.monthlyRaw))+'</span></div>';
+          }
+          if(parseFloat(s.siblingDiscAmt)>0){
+            h+='<div class="prop-row"><span class="prop-lbl">Sibling discount'+(parseFloat(s.sibPct)>0?' ('+Math.round(parseFloat(s.sibPct))+'%)':'')+'</span>';
+            h+='<span class="prop-val" style="color:var(--green)">\u2212$'+Math.round(parseFloat(s.siblingDiscAmt))+'</span></div>';
+          }
+          if(parseFloat(s.pctDiscAmt)>0){
+            h+='<div class="prop-row"><span class="prop-lbl">Discount'+(parseFloat(s.pctDisc)>0?' ('+Math.round(parseFloat(s.pctDisc))+'%)':'')+(s.pctDiscountNote?' \u2014 '+esc(s.pctDiscountNote):'')+'</span>';
+            h+='<span class="prop-val" style="color:var(--green)">\u2212$'+Math.round(parseFloat(s.pctDiscAmt))+'</span></div>';
+          }
+          if(parseFloat(s.dollarDisc)>0){
+            h+='<div class="prop-row"><span class="prop-lbl">Discount'+(s.dollarDiscountNote?' \u2014 '+esc(s.dollarDiscountNote):'')+'</span>';
+            h+='<span class="prop-val" style="color:var(--green)">\u2212$'+Math.round(parseFloat(s.dollarDisc))+'</span></div>';
+          }
+          if(s.adjMonthly&&parseFloat(s.adjMonthly)!==0){
+            var _adj=parseFloat(s.adjMonthly);
+            var _adjSign=_adj<0?'\u2212':'+';
+            var _adjCol=_adj<0?'var(--green)':'var(--rt)';
+            var _adjAmt=_adjSign+'$'+String(Math.round(Math.abs(_adj)));
+            h+='<div class="prop-row"><span class="prop-lbl">Adjustment'+(s.adjustmentNote?' \u2014 '+esc(s.adjustmentNote):'')+'</span>';
+            h+='<span class="prop-val" style="color:'+_adjCol+'">'+_adjAmt+'</span></div>';
+          }
+          if(parseFloat(s.inHomeFee)>0){
+            h+='<div class="prop-row"><span class="prop-lbl">In-home lesson fee</span><span class="prop-val">+$'+Math.round(parseFloat(s.inHomeFee))+'/mo</span></div>';
+          }
+          h+='<div class="prop-row" style="margin-top:.4rem;padding-top:.7rem;border-top:1.5px solid var(--border2);border-bottom:none">';
+          h+='<span class="prop-lbl" style="font-weight:700;color:var(--text)">Monthly tuition</span>';
+          h+='<span class="price-big">'+displayPriceStr+'</span></div>';
+          if(s.isProrated&&parseFloat(s.proratedFirstMonth)>0){
+            h+='<div class="prop-row" style="border-bottom:none"><span class="prop-lbl">First month (prorated)</span>';
+            h+='<span class="prop-val">$'+Math.round(parseFloat(s.proratedFirstMonth))+'</span></div>';
+          }
+          if(parseFloat(s.subMonths)>0||parseFloat(s.lessonCount)>0){
+            var _yp=[];
+            if(parseFloat(s.subMonths)>0) _yp.push(Math.round(parseFloat(s.subMonths))+' billing months');
+            if(parseFloat(s.lessonCount)>0) _yp.push(Math.round(parseFloat(s.lessonCount))+' lessons scheduled');
+            h+='<div style="font-size:11px;color:var(--text4);margin-top:.35rem;text-align:right">'+_yp.join(' \u00b7 ')+'</div>';
+          }
+
+          // Next steps / managing enrollment
+          h+='<div style="border-top:1px solid var(--border);margin-top:1rem;padding-top:1rem">';
+          if(isFullyEnrolled){
+            h+='<div style="font-size:11px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem">Managing Your Enrollment</div>';
+            h+='<p style="font-size:13px;color:var(--text2);margin-bottom:.75rem">Your lesson schedule and billing live in your Keylab Opus account. Log in to view your full schedule, update your payment method, or cancel an individual lesson.</p>';
+            h+='<a href="https://keylab.opus1.io/login" target="_blank" class="btn btn-p btn-sm" style="display:inline-flex">Log in to Opus \u2192</a>';
+            h+='<p style="font-size:11px;color:var(--text4);margin-top:.75rem">Keylab uses two systems \u2014 this portal for enrollment, communication, and resources; Opus for your lesson schedule and billing.</p>';
+          } else {
+            h+='<div style="font-size:11px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem">What Happens Next</div>';
+            h+='<p style="font-size:13px;color:var(--text2)">We\u2019re finishing up \u2014 scheduling '+esc(firstName)+'\u2019s lessons, processing the first payment, and setting up monthly billing. We\u2019ll be in touch once everything is confirmed.</p>';
+          }
+          h+='</div>';
+
+          h+='</div>';
+        }
       } else if(hasPrice&&!isAccepted&&!isFullyEnrolled){
         h+='<div class="card"><h2>Lesson Policies</h2>';
         h+='<p>Please read through our policies below. Once you\'ve reviewed everything, accept and sign at the bottom. Once accepted, we will finish processing your enrollment on the admin side by scheduling your lessons for the school year, processing your first monthly payment, and setting up automatic monthly payments using your card on file. If you do not have a payment method on file, we\'ll contact you with instructions on how to add that to your account.</p>';
@@ -1983,7 +1984,7 @@ function togglePolicy(stuId){
 function rPolicyCollapsible(forceOpen, isInHome, stuId){
   var open=forceOpen||(stuId?_tcPolicyOpen[stuId]:_policyOpen);
   var toggleArg=stuId?'&apos;'+stuId+'&apos;':'';
-  var h='<button class="btn btn-s btn-sm" onclick="togglePolicy('+toggleArg+')" style="margin-bottom:.75rem">'+
+  var h='<button class="btn btn-p btn-sm" onclick="togglePolicy('+toggleArg+')" style="margin-bottom:.75rem">'+
     (open?'Hide policies':'Click to view policies')+'</button>';
   if(open){
     // If this student has an accepted policy snapshot, show it (immutable legal record)

@@ -894,10 +894,13 @@ function _rHomeSelfRelease(s){
   var granted=!!s.selfReleaseGrantedAt;
   var open=!!_srOpen[s.studentId];
   var h='';
-  h+='<div style="border-top:.5px solid var(--border);margin-top:.75rem;padding-top:.5rem">';
-  h+='<div onclick="_srOpen[&apos;'+esc(s.studentId)+'&apos;]=!_srOpen[&apos;'+esc(s.studentId)+'&apos;];render()" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:.25rem 0">';
-  h+='<span style="font-size:13px;font-weight:500;color:var(--text2)">Unaccompanied arrival &amp; departure</span>';
-  h+='<span style="font-size:13px;color:var(--text4)">'+(open?'&#8249;':'&#8250;')+'</span>';
+  h+='<div style="border-top:1px solid var(--border);margin-top:1rem">';
+  h+='<div onclick="_srOpen[&apos;'+esc(s.studentId)+'&apos;]=!_srOpen[&apos;'+esc(s.studentId)+'&apos;];render()" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:.85rem 0;gap:10px">';
+  h+='<div style="display:flex;align-items:center;gap:8px">';
+  h+='<span style="font-size:14px;font-weight:600;color:var(--text)">Self-release</span>';
+  if(granted) h+='<span class="chip c-good" style="font-size:10px;padding:2px 7px">Granted</span>';
+  h+='</div>';
+  h+='<span style="font-size:18px;color:var(--text4);line-height:1">'+(open?'\u2039':'\u203a')+'</span>';
   h+='</div>';
   if(open){
     h+='<div style="padding:.5rem 0 .25rem">';

@@ -1086,7 +1086,19 @@ function rScheduling(){
   }
 
   if(!SC.studentId){
-    return h+'<p style="color:var(--text3)">Please go back to the home tab and select a child to submit availability for.</p>';
+    var _btnHtml='<div style="margin-top:.5rem">';
+    if(students.length>1){
+      _btnHtml+='<p style="font-size:13px;color:var(--text3);margin-bottom:.75rem">Select a child to submit availability for:</p>';
+      students.forEach(function(stu){
+        _btnHtml+='<button class="btn btn-p" style="margin-bottom:.5rem;margin-right:.5rem" onclick="_gotoSchedulingForStudent(&apos;'+esc(stu.studentId)+'&apos;)">'+esc(stu.studentName)+'</button>';
+      });
+    } else if(students.length===1){
+      _btnHtml+='<button class="btn btn-p" onclick="_gotoSchedulingForStudent(&apos;'+esc(students[0].studentId)+'&apos;)">Submit availability for '+esc(students[0].studentName)+'</button>';
+    } else {
+      _btnHtml+='<button class="btn btn-s" onclick="TAB=&apos;home&apos;;render()">Back to home</button>';
+    }
+    _btnHtml+='</div>';
+    return h+_btnHtml;
   }
 
   // Loading submission from server — show spinner, never flash form
@@ -1780,10 +1792,6 @@ function rEnrollment(){
       if((isFullyEnrolled||isAccepted)&&_exp){
         h+='<div class="card">';
 
-        // Document header
-        h+='<div style="font-size:11px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.75rem">Enrollment Agreement</div>';
-        h+='<div style="font-size:11px;color:var(--text4);margin-bottom:1rem">Keylab Children\u2019s Lessons \u00b7 '+esc(s.instrument||'')+(s.teacher?' \u00b7 '+esc(s.teacher):'')+'</div>';
-
         // Tuition breakdown
         h+='<div style="font-size:11px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem">Tuition</div>';
         if(parseFloat(s.monthlyRaw)>0&&Math.round(parseFloat(s.monthlyRaw))!==Math.round(parseFloat(s.monthlyPrice))){
@@ -1845,13 +1853,12 @@ function rEnrollment(){
         h+=rPolicyCollapsible(false, isInHome, sid);
         h+='</div>';
 
-        // Signature block at bottom
-        h+='<div style="border-top:2px solid var(--border2);margin-top:1.5rem;padding-top:1.25rem">';
-        h+='<div style="font-size:11px;color:var(--text4);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.5rem">Electronically Accepted</div>';
-        h+='<div style="font-size:15px;font-weight:600;color:var(--acc)">'+(s.tcAcceptedName?esc(s.tcAcceptedName):'&mdash;')+'</div>';
-        h+='<div style="font-size:12px;color:var(--text4);margin-top:3px">'+(s.tcAcceptedAt?esc(String(s.tcAcceptedAt)):'')+'</div>';
-        h+='<div style="font-size:11px;color:var(--text5);margin-top:.4rem">By submitting electronically, the signer acknowledged having read and accepted Keylab\u2019s enrollment policies and authorized billing per the proposal details above.</div>';
-        h+='</div>';
+        // Acceptance confirmation at bottom
+        if(s.tcAcceptedAt||s.tcAcceptedName){
+          h+='<div class="msg ms" style="margin-top:1.25rem">';
+          h+='\u2713 Proposal accepted'+(s.tcAcceptedName?' by '+esc(s.tcAcceptedName):'')+
+            (s.tcAcceptedAt?' on '+esc(String(s.tcAcceptedAt)):'')+'.</div>';
+        }
 
         h+='</div>';
       } else if(hasPrice){
@@ -1882,7 +1889,7 @@ function rEnrollment(){
       var lbl=phaseLabel(ph, s.availabilitySubmitted, avOpen, s.tcAcceptedAt);
       h+='<div class="card">';
       h+='<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:.5rem">';
-      if(students.length===1) h+='<div style="font-weight:600;font-size:15px">'+esc(s.studentName)+'</div>';
+      if(students.length===1) h+='<span class="stu-name" style="font-size:18px;margin-bottom:.4rem;display:inline-block">'+esc(s.studentName)+'</span>';
       h+='<span class="chip '+esc(lbl.cls)+'">'+esc(lbl.text)+'</span>';
       h+='</div>';
       if(ph==='Holding'){

@@ -894,21 +894,32 @@ function _rHomeQuickActions(){
 }
 
 function _rHomeSelfRelease(s){
+  // Collapsible section rendered INSIDE the dashboard card (no outer card wrapper)
   var age=parseInt(s.age,10);
   if(isNaN(age)||age<10) return '';
   var granted=!!s.selfReleaseGrantedAt;
-  var h='<div class="card"><h2>Unaccompanied Arrival &amp; Departure</h2>';
-  if(granted){
-    h+='<div class="msg ms">\u2713 Permission granted \u2014 '+esc(s.studentName)+' may arrive and depart unaccompanied.</div>';
-  } else {
-    h+='<p style="font-size:13px;color:var(--text2);margin-bottom:.75rem">If you would like '+esc(s.studentName)+' to be able to arrive at and depart from lessons without a parent or guardian present, check the box below and submit. This is optional.</p>';
-    h+='<div class="agree-box">'+
-      '<input type="checkbox" id="sr-hm-chk-'+esc(s.studentId)+'" onchange="document.getElementById(&apos;sr-hm-btn-'+esc(s.studentId)+'&apos;).disabled=!this.checked">'+
-      '<label class="agree-lbl" for="sr-hm-chk-'+esc(s.studentId)+'">I grant permission for '+esc(s.studentName)+' to arrive at and depart from Keylab unaccompanied. I acknowledge that Keylab and its instructors assume no supervisory responsibility or liability for the student outside of their designated lesson time. I accept full responsibility for the student\u2019s transportation, safety, and conduct prior to, during, and immediately following their scheduled lesson.</label>'+
-    '</div>';
-    h+=_srBusy[s.studentId]
-      ?'<button class="btn btn-p btn-full" disabled><span class="spin">\u21bb</span> Submitting...</button>'
-      :'<button id="sr-hm-btn-'+esc(s.studentId)+'" class="btn btn-p btn-full" disabled onclick="doGrantSelfRelease(&apos;'+esc(s.studentId)+'&apos;)">Grant Permission</button>';
+  var open=!!_srOpen[s.studentId];
+  var h='';
+  h+='<div style="border-top:.5px solid var(--border);margin-top:.75rem;padding-top:.5rem">';
+  h+='<div onclick="_srOpen[&apos;'+esc(s.studentId)+'&apos;]=!_srOpen[&apos;'+esc(s.studentId)+'&apos;];render()" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:.25rem 0">';
+  h+='<span style="font-size:13px;font-weight:500;color:var(--text2)">Unaccompanied arrival &amp; departure</span>';
+  h+='<span style="font-size:13px;color:var(--text4)">'+(open?'&#8249;':'&#8250;')+'</span>';
+  h+='</div>';
+  if(open){
+    h+='<div style="padding:.5rem 0 .25rem">';
+    if(granted){
+      h+='<div class="msg ms">\u2713 Permission granted \u2014 '+esc(s.studentName)+' may arrive and depart unaccompanied.</div>';
+    } else {
+      h+='<p style="font-size:13px;color:var(--text2);margin-bottom:.75rem">If you would like '+esc(s.studentName)+' to be able to arrive at and depart from lessons without a parent or guardian present, check the box below and submit. This is optional.</p>';
+      h+='<div class="agree-box">'+
+        '<input type="checkbox" id="sr-hm-chk-'+esc(s.studentId)+'" onchange="document.getElementById(&apos;sr-hm-btn-'+esc(s.studentId)+'&apos;).disabled=!this.checked">'+
+        '<label class="agree-lbl" for="sr-hm-chk-'+esc(s.studentId)+'">I grant permission for '+esc(s.studentName)+' to arrive at and depart from Keylab unaccompanied. I acknowledge that Keylab and its instructors assume no supervisory responsibility or liability for the student outside of their designated lesson time. I accept full responsibility for the student\u2019s transportation, safety, and conduct prior to, during, and immediately following their scheduled lesson.</label>'+
+      '</div>';
+      h+=_srBusy[s.studentId]
+        ?'<button class="btn btn-p btn-full" disabled><span class="spin">\u21bb</span> Submitting...</button>'
+        :'<button id="sr-hm-btn-'+esc(s.studentId)+'" class="btn btn-p btn-full" disabled onclick="doGrantSelfRelease(&apos;'+esc(s.studentId)+'&apos;)">Grant Permission</button>';
+    }
+    h+='</div>';
   }
   h+='</div>';
   return h;
@@ -926,7 +937,6 @@ function rHome(){
   }
   var avOpen=isTruthy(publicCfg.availabilityOpen);
   var locMap={studio:'Keylab \u00b7 94 Luquer St, 11231','in-home':'In-home',virtual:'Virtual'};
-  var hadDashboard=false;
   students.forEach(function(s){
     var lbl=phaseLabel(s.phase, s.availabilitySubmitted, avOpen, s.tcAcceptedAt);
     var ph=s.phase||'';
@@ -941,7 +951,6 @@ function rHome(){
     var showDashboard=(isEnrolled||(hasProp&&isAccepted));
 
     if(showDashboard){
-      hadDashboard=true;
       // ── Dashboard: accepted or enrolled ──
       h+='<div class="card">';
       h+='<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:.75rem">';
@@ -962,8 +971,9 @@ function rHome(){
         h+='<div class="msg ms">\u2713 Thank you for accepting your proposal! We will finish processing your enrollment by scheduling '+esc(firstName)+'\u2019s lessons for the school year, processing your first monthly payment, and setting up automatic monthly payments using your card on file. If you do not have a payment method on file, we\u2019ll contact you with instructions on how to add that to your account. We\u2019ll let you know once your enrollment is complete and '+esc(firstName)+'\u2019s lessons have been scheduled. Scroll down for quick links and helpful information about managing your child\u2019s lessons.</div>';
       }
       h+='<div style="margin-top:.6rem"><button class="btn btn-s btn-sm" onclick="gotoEnrollment()">View Proposal &amp; Policies</button></div>';
-      h+='</div>';
       h+=_rHomeSelfRelease(s);
+      h+='</div>';
+      h+=_rHomeQuickActions();
     } else {
       // ── Non-dashboard states ──
       h+='<div class="card-stu">';
@@ -1009,7 +1019,6 @@ function rHome(){
       h+='</div>';
     }
   });
-  if(hadDashboard) h+=_rHomeQuickActions();
   h+='<hr class="divider">';
   h+='<p style="font-size:12px;color:var(--text4)">Questions? Email us at <a href="mailto:info@keylab.nyc">info@keylab.nyc</a>.</p>';
   return h;
@@ -1026,34 +1035,41 @@ function rScheduling(){
     return '<div style="text-align:center;padding:3rem"><span class="spin" style="font-size:20px">\u21bb</span></div>';
   }
 
-  // Determine selected student first
-  var _scStu=null;
-  for(var _i=0;_i<students.length;_i++){ if(students[_i].studentId===SC.studentId){_scStu=students[_i];break;} }
-
-  // If selected student is enrolled/in enrollment change, show their schedule (read-only)
-  if(_scStu && (_scStu.phase==='Enrolled'||_scStu.phase==='Enrollment Change')){
+  // Enrolled families — read-only lesson summary, no availability form
+  var anyEnrolled=students.some(function(s){
+    var ph=s.phase||'';
+    return ph==='Enrolled'||ph==='Enrollment Change';
+  });
+  if(anyEnrolled){
     var locMap={studio:'Keylab \u00b7 94 Luquer St, 11231','in-home':'In-home',virtual:'Virtual'};
     var h='<h1>Your Schedule</h1>';
-    if(students.length>1) h+='<p style="font-size:13px;color:var(--text3);margin-bottom:1rem">\u2713 '+esc(_scStu.studentName)+' is enrolled. <a href="#" onclick="TAB=&apos;home&apos;;render();return false" style="color:var(--acc)">Back to home</a></p>';
-    h+='<div class="card">';
-    var rows=[
-      ['Instrument',_scStu.instrument],
-      ['Teacher',_scStu.teacher],
-      ['Day',_scStu.day],
-      ['Time',_scStu.time||null],
-      ['Duration',_scStu.durationBase?_scStu.durationBase+' minutes':null],
-      ['Location',locMap[_scStu.lessonLocation]||_scStu.lessonLocation||null],
-      ['Start Date',_scStu.startDate?_fmtFamilyDate(_scStu.startDate):null]
-    ];
-    rows.forEach(function(row){
-      if(!row[1]) return;
-      h+='<div class="prop-row"><span class="prop-lbl">'+esc(row[0])+'</span><span class="prop-val">'+esc(row[1])+'</span></div>';
+    students.forEach(function(s){
+      var ph=s.phase||'';
+      var isEnrolled=(ph==='Enrolled'||ph==='Enrollment Change');
+      if(!isEnrolled) return;
+      if(students.length>1) h+='<h2 style="margin-top:1.25rem">'+esc(s.studentName)+'</h2>';
+      h+='<div class="card">';
+      var rows=[
+        ['Instrument',s.instrument],
+        ['Teacher',s.teacher],
+        ['Day',s.day],
+        ['Time',s.time||null],
+        ['Duration',s.durationBase?s.durationBase+' minutes':null],
+        ['Location',locMap[s.lessonLocation]||s.lessonLocation||null],
+        ['Start Date',s.startDate?_fmtFamilyDate(s.startDate):null]
+      ];
+      rows.forEach(function(row){
+        if(!row[1]) return;
+        h+='<div class="prop-row"><span class="prop-lbl">'+esc(row[0])+'</span><span class="prop-val">'+esc(row[1])+'</span></div>';
+      });
+      h+='</div>';
     });
-    h+='</div>';
     h+='<p style="font-size:12px;color:var(--text4)">Questions about your schedule? Email us at <a href="mailto:info@keylab.nyc">info@keylab.nyc</a>.</p>';
     return h;
   }
-
+  // Determine enrollmentType for the selected student
+  var _scStu=null;
+  for(var _i=0;_i<students.length;_i++){ if(students[_i].studentId===SC.studentId){_scStu=students[_i];break;} }
   var _enType=(_scStu&&_scStu.enrollmentType)||'';
   var _isReturning=_enType.toLowerCase().indexOf('returning')===0;
 
@@ -1154,12 +1170,11 @@ function rSplitLessonSection(){
   var has60=SC.durations.indexOf('60')>-1;
   if(!has45&&!has60) return '';
   var h='';
-  h+='<div class="card" style="margin-top:.75rem">';
-  h+='<h2 style="margin-bottom:.4rem">Split Lesson</h2>';
-  h+='<div class="agree-box" style="margin-bottom:.5rem">';
+  h+='<div style="display:flex;align-items:center;padding:.6rem 0 .5rem;border-bottom:.5px solid var(--border);margin-bottom:.75rem">';
+  h+='<div class="agree-box" style="margin:0">';
   h+='<input type="checkbox" id="split-chk"'+(SC.splitLesson?' checked':'')+' onchange="SC.splitLesson=this.checked;render()">';
-  h+='<label class="agree-lbl" for="split-chk">Select this checkbox if you would like to split the duration between two children, and enter the 2nd child\'s information below.</label>';
-  h+='</div>';
+  h+='<label class="agree-lbl" for="split-chk" style="font-size:13px;font-weight:500">Split lesson between two children</label>';
+  h+='</div></div>';
   if(SC.splitLesson){
     if(has60){
       h+='<div class="note" style="margin-bottom:.75rem">Please note: if you\'d like to split a 60-minute slot evenly (30 minutes per child), this will be scheduled as two separate back-to-back lessons and priced accordingly \u2014 not as a single shared lesson. If you\'d like an uneven split within one lesson, like splitting a 60 minute time slot into a 45 minute lesson and a short 15 minute lesson, a monthly surcharge of $30 will be added to the monthly price.</div>';
@@ -1187,7 +1202,6 @@ function rSplitLessonSection(){
     h+='<div class="field"><label>Tell us about your 2nd child<span class="req">*</span></label>';
     h+='<textarea placeholder="Please tell us about your 2nd child and what you are looking for in a lesson experience for them." oninput="SC.splitChild.notes=this.value">'+esc(SC.splitChild.notes)+'</textarea></div>';
   }
-  h+='</div>';
   return h;
 }
 
@@ -1422,10 +1436,10 @@ function rSchedForm(){
     h+='<p style="font-size:13px;color:var(--text2);margin-bottom:.6rem">Add the days and time windows that work for your family. More options = better chances of a great fit.</p>';
     h+='<div style="background:var(--bg3);border-radius:var(--r);padding:.55rem .75rem;margin-bottom:.75rem;font-size:12px;color:var(--text3);line-height:1.8">';
     h+='Label each window so we know how to prioritize: &nbsp;';
-    h+='<strong style="color:var(--gt)">Preferred</strong> &rarr; ';
-    h+='<strong style="color:var(--it)">Next Best</strong> &rarr; ';
-    h+='<strong style="color:var(--at)">Possible</strong> &rarr; ';
-    h+='<strong style="color:var(--text4)">Least Preferred</strong>';
+    h+='<span class="pb p-pref" style="font-size:11px;pointer-events:none">Preferred</span> &rarr; ';
+    h+='<span class="pb p-next" style="font-size:11px;pointer-events:none">Next Best</span> &rarr; ';
+    h+='<span class="pb p-poss" style="font-size:11px;pointer-events:none">Possible</span> &rarr; ';
+    h+='<span class="pb p-least" style="font-size:11px;pointer-events:none">Least Preferred</span>';
     h+='</div>';
   } else {
     h+='<p style="font-size:13px;color:var(--text3);margin-bottom:.75rem">Click Edit to change a time window, or Delete to remove it.</p>';

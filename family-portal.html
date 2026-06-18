@@ -136,10 +136,9 @@ function _fmtFamilyDate(iso){
 // login form
 var LF = (function(){
   try{
-    var n=sessionStorage.getItem('kl_name')||'';
-    var p=sessionStorage.getItem('kl_phone')||'';
-    return {name:n, phone:p};
-  } catch(e){ return {name:'', phone:''}; }
+    var e=sessionStorage.getItem('kl_email')||'';
+    return {email:e};
+  } catch(e){ return {email:''}; }
 })();
 
 // lookup
@@ -454,32 +453,26 @@ function rLogin(){
     '<p>Sign in below to access your family portal.</p>'+
     '<div class="card">'+
     '<h2>Sign In</h2>'+
-    '<div class="field"><label>Your first and last name<span class="req">*</span></label>'+
-    '<input id="ln" type="text" autocomplete="name" placeholder="e.g. Jane Smith" value="'+esc(LF.name)+'" oninput="LF.name=this.value" onkeydown="if(event.keyCode===13)doLogin()"></div>'+
-    '<div class="field"><label>Last 4 digits of your phone number<span class="req">*</span></label>'+
-    '<input id="lp" type="text" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="e.g. 3514" value="'+esc(LF.phone)+'" oninput="LF.phone=this.value.replace(/\\D/g,\'\').slice(0,4)" onkeydown="if(event.keyCode===13)doLogin()">'+
-    '<div class="hint">The phone number you used when you registered with Keylab.</div></div>'+
+    '<div class="field"><label>Your email address<span class="req">*</span></label>'+
+    '<input id="le" type="email" autocomplete="email" inputmode="email" placeholder="e.g. jane@example.com" value="'+esc(LF.email)+'" oninput="LF.email=this.value" onkeydown="if(event.keyCode===13)doLogin()"></div>'+
     btn+'</div>'+
     '<p style="font-size:13px;color:var(--text3)">New to Keylab? <a href="#" onclick="event.preventDefault();PAGE=&apos;lookup&apos;;LK={name:&apos;&apos;,matches:[],done:false};render()">Get started here.</a></p>'+
     '<p style="font-size:12px;color:var(--text4)">Having trouble logging in? Email us at <a href="mailto:info@keylab.nyc">info@keylab.nyc</a> and we\'ll get you sorted out right away.</p>';
 }
 
 function doLogin(){
-  var name=(document.getElementById('ln')||{}).value||LF.name;
-  var phone=(document.getElementById('lp')||{}).value||LF.phone;
-  LF.name=name.trim();
-  LF.phone=phone.replace(/\D/g,'').slice(0,4);
-  if(!LF.name){showMsg('Please enter your first and last name.','e');return;}
-  if(LF.phone.length!==4){showMsg('Please enter the last 4 digits of your phone number.','e');return;}
+  var email=(document.getElementById('le')||{}).value||LF.email;
+  LF.email=email.trim().toLowerCase();
+  if(!LF.email||LF.email.indexOf('@')===-1){showMsg('Please enter a valid email address.','e');return;}
   busy=true; render();
-  api({action:'familyLogin', data:{familyName:LF.name, phoneLast4:LF.phone}}, function(e,r){
+  api({action:'familyLogin', data:{familyEmail:LF.email}}, function(e,r){
     busy=false;
     if(e||!r||!r.ok){
-      showMsg(r&&r.error?r.error:'We weren\'t able to verify your information. Please check your name and phone number, or email us at info@keylab.nyc.','e');
+      showMsg(r&&r.error?r.error:'We couldn\'t find an account with that email address. Please check your email or contact us at info@keylab.nyc.','e');
       render(); return;
     }
     TOKEN=r.token; FAMILY_ID=r.familyId;
-    try{sessionStorage.setItem('kl_name',LF.name);sessionStorage.setItem('kl_phone',LF.phone);}catch(e){}
+    try{sessionStorage.setItem('kl_email',LF.email);}catch(e){}
     loadFamily();
   });
 }
@@ -534,7 +527,6 @@ function doLookup(){
 }
 
 function selectMatch(i){
-  LF.name=LK.matches[i].parent1Name;
   PAGE='login';
   showMsg('Great! Sign in below to access your enrollment portal.','s');
 }

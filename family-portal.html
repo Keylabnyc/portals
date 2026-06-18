@@ -949,8 +949,8 @@ function rHome(){
       // ── Dashboard: accepted or enrolled ──
       h+='<div class="card">';
       h+='<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:.75rem">';
-      h+='<div><div style="font-weight:600;font-size:15px">'+esc(s.studentName)+'</div>';
-      if(s.instrument) h+='<div style="font-size:12px;color:var(--text4);margin-top:2px">'+esc(s.instrument)+'</div>';
+      h+='<div><div style="font-weight:700;font-size:20px;letter-spacing:-.01em;color:var(--text)">'+esc(s.studentName)+'</div>';
+      if(s.instrument) h+='<div style="font-size:12px;color:var(--text4);margin-top:3px">'+esc(s.instrument)+'</div>';
       h+='</div><span class="chip '+lbl.cls+'">'+esc(lbl.text)+'</span></div>';
       var details=[];
       if(s.day) details.push(s.day);
@@ -973,7 +973,7 @@ function rHome(){
       // ── Non-dashboard states ──
       h+='<div class="card-stu">';
       h+='<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:.6rem">';
-      h+='<div><div style="font-weight:600;font-size:15px">'+esc(s.studentName)+'</div>';
+      h+='<div><div style="font-weight:700;font-size:20px;letter-spacing:-.01em;color:var(--text)">'+esc(s.studentName)+'</div>';
       h+=_rInstrEdit(s);
       h+='</div>';
       h+='<span class="chip '+lbl.cls+'">'+esc(lbl.text)+'</span>';
@@ -1721,7 +1721,9 @@ function rEnrollment(){
 
     // ── Per-student section header ──
     if(students.length>1){
-      h+='<h2 style="margin-top:1.5rem;margin-bottom:.75rem">'+esc(s.studentName||'Student')+'</h2>';
+      h+='<div style="margin-top:2.5rem;margin-bottom:1rem;border-top:2px solid var(--border2);padding-top:1.25rem">';
+      h+='<div style="font-size:22px;font-weight:700;color:var(--text);letter-spacing:-.01em;line-height:1.1">'+esc(s.studentName||'Student')+'</div>';
+      h+='</div>';
     }
 
     if(isProposalPhase){
@@ -1882,7 +1884,7 @@ function rPolicyCollapsible(forceOpen, isInHome, stuId){
   var open=forceOpen||(stuId?_tcPolicyOpen[stuId]:_policyOpen);
   var toggleArg=stuId?'&apos;'+stuId+'&apos;':'';
   var h='<button class="btn btn-s btn-sm" onclick="togglePolicy('+toggleArg+')" style="margin-bottom:.75rem">'+
-    (open?'Hide policies':'View policies')+'</button>';
+    (open?'Hide policies':'Click to view policies')+'</button>';
   if(open){
     // If this student has an accepted policy snapshot, show it (immutable legal record)
     var stu=stuId?students.filter(function(s){return s.studentId===stuId;})[0]:null;

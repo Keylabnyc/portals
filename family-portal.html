@@ -27,8 +27,8 @@ h2{font-size:10px;font-weight:600;color:var(--acc);text-transform:uppercase;lett
 p{color:var(--text3);margin-bottom:.75rem;line-height:1.65;font-size:13px}
 a{color:var(--bt);text-decoration:none}
 a:hover{text-decoration:underline}
-.card{background:rgba(255,255,255,.35);border:1px solid var(--border);border-radius:var(--rl);padding:1.25rem;margin-bottom:1rem}
-.card-stu{background:rgba(255,255,255,.35);border:1px solid var(--border);border-radius:var(--rl);padding:1.1rem;margin-bottom:.75rem;position:relative}
+.card{background:rgba(255,255,255,.45);border:1px solid var(--border);border-radius:var(--rl);padding:1.25rem;margin-bottom:1rem}
+.card-stu{background:rgba(255,255,255,.55);border:1px solid var(--border);border-radius:var(--rl);padding:1.1rem;margin-bottom:.75rem;position:relative}
 .msg{padding:10px 14px;border-radius:var(--r);font-size:13px;margin-bottom:1rem;border:1px solid;line-height:1.5}
 .ms{background:var(--gbg);color:var(--gt);border-color:var(--green)}
 .me{background:var(--rbg);color:var(--rt);border-color:var(--red)}
@@ -50,10 +50,10 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 .btn-full{width:100%;justify-content:center}
 .spin{display:inline-block;animation:spin .9s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-.tabs{display:flex;gap:0;margin-bottom:2rem;border-bottom:1px solid var(--border2)}
-.tab{padding:8px 16px;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text4);background:transparent;cursor:pointer;transition:all .12s;border-bottom:2px solid transparent;margin-bottom:-1px;font-family:"DM Mono",monospace;font-weight:500}
-.tab:hover{color:var(--text2)}
-.tab.on{color:var(--acc);border-bottom-color:var(--acc);font-weight:600}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:2rem;padding:6px;background:rgba(255,255,255,.35);border:1px solid var(--border);border-radius:10px}
+.tab{padding:10px 20px;font-size:12px;text-transform:uppercase;letter-spacing:.07em;color:var(--text4);background:transparent;cursor:pointer;transition:all .15s;border-radius:7px;font-family:"DM Mono",monospace;font-weight:600;flex:1;text-align:center;border:1px solid transparent}
+.tab:hover{color:var(--text);background:rgba(255,255,255,.5)}
+.tab.on{color:#fff;background:var(--acc);border-color:var(--acc)}
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
 .prop-row{display:flex;justify-content:space-between;align-items:baseline;padding:6px 0;border-bottom:.5px solid var(--border)}
@@ -61,7 +61,7 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 .prop-lbl{font-size:11px;color:var(--text4);text-transform:uppercase;letter-spacing:.06em;font-family:"DM Mono",monospace}
 .prop-val{font-size:13px;color:var(--text);text-align:right;font-weight:500}
 .price-big{font-size:26px;font-weight:300;font-family:"Open Sans",sans-serif;color:var(--acc)}
-.tc-box{background:rgba(255,255,255,.3);border:1px solid var(--border2);border-radius:var(--r);padding:1rem;font-size:12px;color:var(--text3);line-height:1.75;margin-bottom:1rem;max-height:55vh;overflow-y:auto}
+.tc-box{background:rgba(255,255,255,.3);border:1px solid var(--border2);border-radius:var(--r);padding:1rem;font-size:13px;color:var(--text2);line-height:1.85;margin-bottom:1rem;max-height:55vh;overflow-y:auto}.tc-box a{color:var(--acc);text-decoration:underline}
 .tc-box h3{font-size:10px;text-transform:uppercase;letter-spacing:.09em;color:var(--acc);margin:1rem 0 .35rem;font-family:"DM Mono",monospace}
 .tc-box h3:first-child{margin-top:0}
 .tc-box ul{padding-left:1.1rem;margin-bottom:.4rem}
@@ -103,6 +103,7 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 .est-amt{font-size:13px;font-weight:600;font-family:"Open Sans",sans-serif;color:var(--acc)}
 .est-disc{font-size:10px;color:var(--gt);margin-top:3px}
 .est-note{font-size:10px;color:var(--text5);margin-top:.4rem;line-height:1.5}
+.stu-name{display:inline-block;background:rgba(255,255,255,.55);border-radius:20px;padding:4px 14px;color:var(--acc);font-size:22px;font-weight:700;letter-spacing:-.01em;line-height:1.25;border:1px solid rgba(30,58,110,.12)}
 </style>
 </head>
 <body>
@@ -894,14 +895,18 @@ function _rHomeSelfRelease(s){
   var granted=!!s.selfReleaseGrantedAt;
   var open=!!_srOpen[s.studentId];
   var h='';
-  h+='<div style="border-top:1px solid var(--border);margin-top:1rem">';
-  h+='<div onclick="_srOpen[&apos;'+esc(s.studentId)+'&apos;]=!_srOpen[&apos;'+esc(s.studentId)+'&apos;];render()" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:.85rem 0;gap:10px">';
-  h+='<div style="display:flex;align-items:center;gap:8px">';
-  h+='<span style="font-size:14px;font-weight:600;color:var(--text)">Self-release</span>';
-  if(granted) h+='<span class="chip c-good" style="font-size:10px;padding:2px 7px">Granted</span>';
-  h+='</div>';
-  h+='<span style="font-size:18px;color:var(--text4);line-height:1">'+(open?'\u2039':'\u203a')+'</span>';
-  h+='</div>';
+  h+='<div style="border-top:1px solid var(--border);margin-top:1rem;padding:.75rem 0">';
+  if(granted){
+    h+='<div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer" onclick="_srOpen[&apos;'+esc(s.studentId)+'&apos;]=!_srOpen[&apos;'+esc(s.studentId)+'&apos;];render()">';
+    h+='<div style="display:flex;align-items:center;gap:8px">';
+    h+='<span style="font-size:13px;font-weight:600;color:var(--text)">Self-release</span>';
+    h+='<span class="chip c-good" style="font-size:10px;padding:2px 7px">Granted</span>';
+    h+='</div>';
+    h+='<span style="font-size:16px;color:var(--text4)">'+(open?'\u2039':'\u203a')+'</span>';
+    h+='</div>';
+  } else {
+    h+='<button class="btn btn-s" style="width:100%;justify-content:center;padding:11px 16px;font-size:12px;border-radius:20px" onclick="_srOpen[&apos;'+esc(s.studentId)+'&apos;]=!_srOpen[&apos;'+esc(s.studentId)+'&apos;];render()">Authorize self-release (for ages 10 and up)</button>';
+  }
   if(open){
     h+='<div style="padding:.5rem 0 .25rem">';
     if(granted){
@@ -952,8 +957,8 @@ function rHome(){
       // ── Dashboard: accepted or enrolled ──
       h+='<div class="card">';
       h+='<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:.75rem">';
-      h+='<div><div style="font-weight:700;font-size:20px;letter-spacing:-.01em;color:var(--text)">'+esc(s.studentName)+'</div>';
-      if(s.instrument) h+='<div style="font-size:12px;color:var(--text4);margin-top:3px">'+esc(s.instrument)+'</div>';
+      h+='<div><span class="stu-name" style="font-size:18px">'+esc(s.studentName)+'</span>';
+      if(s.instrument) h+='<div style="font-size:12px;color:var(--text4);margin-top:5px">'+esc(s.instrument)+'</div>';
       h+='</div><span class="chip '+lbl.cls+'">'+esc(lbl.text)+'</span></div>';
       var details=[];
       if(s.day) details.push(s.day);
@@ -976,7 +981,7 @@ function rHome(){
       // ── Non-dashboard states ──
       h+='<div class="card-stu">';
       h+='<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:.6rem">';
-      h+='<div><div style="font-weight:700;font-size:20px;letter-spacing:-.01em;color:var(--text)">'+esc(s.studentName)+'</div>';
+      h+='<div><span class="stu-name" style="font-size:18px">'+esc(s.studentName)+'</span>';
       h+=_rInstrEdit(s);
       h+='</div>';
       h+='<span class="chip '+lbl.cls+'">'+esc(lbl.text)+'</span>';
@@ -1725,7 +1730,7 @@ function rEnrollment(){
     // ── Per-student section header ──
     if(students.length>1){
       h+='<div style="margin-top:2.5rem;margin-bottom:1rem;border-top:2px solid var(--border2);padding-top:1.25rem">';
-      h+='<div style="font-size:22px;font-weight:700;color:var(--text);letter-spacing:-.01em;line-height:1.1">'+esc(s.studentName||'Student')+'</div>';
+      h+='<span class="stu-name">'+esc(s.studentName||'Student')+'</span>';
       h+='</div>';
     }
 
@@ -1742,6 +1747,7 @@ function rEnrollment(){
         statusChip='<span class="chip c-good" style="margin-bottom:.75rem;display:inline-block">Enrollment confirmed</span>';
       }
 
+      var _exp=!!_enrExpanded[sid];
       h+='<div class="card">';
       if(statusChip) h+=statusChip;
       var rows=[
@@ -1762,17 +1768,21 @@ function rEnrollment(){
           '<span class="prop-lbl">Monthly Tuition</span><span class="price-big">'+displayPriceStr+'</span></div>';
         if(parseFloat(s.inHomeFee)>0) h+='<div style="font-size:11px;color:var(--text4);text-align:right;margin-top:2px">Includes $'+esc(String(s.inHomeFee))+'/mo in-home fee</div>';
       }
+      if(isAccepted||isFullyEnrolled){
+        h+='<div style="margin-top:1rem;border-top:1px solid var(--border);padding-top:.85rem">';
+        h+='<button class="btn btn-s btn-sm" onclick="_enrExpanded[&apos;'+esc(sid)+'&apos;]=!_enrExpanded[&apos;'+esc(sid)+'&apos;];render()">'+(_exp?'Hide details':'Enrollment details')+'</button>';
+        h+='</div>';
+      }
       h+='</div>';
 
       // ── Policies + acceptance section ──
       var tc=_tcState(sid);
-      if(isFullyEnrolled||isAccepted){
+      if((isFullyEnrolled||isAccepted)&&_exp){
         h+='<div class="card">';
 
-        // Accepted proposal header
-        h+='<div style="font-size:11px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.6rem">Accepted Proposal</div>';
-        h+='<div class="msg ms" style="margin-bottom:1.1rem">\u2713 Proposal accepted'+(s.tcAcceptedName?' by '+esc(s.tcAcceptedName):'')+
-          (s.tcAcceptedAt?' on '+esc(String(s.tcAcceptedAt)):'')+'.</div>';
+        // Document header
+        h+='<div style="font-size:11px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.75rem">Enrollment Agreement</div>';
+        h+='<div style="font-size:11px;color:var(--text4);margin-bottom:1rem">Keylab Children\u2019s Lessons \u00b7 '+esc(s.instrument||'')+(s.teacher?' \u00b7 '+esc(s.teacher):'')+'</div>';
 
         // Tuition breakdown
         h+='<div style="font-size:11px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem">Tuition</div>';
@@ -1830,9 +1840,17 @@ function rEnrollment(){
         h+='</div>';
 
         // Policies
-        h+='<div style="border-top:1px solid var(--border);margin-top:1rem;padding-top:.25rem">';
-        h+='<div style="font-size:11px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.08em;margin:.75rem 0 .5rem">Policies You Agreed To</div>';
+        h+='<div style="border-top:1px solid var(--border);margin-top:1.25rem;padding-top:.25rem">';
+        h+='<div style="font-size:11px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.08em;margin:.75rem 0 .5rem">Policies Agreed To</div>';
         h+=rPolicyCollapsible(false, isInHome, sid);
+        h+='</div>';
+
+        // Signature block at bottom
+        h+='<div style="border-top:2px solid var(--border2);margin-top:1.5rem;padding-top:1.25rem">';
+        h+='<div style="font-size:11px;color:var(--text4);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.5rem">Electronically Accepted</div>';
+        h+='<div style="font-size:15px;font-weight:600;color:var(--acc)">'+(s.tcAcceptedName?esc(s.tcAcceptedName):'&mdash;')+'</div>';
+        h+='<div style="font-size:12px;color:var(--text4);margin-top:3px">'+(s.tcAcceptedAt?esc(String(s.tcAcceptedAt)):'')+'</div>';
+        h+='<div style="font-size:11px;color:var(--text5);margin-top:.4rem">By submitting electronically, the signer acknowledged having read and accepted Keylab\u2019s enrollment policies and authorized billing per the proposal details above.</div>';
         h+='</div>';
 
         h+='</div>';
@@ -1931,6 +1949,7 @@ function doGrantSelfRelease(studentId){
 }
 
 var _policyOpen=false;
+var _enrExpanded={};
 function togglePolicy(stuId){
   if(stuId){_tcPolicyOpen[stuId]=!_tcPolicyOpen[stuId];}
   else{_policyOpen=!_policyOpen;}

@@ -1763,6 +1763,10 @@ function rEnrollment(){
       var tc=_tcState(sid);
       if(isFullyEnrolled){
         h+='<div class="card">';
+        if(s.tcAcceptedAt||s.tcAcceptedName){
+          h+='<div class="msg ms">\u2713 Policies accepted'+(s.tcAcceptedName?' by '+esc(s.tcAcceptedName):'')+
+            (s.tcAcceptedAt?' on '+esc(String(s.tcAcceptedAt)):'')+'.</div>';
+        }
         h+='<p style="font-size:12px;color:var(--text4);margin-bottom:.5rem">The policies you agreed to are below for your records.</p>';
         h+=rPolicyCollapsible(false, isInHome, sid);
         h+='</div>';

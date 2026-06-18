@@ -1700,121 +1700,134 @@ function doSubmitSched(){
 // ENROLLMENT TAB
 // ============================================================
 function rEnrollment(){
-  var h='';
+  var h='<h1>Enrollment</h1>';
   if(_familyLoading){
-    return '<h1>Enrollment</h1><div style="text-align:center;padding:3rem"><span class="spin" style="font-size:20px">\u21bb</span></div>';
+    return h+'<div style="text-align:center;padding:3rem"><span class="spin" style="font-size:20px">\u21bb</span></div>';
   }
   if(!students.length){
-    return '<h1>Enrollment</h1><div class="card"><p style="color:var(--text3)">Nothing here yet. We\'ll update this as soon as your enrollment details are ready.</p></div>';
+    return h+'<div class="card"><p style="color:var(--text3)">Nothing here yet. We\'ll update this as soon as your enrollment details are ready.</p></div>';
   }
 
   var locMap={studio:'Keylab \u00b7 94 Luquer St, 11231','in-home':'In-home',virtual:'Virtual'};
-  var anyRendered=false;
+  var avOpen=isTruthy(publicCfg.availabilityOpen);
 
   students.forEach(function(s){
     var ph=s.phase||'';
-    var isProposalPhase=ph==='Proposal'||ph==='Confirmed to Enroll'||
-      ph==='Enrolled'||ph==='Enrollment Change';
-    // Gate: only show enrollment content when admin has sent a proposal (phase-gated).
-    // Never show based on monthlyPrice alone — price may exist before proposal is sent.
-    if(!isProposalPhase) return;
-    anyRendered=true;
-
     var sid=s.studentId;
-    var tc=_tcState(sid);
     var firstName=s.studentName?(s.studentName.trim().split(' ')[0]):'';
+    var isProposalPhase=ph==='Proposal'||ph==='Confirmed to Enroll'||ph==='Enrolled'||ph==='Enrollment Change';
+    var hasPrice=parseFloat(s.monthlyPrice)>0;
     var isAccepted=!!s.tcAcceptedAt;
     var isFullyEnrolled=(ph==='Enrolled');
     var isInHome=s.lessonLocation==='in-home';
     var displayPrice=parseFloat(s.monthlyPrice)||0;
     var displayPriceStr=displayPrice>0?'$'+displayPrice.toFixed(0):'--';
 
-    h+='<h1>'+(firstName?esc(firstName)+'\'s Enrollment Details':'Enrollment Details')+'</h1>';
-
-    // ── Status chip ──
-    var statusChip='';
-    if(isFullyEnrolled){
-      statusChip='<span class="chip c-good" style="margin-bottom:.75rem;display:inline-block">Enrolled</span>';
-    } else if(isAccepted){
-      statusChip='<span class="chip c-info" style="margin-bottom:.75rem;display:inline-block">Policies Accepted \u2014 Enrollment Pending</span>';
-    } else if(ph==='Proposal'){
-      statusChip='<span class="chip c-good" style="margin-bottom:.75rem;display:inline-block">Proposal ready</span>';
-    } else if(ph==='Confirmed to Enroll'){
-      statusChip='<span class="chip c-good" style="margin-bottom:.75rem;display:inline-block">Enrollment confirmed</span>';
+    // ── Per-student section header ──
+    if(students.length>1){
+      h+='<h2 style="margin-top:1.5rem;margin-bottom:.75rem">'+esc(s.studentName||'Student')+'</h2>';
     }
 
-    // ── Enrollment details card ──
-    h+='<div class="card">';
-    if(statusChip) h+=statusChip;
-    var rows=[
-      ['Instrument',s.instrument],
-      ['Teacher',s.teacher],
-      ['Day',s.day],
-      ['Time',s.time],
-      ['Duration',s.durationBase?s.durationBase+' minutes':null],
-      ['Location',locMap[s.lessonLocation]||s.lessonLocation||null],
-      ['Start Date',s.startDate?_fmtFamilyDate(s.startDate):(s.startMonth?'Starting month '+s.startMonth:null)]
-    ];
-    rows.forEach(function(row){
-      if(!row[1]) return;
-      h+='<div class="prop-row"><span class="prop-lbl">'+esc(row[0])+'</span><span class="prop-val">'+esc(row[1])+'</span></div>';
-    });
-    if(hasPrice){
-      h+='<div class="prop-row" style="margin-top:.5rem;padding-top:.75rem;border-top:1px solid var(--border2);border-bottom:none">'+
-        '<span class="prop-lbl">Monthly Tuition</span><span class="price-big">'+displayPriceStr+'</span></div>';
-      if(parseFloat(s.inHomeFee)>0) h+='<div style="font-size:11px;color:var(--text4);text-align:right;margin-top:2px">Includes $'+esc(String(s.inHomeFee))+'/mo in-home fee</div>';
-    }
-    h+='</div>';
+    if(isProposalPhase){
+      // ── Full enrollment details ──
+      var statusChip='';
+      if(isFullyEnrolled){
+        statusChip='<span class="chip c-good" style="margin-bottom:.75rem;display:inline-block">Enrolled</span>';
+      } else if(isAccepted){
+        statusChip='<span class="chip c-info" style="margin-bottom:.75rem;display:inline-block">Policies Accepted \u2014 Enrollment Pending</span>';
+      } else if(ph==='Proposal'){
+        statusChip='<span class="chip c-good" style="margin-bottom:.75rem;display:inline-block">Proposal ready</span>';
+      } else if(ph==='Confirmed to Enroll'){
+        statusChip='<span class="chip c-good" style="margin-bottom:.75rem;display:inline-block">Enrollment confirmed</span>';
+      }
 
-    // ── Policies + acceptance section ──
-    if(isFullyEnrolled){
-      // Admin has confirmed enrollment — show collapsible policies for records
       h+='<div class="card">';
-      h+='<p style="font-size:12px;color:var(--text4);margin-bottom:.5rem">The policies you agreed to are below for your records.</p>';
-      h+=rPolicyCollapsible(false, isInHome, sid);
+      if(statusChip) h+=statusChip;
+      var rows=[
+        ['Instrument',s.instrument],
+        ['Teacher',s.teacher],
+        ['Day',s.day],
+        ['Time',s.time],
+        ['Duration',s.durationBase?s.durationBase+' minutes':null],
+        ['Location',locMap[s.lessonLocation]||s.lessonLocation||null],
+        ['Start Date',s.startDate?_fmtFamilyDate(s.startDate):(s.startMonth?'Starting month '+s.startMonth:null)]
+      ];
+      rows.forEach(function(row){
+        if(!row[1]) return;
+        h+='<div class="prop-row"><span class="prop-lbl">'+esc(row[0])+'</span><span class="prop-val">'+esc(row[1])+'</span></div>';
+      });
+      if(hasPrice){
+        h+='<div class="prop-row" style="margin-top:.5rem;padding-top:.75rem;border-top:1px solid var(--border2);border-bottom:none">'+
+          '<span class="prop-lbl">Monthly Tuition</span><span class="price-big">'+displayPriceStr+'</span></div>';
+        if(parseFloat(s.inHomeFee)>0) h+='<div style="font-size:11px;color:var(--text4);text-align:right;margin-top:2px">Includes $'+esc(String(s.inHomeFee))+'/mo in-home fee</div>';
+      }
       h+='</div>';
-    } else if(isAccepted){
-      // Policies signed — waiting on admin to process
-      h+='<div class="card">';
-      h+='<div class="msg ms">\u2713 Policies accepted'+(s.tcAcceptedName?' by '+esc(s.tcAcceptedName):'')+
-        (s.tcAcceptedAt?' on '+esc(String(s.tcAcceptedAt)):'')+'.</div>';
-      h+='<p>Thank you for accepting your proposal! We will finish processing your enrollment by scheduling '+esc(firstName)+'\u2019s lessons for the school year, processing your first monthly payment, and setting up automatic monthly payments using your card on file. If you do not have a payment method on file, we\u2019ll contact you with instructions on how to add that to your account. We\u2019ll let you know once your enrollment is complete and '+esc(firstName)+'\u2019s lessons have been scheduled.</p>';
-      h+='<p style="font-size:12px;color:var(--text4);margin-bottom:.5rem">The policies you agreed to are below for your records.</p>';
-      h+=rPolicyCollapsible(false, isInHome, sid);
-      h+='</div>';
-    } else if(hasPrice){
-      // Ready to accept — show per-student form
-      h+='<div class="card"><h2>Lesson Policies</h2>';
-      h+='<p>Please read through our policies below. Once you\'ve reviewed everything, accept and sign at the bottom. Once accepted, we will finish processing your enrollment on the admin side by scheduling your lessons for the school year, processing your first monthly payment, and setting up automatic monthly payments using your card on file. If you do not have a payment method on file, we\'ll contact you with instructions on how to add that to your account.</p>';
-      h+=rPolicyText(isInHome);
-      h+='<div class="agree-box" id="tc-agree-box-'+esc(sid)+'" style="'+(tc.checked?'border-color:var(--green);background:rgba(255,255,255,.5)':'')+'">'+
-        '<input type="checkbox" id="tc-chk-'+esc(sid)+'"'+(tc.checked?' checked':'')+' onchange="_tcState(&apos;'+esc(sid)+'&apos;).checked=this.checked;tcRefresh(&apos;'+esc(sid)+'&apos;)">'+
-        '<label class="agree-lbl" for="tc-chk-'+esc(sid)+'">By accepting this proposal, I acknowledge that I have read and accept Keylab\u2019s enrollment policies, and I am authorizing Keylab to schedule my child\u2019s lessons, bill my card on file for the first month of lessons, and schedule recurring automatic flat-monthly payments based on the proposal details.</label></div>';
-      var canSubmit=tc.checked&&tc.name.trim().length>0;
-      h+='<div class="field"><label>Your full name<span class="req">*</span></label>'+
-        '<input id="tc-nm-'+esc(sid)+'" type="text" placeholder="First and last name" value="'+esc(tc.name)+'" oninput="_tcState(&apos;'+esc(sid)+'&apos;).name=this.value;tcRefresh(&apos;'+esc(sid)+'&apos;)">'+
-        '<div class="hint">By typing your full legal name above, you are executing this agreement electronically. Your electronic signature is legally binding and has the same legal effect as a handwritten signature under applicable e-signature laws.</div></div>';
-      h+=tc.busy
-        ?'<button class="btn btn-p btn-full" disabled><span class="spin">\u21bb</span> Submitting...</button>'
-        :'<div id="tc-err-'+esc(sid)+'" style="display:none;color:var(--rt);font-size:13px;margin-bottom:.5rem"></div>'+
-         '<button id="tc-submit-btn-'+esc(sid)+'" class="btn btn-p btn-full" onclick="doSubmitTC(&apos;'+esc(sid)+'&apos;)" '+(canSubmit?'':'disabled style="opacity:0.4"')+'>Accept Proposal</button>';
-      h+='</div>';
+
+      // ── Policies + acceptance section ──
+      var tc=_tcState(sid);
+      if(isFullyEnrolled){
+        h+='<div class="card">';
+        h+='<p style="font-size:12px;color:var(--text4);margin-bottom:.5rem">The policies you agreed to are below for your records.</p>';
+        h+=rPolicyCollapsible(false, isInHome, sid);
+        h+='</div>';
+      } else if(isAccepted){
+        h+='<div class="card">';
+        h+='<div class="msg ms">\u2713 Policies accepted'+(s.tcAcceptedName?' by '+esc(s.tcAcceptedName):'')+
+          (s.tcAcceptedAt?' on '+esc(String(s.tcAcceptedAt)):'')+'.</div>';
+        h+='<p>Thank you for accepting your proposal! We will finish processing your enrollment by scheduling '+esc(firstName)+'\u2019s lessons for the school year, processing your first monthly payment, and setting up automatic monthly payments using your card on file. If you do not have a payment method on file, we\u2019ll contact you with instructions on how to add that to your account. We\u2019ll let you know once your enrollment is complete and '+esc(firstName)+'\u2019s lessons have been scheduled.</p>';
+        h+='<p style="font-size:12px;color:var(--text4);margin-bottom:.5rem">The policies you agreed to are below for your records.</p>';
+        h+=rPolicyCollapsible(false, isInHome, sid);
+        h+='</div>';
+      } else if(hasPrice){
+        h+='<div class="card"><h2>Lesson Policies</h2>';
+        h+='<p>Please read through our policies below. Once you\'ve reviewed everything, accept and sign at the bottom. Once accepted, we will finish processing your enrollment on the admin side by scheduling your lessons for the school year, processing your first monthly payment, and setting up automatic monthly payments using your card on file. If you do not have a payment method on file, we\'ll contact you with instructions on how to add that to your account.</p>';
+        h+=rPolicyText(isInHome);
+        h+='<div class="agree-box" id="tc-agree-box-'+esc(sid)+'" style="'+(tc.checked?'border-color:var(--green);background:rgba(255,255,255,.5)':'')+'">';
+        h+='<input type="checkbox" id="tc-chk-'+esc(sid)+'"'+(tc.checked?' checked':'')+' onchange="_tcState(&apos;'+esc(sid)+'&apos;).checked=this.checked;tcRefresh(&apos;'+esc(sid)+'&apos;)">';
+        h+='<label class="agree-lbl" for="tc-chk-'+esc(sid)+'">By accepting this proposal, I acknowledge that I have read and accept Keylab\u2019s enrollment policies, and I am authorizing Keylab to schedule my child\u2019s lessons, bill my card on file for the first month of lessons, and schedule recurring automatic flat-monthly payments based on the proposal details.</label></div>';
+        var canSubmit=tc.checked&&tc.name.trim().length>0;
+        h+='<div class="field"><label>Your full name<span class="req">*</span></label>'+
+          '<input id="tc-nm-'+esc(sid)+'" type="text" placeholder="First and last name" value="'+esc(tc.name)+'" oninput="_tcState(&apos;'+esc(sid)+'&apos;).name=this.value;tcRefresh(&apos;'+esc(sid)+'&apos;)">'+
+          '<div class="hint">By typing your full legal name above, you are executing this agreement electronically. Your electronic signature is legally binding and has the same legal effect as a handwritten signature under applicable e-signature laws.</div></div>';
+        h+=tc.busy
+          ?'<button class="btn btn-p btn-full" disabled><span class="spin">\u21bb</span> Submitting...</button>'
+          :'<div id="tc-err-'+esc(sid)+'" style="display:none;color:var(--rt);font-size:13px;margin-bottom:.5rem"></div>'+
+           '<button id="tc-submit-btn-'+esc(sid)+'" class="btn btn-p btn-full" onclick="doSubmitTC(&apos;'+esc(sid)+'&apos;)" '+(canSubmit?'':'disabled style="opacity:0.4"')+'>Accept Proposal</button>';
+        h+='</div>';
+      } else {
+        // Phase but no pricing yet
+        h+='<div class="card"><h2>Lesson Policies</h2>';
+        h+=rPolicyCollapsible(false, isInHome, sid);
+        h+='</div>';
+      }
+
     } else {
-      // Has phase but no pricing yet
-      h+='<div class="card"><h2>Lesson Policies</h2>';
-      h+=rPolicyCollapsible(false, isInHome, sid);
+      // ── Non-proposal students: status card ──
+      var lbl=phaseLabel(ph, s.availabilitySubmitted, avOpen, s.tcAcceptedAt);
+      h+='<div class="card">';
+      h+='<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:.5rem">';
+      if(students.length===1) h+='<div style="font-weight:600;font-size:15px">'+esc(s.studentName)+'</div>';
+      h+='<span class="chip '+esc(lbl.cls)+'">'+esc(lbl.text)+'</span>';
+      h+='</div>';
+      if(ph==='Holding'){
+        h+='<p style="font-size:13px;color:var(--text2);margin:0">We\'ve received '+esc(firstName)+'\u2019s availability and are working on scheduling. We\'ll reach out as soon as we have a time slot for them.</p>';
+      } else if(ph==='Trial Booked'){
+        h+='<p style="font-size:13px;color:var(--text2);margin:0">'+esc(firstName)+'\u2019s trial lesson is scheduled. After the trial, we\'ll be in touch with next steps.</p>';
+      } else if(ph==='Withdrawn'){
+        h+='<p style="font-size:13px;color:var(--text2);margin:0">'+esc(firstName)+' is not currently enrolled. Please contact us at <a href="mailto:info@keylab.nyc">info@keylab.nyc</a> if you have questions.</p>';
+      } else {
+        // Leads, Pending, or other early phases
+        h+='<p style="font-size:13px;color:var(--text2);margin:0">We\'re still getting '+esc(firstName)+'\u2019s enrollment ready. We\'ll be in touch as soon as we have an update.</p>';
+      }
       h+='</div>';
     }
   });
-
-  if(!anyRendered){
-    h+='<div class="card"><p>Your enrollment details aren\'t ready yet. We\'ll reach out as soon as we have everything set for your family.</p></div>';
-  }
 
   // Self-release section — shown for students in Enrolled/Enrollment Change phase age 10+
   h+=rSelfReleaseSection();
   return h;
 }
+
 
 var _srBusy={};
 function rSelfReleaseSection(){

@@ -1743,8 +1743,9 @@ function rEnrollment(){
     var ph=s.phase||'';
     var isProposalPhase=ph==='Proposal'||ph==='Confirmed to Enroll'||
       ph==='Enrolled'||ph==='Enrollment Change';
-    var hasPrice=parseFloat(s.monthlyPrice)>0;
-    if(!isProposalPhase&&!hasPrice) return;
+    // Gate: only show enrollment content when admin has sent a proposal (phase-gated).
+    // Never show based on monthlyPrice alone — price may exist before proposal is sent.
+    if(!isProposalPhase) return;
     anyRendered=true;
 
     var sid=s.studentId;

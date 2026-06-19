@@ -882,10 +882,10 @@ function _rHomeQuickActions(){
       '<strong>June 14\u201318, 2026</strong> \u2014 <a href="https://keylab.nyc/performance-parties" target="_blank">keylab.nyc/performance-parties</a>']
   ];
   var h='<div class="card">';
-  h+='<div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer" onclick="_qaOpen=!_qaOpen;render()">';
+  h+='<div style="display:flex;align-items:center;justify-content:space-between">';
   h+='<div><h2 style="margin-bottom:2px">Quick Reference</h2>'+
     '<div style="font-size:12px;color:var(--text3)">Schedule, billing, cancellations &amp; more</div></div>';
-  h+='<span style="font-size:16px;color:var(--text4)">'+(_qaOpen?'\u2039':'\u203a')+'</span>';
+  h+='<button class="btn btn-p btn-sm" onclick="_qaOpen=!_qaOpen;render()">'+(_qaOpen?'Hide':'View')+'</button>';
   h+='</div>';
   if(_qaOpen){
     h+='<ul style="list-style:none;padding:0;margin:.85rem 0 0">';

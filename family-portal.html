@@ -1836,7 +1836,7 @@ function rEnrollment(){
         if(!row[1]) return;
         h+='<div class="prop-row"><span class="prop-lbl">'+esc(row[0])+'</span><span class="prop-val">'+esc(row[1])+'</span></div>';
       });
-      if(hasPrice){
+      if(hasPrice&&!(isAccepted||isFullyEnrolled)){
         h+='<div class="prop-row" style="margin-top:.5rem;padding-top:.75rem;border-top:1px solid var(--border2);border-bottom:none">'+
           '<span class="prop-lbl">Monthly Tuition</span><span class="price-big">'+displayPriceStr+'</span></div>';
         if(parseFloat(s.inHomeFee)>0) h+='<div style="font-size:11px;color:var(--text4);text-align:right;margin-top:2px">Includes $'+esc(String(s.inHomeFee))+'/mo in-home fee</div>';
@@ -1856,6 +1856,7 @@ function rEnrollment(){
           h+='\u2713 Proposal and policies accepted'+(s.tcAcceptedName?' by '+esc(s.tcAcceptedName):'')+
             (s.tcAcceptedAt?' on '+esc(String(s.tcAcceptedAt)):'')+'.</div>';
         }
+        h+=_rHomeSelfRelease(s);
         h+='</div>';
 
         if(_exp){
@@ -1969,8 +1970,6 @@ function rEnrollment(){
     }
   });
 
-  // Self-release section — shown for students in Enrolled/Enrollment Change phase age 10+
-  h+=rSelfReleaseSection();
   return h;
 }
 

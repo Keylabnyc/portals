@@ -858,42 +858,53 @@ function _saveInstrument(id){
 // HOME TAB
 // ============================================================
 function _rHomeQuickActions(){
-  // NOTE: End-of-year date and Performance Party dates are hardcoded below.
+  // NOTE: Calendar & Dates body text (item 8) is hardcoded below.
   // Future improvement: make these admin-configurable from the Settings tab
   // so they can be updated year-over-year without changing code.
   var qa=[
     ['\ud83d\udcc5','Check your child\'s lesson schedule',
-      '<a href="https://keylab.opus1.io/login" target="_blank">Log in to your account portal</a> to view your child\'s full lesson schedule.'],
+      'View upcoming lessons, cancellations, and schedule changes.'],
     ['\ud83d\uddd3\ufe0f','View the Keylab studio calendar',
-      '<a href="https://keylab.nyc/calendar" target="_blank">keylab.nyc/calendar</a> \u2014 see holidays, closures, and upcoming events.'],
+      'See all important Keylab dates like studio closures, holidays, and special events.',
+      'View Calendar','https://keylab.nyc/calendar'],
     ['\u274c','Cancel a lesson',
-      '<a href="https://keylab.opus1.io/login" target="_blank">Log in to your account portal</a> and cancel directly from your schedule. Please cancel as early as possible.'],
+      'Make-ups / credits not guaranteed. See cancellation policies for details.'],
     ['\ud83e\udd12','If your child is ill',
-      'Keep them home and <a href="https://keylab.opus1.io/login" target="_blank">log in to your portal</a> to cancel the lesson and request a virtual lesson or a written assignment from your teacher.'],
+      'Keep them home. You can cancel the lesson and request a virtual lesson or written assignment.'],
     ['\ud83d\udcac','Contact your teacher',
-      'Use the messaging feature in the <a href="https://keylabnyc.github.io/portals/family-portal.html" target="_blank">Keylab family portal</a> to discuss educational or lesson-related topics with your child\'s teacher. Teachers do not manage scheduling or billing matters.'],
+      'Contact your teacher to discuss educational or lesson-related topics and request assignment details. Teachers do not manage scheduling or billing matters.'],
     ['\ud83d\udce7','Contact admin',
-      'For all scheduling, billing, and administrative questions, email us at <a href="mailto:info@keylab.nyc">info@keylab.nyc</a>.'],
+      'Contact admin for all scheduling, billing, and administrative assistance.'],
     ['\ud83d\udcb3','Payment info &amp; invoices',
-      '<a href="https://keylab.opus1.io/login" target="_blank">Log in to your account</a> to view your billing history and download invoices.'],
-    ['\ud83c\udf93','End of school year lessons',
-      'Regular lessons end <strong>Saturday, June 12, 2026</strong>.'],
-    ['\ud83c\udf89','Performance Party week',
-      '<strong>June 14\u201318, 2026</strong> \u2014 <a href="https://keylab.nyc/performance-parties" target="_blank">keylab.nyc/performance-parties</a>']
+      'View all payments, download invoices, and update your payment details.',
+      'View Payments / Update Credit Card','https://keylab.opus1.io/login'],
+    ['\ud83d\udcc6','Calendar &amp; Dates',
+      'Regular lessons end Saturday, June 12, 2026. Performance Party week is June 14\u201318, 2026.',
+      'View Calendar','https://keylab.nyc/calendar']
   ];
   var h='<div class="card">';
   h+='<div style="display:flex;align-items:center;justify-content:space-between">';
-  h+='<div><h2 style="margin-bottom:2px">Quick Reference</h2>'+
-    '<div style="font-size:12px;color:var(--text3)">Schedule, billing, cancellations &amp; more</div></div>';
+  h+='<div><h2 style="margin-bottom:2px">Managing Your Enrollment</h2>'+
+    '<div style="font-size:12px;color:var(--text3)">How to check your schedule, cancel a lesson, communicate with Keylab staff, review policies, and more</div></div>';
   h+='<button class="btn btn-p btn-sm" onclick="_qaOpen=!_qaOpen;render()">'+(_qaOpen?'Hide':'View')+'</button>';
   h+='</div>';
   if(_qaOpen){
+    h+='<div style="display:flex;flex-wrap:wrap;gap:8px;margin:.85rem 0 0">';
+    h+='<a class="btn btn-p btn-sm" href="https://keylab.opus1.io/login" target="_blank">Check Schedule</a>';
+    h+='<button class="btn btn-p btn-sm" onclick="gotoEnrollment()">Review Policies</button>';
+    h+='<a class="btn btn-d btn-sm" href="https://keylab.opus1.io/login" target="_blank">Cancel a Lesson</a>';
+    h+='<button class="btn btn-p btn-sm" onclick="showMsg(&apos;Coming soon!&apos;,&apos;a&apos;)">Change to Virtual Lesson</button>';
+    h+='<button class="btn btn-p btn-sm" onclick="showMsg(&apos;Coming soon!&apos;,&apos;a&apos;)">Contact Teacher</button>';
+    h+='<a class="btn btn-p btn-sm" href="mailto:info@keylab.nyc">Contact Admin</a>';
+    h+='</div>';
     h+='<ul style="list-style:none;padding:0;margin:.85rem 0 0">';
     qa.forEach(function(item){
       h+='<li style="display:flex;gap:10px;align-items:flex-start;padding:.6rem 0;border-bottom:.5px solid var(--border)">'+
         '<span style="font-size:16px;flex-shrink:0;width:22px;text-align:center;margin-top:1px">'+item[0]+'</span>'+
         '<div><div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:2px">'+item[1]+'</div>'+
-        '<div style="font-size:12px;color:var(--text3);line-height:1.55">'+item[2]+'</div></div></li>';
+        '<div style="font-size:12px;color:var(--text3);line-height:1.55">'+item[2]+'</div>'+
+        (item[3]?'<div style="margin-top:6px"><a class="btn btn-p btn-sm" href="'+item[4]+'" target="_blank">'+item[3]+'</a></div>':'')+
+        '</div></li>';
     });
     h+='</ul>';
   }
@@ -953,6 +964,7 @@ function rHome(){
   var avOpen=isTruthy(publicCfg.availabilityOpen);
   var locMap={studio:'Keylab \u00b7 94 Luquer St, 11231','in-home':'In-home',virtual:'Virtual'};
   var hadDashboard=false;
+  var anyEnrolled=false;
   students.forEach(function(s){
     var lbl=phaseLabel(s.phase, s.availabilitySubmitted, avOpen, s.tcAcceptedAt);
     var ph=s.phase||'';
@@ -991,6 +1003,7 @@ function rHome(){
       h+=_rHomeSelfRelease(s);
       h+='</div>';
       hadDashboard=true;
+      if(isEnrolled) anyEnrolled=true;
     } else {
       // ── Non-dashboard states ──
       h+='<div class="card-stu">';
@@ -1035,7 +1048,7 @@ function rHome(){
       h+='</div>';
     }
   });
-  if(hadDashboard) h+=_rHomeQuickActions();
+  if(hadDashboard&&anyEnrolled) h+=_rHomeQuickActions();
   h+='<hr class="divider">';
   h+='<p style="font-size:12px;color:var(--text4)">Questions? Email us at <a href="mailto:info@keylab.nyc">info@keylab.nyc</a>.</p>';
   return h;

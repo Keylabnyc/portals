@@ -1852,6 +1852,14 @@ function rEnrollment(){
       if(hasPrice&&!(isAccepted||isFullyEnrolled)){
         h+='<div class="prop-row" style="margin-top:.5rem;padding-top:.75rem;border-top:1px solid var(--border2);border-bottom:none">'+
           '<span class="prop-lbl">Monthly Tuition</span><span class="price-big">'+displayPriceStr+'</span></div>';
+        if(s.isProrated&&parseFloat(s.proratedFirstMonth)>0){
+          h+='<div class="prop-row" style="border-bottom:none"><span class="prop-lbl">First month (prorated)</span>'+
+            '<span class="prop-val">$'+Math.round(parseFloat(s.proratedFirstMonth))+'</span></div>';
+        }
+        if(parseFloat(s.splitLessonFee)>0){
+          h+='<div class="prop-row" style="border-bottom:none"><span class="prop-lbl">Split lesson fee'+(s.splitLessonNote?' \u2014 '+esc(s.splitLessonNote):'')+'</span>'+
+            '<span class="prop-val">$'+Math.round(parseFloat(s.splitLessonFee))+'</span></div>';
+        }
         if(parseFloat(s.inHomeFee)>0) h+='<div style="font-size:11px;color:var(--text4);text-align:right;margin-top:2px">Includes $'+esc(String(s.inHomeFee))+'/mo in-home fee</div>';
       }
       if(isAccepted||isFullyEnrolled){
@@ -1902,6 +1910,9 @@ function rEnrollment(){
           }
           if(parseFloat(s.inHomeFee)>0){
             h+='<div class="prop-row"><span class="prop-lbl">In-home lesson fee</span><span class="prop-val">+$'+Math.round(parseFloat(s.inHomeFee))+'/mo</span></div>';
+          }
+          if(parseFloat(s.splitLessonFee)>0){
+            h+='<div class="prop-row"><span class="prop-lbl">Split lesson fee'+(s.splitLessonNote?' \u2014 '+esc(s.splitLessonNote):'')+'</span><span class="prop-val">+$'+Math.round(parseFloat(s.splitLessonFee))+'</span></div>';
           }
           h+='<div class="prop-row" style="margin-top:.4rem;padding-top:.7rem;border-top:1.5px solid var(--border2);border-bottom:none">';
           h+='<span class="prop-lbl" style="font-weight:700;color:var(--text)">Monthly tuition</span>';

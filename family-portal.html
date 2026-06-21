@@ -1862,22 +1862,26 @@ function rEnrollment(){
         }
         if(parseFloat(s.inHomeFee)>0) h+='<div style="font-size:11px;color:var(--text4);text-align:right;margin-top:2px">Includes $'+esc(String(s.inHomeFee))+'/mo in-home fee</div>';
       }
-      if(isAccepted||isFullyEnrolled){
-        h+='<div style="margin-top:1rem;border-top:1px solid var(--border);padding-top:.85rem">';
-        h+='<button class="btn btn-p btn-sm" onclick="_enrExpanded[&apos;'+esc(sid)+'&apos;]=!_enrExpanded[&apos;'+esc(sid)+'&apos;];render()">'+(_exp?'Hide details':'Review Enrollment Details')+'</button>';
-        h+='</div>';
-      }
-
-      // ── Policies + acceptance section ──
+      // ── Acceptance banner + self-release + Review Details button (in display order) ──
       var tc=_tcState(sid);
       if(isFullyEnrolled||isAccepted){
-        // Always-visible: acceptance confirmation, same card as summary above
+        // Always-visible: acceptance confirmation
         if(s.tcAcceptedAt||s.tcAcceptedName){
           h+='<div class="msg ms" style="margin-top:1rem">';
           h+='\u2713 Proposal and policies accepted'+(s.tcAcceptedName?' by '+esc(s.tcAcceptedName):'')+
             (s.tcAcceptedAt?' on '+esc(String(s.tcAcceptedAt)):'')+'.</div>';
         }
         h+=_rHomeSelfRelease(s);
+        h+='<div style="margin-top:1rem;border-top:1px solid var(--border);padding-top:.85rem">';
+        h+='<button class="btn btn-p btn-sm" onclick="_enrExpanded[&apos;'+esc(sid)+'&apos;]=!_enrExpanded[&apos;'+esc(sid)+'&apos;];render()">'+(_exp?'Hide details':'Review Enrollment Details')+'</button>';
+        h+='</div>';
+
+        if(_exp){
+          h+='<div style="margin-top:1rem;border-top:1px solid var(--border);padding-top:1rem">';
+          h+='<div style="font-size:11px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem">Keylab Children\u2019s Lesson Policies</div>';
+          h+=rPolicyText(isInHome);
+          h+='</div>';
+        }
         h+='</div>';
 
         if(_exp){
@@ -1941,12 +1945,6 @@ function rEnrollment(){
           }
           h+='</div>';
 
-          // Policies
-          h+='<div style="border-top:1px solid var(--border);margin-top:1.25rem;padding-top:1rem">';
-          h+='<div style="font-size:11px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem">Policies Agreed To</div>';
-          h+=rPolicyText(isInHome);
-          h+='</div>';
-
           h+='</div>';
         }
       } else if(hasPrice&&!isAccepted&&!isFullyEnrolled){
@@ -1986,8 +1984,11 @@ function rEnrollment(){
         h+='<p style="font-size:13px;color:var(--text2);margin:0">'+esc(firstName)+'\u2019s trial lesson is scheduled. After the trial, we\'ll be in touch with next steps.</p>';
       } else if(ph==='Withdrawn'){
         h+='<p style="font-size:13px;color:var(--text2);margin:0">'+esc(firstName)+' is not currently enrolled. Please contact us at <a href="mailto:info@keylab.nyc">info@keylab.nyc</a> if you have questions.</p>';
+      } else if(isTruthy(s.availabilitySubmitted)){
+        // Leads, Pending, or other early phases \u2014 availability already submitted
+        h+='<p style="font-size:13px;color:var(--text2);margin:0">We\'ve received '+esc(firstName)+'\u2019s availability. We\'ll be in touch as soon as we have an update.</p>';
       } else {
-        // Leads, Pending, or other early phases
+        // Leads, Pending, or other early phases \u2014 no availability submitted yet
         h+='<p style="font-size:13px;color:var(--text2);margin:0">We\'re still getting '+esc(firstName)+'\u2019s enrollment ready. We\'ll be in touch as soon as we have an update.</p>';
       }
       h+='</div>';

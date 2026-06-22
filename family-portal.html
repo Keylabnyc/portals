@@ -1834,7 +1834,7 @@ function rEnrollment(){
       } else if(isAccepted){
         statusChip='<span class="chip c-info" style="margin-bottom:.75rem;display:inline-block">Policies Accepted \u2014 Enrollment Pending</span>';
       } else if(ph==='Proposal'){
-        statusChip='<span class="chip c-good" style="margin-bottom:.75rem;display:inline-block">Proposal ready</span>';
+        statusChip='<div style="margin-bottom:.75rem"><div style="font-size:18px;font-weight:700;color:var(--text);letter-spacing:-.01em;margin-bottom:.4rem">LESSON PROPOSAL FOR '+esc(s.studentName||' ')+'</div><span class="chip c-good" style="display:inline-block">Review and accept</span></div>';
       } else if(ph==='Confirmed to Enroll'){
         statusChip='<span class="chip c-good" style="margin-bottom:.75rem;display:inline-block">Enrollment confirmed</span>';
       }
@@ -1884,7 +1884,7 @@ function rEnrollment(){
 
         if(_exp){
           h+='<div style="margin-top:1rem;border-top:1px solid var(--border);padding-top:1rem">';
-          h+='<div style="font-size:11px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem">Keylab Children\u2019s Lesson Policies</div>';
+          h+='<div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:.5rem">Keylab Children\u2019s Lesson Policies</div>';
           h+=rPolicyText(isInHome);
           h+='</div>';
         }

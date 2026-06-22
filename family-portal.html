@@ -332,13 +332,20 @@ function rSlotPricing(day){
   var disc = currentStudentDiscounts();
   var hasDisc = disc.pct>0 || disc.dollar>0;
   var hd = 'Estimated monthly tuition';
+  // Split lesson fee: $30/mo if 60min selected, $20/mo otherwise (45min split)
+  var splitFee = 0;
+  if(SC.splitLesson){
+    splitFee = SC.durations.indexOf('60')>-1 ? 30 : 20;
+  }
   var rows = SC.durations.map(function(d){
     var raw = estimatePrice(d, day, tRate);
     var final = hasDisc ? applyDiscounts(raw, disc.pct, disc.dollar) : raw;
+    var splitLine = splitFee ? '<div class="est-row" style="font-size:11px;color:var(--text4)"><span class="est-dur">Split lesson fee</span><span class="est-amt">+$'+splitFee+'/mo</span></div>' : '';
+    var totalLine = splitFee ? '<div class="est-row" style="font-weight:600"><span class="est-dur">Total</span><span class="est-amt">~$'+(final+splitFee)+'/mo</span></div>' : '';
     return '<div class="est-row">'
       +'<span class="est-dur">'+esc(d)+' min</span>'
       +'<span class="est-amt">~$'+final+'/mo'+(hasDisc&&final!==raw?'<span style="font-size:10px;font-weight:400;color:var(--text5);margin-left:4px;text-decoration:line-through">$'+raw+'</span>':'')+'</span>'
-      +'</div>';
+      +'</div>'+splitLine+totalLine;
   }).join('');
   var discLine='';
   if(hasDisc){
@@ -1192,10 +1199,10 @@ function rSplitLessonSection(){
       h+='<div class="note" style="margin-bottom:.75rem">A monthly surcharge of $20 will be added to the monthly price for split lessons.</div>';
     }
     h+='<div class="field"><label>Second child\'s full name<span class="req">*</span></label>';
-    h+='<input type="text" placeholder="Full name" value="'+esc(SC.splitChild.name)+'" oninput="SC.splitChild.name=this.value;render()"></div>';
+    h+='<input type="text" placeholder="Full name" value="'+esc(SC.splitChild.name)+'" oninput="SC.splitChild.name=this.value"></div>';
     var sc2Age=parseInt(SC.splitChild.age,10);
     h+='<div class="field"><label>Second child\'s age<span class="req">*</span></label>';
-    h+='<input type="number" inputmode="numeric" min="1" max="18" placeholder="Age" value="'+esc(SC.splitChild.age)+'" oninput="SC.splitChild.age=this.value;render()"></div>';
+    h+='<input type="number" inputmode="numeric" min="1" max="18" placeholder="Age" value="'+esc(SC.splitChild.age)+'" oninput="SC.splitChild.age=this.value" onchange="render()"></div>';
     if(SC.splitChild.age&&!isNaN(sc2Age)&&sc2Age<5){
       var _sc2Name=SC.splitChild.name.trim()?esc(SC.splitChild.name.trim()):'your second child';
       h+='<div class="note" style="margin-bottom:.75rem;color:var(--at)">Our lessons are designed for children ages 5 and up. If '+_sc2Name+' is younger than 5 and shows strong focus and musical aptitude, we\u2019d love to hear from you \u2014 we\u2019ll reach out to see if we can find the right fit.</div>';
@@ -1436,8 +1443,7 @@ function rSchedForm(){
     h+='<div style="font-size:12px;color:var(--rt);margin-top:.5rem">\u26a0 Please select a lesson duration to see pricing and continue.</div>';
   }
   if(SC.durations.length){
-    h+=rSlotPricing('Monday');
-    h+='<div style="font-size:11px;color:var(--text4);margin-top:.4rem">Prices vary by day of week and teacher. See exact estimates under each time window below.</div>';
+    h+='<div style="font-size:11px;color:var(--text4);margin-top:.4rem">Pricing is estimated and varies by day and teacher. Your final tuition will be confirmed in your enrollment proposal. See estimates for each time window below.</div>';
   }
   h+='</div>';
 
@@ -1989,7 +1995,8 @@ function rEnrollment(){
         h+='<p style="font-size:13px;color:var(--text2);margin:0">We\'ve received '+esc(firstName)+'\u2019s availability. We\'ll be in touch as soon as we have an update.</p>';
       } else {
         // Leads, Pending, or other early phases \u2014 no availability submitted yet
-        h+='<p style="font-size:13px;color:var(--text2);margin:0">We\'re still getting '+esc(firstName)+'\u2019s enrollment ready. We\'ll be in touch as soon as we have an update.</p>';
+        h+='<p style="font-size:13px;color:var(--text2);margin:0 0 .6rem">We\'re still getting '+esc(firstName)+'\u2019s enrollment ready. Submit '+esc(firstName)+'\u2019s availability so we can start finding the right time slot.</p>';
+        h+='<button class="btn btn-p btn-sm" onclick="_gotoSchedulingForStudent(&apos;'+esc(s.studentId)+'&apos;)">Submit '+esc(firstName)+'\u2019s availability</button>';
       }
       h+='</div>';
     }

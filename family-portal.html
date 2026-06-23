@@ -1205,10 +1205,10 @@ function rSplitLessonSection(){
   var has60=SC.durations.indexOf('60')>-1;
   if(!has45&&!has60) return '';
   var h='';
-  h+='<div style="display:flex;align-items:center;padding:.6rem 0 .5rem;border-bottom:.5px solid var(--border);margin-bottom:.75rem">';
+  h+='<div style="display:flex;align-items:center;padding:.35rem 0;margin-bottom:.5rem">';
   h+='<div class="agree-box" style="margin:0">';
   h+='<input type="checkbox" id="split-chk"'+(SC.splitLesson?' checked':'')+' onchange="SC.splitLesson=this.checked;render()">';
-  h+='<label class="agree-lbl" for="split-chk" style="font-size:13px;font-weight:500">Split lesson between two children</label>';
+  h+='<label class="agree-lbl" for="split-chk" style="font-size:11px;font-weight:400;color:var(--text3)">Split lesson between two children</label>';
   h+='</div></div>';
   if(SC.splitLesson){
     if(has60){
@@ -1283,9 +1283,6 @@ function rSchedViewMode(){
   h+='</div>';
 
   h+='</div>';
-
-  // Split lesson section
-  h+=rSplitLessonSection();
 
   // Time windows card — inline per-slot editing, all slots always visible
   h+='<div class="card"><h2>Your Available Times</h2>';
@@ -1384,6 +1381,9 @@ function rSchedViewMode(){
   h+='<button class="btn btn-p btn-sm" style="margin-top:.5rem" onclick="var ni=SC.slots.length;SC.slots.push(blankSlot());SC.slotEditing[ni]=true;render()">+ Add a time window</button>';
   h+='</div>';
 
+  // Split lesson section (below time windows)
+  h+=rSplitLessonSection();
+
   // Submit Changes footer — only shown when pending local changes exist
   if(SC.pendingChanges){
     if(SC.busy){
@@ -1464,9 +1464,6 @@ function rSchedForm(){
     h+='<div style="font-size:11px;color:var(--text4);margin-top:.4rem">Pricing is estimated and varies by day and teacher. Your final tuition will be confirmed in your enrollment proposal. See estimates for each time window below.</div>';
   }
   h+='</div>';
-
-  // Split lesson section
-  h+=rSplitLessonSection();
 
   // Step 2: Location
   var locMissing=!SC.locations.length;
@@ -1565,6 +1562,9 @@ function rSchedForm(){
   h+='<div class="field"><label>Anything else we should know? (optional)</label>'+
     '<textarea placeholder="Your child\'s learning style, musical interests, scheduling context, or anything else that helps us find the right fit." oninput="SC.notes=this.value">'+esc(SC.notes)+'</textarea></div>';
   h+='</div>';
+
+  // Split lesson section (below time windows)
+  h+=rSplitLessonSection();
 
   // Submit
   var durNoteMissing=SC.durations.length>1&&!SC.durationNote.trim();

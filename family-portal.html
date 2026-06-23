@@ -986,7 +986,7 @@ function rHome(){
     var isWithdrawn=ph==='Withdrawn';
     var isEnrolled=(ph==='Enrolled');
     var isAccepted=!!s.tcAcceptedAt;
-    var showDashboard=(isEnrolled||(hasProp&&isAccepted));
+    var showDashboard=(isEnrolled||ph==='Enrollment Change'||(hasProp&&isAccepted));
 
     if(showDashboard){
       // ── Dashboard: accepted or enrolled ──

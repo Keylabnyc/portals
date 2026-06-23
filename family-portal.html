@@ -411,10 +411,10 @@ function phaseLabel(phase, avSubmitted, avOpen, tcAcceptedAt){
   if(phase==='Holding')             return {text:'In review', cls:'c-info'};
   if(phase==='Trial Booked')        return {text:'Trial scheduled', cls:'c-info'};
   if(phase==='Proposal')            return {text:'Proposal ready', cls:'c-good'};
-  if(phase==='Confirmed to Enroll') return {text:'Enrollment confirmed', cls:'c-good'};
+  if(phase==='Confirmed to Enroll') return {text:'Processing enrollment', cls:'c-good'};
   if(phase==='Enrolled') return {text:'Enrolled', cls:'c-good'};
-  if(phase==='Enrollment Change') return {text:'Enrollment change', cls:'c-warn'};
-  if(phase==='Withdrawn')           return {text:'Not currently enrolled', cls:'c-pend'};
+  if(phase==='Enrollment Change') return {text:'Pending enrollment change', cls:'c-warn'};
+  if(phase==='Withdrawn')           return {text:'Withdrawn', cls:'c-pend'};
   return {text:'Pending', cls:'c-pend'};
 }
 
@@ -1039,7 +1039,11 @@ function rHome(){
         if(trialDetails.length) h+='<div style="font-size:13px;color:var(--text3);margin-bottom:.35rem">'+esc(trialDetails.join(' \u00b7 '))+'</div>';
         h+='<div style="font-size:12px;color:var(--text4)">We\'re looking forward to meeting your family! We\'ll be in touch as soon as possible with an update.</div>';
       } else if(isHolding){
-        h+='<div style="font-size:12px;color:var(--text4)">We\'ve received your availability and are working on scheduling. We\'ll be in touch as soon as possible with an update.</div>';
+        if(avSubmitted){
+          h+='<div style="font-size:12px;color:var(--text4)">We\'ve received your availability and are working on scheduling. We\'ll be in touch as soon as possible with an update.</div>';
+        } else {
+          h+='<div style="font-size:12px;color:var(--text4)">We\'ve got a spot pending for '+esc(firstName)+'\u2019s '+esc(s.instrument||'lessons')+' lessons. We\'ll be in touch soon with an update.</div>';
+        }
       } else if(hasProp&&!isAccepted){
         var propDetails=[];
         if(s.day) propDetails.push(s.day);
@@ -1056,11 +1060,14 @@ function rHome(){
       if((ph==='Proposal'||ph==='Confirmed to Enroll')&&!isAccepted){
         ctas.push('<button class="btn btn-p btn-sm" onclick="gotoEnrollment()">Review and Accept Proposal</button>');
       }
-      if(avOpen&&!avSubmitted&&!hasProp&&!hasTrial&&!isHolding&&!isWithdrawn&&!isEnrolled){
+      if(avOpen&&!avSubmitted&&(ph==='Leads'||ph==='Pending')&&!hasProp&&!hasTrial&&!isWithdrawn&&!isEnrolled){
+        ctas.push('<button class="btn btn-p btn-sm" onclick="_gotoSchedulingForStudent(&apos;'+esc(s.studentId)+'&apos;)">Submit availability</button>');
+      }
+      if(!avSubmitted&&ph==='Holding'){
         ctas.push('<button class="btn btn-p btn-sm" onclick="_gotoSchedulingForStudent(&apos;'+esc(s.studentId)+'&apos;)">Submit availability</button>');
       }
       if(avSubmitted&&(ph==='Leads'||ph==='Pending'||ph==='Holding')){
-        ctas.push('<button class="btn btn-p btn-sm" onclick="_gotoSchedulingForStudent(&apos;'+esc(s.studentId)+'&apos;)">Review / Edit Availability</button>');
+        ctas.push('<button class="btn btn-p btn-sm" onclick="_gotoSchedulingForStudent(&apos;'+esc(s.studentId)+'&apos;)">Review / Update Availability</button>');
       }
       if(ctas.length) h+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:.5rem">'+ctas.join('')+'</div>';
       h+='</div>';
@@ -1971,7 +1978,7 @@ function rEnrollment(){
       } else if(ph==='Proposal'){
         statusChip='<div style="margin-bottom:.75rem"><div style="font-size:18px;font-weight:700;color:var(--text);letter-spacing:-.01em;margin-bottom:.4rem">LESSON PROPOSAL FOR '+esc(s.studentName||' ')+'</div><span class="chip c-good" style="display:inline-block">Review and accept</span></div>';
       } else if(ph==='Confirmed to Enroll'){
-        statusChip='<span class="chip c-good" style="margin-bottom:.75rem;display:inline-block">Enrollment confirmed</span>';
+        statusChip='<span class="chip c-good" style="margin-bottom:.75rem;display:inline-block">Processing enrollment</span>';
       }
 
       var _exp=!!_enrExpanded[sid];
@@ -2126,7 +2133,12 @@ function rEnrollment(){
       h+='<span class="chip '+esc(lbl.cls)+'">'+esc(lbl.text)+'</span>';
       h+='</div>';
       if(ph==='Holding'){
-        h+='<p style="font-size:13px;color:var(--text2);margin:0">We\'ve received '+esc(firstName)+'\u2019s availability and are working on scheduling. We\'ll reach out as soon as we have a time slot for them.</p>';
+        if(isTruthy(s.availabilitySubmitted)){
+          h+='<p style="font-size:13px;color:var(--text2);margin:0">We\'ve received '+esc(firstName)+'\u2019s availability and are working on scheduling. We\'ll reach out as soon as we have a time slot for them.</p>';
+        } else {
+          h+='<p style="font-size:13px;color:var(--text2);margin:0 0 .6rem">We have a potential spot pending for '+esc(firstName)+'\u2019s '+esc(s.instrument||'lessons')+' lessons. We\'ll be in touch soon with an update. In the meantime, if your scheduling needs have changed, use the button below to add or update your availability.</p>';
+          h+='<button class="btn btn-p btn-sm" onclick="_gotoSchedulingForStudent(&apos;'+esc(s.studentId)+'&apos;)">Submit '+esc(firstName)+'\u2019s availability</button>';
+        }
       } else if(ph==='Trial Booked'){
         h+='<p style="font-size:13px;color:var(--text2);margin:0">'+esc(firstName)+'\u2019s trial lesson is scheduled. After the trial, we\'ll be in touch with next steps.</p>';
       } else if(ph==='Withdrawn'){

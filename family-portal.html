@@ -1059,7 +1059,7 @@ function rHome(){
       if(avOpen&&!avSubmitted&&!hasProp&&!hasTrial&&!isHolding&&!isWithdrawn&&!isEnrolled){
         ctas.push('<button class="btn btn-p btn-sm" onclick="_gotoSchedulingForStudent(&apos;'+esc(s.studentId)+'&apos;)">Submit availability</button>');
       }
-      if(avOpen&&avSubmitted&&(ph==='Leads'||ph==='Pending'||ph==='Holding')){
+      if(avSubmitted&&(ph==='Leads'||ph==='Pending'||ph==='Holding')){
         ctas.push('<button class="btn btn-p btn-sm" onclick="_gotoSchedulingForStudent(&apos;'+esc(s.studentId)+'&apos;)">Review / Edit Availability</button>');
       }
       if(ctas.length) h+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:.5rem">'+ctas.join('')+'</div>';

@@ -118,6 +118,7 @@ var PAGE = 'boot'; // boot | locked | login | lookup | register | home
 var TAB  = 'home'; // home | scheduling | enrollment
 var TOKEN = '', FAMILY_ID = '';
 var students = [];
+var familyParents = {p1:'', p2:''};
 var _familyLoading = false;
 var publicCfg = {availabilityOpen:'FALSE'};
 var MSG = {m:'', t:''};
@@ -757,6 +758,7 @@ function loadFamily(){
       render(); return;
     }
     students=r.proposals||[];
+    familyParents={p1:r.parent1Name||''  ,p2:r.parent2Name||''};
     render();
   });
 }
@@ -780,7 +782,7 @@ function gotoEnrollment(){
   _familyLoading=true;
   render();
   fapi('getProposal', {}, function(e, r){
-    if(!e && r && r.ok){ students = r.proposals || []; }
+    if(!e && r && r.ok){ students = r.proposals || []; familyParents={p1:r.parent1Name||''  ,p2:r.parent2Name||''}; }
     _familyLoading=false;
     render();
   });
@@ -1856,15 +1858,17 @@ function rEnrollment(){
         h+='<div class="prop-row"><span class="prop-lbl">'+esc(row[0])+'</span><span class="prop-val">'+esc(row[1])+'</span></div>';
       });
       if(hasPrice&&!(isAccepted||isFullyEnrolled)){
+        var _splitFee=parseFloat(s.splitLessonFee)||0;
+        var _basePrice=displayPrice-_splitFee;
         h+='<div class="prop-row" style="margin-top:.5rem;padding-top:.75rem;border-top:1px solid var(--border2);border-bottom:none">'+
           '<span class="prop-lbl">Monthly Tuition</span><span class="price-big">'+displayPriceStr+'</span></div>';
+        if(_splitFee>0){
+          h+='<div class="prop-row" style="border-bottom:none;font-size:12px;color:var(--text3)"><span class="prop-lbl">Lesson fee</span><span class="prop-val">$'+Math.round(_basePrice)+'</span></div>';
+          h+='<div class="prop-row" style="border-bottom:none;font-size:12px;color:var(--text3)"><span class="prop-lbl">Split lesson fee'+(s.splitLessonNote?' \u2014 '+esc(s.splitLessonNote):'')+'</span><span class="prop-val">+$'+Math.round(_splitFee)+'</span></div>';
+        }
         if(s.isProrated&&parseFloat(s.proratedFirstMonth)>0){
           h+='<div class="prop-row" style="border-bottom:none"><span class="prop-lbl">First month (prorated)</span>'+
             '<span class="prop-val">$'+Math.round(parseFloat(s.proratedFirstMonth))+'</span></div>';
-        }
-        if(parseFloat(s.splitLessonFee)>0){
-          h+='<div class="prop-row" style="border-bottom:none"><span class="prop-lbl">Split lesson fee'+(s.splitLessonNote?' \u2014 '+esc(s.splitLessonNote):'')+'</span>'+
-            '<span class="prop-val">$'+Math.round(parseFloat(s.splitLessonFee))+'</span></div>';
         }
         if(parseFloat(s.inHomeFee)>0) h+='<div style="font-size:11px;color:var(--text4);text-align:right;margin-top:2px">Includes $'+esc(String(s.inHomeFee))+'/mo in-home fee</div>';
       }
@@ -1878,6 +1882,31 @@ function rEnrollment(){
             (s.tcAcceptedAt?' on '+esc(String(s.tcAcceptedAt)):'')+'.</div>';
         }
         h+=_rHomeSelfRelease(s);
+        if(isAccepted&&!isFullyEnrolled){
+          h+='<div style="margin-top:1rem;border-top:1px solid var(--border);padding-top:1rem">';
+          h+='<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:.4rem">What Happens Next</div>';
+          h+='<p style="font-size:13px;color:var(--text2);margin:0">We\u2019ll process enrollment within 2 business days (sooner if your start date is sooner). Once payment for the first month is processed and automatic payments are set up, '+esc(firstName)+'\u2019s lessons will appear in your Opus account.</p>';
+          h+='</div>';
+          // Always-visible Tuition Details when accepted but not yet enrolled
+          h+='<div style="margin-top:1rem;border-top:1px solid var(--border);padding-top:1rem">';
+          h+='<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:.75rem">Tuition Details</div>';
+          var _sfee=parseFloat(s.splitLessonFee)||0;
+          var _base2=displayPrice-_sfee;
+          if(_sfee>0){
+            h+='<div class="prop-row" style="border-bottom:none;font-size:12px;color:var(--text3)"><span class="prop-lbl">Lesson fee</span><span class="prop-val">$'+Math.round(_base2)+'</span></div>';
+            h+='<div class="prop-row" style="border-bottom:none;font-size:12px;color:var(--text3)"><span class="prop-lbl">Split lesson fee'+(s.splitLessonNote?' \u2014 '+esc(s.splitLessonNote):'')+'</span><span class="prop-val">+$'+Math.round(_sfee)+'/mo</span></div>';
+          }
+          if(parseFloat(s.inHomeFee)>0){
+            h+='<div class="prop-row" style="border-bottom:none;font-size:12px;color:var(--text3)"><span class="prop-lbl">In-home fee</span><span class="prop-val">+$'+Math.round(parseFloat(s.inHomeFee))+'/mo</span></div>';
+          }
+          h+='<div class="prop-row" style="margin-top:.4rem;padding-top:.5rem;border-top:1px solid var(--border2);border-bottom:none"><span class="prop-lbl" style="font-weight:700">Monthly from month 2</span><span class="price-big">'+displayPriceStr+'</span></div>';
+          if(s.isProrated&&parseFloat(s.proratedFirstMonth)>0){
+            h+='<div class="prop-row" style="border-bottom:none"><span class="prop-lbl">1st month (prorated)</span><span class="prop-val">$'+Math.round(parseFloat(s.proratedFirstMonth))+'</span></div>';
+          } else {
+            h+='<div class="prop-row" style="border-bottom:none"><span class="prop-lbl">1st month</span><span class="prop-val">'+displayPriceStr+'</span></div>';
+          }
+          h+='</div>';
+        }
         h+='<div style="margin-top:1rem;border-top:1px solid var(--border);padding-top:.85rem">';
         h+='<button class="btn btn-p btn-sm" onclick="_enrExpanded[&apos;'+esc(sid)+'&apos;]=!_enrExpanded[&apos;'+esc(sid)+'&apos;];render()">'+(_exp?'Hide details':'Review Enrollment Details')+'</button>';
         h+='</div>';
@@ -1961,9 +1990,14 @@ function rEnrollment(){
         h+='<input type="checkbox" id="tc-chk-'+esc(sid)+'"'+(tc.checked?' checked':'')+' onchange="_tcState(&apos;'+esc(sid)+'&apos;).checked=this.checked;tcRefresh(&apos;'+esc(sid)+'&apos;)">';
         h+='<label class="agree-lbl" for="tc-chk-'+esc(sid)+'">By accepting this proposal, I acknowledge that I have read and accept Keylab\u2019s enrollment policies, and I am authorizing Keylab to schedule my child\u2019s lessons, bill my card on file for the first month of lessons, and schedule recurring automatic flat-monthly payments based on the proposal details.</label></div>';
         var canSubmit=tc.checked&&tc.name.trim().length>0;
-        h+='<div class="field"><label>Your full name<span class="req">*</span></label>'+
-          '<input id="tc-nm-'+esc(sid)+'" type="text" placeholder="First and last name" value="'+esc(tc.name)+'" oninput="_tcState(&apos;'+esc(sid)+'&apos;).name=this.value;tcRefresh(&apos;'+esc(sid)+'&apos;)">'+
-          '<div class="hint">By typing your full legal name above, you are executing this agreement electronically. Your electronic signature is legally binding and has the same legal effect as a handwritten signature under applicable e-signature laws.</div></div>';
+        var _pOpts='';
+        if(familyParents.p1) _pOpts+='<option value="'+esc(familyParents.p1)+'"'+(tc.name===familyParents.p1?' selected':'')+'>'+esc(familyParents.p1)+'</option>';
+        if(familyParents.p2) _pOpts+='<option value="'+esc(familyParents.p2)+'"'+(tc.name===familyParents.p2?' selected':'')+'>'+esc(familyParents.p2)+'</option>';
+        h+='<div class="field"><label>Select your name<span class="req">*</span></label>'+
+          '<select id="tc-nm-'+esc(sid)+'" onchange="_tcState(&apos;'+esc(sid)+'&apos;).name=this.value;tcRefresh(&apos;'+esc(sid)+'&apos;)">'+
+          '<option value="">-- Select --</option>'+_pOpts+
+          '</select>'+
+          '<div class="hint">By selecting your name, you are executing this agreement electronically. Your electronic signature is legally binding and has the same legal effect as a handwritten signature under applicable e-signature laws.</div></div>';
         h+=tc.busy
           ?'<button class="btn btn-p btn-full" disabled><span class="spin">\u21bb</span> Submitting...</button>'
           :'<div id="tc-err-'+esc(sid)+'" style="display:none;color:var(--rt);font-size:13px;margin-bottom:.5rem"></div>'+
@@ -1995,7 +2029,7 @@ function rEnrollment(){
         h+='<p style="font-size:13px;color:var(--text2);margin:0">We\'ve received '+esc(firstName)+'\u2019s availability. We\'ll be in touch as soon as we have an update.</p>';
       } else {
         // Leads, Pending, or other early phases \u2014 no availability submitted yet
-        h+='<p style="font-size:13px;color:var(--text2);margin:0 0 .6rem">We\'re still getting '+esc(firstName)+'\u2019s enrollment ready. Submit '+esc(firstName)+'\u2019s availability so we can start finding the right time slot.</p>';
+        h+='<p style="font-size:13px;color:var(--text2);margin:0 0 .6rem">We don\'t have '+esc(firstName)+'\u2019s availability yet. Let us know when '+esc(firstName)+' can take lessons so we can start finding the right time slot.</p>';
         h+='<button class="btn btn-p btn-sm" onclick="_gotoSchedulingForStudent(&apos;'+esc(s.studentId)+'&apos;)">Submit '+esc(firstName)+'\u2019s availability</button>';
       }
       h+='</div>';

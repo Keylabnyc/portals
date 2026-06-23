@@ -83,6 +83,7 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 .c-pend{background:var(--abg);color:var(--at)}
 .c-good{background:var(--gbg);color:var(--gt)}
 .c-info{background:var(--bbg);color:var(--bt)}
+.c-warn{background:#FDECD6;color:#7C3A00}
 .divider{border:none;border-top:1px solid var(--border);margin:1.5rem 0}
 .add-btn{border:1px dashed var(--border2);border-radius:var(--r);padding:.75rem;text-align:center;cursor:pointer;color:var(--text4);font-size:13px;margin-bottom:1rem;background:transparent;width:100%;transition:all .12s;font-family:"Open Sans",sans-serif}
 .add-btn:hover{border-color:var(--acc);color:var(--acc)}
@@ -133,7 +134,7 @@ function _fmtFamilyDate(iso){
   var months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
   var date = d.getDate();
   var suffix = date === 1 || date === 21 || date === 31 ? 'st' : date === 2 || date === 22 ? 'nd' : date === 3 || date === 23 ? 'rd' : 'th';
-  return days[d.getDay()] + ', ' + months[d.getMonth()] + ' ' + date + suffix + ', ' + d.getFullYear();
+  return days[d.getDay()] + ', ' + months[d.getMonth()] + ' ' + date + suffix;
 }
 
 // login form
@@ -412,7 +413,7 @@ function phaseLabel(phase, avSubmitted, avOpen, tcAcceptedAt){
   if(phase==='Proposal')            return {text:'Proposal ready', cls:'c-good'};
   if(phase==='Confirmed to Enroll') return {text:'Enrollment confirmed', cls:'c-good'};
   if(phase==='Enrolled') return {text:'Enrolled', cls:'c-good'};
-  if(phase==='Enrollment Change') return {text:'Enrollment pending', cls:'c-warn'};
+  if(phase==='Enrollment Change') return {text:'Enrollment change', cls:'c-warn'};
   if(phase==='Withdrawn')           return {text:'Not currently enrolled', cls:'c-pend'};
   return {text:'Pending', cls:'c-pend'};
 }
@@ -867,50 +868,56 @@ function _saveInstrument(id){
 // HOME TAB
 // ============================================================
 function _rHomeQuickActions(){
-  function _qaRow(icon, label, desc, btnHtml){
-    return '<li style="display:flex;gap:10px;align-items:flex-start;padding:.6rem 0;border-bottom:.5px solid var(--border)">'+
-      '<span style="font-size:15px;flex-shrink:0;width:22px;text-align:center;margin-top:1px">'+icon+'</span>'+
-      '<div style="flex:1">'+
-        '<div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:2px">'+label+'</div>'+
-        '<div style="font-size:12px;color:var(--text3);line-height:1.55">'+desc+'</div>'+
-        (btnHtml?'<div style="margin-top:6px">'+btnHtml+'</div>':'')+
-      '</div></li>';
-  }
+  // NOTE: Calendar & Dates body text (item 8) is hardcoded below.
+  // Future improvement: make these admin-configurable from the Settings tab
+  // so they can be updated year-over-year without changing code.
+  var qa=[
+    ['\ud83d\udcc5','Check your child\'s lesson schedule',
+      'View upcoming lessons, cancellations, and schedule changes.'],
+    ['\ud83d\uddd3\ufe0f','View the Keylab studio calendar',
+      'See all important Keylab dates like studio closures, holidays, and special events.',
+      'View Calendar','https://keylab.nyc/calendar'],
+    ['\u274c','Cancel a lesson',
+      'Make-ups / credits not guaranteed. See cancellation policies for details.'],
+    ['\ud83e\udd12','If your child is ill',
+      'Keep them home. You can cancel the lesson and request a virtual lesson or written assignment.'],
+    ['\ud83d\udcac','Contact your teacher',
+      'Contact your teacher to discuss educational or lesson-related topics and request assignment details. Teachers do not manage scheduling or billing matters.'],
+    ['\ud83d\udce7','Contact admin',
+      'Contact admin for all scheduling, billing, and administrative assistance.'],
+    ['\ud83d\udcb3','Scheduling &amp; billing',
+      'View your lesson schedule, all payments, download invoices, and update your payment details.',
+      'Scheduling &amp; Billing','https://keylab.opus1.io'],
+    ['\ud83d\udcc6','Calendar &amp; Dates',
+      'Regular lessons end Saturday, June 12, 2026. Performance Party week is June 14\u201318, 2026.',
+      'View Calendar','https://keylab.nyc/calendar']
+  ];
   var h='<div class="card">';
-  // ── Section 1: Scheduling & Billing ──────────────────────────────────
-  h+='<h2 style="margin-bottom:.35rem">Scheduling &amp; Billing</h2>';
-  h+='<p style="font-size:13px;color:var(--text2);margin-bottom:.75rem">Log in securely to cancel a lesson, check your schedule, and manage your billing and payment information.</p>';
-  h+='<a class="btn btn-p btn-sm" href="https://keylab.opus1.io/login" target="_blank" style="display:inline-flex">Log in to Opus \u2192</a>';
-  // ── Section 2: Other Resources ────────────────────────────────────────
-  h+='<div style="border-top:1px solid var(--border);margin-top:.85rem;padding-top:.85rem">';
-  h+='<h2 style="margin-bottom:0">Other Resources</h2>';
+  h+='<div style="display:flex;align-items:center;justify-content:space-between">';
+  h+='<div><h2 style="margin-bottom:2px">Managing Your Enrollment</h2>'+
+    '<div style="font-size:12px;color:var(--text3)">How to check your schedule, cancel a lesson, communicate with Keylab staff, review policies, and more</div></div>';
+  h+='<button class="btn btn-p btn-sm" onclick="_qaOpen=!_qaOpen;render()">'+(_qaOpen?'Hide':'View')+'</button>';
   h+='</div>';
-  h+='<ul style="list-style:none;padding:0;margin:0">';
-  h+=_qaRow('\ud83d\uddd3\ufe0f','View the Keylab studio calendar','See all important Keylab dates like studio closures, holidays, and special events.','<a class="btn btn-p btn-sm" href="https://keylab.nyc/calendar" target="_blank">View Calendar</a>');
-  // ── Contact admin — inline expand form ──────────────────────
-  h+='<li style="display:flex;gap:10px;align-items:flex-start;padding:.6rem 0;border-bottom:.5px solid var(--border)">';
-  h+='<span style="font-size:15px;flex-shrink:0;width:22px;text-align:center;margin-top:1px">\ud83d\udce7</span>';
-  h+='<div style="flex:1">';
-  h+='<div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:2px">Contact admin</div>';
-  h+='<div style="font-size:12px;color:var(--text3);line-height:1.55">Contact admin for all scheduling, billing, and administrative assistance.</div>';
-  if(_contactForm.sent){
-    h+='<div class="msg ms" style="margin-top:8px">\u2713 Your message has been sent. We\u2019ll be in touch soon!</div>';
-  } else if(_contactForm.open){
-    h+='<div style="margin-top:8px">';
-    h+='<textarea id="contact-msg" style="width:100%;min-height:90px;margin-bottom:6px;font-size:12px" placeholder="What can we help you with?" oninput="_contactForm.msg=this.value">'+esc(_contactForm.msg)+'</textarea>';
-    if(_contactForm.busy){
-      h+='<button class="btn btn-p btn-sm" disabled><span class="spin">\u21bb</span> Sending...</button>';
-    } else {
-      h+='<button class="btn btn-p btn-sm" onclick="doSendContact()">Send Message</button>';
-      h+=' <button class="btn btn-s btn-sm" onclick="_contactForm={open:false,msg:&apos;&apos;,busy:false,sent:false};render()">Cancel</button>';
-    }
+  if(_qaOpen){
+    h+='<div style="display:flex;flex-wrap:wrap;gap:8px;margin:.85rem 0 0">';
+    h+='<a class="btn btn-p btn-sm" href="https://keylab.opus1.io" target="_blank">Scheduling &amp; Billing</a>';
+    h+='<button class="btn btn-p btn-sm" onclick="gotoEnrollment()">Review Policies</button>';
+    h+='<a class="btn btn-d btn-sm" href="https://keylab.opus1.io" target="_blank">Cancel a Lesson</a>';
+    h+='<button class="btn btn-p btn-sm" onclick="showMsg(&apos;Coming soon!&apos;,&apos;a&apos;)">Change to Virtual Lesson</button>';
+    h+='<button class="btn btn-p btn-sm" onclick="showMsg(&apos;Coming soon!&apos;,&apos;a&apos;)">Contact Teacher</button>';
+    h+='<a class="btn btn-p btn-sm" href="mailto:info@keylab.nyc">Contact Admin</a>';
     h+='</div>';
-  } else {
-    h+='<div style="margin-top:6px"><button class="btn btn-p btn-sm" onclick="_contactForm.open=true;render()">Contact Admin</button></div>';
+    h+='<ul style="list-style:none;padding:0;margin:.85rem 0 0">';
+    qa.forEach(function(item){
+      h+='<li style="display:flex;gap:10px;align-items:flex-start;padding:.6rem 0;border-bottom:.5px solid var(--border)">'+
+        '<span style="font-size:16px;flex-shrink:0;width:22px;text-align:center;margin-top:1px">'+item[0]+'</span>'+
+        '<div><div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:2px">'+item[1]+'</div>'+
+        '<div style="font-size:12px;color:var(--text3);line-height:1.55">'+item[2]+'</div>'+
+        (item[3]?'<div style="margin-top:6px"><a class="btn btn-p btn-sm" href="'+item[4]+'" target="_blank">'+item[3]+'</a></div>':'')+
+        '</div></li>';
+    });
+    h+='</ul>';
   }
-  h+='</div></li>';
-  h+=_qaRow('\ud83d\udccb','Enrollment &amp; policies','Review Keylab\'s enrollment policies for help understanding how to see your schedule, cancel a lesson, and communicate with your teacher or admin staff.','<button class="btn btn-p btn-sm" onclick="gotoEnrollment()">Review Policies</button>');
-  h+='</ul>';
   h+='</div>';
   return h;
 }
@@ -937,7 +944,7 @@ function _rHomeSelfRelease(s){
   if(open){
     h+='<div style="padding:.5rem 0 .25rem">';
     if(granted){
-      h+='<div class="msg ms">\u2713 Self-release permission granted on '+esc(String(s.selfReleaseGrantedAt))+' \u2014 '+esc(s.studentName)+' may arrive and depart unaccompanied.</div>';
+      h+='<div class="msg ms">\u2713 Permission granted \u2014 '+esc(s.studentName)+' may arrive and depart unaccompanied.</div>';
     } else {
       h+='<p style="font-size:13px;color:var(--text2);margin-bottom:.75rem">If you would like '+esc(s.studentName)+' to be able to arrive at and depart from lessons without a parent or guardian present, check the box below and submit. This is optional.</p>';
       h+='<div class="agree-box">'+
@@ -996,13 +1003,21 @@ function rHome(){
       if(details.length) h+='<div style="font-size:13px;color:var(--text3);margin-bottom:.3rem">'+esc(details.join(' \u00b7 '))+'</div>';
       if(s.startDate) h+='<div style="font-size:12px;color:var(--text3);margin-bottom:.3rem">Starts '+esc(_fmtFamilyDate(s.startDate))+'</div>';
       if(s.monthlyPrice) h+='<div style="font-size:14px;font-weight:600;font-family:\'DM Mono\',monospace;color:var(--acc);margin-bottom:.5rem">'+fmtPrice(s.monthlyPrice)+'/mo</div>';
-      if(isEnrolled){
+      if(ph==='Enrollment Change'){
+        h+='<div class="msg mi" style="margin-top:.5rem">'+esc(firstName)+'\u2019s current enrollment will remain active until you accept the new proposal. Once accepted, we\u2019ll process the new enrollment and get '+esc(firstName)+'\u2019s new lesson schedule on the books, and the current enrollment will be archived.</div>';
+        h+='<div style="margin-top:.6rem"><button class="btn btn-p btn-sm" onclick="gotoEnrollment()">Review New Proposal</button></div>';
+      } else if(isEnrolled){
         h+='<div class="msg ms">\u2713 '+esc(firstName)+' is enrolled! See below for details on how to manage their enrollment.</div>';
+        h+='<div style="margin-top:.6rem;display:flex;gap:8px;flex-wrap:wrap">';
+        h+='<button class="btn btn-p btn-sm" onclick="gotoEnrollment()">Review Enrollment Details</button>';
+        h+='</div>';
       } else if(s.tcAcceptedAt||s.tcAcceptedName){
         h+='<div class="msg ms">\u2713 Proposal and policies accepted'+(s.tcAcceptedName?' by '+esc(s.tcAcceptedName):'')+
           (s.tcAcceptedAt?' on '+esc(String(s.tcAcceptedAt)):'')+'.</div>';
+        h+='<div style="margin-top:.6rem"><button class="btn btn-p btn-sm" onclick="gotoEnrollment()">Review Proposal and Policies</button></div>';
+      } else {
+        h+='<div style="margin-top:.6rem"><button class="btn btn-p btn-sm" onclick="gotoEnrollment()">Review Proposal and Policies</button></div>';
       }
-      h+='<div style="margin-top:.6rem"><button class="btn btn-p btn-sm" onclick="gotoEnrollment()">Review Proposal and Policies</button></div>';
       h+=_rHomeSelfRelease(s);
       h+='</div>';
       hadDashboard=true;
@@ -1044,7 +1059,7 @@ function rHome(){
       if(avOpen&&!avSubmitted&&!hasProp&&!hasTrial&&!isHolding&&!isWithdrawn&&!isEnrolled){
         ctas.push('<button class="btn btn-p btn-sm" onclick="_gotoSchedulingForStudent(&apos;'+esc(s.studentId)+'&apos;)">Submit availability</button>');
       }
-      if(avOpen&&avSubmitted&&(ph==='Leads'||ph==='Pending')){
+      if(avOpen&&avSubmitted&&(ph==='Leads'||ph==='Pending'||ph==='Holding')){
         ctas.push('<button class="btn btn-p btn-sm" onclick="_gotoSchedulingForStudent(&apos;'+esc(s.studentId)+'&apos;)">Review / Edit Availability</button>');
       }
       if(ctas.length) h+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:.5rem">'+ctas.join('')+'</div>';
@@ -1791,6 +1806,68 @@ function doSubmitSched(){
 // ============================================================
 // ENROLLMENT TAB
 // ============================================================
+// ── Pricing display helper — matches admin _calcPriceBoxHTML layout ──
+// Used on enrollment tab for both pre-acceptance proposal and post-acceptance tuition details.
+// Reads from student record fields populated by doGetProposal's calcResult overlay.
+function _fmtPriceBox(s){
+  var h='';
+  var _price=parseFloat(s.monthlyPrice)||0;
+  var _priceStr=_price>0?('$'+Math.round(_price)):'--';
+  var _prorated=s.isProrated&&parseFloat(s.proratedFirstMonth)>0;
+  var _prorStr=_prorated?('$'+Math.round(parseFloat(s.proratedFirstMonth))):'';
+  var _splitFee=parseFloat(s.splitLessonFee)||0;
+  var _inHome=parseFloat(s.inHomeFee)||0;
+  var _oneTime=parseFloat(s.oneTimeCharge)||0;
+  var _sibDisc=parseFloat(s.siblingDiscAmt)||0;
+  var _pctDisc=parseFloat(s.pctDiscAmt)||0;
+  var _dolDisc=parseFloat(s.dollarDisc)||0;
+  var _adj=parseFloat(s.adjMonthly)||0;
+  var _baseLesson=_price-_splitFee-_inHome;
+
+  // Price box: two-card when prorated, one-card otherwise
+  h+='<div style="margin:.6rem 0">';
+  if(_prorated){
+    h+=
+      '<div style="display:flex;gap:.5rem">'+
+        '<div style="flex:1;padding:.6rem;background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;text-align:center">'+
+          '<div style="font-size:10px;font-weight:700;color:#1E40AF;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.25rem">1st month price (prorated)</div>'+
+          '<div style="font-size:26px;font-weight:700;font-family:\'DM Mono\',monospace;color:#1D4ED8">'+_prorStr+'</div>'+
+          '<div style="font-size:10px;color:#3B82F6;margin-top:2px">Covers the partial first month based on your start date</div>'+
+        '</div>'+
+        '<div style="flex:1;padding:.6rem;background:var(--bg3);border-radius:8px;text-align:center">'+
+          '<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.25rem">Monthly price</div>'+
+          '<div style="font-size:26px;font-weight:700;font-family:\'DM Mono\',monospace;color:var(--acc)">'+_priceStr+'</div>'+
+          '<div style="font-size:10px;color:var(--text4);margin-top:2px">Flat monthly rate from your 2nd month onward</div>'+
+        '</div>'+
+      '</div>';
+  } else {
+    h+=
+      '<div style="padding:.6rem;background:var(--bg3);border-radius:8px;text-align:center">'+
+        '<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.25rem">Monthly price</div>'+
+        '<div style="font-size:26px;font-weight:700;font-family:\'DM Mono\',monospace;color:var(--acc)">'+_priceStr+'</div>'+
+        '<div style="font-size:10px;color:var(--text4);margin-top:2px">Billed as a flat monthly rate via automatic payment</div>'+
+      '</div>';
+  }
+  h+='</div>';
+
+  // Itemized fee breakdown — shown below price box when any add-ons exist
+  var _hasItems=_splitFee>0||_inHome>0||_oneTime>0||_sibDisc>0||_pctDisc>0||_dolDisc>0||(_adj!==0);
+  if(_hasItems){
+    h+='<div style="margin-top:.4rem;border-top:1px solid var(--border2);padding-top:.5rem">';
+    h+='<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.35rem">Fee breakdown</div>';
+    if(_baseLesson>0) h+='<div class="prop-row" style="border-bottom:none;font-size:12px"><span class="prop-lbl">Lesson fee</span><span class="prop-val">$'+Math.round(_baseLesson)+'</span></div>';
+    if(_splitFee>0)   h+='<div class="prop-row" style="border-bottom:none;font-size:12px"><span class="prop-lbl">Split lesson fee'+(s.splitLessonNote?' \u2014 '+esc(s.splitLessonNote):'')+'</span><span class="prop-val">+$'+Math.round(_splitFee)+'/mo</span></div>';
+    if(_inHome>0)     h+='<div class="prop-row" style="border-bottom:none;font-size:12px"><span class="prop-lbl">In-home lesson fee</span><span class="prop-val">+$'+Math.round(_inHome)+'/mo</span></div>';
+    if(_sibDisc>0)    h+='<div class="prop-row" style="border-bottom:none;font-size:12px;color:var(--green)"><span class="prop-lbl">Sibling discount</span><span class="prop-val">&minus;$'+Math.round(_sibDisc)+'/mo</span></div>';
+    if(_pctDisc>0)    h+='<div class="prop-row" style="border-bottom:none;font-size:12px;color:var(--green)"><span class="prop-lbl">Discount'+(s.pctDiscountNote?' \u2014 '+esc(s.pctDiscountNote):'')+'</span><span class="prop-val">&minus;$'+Math.round(_pctDisc)+'/mo</span></div>';
+    if(_dolDisc>0)    h+='<div class="prop-row" style="border-bottom:none;font-size:12px;color:var(--green)"><span class="prop-lbl">Discount'+(s.dollarDiscountNote?' \u2014 '+esc(s.dollarDiscountNote):'')+'</span><span class="prop-val">&minus;$'+Math.round(_dolDisc)+'/mo</span></div>';
+    if(_adj!==0){var _adjSign=_adj<0?'&minus;':'+';var _adjCol=_adj<0?'var(--green)':'var(--rt)';h+='<div class="prop-row" style="border-bottom:none;font-size:12px;color:'+_adjCol+'"><span class="prop-lbl">Adjustment'+(s.adjustmentNote?' \u2014 '+esc(s.adjustmentNote):'')+'</span><span class="prop-val">'+_adjSign+'$'+Math.round(Math.abs(_adj))+'/mo</span></div>';}
+    if(_oneTime>0)    h+='<div class="prop-row" style="border-bottom:none;font-size:12px"><span class="prop-lbl">One-time fee (first payment only)</span><span class="prop-val">$'+Math.round(_oneTime)+'</span></div>';
+    h+='</div>';
+  }
+  return h;
+}
+
 function rEnrollment(){
   var h='<h1>Enrollment</h1>';
   if(_familyLoading){
@@ -1822,7 +1899,69 @@ function rEnrollment(){
       h+='</div>';
     }
 
-    if(isProposalPhase){
+    if(ph==='Enrollment Change'){
+      // ── Enrollment Change: two-section layout ──
+      var _ce=s.currentEnrollment||{};
+      var _cePrice=parseFloat(_ce.monthlyPrice)||0;
+      var _cePriceStr=_cePrice>0?('$'+Math.round(_cePrice)+'/mo'):'';
+      var _ceLocMap={studio:'Keylab \u00b7 94 Luquer St, 11231','in-home':'In-home',virtual:'Virtual'};
+      h+='<div class="card">';
+      h+='<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem">Current Enrollment \u2014 Active</div>';
+      h+='<span class="chip c-good" style="margin-bottom:.75rem;display:inline-block">Active</span>';
+      if(_ce.day||_ce.time||_ce.teacher){
+        var _ceDetails=[];
+        if(_ce.day) _ceDetails.push(_ce.day);
+        if(_ce.time) _ceDetails.push(_ce.time);
+        if(_ce.teacher) _ceDetails.push(_ce.teacher);
+        if(_ce.lessonLocation) _ceDetails.push(_ceLocMap[_ce.lessonLocation]||_ce.lessonLocation);
+        h+='<div class="prop-row"><span class="prop-lbl">Lesson slot</span><span class="prop-val">'+esc(_ceDetails.join(' \u00b7 '))+'</span></div>';
+      }
+      if(_ce.durationBase) h+='<div class="prop-row"><span class="prop-lbl">Duration</span><span class="prop-val">'+esc(_ce.durationBase)+' minutes</span></div>';
+      if(_cePriceStr) h+='<div class="prop-row"><span class="prop-lbl">Monthly rate</span><span class="prop-val" style="font-weight:600;color:var(--acc);font-family:\'DM Mono\',monospace">'+_cePriceStr+'</span></div>';
+      h+='<div class="msg mi" style="margin-top:.75rem">'+esc(firstName)+'\u2019s current enrollment will remain active until you accept the new proposal. Once accepted, we\u2019ll process the new enrollment and get '+esc(firstName)+'\u2019s new lesson schedule on the books, and the current enrollment will be archived.</div>';
+      h+='</div>';
+      // ── New proposal section ──
+      h+='<div class="card" style="margin-top:1rem">';
+      h+='<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem">New Proposal \u2014 Pending Your Review</div>';
+      h+='<div style="margin-bottom:.75rem"><div style="font-size:18px;font-weight:700;color:var(--text);letter-spacing:-.01em;margin-bottom:.4rem">LESSON PROPOSAL FOR '+esc(s.studentName||firstName)+'</div><span class="chip c-warn" style="display:inline-block">Review and accept</span></div>';
+      var _npRows=[
+        ['Instrument',s.instrument],
+        ['Teacher',s.teacher],
+        ['Day',s.day],
+        ['Time',s.time],
+        ['Duration',s.durationBase?s.durationBase+' minutes':null],
+        ['Location',locMap[s.lessonLocation]||s.lessonLocation||null],
+        ['Start Date',s.startDate?_fmtFamilyDate(s.startDate):(s.startMonth?'Starting month '+s.startMonth:null)]
+      ];
+      _npRows.forEach(function(row){
+        if(!row[1]) return;
+        h+='<div class="prop-row"><span class="prop-lbl">'+esc(row[0])+'</span><span class="prop-val">'+esc(row[1])+'</span></div>';
+      });
+      if(hasPrice) h+=_fmtPriceBox(s);
+      // Acceptance form
+      var tc=_tcState(sid);
+      h+='<div style="margin-top:1rem;border-top:1px solid var(--border);padding-top:1rem">';
+      h+='<p>Please read through our policies below. Once you\u2019ve reviewed everything, accept and sign at the bottom to confirm the new enrollment.</p>';
+      h+=rPolicyText(isInHome);
+      h+='<div class="agree-box" id="tc-agree-box-'+esc(sid)+'" style="'+(tc.checked?'border-color:var(--green);background:rgba(255,255,255,.5)':'')+'">';
+      h+='<input type="checkbox" id="tc-chk-'+esc(sid)+'"'+(tc.checked?' checked':'')+' onchange="_tcState(&apos;'+esc(sid)+'&apos;).checked=this.checked;tcRefresh(&apos;'+esc(sid)+'&apos;)">';
+      h+='<label class="agree-lbl" for="tc-chk-'+esc(sid)+'">By accepting this proposal, I acknowledge that I have read and accept Keylab\u2019s enrollment policies, and I am authorizing Keylab to schedule my child\u2019s lessons, bill my card on file for the first month of lessons, and schedule recurring automatic flat-monthly payments based on the proposal details.</label></div>';
+      var canSubmit=tc.checked&&tc.name.trim().length>0;
+      var _pOpts2='';
+      if(familyParents.p1) _pOpts2+='<option value="'+esc(familyParents.p1)+'"'+(tc.name===familyParents.p1?' selected':'')+'>'+esc(familyParents.p1)+'</option>';
+      if(familyParents.p2) _pOpts2+='<option value="'+esc(familyParents.p2)+'"'+(tc.name===familyParents.p2?' selected':'')+'>'+esc(familyParents.p2)+'</option>';
+      h+='<div class="field"><label>Select your name<span class="req">*</span></label>'+
+        '<select id="tc-nm-'+esc(sid)+'" onchange="_tcState(&apos;'+esc(sid)+'&apos;).name=this.value;tcRefresh(&apos;'+esc(sid)+'&apos;)">'+
+        '<option value="">-- Select --</option>'+_pOpts2+
+        '</select>'+
+        '<div class="hint">By selecting your name, you are executing this agreement electronically. Your electronic signature is legally binding and has the same legal effect as a handwritten signature under applicable e-signature laws.</div></div>';
+      h+=tc.busy
+        ?'<button class="btn btn-p btn-full" disabled><span class="spin">\u21bb</span> Submitting...</button>'
+        :'<div id="tc-err-'+esc(sid)+'" style="display:none;color:var(--rt);font-size:13px;margin-bottom:.5rem"></div>'+
+         '<button id="tc-submit-btn-'+esc(sid)+'" class="btn btn-p btn-full" onclick="doSubmitTC(&apos;'+esc(sid)+'&apos;)" '+(canSubmit?'':'disabled style="opacity:0.4"')+'>Accept New Proposal</button>';
+      h+='</div>';
+      h+='</div>';
+    } else if(isProposalPhase){
       // ── Full enrollment details ──
       var statusChip='';
       if(isFullyEnrolled){
@@ -1852,32 +1991,9 @@ function rEnrollment(){
         h+='<div class="prop-row"><span class="prop-lbl">'+esc(row[0])+'</span><span class="prop-val">'+esc(row[1])+'</span></div>';
       });
       if(hasPrice&&!(isAccepted||isFullyEnrolled)){
-        var _splitFee=parseFloat(s.splitLessonFee)||0;
-        var _basePrice=displayPrice-_splitFee;
-        var _isProrated=s.isProrated&&parseFloat(s.proratedFirstMonth)>0;
-        h+='<div style="margin-top:.5rem;padding-top:.75rem;border-top:1px solid var(--border2)">';
-        if(_isProrated){
-          // First: prorated first month as primary price
-          h+='<div class="prop-row" style="border-bottom:none"><span class="prop-lbl">First month (prorated)</span><span class="price-big">$'+Math.round(parseFloat(s.proratedFirstMonth))+'</span></div>';
-          // Split fee breakdown if applicable
-          if(_splitFee>0){
-            h+='<div class="prop-row" style="border-bottom:none;font-size:12px;color:var(--text3)"><span class="prop-lbl">Lesson fee</span><span class="prop-val">$'+Math.round(_basePrice)+'</span></div>';
-            h+='<div class="prop-row" style="border-bottom:none;font-size:12px;color:var(--text3)"><span class="prop-lbl">Split lesson fee'+(s.splitLessonNote?' \u2014 '+esc(s.splitLessonNote):'')+'</span><span class="prop-val">+$'+Math.round(_splitFee)+'</span></div>';
-          }
-          // Then: regular monthly
-          h+='<div class="prop-row" style="border-bottom:none;margin-top:.35rem"><span class="prop-lbl">Monthly tuition from month 2</span><span class="prop-val">'+displayPriceStr+'</span></div>';
-        } else {
-          // No proration: single monthly price
-          h+='<div class="prop-row" style="border-bottom:none"><span class="prop-lbl">Monthly Tuition</span><span class="price-big">'+displayPriceStr+'</span></div>';
-          if(_splitFee>0){
-            h+='<div class="prop-row" style="border-bottom:none;font-size:12px;color:var(--text3)"><span class="prop-lbl">Lesson fee</span><span class="prop-val">$'+Math.round(_basePrice)+'</span></div>';
-            h+='<div class="prop-row" style="border-bottom:none;font-size:12px;color:var(--text3)"><span class="prop-lbl">Split lesson fee'+(s.splitLessonNote?' \u2014 '+esc(s.splitLessonNote):'')+'</span><span class="prop-val">+$'+Math.round(_splitFee)+'</span></div>';
-          }
-        }
-        if(parseFloat(s.inHomeFee)>0) h+='<div style="font-size:11px;color:var(--text4);text-align:right;margin-top:2px">Includes $'+esc(String(s.inHomeFee))+'/mo in-home fee</div>';
-        h+='</div>';
+        h+=_fmtPriceBox(s);
       }
-      // ── Acceptance banner + policies (legal transcript — never separated) ──
+      // ── Acceptance banner + self-release + Review Details button (in display order) ──
       var tc=_tcState(sid);
       if(isFullyEnrolled||isAccepted){
         // Always-visible: acceptance confirmation
@@ -1886,51 +2002,26 @@ function rEnrollment(){
           h+='\u2713 Proposal and policies accepted'+(s.tcAcceptedName?' by '+esc(s.tcAcceptedName):'')+
             (s.tcAcceptedAt?' on '+esc(String(s.tcAcceptedAt)):'')+'.</div>';
         }
-        // Policies toggle — immediately follows acceptance banner (legal transcript)
-        h+='<div style="margin-top:.75rem">';
-        h+='<button class="btn btn-p btn-sm" onclick="_enrExpanded[&apos;'+esc(sid)+'&apos;]=!_enrExpanded[&apos;'+esc(sid)+'&apos;];render()">'+(_exp?'Hide policies':'Show policies')+'</button>';
-        h+='</div>';
-        if(_exp){
-          h+='<div style="margin-top:.75rem;border-top:1px solid var(--border);padding-top:.75rem">';
-          h+='<div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:.5rem">Keylab Children\u2019s Lesson Policies</div>';
-          h+=rPolicyText(isInHome);
-          h+='</div>';
-        }
-        // Self-release — after policies
         h+=_rHomeSelfRelease(s);
         if(isAccepted&&!isFullyEnrolled){
           h+='<div style="margin-top:1rem;border-top:1px solid var(--border);padding-top:1rem">';
           h+='<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:.4rem">What Happens Next</div>';
-          h+='<p style="font-size:13px;color:var(--text2);margin:0">We\u2019ll process enrollment within 2 business days (sooner if your start date is sooner). Once payment for the first month is processed and automatic payments are set up, '+esc(firstName)+'\u2019s lessons will appear in your Opus account.</p>';
+          h+='<p style="font-size:13px;color:var(--text2);margin:0">We\u2019ll process enrollment within 2 business days (sooner if your start date is sooner). Once the first month is billed and automatic flat-monthly payments are set up, '+esc(firstName)+'\u2019s lessons will appear in your scheduling and billing account.</p>';
           h+='</div>';
           // Always-visible Tuition Details when accepted but not yet enrolled
           h+='<div style="margin-top:1rem;border-top:1px solid var(--border);padding-top:1rem">';
           h+='<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:.75rem">Tuition Details</div>';
-          var _sfee=parseFloat(s.splitLessonFee)||0;
-          var _base2=displayPrice-_sfee;
-          var _isTDProrated=s.isProrated&&parseFloat(s.proratedFirstMonth)>0;
-          if(_isTDProrated){
-            // First month prorated as primary price
-            h+='<div class="prop-row" style="border-bottom:none"><span class="prop-lbl">1st month (prorated)</span><span class="price-big">$'+Math.round(parseFloat(s.proratedFirstMonth))+'</span></div>';
-            if(_sfee>0){
-              h+='<div class="prop-row" style="border-bottom:none;font-size:12px;color:var(--text3)"><span class="prop-lbl">Lesson fee</span><span class="prop-val">$'+Math.round(_base2)+'</span></div>';
-              h+='<div class="prop-row" style="border-bottom:none;font-size:12px;color:var(--text3)"><span class="prop-lbl">Split lesson fee'+(s.splitLessonNote?' \u2014 '+esc(s.splitLessonNote):'')+'</span><span class="prop-val">+$'+Math.round(_sfee)+'/mo</span></div>';
-            }
-            if(parseFloat(s.inHomeFee)>0){
-              h+='<div class="prop-row" style="border-bottom:none;font-size:12px;color:var(--text3)"><span class="prop-lbl">In-home fee</span><span class="prop-val">+$'+Math.round(parseFloat(s.inHomeFee))+'/mo</span></div>';
-            }
-            h+='<div class="prop-row" style="margin-top:.35rem;border-bottom:none"><span class="prop-lbl">Monthly from month 2</span><span class="prop-val">'+displayPriceStr+'</span></div>';
-          } else {
-            // No proration: single monthly price
-            if(_sfee>0){
-              h+='<div class="prop-row" style="border-bottom:none;font-size:12px;color:var(--text3)"><span class="prop-lbl">Lesson fee</span><span class="prop-val">$'+Math.round(_base2)+'</span></div>';
-              h+='<div class="prop-row" style="border-bottom:none;font-size:12px;color:var(--text3)"><span class="prop-lbl">Split lesson fee'+(s.splitLessonNote?' \u2014 '+esc(s.splitLessonNote):'')+'</span><span class="prop-val">+$'+Math.round(_sfee)+'/mo</span></div>';
-            }
-            if(parseFloat(s.inHomeFee)>0){
-              h+='<div class="prop-row" style="border-bottom:none;font-size:12px;color:var(--text3)"><span class="prop-lbl">In-home fee</span><span class="prop-val">+$'+Math.round(parseFloat(s.inHomeFee))+'/mo</span></div>';
-            }
-            h+='<div class="prop-row" style="border-bottom:none"><span class="prop-lbl">Monthly Tuition</span><span class="price-big">'+displayPriceStr+'</span></div>';
-          }
+          h+=_fmtPriceBox(s);
+          h+='</div>';
+        }
+        h+='<div style="margin-top:1rem;border-top:1px solid var(--border);padding-top:.85rem">';
+        h+='<button class="btn btn-p btn-sm" onclick="_enrExpanded[&apos;'+esc(sid)+'&apos;]=!_enrExpanded[&apos;'+esc(sid)+'&apos;];render()">'+(_exp?'Hide details':'Review Enrollment Details')+'</button>';
+        h+='</div>';
+
+        if(_exp){
+          h+='<div style="margin-top:1rem;border-top:1px solid var(--border);padding-top:1rem">';
+          h+='<div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:.5rem">Keylab Children\u2019s Lesson Policies</div>';
+          h+=rPolicyText(isInHome);
           h+='</div>';
         }
         h+='</div>';
@@ -1986,10 +2077,10 @@ function rEnrollment(){
           // Next steps / managing enrollment
           h+='<div style="border-top:1px solid var(--border);margin-top:1rem;padding-top:1rem">';
           if(isFullyEnrolled){
-            h+='<div style="font-size:11px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem">Managing Your Enrollment</div>';
-            h+='<p style="font-size:13px;color:var(--text2);margin-bottom:.75rem">Your lesson schedule and billing live in your Keylab Opus account. Log in to view your full schedule, update your payment method, or cancel an individual lesson.</p>';
-            h+='<a href="https://keylab.opus1.io/login" target="_blank" class="btn btn-p btn-sm" style="display:inline-flex">Log in to Opus \u2192</a>';
-            h+='<p style="font-size:11px;color:var(--text4);margin-top:.75rem">Keylab uses two systems \u2014 the Keylab Family Portal for enrollment, communication, and resources; Opus for your lesson schedule and billing.</p>';
+            h+='<div style="font-size:11px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem">Scheduling &amp; Billing</div>';
+            h+='<p style="font-size:13px;color:var(--text2);margin-bottom:.75rem">Your lesson schedule and billing are managed through your Keylab scheduling and billing account. To check your upcoming lesson schedule, cancel a lesson, view invoices, or update your payment method, visit your scheduling and billing account.</p>';
+            h+='<a href="https://keylab.opus1.io" target="_blank" class="btn btn-p btn-sm" style="display:inline-flex">Scheduling &amp; Billing \u2192</a>';
+            h+='<p style="font-size:11px;color:var(--text4);margin-top:.75rem">Keylab uses two systems \u2014 this portal for enrollment, communication, and resources; your scheduling and billing account for your lesson schedule and payments.</p>';
           } else {
             h+='<div style="font-size:11px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem">What Happens Next</div>';
             h+='<p style="font-size:13px;color:var(--text2)">We\u2019re finishing up \u2014 scheduling '+esc(firstName)+'\u2019s lessons, processing the first payment, and setting up monthly billing. We\u2019ll be in touch once everything is confirmed.</p>';
@@ -2070,7 +2161,7 @@ function rSelfReleaseSection(){
     var granted=!!s.selfReleaseGrantedAt;
     h+='<div class="card"><h2>Unaccompanied Arrival &amp; Departure Permission</h2>';
     if(granted){
-      h+='<div class="msg ms">\u2713 Self-release permission granted on '+esc(String(s.selfReleaseGrantedAt))+'</div>';
+      h+='<div class="msg ms">\u2713 Permission granted on '+esc(String(s.selfReleaseGrantedAt))+'</div>';
       h+='<p style="font-size:12px;color:var(--text3)">'+esc(s.studentName)+' has permission to arrive at and depart from lessons unaccompanied.</p>';
     } else {
       h+='<p>If you would like '+esc(s.studentName)+' to be able to arrive at and depart from lessons without a parent or guardian present, please read and submit the permission below.</p>';
@@ -2085,18 +2176,6 @@ function rSelfReleaseSection(){
     h+='</div>';
   });
   return h;
-}
-
-function doSendContact(){
-  var msg=(_contactForm.msg||'').trim();
-  if(!msg){showMsg('Please enter a message before sending.','e');return;}
-  _contactForm.busy=true; render();
-  fapi('sendContactMessage',{message:msg},function(e,r){
-    _contactForm.busy=false;
-    if(e||!r||!r.ok){showMsg((r&&r.error)||'Something went wrong. Please try again or email us at info@keylab.nyc.','e');render();return;}
-    _contactForm={open:false,msg:'',busy:false,sent:true};
-    render();
-  });
 }
 
 function doGrantSelfRelease(studentId){
@@ -2114,7 +2193,6 @@ function doGrantSelfRelease(studentId){
 var _policyOpen=false;
 var _enrExpanded={};
 var _qaOpen=false;
-var _contactForm={open:false,msg:'',busy:false,sent:false};
 function togglePolicy(stuId){
   if(stuId){_tcPolicyOpen[stuId]=!_tcPolicyOpen[stuId];}
   else{_policyOpen=!_policyOpen;}
@@ -2146,7 +2224,7 @@ function rPolicyText(isInHome){
     '<h3>LESSON SCHEDULING</h3><ul>'+
     '<li>Lessons are scheduled weekly in your chosen time slot from the date of your child\'s first lesson through the end of Keylab\'s school year in June, excluding holidays and studio closures</li>'+
     '<li>We generally follow the NYC public school calendar, but our schedule may differ slightly \u2014 please check the <a href="https://keylab.nyc/calendar" target="_blank">Keylab calendar</a> for full details</li>'+
-    '<li>You can view your child\'s full lesson schedule in your <a href="https://keylab.opus1.io/login" target="_blank">Opus account</a></li>'+
+    '<li>You can view your child\'s full lesson schedule in your <a href="https://keylab.opus1.io/login" target="_blank">account portal</a></li>'+
     '<li>Schedule reminders are sent via email and text \u2014 you can adjust notification preferences in your account</li>'+
     '</ul>'+
 
@@ -2180,9 +2258,9 @@ function rPolicyText(isInHome){
     '</ul>'+
 
     '<h3>SAME-DAY CANCELLATION / LAST MINUTE SCHEDULING ISSUES</h3><ul>'+
-    '<li>Same-day cancellations: cancel online through your Opus account</li>'+
-    '<li>Running late: contact your teacher directly via your Opus account to give them a status update</li>'+
-    '<li>Family emergencies or illness: if you are able to, contact your teacher directly via your Opus account to let them know you won\'t be able to make it</li>'+
+    '<li>Same-day cancellations: cancel online through your account portal</li>'+
+    '<li>Running late: contact your teacher directly via your portal to give them a status update</li>'+
+    '<li>Family emergencies or illness: if you are able to, contact your teacher directly via your account portal to let them know you won\'t be able to make it</li>'+
     '</ul>'+
 
     '<h3>STUDIO CANCELLATIONS</h3><ul>'+
@@ -2211,7 +2289,7 @@ function rPolicyText(isInHome){
 
     '<h3>COMMUNICATION</h3><ul>'+
     '<li>Keylab does not have admin staff available to respond to messages or notify teachers during teaching hours from 2\u20138pm</li>'+
-    '<li>During these hours, you may use the Keylab Family Portal to contact your teacher or admin</li>'+
+    '<li>During these hours, you may use the family portal to contact your teacher or admin</li>'+
     '<li>Teachers may not be able to see your message or respond right away, but they will respond as soon as possible</li>'+
     '<li>Please do not contact your teacher to cancel a lesson, ask about your lesson schedule, billing, or other admin related matters. Our teachers are hired to teach, and do not handle administrative duties</li>'+
     '<li>You can contact your teacher to ask for lesson assignments and materials, updates on your child\'s progress, or questions about anything having to do with your child\'s musical education. Teachers will respond as soon as possible and typically at most within 1 business day</li>'+
@@ -2259,7 +2337,7 @@ function rPolicyText(isInHome){
 
     '<h3>SAME-DAY COMMUNICATION FOR IN-HOME LESSONS</h3><ul>'+
     '<li>Important: We do not have admin staff available to notify teachers during lesson hours - if you email or call us for same-day matters, your teacher will not receive the message and will make an unnecessary trip to your home.</li>'+
-    '<li>Between 3 and 8pm, you must use the client comment feature in your Opus account to communicate directly with your teacher</li>'+
+    '<li>Between 3 and 8pm, you must use the client comment feature in your account portal to communicate directly with your teacher</li>'+
     '<li>Same-day cancellations: Log into your account and cancel the lesson directly</li>'+
     '<li>Running late or not home: Send a client comment to your teacher through your account</li>'+
     '<li>Family emergencies or illness: Send a client comment to your teacher through your account as soon as possible</li>'+

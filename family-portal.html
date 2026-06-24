@@ -32,6 +32,7 @@ a:hover{text-decoration:underline}
 .msg{padding:10px 14px;border-radius:var(--r);font-size:13px;margin-bottom:1rem;border:1px solid;line-height:1.5}
 .ms{background:var(--gbg);color:var(--gt);border-color:var(--green)}
 .me{background:var(--rbg);color:var(--rt);border-color:var(--red)}
+.aw{background:#fffbeb;border:1px solid #f59e0b;border-radius:var(--r);padding:.5rem .75rem;font-size:12px;color:#92400e;line-height:1.5;margin-top:.5rem}
 .mi{background:var(--bbg);color:var(--bt);border-color:var(--blue)}
 input,select,textarea{background:rgba(255,255,255,.45);border:1px solid var(--border2);color:var(--text);border-radius:var(--r);padding:7px 10px;font-family:"Open Sans",sans-serif;font-size:13px;width:100%;outline:none;margin-top:4px;-webkit-appearance:none}
 input:focus,select:focus,textarea:focus{border-color:var(--acc);background:rgba(255,255,255,.65)}
@@ -121,6 +122,7 @@ var TOKEN = '', FAMILY_ID = '';
 var students = [];
 var familyParents = {p1:'', p2:''};
 var _familyLoading = false;
+var _lastFamilyLoadAt = 0;
 var publicCfg = {availabilityOpen:'FALSE'};
 var MSG = {m:'', t:''};
 var busy = false; // generic submitting flag
@@ -760,6 +762,7 @@ function loadFamily(){
     }
     students=r.proposals||[];
     familyParents={p1:r.parent1Name||''  ,p2:r.parent2Name||''};
+    _lastFamilyLoadAt=Date.now();
     render();
   });
 }
@@ -780,10 +783,18 @@ function rApp(){
 
 function gotoEnrollment(){
   TAB='enrollment';
+  // If data is fresh (<60s) render instantly, then silently refresh in background
+  if(students.length&&(Date.now()-_lastFamilyLoadAt)<60000){
+    render();
+    fapi('getProposal', {}, function(e, r){
+      if(!e&&r&&r.ok){ students=r.proposals||[]; familyParents={p1:r.parent1Name||'',p2:r.parent2Name||''}; _lastFamilyLoadAt=Date.now(); render(); }
+    });
+    return;
+  }
   _familyLoading=true;
   render();
   fapi('getProposal', {}, function(e, r){
-    if(!e && r && r.ok){ students = r.proposals || []; familyParents={p1:r.parent1Name||''  ,p2:r.parent2Name||''}; }
+    if(!e && r && r.ok){ students = r.proposals || []; familyParents={p1:r.parent1Name||''  ,p2:r.parent2Name||''}; _lastFamilyLoadAt=Date.now(); }
     _familyLoading=false;
     render();
   });
@@ -1347,14 +1358,13 @@ function rSchedViewMode(){
       if(SC.slotSaveAttempted[i]){
         var _sd=document.getElementById('slot-day-'+i),_ss=document.getElementById('slot-start-'+i),_se=document.getElementById('slot-end-'+i);
         var _day=_sd?_sd.value:slot.day,_start=_ss?_ss.value:slot.start,_end=_se?_se.value:slot.end;
-        if(_day&&!_start) h+='<div style="font-size:12px;color:var(--rt);margin-top:.35rem">\u26a0 Please select the earliest time your child could start a lesson on this day.</div>';
-        if(_day&&_start&&!_end) h+='<div style="font-size:12px;color:var(--rt);margin-top:.35rem">\u26a0 Please select the latest time your child\u2019s lesson could end on this day.</div>';
-        if(_day&&!slot.pref) h+='<div style="font-size:12px;color:var(--rt);margin-top:.35rem">\u26a0 Please select how well this day works for your family using the options above.</div>';
+        if(_day&&!_start) h+='<div class="aw" style="margin-top:.35rem">\u26a0 Please select the earliest time your child could start a lesson on this day.</div>';
+        if(_day&&_start&&!_end) h+='<div class="aw" style="margin-top:.35rem">\u26a0 Please select the latest time your child\u2019s lesson could end on this day.</div>';
+        if(_day&&!slot.pref) h+='<div class="aw" style="margin-top:.35rem">\u26a0 Please select priority.</div>';
       }
       h+='<div style="margin-top:.6rem">';
       h+='<label style="font-size:11px;color:var(--text3);margin-bottom:4px;display:block">Optional note for this window</label>';
-      h+='<input type="text" style="margin-bottom:.5rem" placeholder="Optional — e.g. ‘prefer 3:30 or later’, ‘early release from school on alternating Fridays’, or anything else we should know about this day" value="'+esc(SC.slotNotes[i]||'')+'" oninput="SC.slotNotes['+i+']=this.value">';
-      h+='<button class="btn btn-p btn-sm" onclick="saveSlotLocal('+i+')">Save</button>';
+      h+='<input type="text" placeholder="Optional — e.g. ‘prefer 3:30 or later’, ‘early release from school on alternating Fridays’, or anything else we should know about this day" value="'+esc(SC.slotNotes[i]||'')+'" oninput="SC.slotNotes['+i+']=this.value">';
       h+='</div>';
       h+='</div>';
     } else {
@@ -1439,7 +1449,7 @@ function rSchedForm(){
     }).join('')+
     '</select>';
   if(instMissing){
-    h+='<div style="font-size:12px;color:var(--rt);margin-top:.5rem">\u26a0 Please select an instrument.</div>';
+    h+='<div class="aw">\u26a0 Please select an instrument.</div>';
   }
   h+='</div>';
 
@@ -1456,10 +1466,10 @@ function rSchedForm(){
   if(SC.durations.length>1){
     h+='<div class="field" style="margin-top:.5rem"><label>Context on your duration preference<span class="req">*</span></label>'+
       '<textarea oninput="SC.durationNote=this.value" style="min-height:55px" placeholder="e.g. prefer 45 min but open to 60 depending on cost">'+esc(SC.durationNote)+'</textarea></div>';
-    if(durNoteMissing) h+='<div style="font-size:12px;color:var(--rt);margin-top:.25rem">\u26a0 Please add context on your duration preference.</div>';
+    if(durNoteMissing) h+='<div class="aw" style="margin-top:.25rem">\u26a0 Please add context on your duration preference.</div>';
   }
   if(durMissing){
-    h+='<div style="font-size:12px;color:var(--rt);margin-top:.5rem">\u26a0 Please select a lesson duration to see pricing and continue.</div>';
+    h+='<div class="aw">\u26a0 Please select a lesson duration to see pricing and continue.</div>';
   }
   if(SC.durations.length){
     h+='<div style="font-size:11px;color:var(--text4);margin-top:.4rem">Pricing is estimated and varies by day and teacher. Your final tuition will be confirmed in your enrollment proposal. See estimates for each time window below.</div>';
@@ -1475,13 +1485,13 @@ function rSchedForm(){
     return '<button class="db'+(on?' on':'')+'" onclick="toggleScLoc(&apos;'+x.v+'&apos;)">'+x.l+'</button>';
   }).join('')+'</div>';
   if(locMissing){
-    h+='<div style="font-size:12px;color:var(--rt);margin-top:.5rem">\u26a0 Please select a lesson location.</div>';
+    h+='<div class="aw">\u26a0 Please select a lesson location.</div>';
   }
   var locNoteMissing=SC.locations.length>1&&!SC.locationNote.trim();
   if(SC.locations.length>1){
     h+='<div class="field" style="margin-top:.6rem"><label>Context on your location preference<span class="req">*</span></label>'+
       '<textarea oninput="SC.locationNote=this.value" style="min-height:55px" placeholder="e.g. prefer studio but in-home works for winter">'+esc(SC.locationNote)+'</textarea></div>';
-    if(locNoteMissing) h+='<div style="font-size:12px;color:var(--rt);margin-top:.25rem">\u26a0 Please add context on your location preference.</div>';
+    if(locNoteMissing) h+='<div class="aw" style="margin-top:.25rem">\u26a0 Please add context on your location preference.</div>';
   }
   if(SC.locations.indexOf('in-home')>-1){
     h+='<div class="note" style="margin-top:.65rem;margin-bottom:.65rem">In-home lessons are not guaranteed and are based on instructor availability.</div>';
@@ -1552,11 +1562,11 @@ function rSchedForm(){
     h+='<button class="btn btn-p btn-sm" style="margin-bottom:.75rem" onclick="var ni=SC.slots.length;SC.slots.push(blankSlot());SC.slotEditing[ni]=true;render()">+ Add another time window</button>';
   }
   if(!hasCompleteSlot){
-    h+='<div style="font-size:12px;color:var(--rt);margin-bottom:.5rem">\u26a0 Please add at least one time window with a day, start time, and end time.</div>';
+    h+='<div class="aw" style="margin-top:0;margin-bottom:.5rem">\u26a0 Please add at least one time window with a day, start time, and end time.</div>';
   } else if(missingEndTime){
-    h+='<div style="font-size:12px;color:var(--rt);margin-bottom:.5rem">\u26a0 Please select an end time for each time window.</div>';
+    h+='<div class="aw" style="margin-top:0;margin-bottom:.5rem">\u26a0 Please select an end time for each time window.</div>';
   } else if(missingStartTime){
-    h+='<div style="font-size:12px;color:var(--rt);margin-bottom:.5rem">\u26a0 Please select a start time for each time window.</div>';
+    h+='<div class="aw" style="margin-top:0;margin-bottom:.5rem">\u26a0 Please select a start time for each time window.</div>';
   }
   h+='<div class="field" style="margin-top:.35rem"><label>Instrument or subject notes (optional)</label>'+
     '<input type="text" placeholder="e.g. Piano, but open to keyboard or theory" value="'+esc(SC.instrumentNote)+'" oninput="SC.instrumentNote=this.value"></div>';
@@ -1574,7 +1584,7 @@ function rSchedForm(){
   var submitLbl=isEdit?'Save Changes':'Submit Availability';
   h+='<div style="margin-top:1rem">';
   if(SC.submitError){
-    h+='<div style="background:#fffbeb;border:1px solid #f59e0b;border-radius:var(--r);padding:.65rem .85rem;margin-bottom:.75rem;font-size:13px;color:#92400e;line-height:1.5">\u26a0\ufe0f '+esc(SC.submitError)+'</div>';
+    h+='<div class="aw" style="margin-top:0;margin-bottom:.75rem;font-size:13px;padding:.65rem .85rem">\u26a0\ufe0f '+esc(SC.submitError)+'</div>';
   }
   if(SC.busy){
     h+='<button class="btn btn-p btn-full" disabled><span class="spin">\u21bb</span> Saving...</button>';
@@ -1758,6 +1768,16 @@ function _saveSlotsAndDetails(cb){
 
 function doSubmitSched(){
   SC.submitError='';
+  // Auto-commit any open slot DOM values before validating
+  SC.slots.forEach(function(slot,i){
+    if(SC.slotDeleted[i]) return;
+    var dayEl=document.getElementById('slot-day-'+i);
+    var startEl=document.getElementById('slot-start-'+i);
+    var endEl=document.getElementById('slot-end-'+i);
+    if(dayEl) slot.day=dayEl.value;
+    if(startEl) slot.start=startEl.value;
+    if(endEl) slot.end=endEl.value;
+  });
   if(!SC.studentId){SC.submitError='Please select a child.';render();return;}
   if(!SC.instrument){SC.submitError='Please select an instrument.';render();return;}
   if(!SC.durations.length){SC.submitError='Please select at least one lesson duration.';render();return;}

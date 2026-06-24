@@ -161,7 +161,7 @@ var SC = {
   street:'', apt:'', city:'', state:'NY', zip:'',
   slots:[blankSlot(), blankSlot(), blankSlot()],
   instrument:'', instrumentNote:'', notes:'', locationNote:'', durationNote:'',
-  busy:false, submitted:false, loaded:false,
+  busy:false, submitted:false, loaded:false, submitError:'',
   teacherPref:'',
   submittedAt:'',
   editMode:false,
@@ -194,7 +194,7 @@ function _gotoSchedulingForStudent(id) {
   SC.durations = []; SC.locations = [];
   SC.street = ''; SC.apt = ''; SC.city = ''; SC.state = 'NY'; SC.zip = '';
   SC.instrument = ''; SC.instrumentNote = ''; SC.notes = ''; SC.locationNote = ''; SC.durationNote = '';
-  SC.teacherPref = ''; SC.pendingChanges = false;
+  SC.teacherPref = ''; SC.pendingChanges = false; SC.submitError = '';
   SC.splitLesson = false;
   SC.splitChild = {name:'', age:'', instrument:'', instrumentOther:'', notes:''};
   for(var i=0;i<students.length;i++){
@@ -760,7 +760,6 @@ function loadFamily(){
     }
     students=r.proposals||[];
     familyParents={p1:r.parent1Name||''  ,p2:r.parent2Name||''};
-    _lastFamilyLoadAt=Date.now();
     render();
   });
 }
@@ -779,15 +778,12 @@ function rApp(){
   return tabs+content;
 }
 
-var _lastFamilyLoadAt=0;
 function gotoEnrollment(){
   TAB='enrollment';
-  // Skip re-fetch if data is <60s old — avoids a full round-trip on every tab switch
-  if(students.length&&(Date.now()-_lastFamilyLoadAt)<60000){render();return;}
   _familyLoading=true;
   render();
   fapi('getProposal', {}, function(e, r){
-    if(!e && r && r.ok){ students = r.proposals || []; familyParents={p1:r.parent1Name||''  ,p2:r.parent2Name||''}; _lastFamilyLoadAt=Date.now(); }
+    if(!e && r && r.ok){ students = r.proposals || []; familyParents={p1:r.parent1Name||''  ,p2:r.parent2Name||''}; }
     _familyLoading=false;
     render();
   });
@@ -1117,6 +1113,7 @@ function rScheduling(){
     h+='<h2>How To Submit Your Availability</h2>';
     h+='<ul style="padding-left:1.2rem;color:var(--text2);font-size:13px;line-height:1.75">';
     h+='<li>Select the days and times that work best for your family. You can add as many time windows as you like -- the more options you give us, the easier it is to find a great fit.</li>';
+    h+='<li>For each time window you add, select a start time, end time, and priority level (Preferred, Next Best, Possible, or Least Preferred).</li>';
     h+='<li>Choose your preferred lesson duration. If you select more than one, let us know if you have a preference or are open to any of your choices.</li>';
     h+='<li>If you have a location preference (studio or in-home), let us know. If you select more than one option, let us know details on your preferences. In-home lessons are not guaranteed, but we\'ll do our best if we have a teacher available.</li>';
     h+='<li>After you submit, you\'ll see a summary of your availability here and you can log in to review or make changes.</li>';
@@ -1575,9 +1572,13 @@ function rSchedForm(){
   var locNoteMissing=SC.locations.length>1&&!SC.locationNote.trim();
   var missingRequired=instMissing||durMissing||locMissing||durNoteMissing||locNoteMissing||!hasCompleteSlot||missingEndTime||missingStartTime;
   var submitLbl=isEdit?'Save Changes':'Submit Availability';
+  h+='<div style="margin-top:1rem">';
+  if(SC.submitError){
+    h+='<div style="background:#fffbeb;border:1px solid #f59e0b;border-radius:var(--r);padding:.65rem .85rem;margin-bottom:.75rem;font-size:13px;color:#92400e;line-height:1.5">\u26a0\ufe0f '+esc(SC.submitError)+'</div>';
+  }
   if(SC.busy){
     h+='<button class="btn btn-p btn-full" disabled><span class="spin">\u21bb</span> Saving...</button>';
-  } else if(missingRequired){
+  } else if(missingRequired&&!SC.submitError&&!SC.submitted){
     h+='<button class="btn btn-p btn-full" disabled style="opacity:.5">'+submitLbl+'</button>';
     h+='<div style="text-align:center;font-size:12px;color:var(--text3);margin-top:.4rem">Complete the required sections above to submit.</div>';
   } else {
@@ -1586,6 +1587,7 @@ function rSchedForm(){
   if(!isEdit&&SC.submitted){
     h+='<div class="msg ms" style="margin-top:1rem">\u2713 Availability saved. We\'ll be in touch as soon as possible.</div>';
   }
+  h+='</div>';
   return h;
 }
 
@@ -1696,7 +1698,7 @@ function loadSchedSubmission(){
       SC.durations = []; SC.locations = [];
       SC.street = ''; SC.apt = ''; SC.city = ''; SC.state = 'NY'; SC.zip = '';
       SC.instrumentNote = ''; SC.notes = ''; SC.locationNote = ''; SC.durationNote = '';
-      SC.teacherPref = ''; SC.pendingChanges = false;
+      SC.teacherPref = ''; SC.pendingChanges = false; SC.submitError = '';
       SC.splitLesson = false;
       SC.splitChild = {name:'', age:'', instrument:'', instrumentOther:'', notes:''};
     }
@@ -1755,24 +1757,24 @@ function _saveSlotsAndDetails(cb){
 }
 
 function doSubmitSched(){
-  if(!SC.studentId){showMsg('Please select a child.','e');return;}
-  if(!SC.instrument){showMsg('Please select an instrument.','e');return;}
-  if(!SC.durations.length){showMsg('Please select at least one lesson duration.','e');return;}
-  if(!SC.locations.length){showMsg('Please select at least one lesson location.','e');return;}
-  if(SC.durations.length>1&&!SC.durationNote.trim()){showMsg('Please add context on your duration preference.','e');return;}
-  if(SC.locations.length>1&&!SC.locationNote.trim()){showMsg('Please add context on your location preference.','e');return;}
+  SC.submitError='';
+  if(!SC.studentId){SC.submitError='Please select a child.';render();return;}
+  if(!SC.instrument){SC.submitError='Please select an instrument.';render();return;}
+  if(!SC.durations.length){SC.submitError='Please select at least one lesson duration.';render();return;}
+  if(!SC.locations.length){SC.submitError='Please select at least one lesson location.';render();return;}
+  if(SC.durations.length>1&&!SC.durationNote.trim()){SC.submitError='Please add context on your duration preference.';render();return;}
+  if(SC.locations.length>1&&!SC.locationNote.trim()){SC.submitError='Please add context on your location preference.';render();return;}
   var activeSlots=SC.slots.filter(function(s,i){ return !SC.slotDeleted[i]; });
   var hasSlot=activeSlots.some(function(s){return s.day&&s.start&&s.end;});
-  if(!hasSlot){showMsg('Please add at least one time window with a day, start time, and end time.','e');return;}
+  if(!hasSlot){SC.submitError='Please add at least one complete time window (day, start time, and end time).';render();return;}
   var missingTime=activeSlots.some(function(s){return s.day&&(!s.start||!s.end);});
-  if(missingTime){showMsg('Please add a start and end time for each time window you\u2019ve added.','e');return;}
   // Split lesson validation
   if(SC.splitLesson){
-    if(!SC.splitChild.name.trim()){showMsg('Please enter the second child\'s full name.','e');return;}
-    if(!SC.splitChild.age){showMsg('Please enter the second child\'s age.','e');return;}
-    if(!SC.splitChild.instrument){showMsg('Please select an instrument for the second child.','e');return;}
-    if(SC.splitChild.instrument==='Other'&&!SC.splitChild.instrumentOther.trim()){showMsg('Please describe the second child\'s instrument.','e');return;}
-    if(!SC.splitChild.notes.trim()){showMsg('Please tell us about your second child in the split lesson section.','e');return;}
+    if(!SC.splitChild.name.trim()){SC.submitError='Please enter the second child\'s full name.';render();return;}
+    if(!SC.splitChild.age){SC.submitError='Please enter the second child\'s age.';render();return;}
+    if(!SC.splitChild.instrument){SC.submitError='Please select an instrument for the second child.';render();return;}
+    if(SC.splitChild.instrument==='Other'&&!SC.splitChild.instrumentOther.trim()){SC.submitError='Please describe the second child\'s instrument.';render();return;}
+    if(!SC.splitChild.notes.trim()){SC.submitError='Please tell us about your second child in the split lesson section.';render();return;}
   }
   // One window per day validation
   var daysSeen={};
@@ -1784,15 +1786,23 @@ function doSubmitSched(){
     }
   });
   var missingPref=activeSlots.some(function(s){return s.day&&!s.pref;});
-  if(missingPref){showMsg('Please select priority for each time window.','e');return;}
-  if(dupDay){showMsg('You\'ve already added a window for '+dupDay+'. Please remove the duplicate before submitting.','e');return;}
+  // Build per-day error list for missing time or pref
+  var incompleteSlotDays=[];
+  activeSlots.forEach(function(s){
+    if(s.day&&(!s.start||!s.end||!s.pref)) incompleteSlotDays.push(s.day);
+  });
+  if(missingTime||missingPref){
+    SC.submitError='Please select start time, end time, and priority for each day'+(incompleteSlotDays.length?' ('+incompleteSlotDays.join(', ')+')':'')+'.';
+    render();return;
+  }
+  if(dupDay){SC.submitError='You\'ve already added a window for '+dupDay+'. Please remove the duplicate before submitting.';render();return;}
   SC.busy=true; render();
   _saveSlotsAndDetails(function(ok){
     SC.busy=false;
     if(ok){
       SC.editMode=false;
       SC.submitted=true;
-      showMsg('Availability saved! We\'ll be in touch as soon as possible with an update on your request.','s');
+      SC.submitError='';
       // Check for unsubmitted siblings to nudge
       _siblingNudgeId='';
       var _avOpen=isTruthy(publicCfg.availabilityOpen);

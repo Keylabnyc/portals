@@ -1395,14 +1395,17 @@ function rSchedViewMode(){
   // Split lesson section (below time windows)
   h+=rSplitLessonSection();
 
-  // Submit Changes footer — only shown when pending local changes exist
-  if(SC.pendingChanges){
-    if(SC.busy){
-      h+='<button class="btn btn-p btn-full" style="margin-top:1rem" disabled><span class="spin">\u21bb</span> Submitting...</button>';
-    } else {
-      h+='<button class="btn btn-p btn-full" style="margin-top:1rem" onclick="doSubmitSched()">Submit Changes</button>';
-    }
+  // Submit Changes footer — always visible so family can submit at any time
+  h+='<div style="margin-top:1.25rem">';
+  if(SC.submitError){
+    h+='<div class="aw" style="margin-top:0;margin-bottom:.75rem;font-size:13px;padding:.65rem .85rem">\u26a0\ufe0f '+esc(SC.submitError)+'</div>';
   }
+  if(SC.busy){
+    h+='<button class="btn btn-p btn-full" disabled><span class="spin">\u21bb</span> Submitting...</button>';
+  } else {
+    h+='<button class="btn btn-p btn-full" onclick="doSubmitSched()">Submit Changes</button>';
+  }
+  h+='</div>';
   return h;
 }
 

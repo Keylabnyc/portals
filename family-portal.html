@@ -1603,9 +1603,6 @@ function rSchedForm(){
   } else {
     h+='<button class="btn btn-p btn-full" onclick="doSubmitSched()">'+submitLbl+'</button>';
   }
-  if(!isEdit&&SC.submitted){
-    h+='<div class="msg ms" style="margin-top:1rem">\u2713 Availability saved. We\'ll be in touch as soon as possible.</div>';
-  }
   h+='</div>';
   return h;
 }

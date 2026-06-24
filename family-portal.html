@@ -163,7 +163,7 @@ var SC = {
   street:'', apt:'', city:'', state:'NY', zip:'',
   slots:[blankSlot(), blankSlot(), blankSlot()],
   instrument:'', instrumentNote:'', notes:'', locationNote:'', durationNote:'',
-  busy:false, submitted:false, loaded:false, submitError:'',
+  busy:false, submitted:false, loaded:false, submitError:'', justSubmitted:false,
   teacherPref:'',
   submittedAt:'',
   editMode:false,
@@ -196,7 +196,7 @@ function _gotoSchedulingForStudent(id) {
   SC.durations = []; SC.locations = [];
   SC.street = ''; SC.apt = ''; SC.city = ''; SC.state = 'NY'; SC.zip = '';
   SC.instrument = ''; SC.instrumentNote = ''; SC.notes = ''; SC.locationNote = ''; SC.durationNote = '';
-  SC.teacherPref = ''; SC.pendingChanges = false; SC.submitError = '';
+  SC.teacherPref = ''; SC.pendingChanges = false; SC.submitError = ''; SC.justSubmitted = false;
   SC.splitLesson = false;
   SC.splitChild = {name:'', age:'', instrument:'', instrumentOther:'', notes:''};
   for(var i=0;i<students.length;i++){
@@ -1339,7 +1339,7 @@ function rSchedViewMode(){
       };
       var prefBtns=Object.keys(prefMap).map(function(pv){
         var on=slot.pref===pv;
-        return '<button class="pb'+(on?' '+({preferred:'p-pref',next:'p-next',possible:'p-poss',least:'p-least'}[pv]||''):'')+'" onclick="SC.slots['+i+'].pref=&apos;'+pv+'&apos;;render()">'+prefMap[pv]+'</button>';
+        return '<button class="pb'+(on?' '+({preferred:'p-pref',next:'p-next',possible:'p-poss',least:'p-least'}[pv]||''):'')+'" onclick="SC.slots['+i+'].pref=&apos;'+pv+'&apos;;SC.pendingChanges=true;render()">'+prefMap[pv]+'</button>';
       }).join('');
       h+='<div class="av-slot" style="margin-bottom:.6rem">';
       h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem">';
@@ -1347,9 +1347,9 @@ function rSchedViewMode(){
       h+='<button class="btn btn-d btn-xs" onclick="SC.slotSaveAttempted['+i+']=false;SC.slotEditing['+i+']=false;render()">Cancel</button>';
       h+='</div>';
       h+='<div class="g3" style="margin-bottom:.55rem">';
-      h+='<div><label>Day</label><select id="slot-day-'+i+'" onchange="SC.slots['+i+'].day=this.value;SC.slots['+i+'].start=\'\';SC.slots['+i+'].end=\'\';render()">'+dayOpts+'</select></div>';
-      h+='<div><label>Earliest start time</label><select id="slot-start-'+i+'" onchange="SC.slots['+i+'].start=this.value">'+tOptsFn(slot.start,slot.day,'Earliest start...')+'</select></div>';
-      h+='<div><label>Latest end time</label><select id="slot-end-'+i+'" onchange="SC.slots['+i+'].end=this.value">'+tOptsFn(slot.end,slot.day,'Latest end...')+'</select></div>';
+      h+='<div><label>Day</label><select id="slot-day-'+i+'" onchange="SC.slots['+i+'].day=this.value;SC.slots['+i+'].start=\'\';SC.slots['+i+'].end=\'\';SC.pendingChanges=true;render()">'+dayOpts+'</select></div>';
+      h+='<div><label>Earliest start time</label><select id="slot-start-'+i+'" onchange="SC.slots['+i+'].start=this.value;SC.pendingChanges=true">'+tOptsFn(slot.start,slot.day,'Earliest start...')+'</select></div>';
+      h+='<div><label>Latest end time</label><select id="slot-end-'+i+'" onchange="SC.slots['+i+'].end=this.value;SC.pendingChanges=true">'+tOptsFn(slot.end,slot.day,'Latest end...')+'</select></div>';
       h+='</div>';
       h+='<div class="pref-row"><label style="margin-bottom:4px">How well does this work for you?</label>';
       h+='<div class="pref-btns">'+prefBtns+'</div>';
@@ -1381,24 +1381,24 @@ function rSchedViewMode(){
       if(SC.durations.length&&slot.day) h+=rSlotPricing(slot.day);
       h+='</div>';
       h+='<div style="display:flex;gap:.4rem;flex-shrink:0">';
-      h+='<button class="btn btn-p btn-sm" onclick="SC.slotEditing['+i+']=true;SC.submitted=false;render()">Edit</button>';
-      h+='<button class="btn btn-d btn-sm" onclick="SC.slotDeleted['+i+']=true;SC.pendingChanges=true;SC.submitted=false;render()">Delete</button>';
+      h+='<button class="btn btn-p btn-sm" onclick="SC.slotEditing['+i+']=true;SC.justSubmitted=false;render()">Edit</button>';
+      h+='<button class="btn btn-d btn-sm" onclick="SC.slotDeleted['+i+']=true;SC.pendingChanges=true;SC.justSubmitted=false;render()">Delete</button>';
       h+='</div>';
       h+='</div>';
     }
   });
   if(!hasSlots) h+='<p style="color:var(--text3)">No time windows on file.</p>';
   // Add time window button
-  h+='<button class="btn btn-p btn-sm" style="margin-top:.5rem" onclick="var ni=SC.slots.length;SC.slots.push(blankSlot());SC.slotEditing[ni]=true;SC.submitted=false;render()">+ Add a time window</button>';
+  h+='<button class="btn btn-p btn-sm" style="margin-top:.5rem" onclick="var ni=SC.slots.length;SC.slots.push(blankSlot());SC.slotEditing[ni]=true;SC.justSubmitted=false;render()">+ Add a time window</button>';
   h+='</div>';
 
   // Split lesson section (below time windows)
   h+=rSplitLessonSection();
 
   // Submit Changes footer — shown when pending, error, busy, or just submitted
-  if(SC.pendingChanges||SC.submitError||SC.busy||SC.submitted){
+  if(SC.pendingChanges||SC.submitError||SC.busy||SC.justSubmitted){
     h+='<div style="margin-top:1.25rem">';
-    if(SC.submitted){
+    if(SC.justSubmitted){
       h+='<div class="msg ms">\u2713 Changes saved. We\'ll be in touch as soon as possible.</div>';
     } else {
       if(SC.submitError){
@@ -1717,7 +1717,7 @@ function loadSchedSubmission(){
       SC.durations = []; SC.locations = [];
       SC.street = ''; SC.apt = ''; SC.city = ''; SC.state = 'NY'; SC.zip = '';
       SC.instrumentNote = ''; SC.notes = ''; SC.locationNote = ''; SC.durationNote = '';
-      SC.teacherPref = ''; SC.pendingChanges = false; SC.submitError = '';
+      SC.teacherPref = ''; SC.pendingChanges = false; SC.submitError = ''; SC.justSubmitted = false;
       SC.splitLesson = false;
       SC.splitChild = {name:'', age:'', instrument:'', instrumentOther:'', notes:''};
     }
@@ -1832,6 +1832,7 @@ function doSubmitSched(){
       SC.editMode=false;
       SC.submitted=true;
       SC.submitError='';
+      SC.justSubmitted=true;
       // Check for unsubmitted siblings to nudge
       _siblingNudgeId='';
       var _avOpen=isTruthy(publicCfg.availabilityOpen);

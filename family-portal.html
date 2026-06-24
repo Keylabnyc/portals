@@ -760,6 +760,7 @@ function loadFamily(){
     }
     students=r.proposals||[];
     familyParents={p1:r.parent1Name||''  ,p2:r.parent2Name||''};
+    _lastFamilyLoadAt=Date.now();
     render();
   });
 }
@@ -778,12 +779,15 @@ function rApp(){
   return tabs+content;
 }
 
+var _lastFamilyLoadAt=0;
 function gotoEnrollment(){
   TAB='enrollment';
+  // Skip re-fetch if data is <60s old — avoids a full round-trip on every tab switch
+  if(students.length&&(Date.now()-_lastFamilyLoadAt)<60000){render();return;}
   _familyLoading=true;
   render();
   fapi('getProposal', {}, function(e, r){
-    if(!e && r && r.ok){ students = r.proposals || []; familyParents={p1:r.parent1Name||''  ,p2:r.parent2Name||''}; }
+    if(!e && r && r.ok){ students = r.proposals || []; familyParents={p1:r.parent1Name||''  ,p2:r.parent2Name||''}; _lastFamilyLoadAt=Date.now(); }
     _familyLoading=false;
     render();
   });

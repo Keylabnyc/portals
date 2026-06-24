@@ -2041,16 +2041,27 @@ function rEnrollment(){
       if(hasPrice&&!(isAccepted||isFullyEnrolled)){
         h+=_fmtPriceBox(s);
       }
-      // ── Acceptance banner + self-release + Review Details button (in display order) ──
+      // ── Acceptance banner + Review Policies button + self-release (in display order) ──
+      // Required order: (1) banner (2) Review Policies button (3) policies content (4) self-release
       var tc=_tcState(sid);
       if(isFullyEnrolled||isAccepted){
-        // Always-visible: acceptance confirmation
+        // 1. Always-visible: acceptance confirmation banner
         if(s.tcAcceptedAt||s.tcAcceptedName){
           h+='<div class="msg ms" style="margin-top:1rem">';
           h+='\u2713 Proposal and policies accepted'+(s.tcAcceptedName?' by '+esc(s.tcAcceptedName):'')+
             (s.tcAcceptedAt?' on '+esc(String(s.tcAcceptedAt)):'')+'.</div>';
         }
-        h+=_rHomeSelfRelease(s);
+        // 2. Review Policies toggle button (directly below banner)
+        h+='<div style="margin-top:1rem;border-top:1px solid var(--border);padding-top:.85rem">';
+        h+='<button class="btn btn-p btn-sm" onclick="_enrExpanded[&apos;'+esc(sid)+'&apos;]=!_enrExpanded[&apos;'+esc(sid)+'&apos;];render()">'+(_exp?'Hide policies':'Review Policies')+'</button>';
+        h+='</div>';
+        // 3. Policies content (collapsible under button)
+        if(_exp){
+          h+='<div style="margin-top:1rem;border-top:1px solid var(--border);padding-top:1rem">';
+          h+='<div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:.5rem">Keylab Children\u2019s Lesson Policies</div>';
+          h+=rPolicyText(isInHome);
+          h+='</div>';
+        }
         if(isAccepted&&!isFullyEnrolled){
           h+='<div style="margin-top:1rem;border-top:1px solid var(--border);padding-top:1rem">';
           h+='<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:.4rem">What Happens Next</div>';
@@ -2062,16 +2073,8 @@ function rEnrollment(){
           h+=_fmtPriceBox(s);
           h+='</div>';
         }
-        h+='<div style="margin-top:1rem;border-top:1px solid var(--border);padding-top:.85rem">';
-        h+='<button class="btn btn-p btn-sm" onclick="_enrExpanded[&apos;'+esc(sid)+'&apos;]=!_enrExpanded[&apos;'+esc(sid)+'&apos;];render()">'+(_exp?'Hide details':'Review Enrollment Details')+'</button>';
-        h+='</div>';
-
-        if(_exp){
-          h+='<div style="margin-top:1rem;border-top:1px solid var(--border);padding-top:1rem">';
-          h+='<div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:.5rem">Keylab Children\u2019s Lesson Policies</div>';
-          h+=rPolicyText(isInHome);
-          h+='</div>';
-        }
+        // 4. Self-release section (always last in this card)
+        h+=_rHomeSelfRelease(s);
         h+='</div>';
 
         if(_exp){

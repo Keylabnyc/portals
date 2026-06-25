@@ -128,6 +128,23 @@ var MSG = {m:'', t:''};
 var busy = false; // generic submitting flag
 
 // Formats ISO date string as "Wednesday, September 16th"
+function _isNewFamily(enrollmentType){
+  // Returns true for families who need to set up payment (no card on file yet)
+  // Returning, 2nd Enrollment, and Adjusted Enrollment all have existing accounts
+  var et=(enrollmentType||'').toLowerCase().trim();
+  if(et.indexOf('returning')===0)return false;
+  if(et==='2nd enrollment')return false;
+  if(et==='adjusted enrollment')return false;
+  return true;
+}
+function _fmtFamilyTs(iso){
+  // Formats a full ISO timestamp (e.g. 2026-06-25T14:32:00.000Z) as 'June 25, 2026'
+  if(!iso) return '';
+  var d = new Date(iso);
+  if(isNaN(d.getTime())) return String(iso);
+  var months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  return months[d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear();
+}
 function _fmtFamilyDate(iso){
   if(!iso) return '';
   var d = new Date(iso + 'T12:00:00');
@@ -1024,7 +1041,7 @@ function rHome(){
         h+='</div>';
       } else if(s.tcAcceptedAt||s.tcAcceptedName){
         h+='<div class="msg ms">\u2713 Proposal and policies accepted'+(s.tcAcceptedName?' by '+esc(s.tcAcceptedName):'')+
-          (s.tcAcceptedAt?' on '+esc(String(s.tcAcceptedAt)):'')+'.</div>';
+          (s.tcAcceptedAt?' on '+esc(_fmtFamilyTs(s.tcAcceptedAt)):'')+'.</div>';
         h+='<div style="margin-top:.6rem"><button class="btn btn-p btn-sm" onclick="gotoEnrollment()">Review Proposal and Policies</button></div>';
       } else {
         h+='<div style="margin-top:.6rem"><button class="btn btn-p btn-sm" onclick="gotoEnrollment()">Review Proposal and Policies</button></div>';
@@ -2049,7 +2066,7 @@ function rEnrollment(){
         if(s.tcAcceptedAt||s.tcAcceptedName){
           h+='<div class="msg ms" style="margin-top:1rem">';
           h+='\u2713 Proposal and policies accepted'+(s.tcAcceptedName?' by '+esc(s.tcAcceptedName):'')+
-            (s.tcAcceptedAt?' on '+esc(String(s.tcAcceptedAt)):'')+'.</div>';
+            (s.tcAcceptedAt?' on '+esc(_fmtFamilyTs(s.tcAcceptedAt)):'')+'.</div>';
         }
         // 2. Review Policies toggle button (directly below banner)
         h+='<div style="margin-top:1rem;border-top:1px solid var(--border);padding-top:.85rem">';
@@ -2063,10 +2080,16 @@ function rEnrollment(){
           h+='</div>';
         }
         if(isAccepted&&!isFullyEnrolled){
-          h+='<div style="margin-top:1rem;border-top:1px solid var(--border);padding-top:1rem">';
-          h+='<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:.4rem">What Happens Next</div>';
-          h+='<p style="font-size:13px;color:var(--text2);margin:0">We\u2019ll process enrollment within 2 business days (sooner if your start date is sooner). Once the first month is billed and automatic flat-monthly payments are set up, '+esc(firstName)+'\u2019s lessons will appear in your scheduling and billing account.</p>';
-          h+='</div>';
+          h+=(_isNewFamily(s.enrollmentType)
+          ?('<div style="margin-top:1rem;border-top:1px solid var(--border);padding-top:1rem">'+
+            '<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:.4rem">What Happens Next</div>'+
+            '<p style="font-size:13px;color:var(--text2);margin:0">To confirm '+esc(firstName)+'&rsquo;s time slot'+(s.teacher?' with '+esc(s.teacher):'')+', please use the button below to log into your scheduling and billing account and pay the first month invoice within 48 hours.</p>'+
+            '<div style="margin-top:.75rem"><a href="https://keylab.opus1.io/login" target="_blank" class="btn btn-p btn-sm">Pay Invoice</a></div>'+
+            '</div>')
+          :('<div style="margin-top:1rem;border-top:1px solid var(--border);padding-top:1rem">'+
+            '<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:.4rem">What Happens Next</div>'+
+            '<p style="font-size:13px;color:var(--text2);margin:0">I\u2019ll schedule '+esc(firstName)+'&rsquo;s lessons for the school year and process their enrollment on the admin side using the payment method active in your account. You\u2019ll be billed for the first month when the enrollment is processed, and automatic flat rate monthly payments will be scheduled and processed on the 1st of each month until the last payment in June.</p>'+
+            '</div>'));
           // Always-visible Tuition Details when accepted but not yet enrolled
           h+='<div style="margin-top:1rem;border-top:1px solid var(--border);padding-top:1rem">';
           h+='<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:.75rem">Tuition Details</div>';
@@ -2133,20 +2156,29 @@ function rEnrollment(){
             h+='<a href="https://keylab.opus1.io" target="_blank" class="btn btn-p btn-sm" style="display:inline-flex">Scheduling &amp; Billing \u2192</a>';
             h+='<p style="font-size:11px;color:var(--text4);margin-top:.75rem">Keylab uses two systems \u2014 this portal for enrollment, communication, and resources; your scheduling and billing account for your lesson schedule and payments.</p>';
           } else {
-            h+='<div style="font-size:11px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem">What Happens Next</div>';
-            h+='<p style="font-size:13px;color:var(--text2)">We\u2019re finishing up \u2014 scheduling '+esc(firstName)+'\u2019s lessons, processing the first payment, and setting up monthly billing. We\u2019ll be in touch once everything is confirmed.</p>';
+            h+=(_isNewFamily(s.enrollmentType)
+            ?('<div style="font-size:11px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem">What Happens Next</div>'+
+              '<p style="font-size:13px;color:var(--text2)">To confirm '+esc(firstName)+'&rsquo;s time slot'+(s.teacher?' with '+esc(s.teacher):'')+', please use the button below to log into your scheduling and billing account and pay the first month invoice within 48 hours.</p>'+
+              '<div style="margin-top:.75rem"><a href="https://keylab.opus1.io/login" target="_blank" class="btn btn-p btn-sm">Pay Invoice</a></div>')
+            :('<div style="font-size:11px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem">What Happens Next</div>'+
+              '<p style="font-size:13px;color:var(--text2)">I\u2019ll schedule '+esc(firstName)+'&rsquo;s lessons for the school year and process their enrollment on the admin side using the payment method active in your account. You\u2019ll be billed for the first month when the enrollment is processed, and automatic flat rate monthly payments will be scheduled and processed on the 1st of each month until the last payment in June.</p>'));
           }
           h+='</div>';
 
           h+='</div>';
         }
       } else if(hasPrice&&!isAccepted&&!isFullyEnrolled){
+        var _isNew1=_isNewFamily(s.enrollmentType);
         h+='<div class="card"><h2>Lesson Policies</h2>';
-        h+='<p>Please read through our policies below. Once you\'ve reviewed everything, accept and sign at the bottom. Once accepted, we will finish processing your enrollment on the admin side by scheduling your lessons for the school year, processing your first monthly payment, and setting up automatic monthly payments using your card on file. If you do not have a payment method on file, we\'ll contact you with instructions on how to add that to your account.</p>';
+        h+=_isNew1
+          ?'<p>Please take a look at our policies below and let us know if you have any questions. Once you\'ve accepted, the next step is to log into your scheduling and billing account and pay the first month invoice to confirm '+esc(firstName)+'&rsquo;s spot.</p>'
+          :'<p>Please take a look at our policies below and let us know if you have any questions. Once you\'ve accepted, I\'ll get '+esc(firstName)+'&rsquo;s lessons scheduled for the school year and process their enrollment using the payment method active in your account.</p>';
         h+=rPolicyText(isInHome);
         h+='<div class="agree-box" id="tc-agree-box-'+esc(sid)+'" style="'+(tc.checked?'border-color:var(--green);background:rgba(255,255,255,.5)':'')+'">';
         h+='<input type="checkbox" id="tc-chk-'+esc(sid)+'"'+(tc.checked?' checked':'')+' onchange="_tcState(&apos;'+esc(sid)+'&apos;).checked=this.checked;tcRefresh(&apos;'+esc(sid)+'&apos;)">';
-        h+='<label class="agree-lbl" for="tc-chk-'+esc(sid)+'">By accepting this proposal, I acknowledge that I have read and accept Keylab\u2019s enrollment policies, and I am authorizing Keylab to schedule my child\u2019s lessons, bill my card on file for the first month of lessons, and schedule recurring automatic flat-monthly payments based on the proposal details.</label></div>';
+        h+=_isNew1
+          ?('<label class="agree-lbl" for="tc-chk-'+esc(sid)+'">'+'By accepting this proposal, I acknowledge that I have read and accept Keylab\u2019s enrollment policies, and I understand that '+esc(firstName)+'\u2019s spot will be confirmed once payment for the first month of lessons has been processed.</label></div>')
+          :('<label class="agree-lbl" for="tc-chk-'+esc(sid)+'">'+'By accepting this proposal, I acknowledge that I have read and accept Keylab\u2019s enrollment policies, and I am authorizing Keylab to schedule my child\u2019s lessons, bill my card on file for the first month of lessons, and schedule recurring automatic flat-monthly payments based on the proposal details.</label></div>');
         var canSubmit=tc.checked&&tc.name.trim().length>0;
         var _pOpts='';
         if(familyParents.p1) _pOpts+='<option value="'+esc(familyParents.p1)+'"'+(tc.name===familyParents.p1?' selected':'')+'>'+esc(familyParents.p1)+'</option>';
@@ -2264,7 +2296,7 @@ function rPolicyCollapsible(forceOpen, isInHome, stuId){
     var stu=stuId?students.filter(function(s){return s.studentId===stuId;})[0]:null;
     var snapshot=stu&&stu.tcPolicySnapshot?stu.tcPolicySnapshot:'';
     if(snapshot){
-      h+='<div class="tc-box"><p class="tc-ver" style="margin-bottom:.5rem">Policies as accepted on '+esc(String(stu.tcAcceptedAt||''))+'</p>'+
+      h+='<div class="tc-box"><p class="tc-ver" style="margin-bottom:.5rem">Policies as accepted on '+esc(_fmtFamilyTs(stu.tcAcceptedAt||''))+'</p>'+
         '<div style="font-size:11px;color:var(--text3);line-height:1.6">'+snapshot+'</div></div>';
     } else {
       h+=rPolicyText(isInHome);

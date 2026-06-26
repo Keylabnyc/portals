@@ -239,7 +239,7 @@ var INSTRUMENTS = ['Piano','Guitar','Bass','Drums','Voice','Ukulele','Violin',
 var SKILL_LEVELS = ['Beginner','Some Experience','Intermediate','Advanced'];
 var HOW_HEARD = ['Advertisement','Google','My Child\'s School','Yelp',
   'A Neighbor or Friend','Facebook or Instagram','A Flyer','I\'m already a client'];
-var LOCS = [{v:'studio',l:'Keylab \u00b7 94 Luquer St, 11231'},{v:'in-home',l:'In-home'},{v:'virtual',l:'Virtual'}];
+var LOCS = [{v:'studio',l:'at Keylab'},{v:'in-home',l:'In-home'},{v:'virtual',l:'Virtual'}];
 var PREFS = [
   {v:'preferred', l:'Preferred',      cls:'p-pref'},
   {v:'next',      l:'Next Best Option',cls:'p-next'},
@@ -1000,7 +1000,7 @@ function rHome(){
     return h;
   }
   var avOpen=isTruthy(publicCfg.availabilityOpen);
-  var locMap={studio:'Keylab \u00b7 94 Luquer St, 11231','in-home':'In-home',virtual:'Virtual'};
+  var locMap={studio:'at Keylab','in-home':'In-home',virtual:'Virtual'};
   var hadDashboard=false;
   var anyEnrolled=false;
   students.forEach(function(s){
@@ -1209,7 +1209,7 @@ function _rSiblingNudge(){
 }
 
 function rViewLocPills(){
-  var locs=[{v:'studio',l:'Keylab \u00b7 94 Luquer St, 11231'},{v:'in-home',l:'In-home'},{v:'virtual',l:'Virtual'}];
+  var locs=[{v:'studio',l:'at Keylab'},{v:'in-home',l:'In-home'},{v:'virtual',l:'Virtual'}];
   return locs.map(function(x){
     var on=SC.locations.indexOf(x.v)>-1;
     return '<button class="db'+(on?' on':'')+'" onclick="toggleScLoc(&apos;'+x.v+'&apos;);SC.pendingChanges=true">'+x.l+'</button>';
@@ -1275,7 +1275,7 @@ function rSchedViewMode(){
   h+='<div style="font-size:13px;color:var(--text3);margin-bottom:1rem">\u2713 Availability submitted'+(SC.submittedAt?' \u00b7 '+esc(String(SC.submittedAt)):'')+'</div>';
 
   // Lesson details card — each row independently editable
-  var locLabels={'studio':'Keylab \u00b7 94 Luquer St, 11231','in-home':'In-home','virtual':'Virtual'};
+  var locLabels={'studio':'at Keylab','in-home':'In-home','virtual':'Virtual'};
   var locDisplay=SC.locations.map(function(l){return locLabels[l]||l;}).join(', ')||'\u2014';
   var durDisplay=SC.durations.map(function(d){return d+' min';}).join(', ')||'\u2014';
   var tchDisplay=SC.teacherPref||'No preference';
@@ -1375,9 +1375,9 @@ function rSchedViewMode(){
       if(SC.slotSaveAttempted[i]){
         var _sd=document.getElementById('slot-day-'+i),_ss=document.getElementById('slot-start-'+i),_se=document.getElementById('slot-end-'+i);
         var _day=_sd?_sd.value:slot.day,_start=_ss?_ss.value:slot.start,_end=_se?_se.value:slot.end;
-        if(_day&&!_start) h+='<div class="aw" style="margin-top:.35rem">\u26a0 Please select the earliest time your child could start a lesson on this day.</div>';
-        if(_day&&_start&&!_end) h+='<div class="aw" style="margin-top:.35rem">\u26a0 Please select the latest time your child\u2019s lesson could end on this day.</div>';
-        if(_day&&!slot.pref) h+='<div class="aw" style="margin-top:.35rem">\u26a0 Please select priority.</div>';
+        if(_day&&!_start) h+='<div class="aw" style="margin-top:.35rem">Please select the earliest time your child could start a lesson on this day.</div>';
+        if(_day&&_start&&!_end) h+='<div class="aw" style="margin-top:.35rem">Please select the latest time your child\u2019s lesson could end on this day.</div>';
+        if(_day&&!slot.pref) h+='<div class="aw" style="margin-top:.35rem">Please select priority.</div>';
       }
       h+='<div style="margin-top:.6rem">';
       h+='<label style="font-size:11px;color:var(--text3);margin-bottom:4px;display:block">Optional note for this window</label>';
@@ -1419,7 +1419,7 @@ function rSchedViewMode(){
       h+='<div class="msg ms">\u2713 Changes saved. We\'ll be in touch as soon as possible.</div>';
     } else {
       if(SC.submitError){
-        h+='<div class="aw" style="margin-top:0;margin-bottom:.75rem;font-size:13px;padding:.65rem .85rem">\u26a0\ufe0f '+esc(SC.submitError)+'</div>';
+        h+='<div class="aw" style="margin-top:0;margin-bottom:.75rem;font-size:13px;padding:.65rem .85rem">'+esc(SC.submitError)+'</div>';
       }
       if(SC.busy){
         h+='<button class="btn btn-p btn-full" disabled><span class="spin">\u21bb</span> Saving...</button>';
@@ -1475,8 +1475,10 @@ function rSchedForm(){
     }).join('')+
     '</select>';
   if(instMissing){
-    h+='<div class="aw">\u26a0 Please select an instrument.</div>';
+    h+='<div class="aw">Please select an instrument.</div>';
   }
+  h+='<div class="field" style="margin-top:.5rem"><label>Instrument or subject notes (optional)</label>'+
+    '<input type="text" placeholder="e.g. piano main instrument but also wants to explore drums" value="'+esc(SC.instrumentNote)+'" oninput="SC.instrumentNote=this.value"></div>';
   h+='</div>';
 
   // Step 2: Duration
@@ -1492,13 +1494,10 @@ function rSchedForm(){
   if(SC.durations.length>1){
     h+='<div class="field" style="margin-top:.5rem"><label>Context on your duration preference<span class="req">*</span></label>'+
       '<textarea oninput="SC.durationNote=this.value" style="min-height:55px" placeholder="e.g. prefer 45 min but open to 60 depending on cost">'+esc(SC.durationNote)+'</textarea></div>';
-    if(durNoteMissing) h+='<div class="aw" style="margin-top:.25rem">\u26a0 Please add context on your duration preference.</div>';
+    if(durNoteMissing) h+='<div class="aw" style="margin-top:.25rem">Please add context on your duration preference.</div>';
   }
   if(durMissing){
-    h+='<div class="aw">\u26a0 Please select a lesson duration to see pricing and continue.</div>';
-  }
-  if(SC.durations.length){
-    h+='<div style="font-size:11px;color:var(--text4);margin-top:.4rem">Pricing is estimated and varies by day and teacher. Your final tuition will be confirmed in your enrollment proposal. See estimates for each time window below.</div>';
+    h+='<div class="aw">Please select a lesson duration to see pricing and continue.</div>';
   }
   h+='</div>';
 
@@ -1511,13 +1510,13 @@ function rSchedForm(){
     return '<button class="db'+(on?' on':'')+'" onclick="toggleScLoc(&apos;'+x.v+'&apos;)">'+x.l+'</button>';
   }).join('')+'</div>';
   if(locMissing){
-    h+='<div class="aw">\u26a0 Please select a lesson location.</div>';
+    h+='<div class="aw">Please select a lesson location.</div>';
   }
   var locNoteMissing=SC.locations.length>1&&!SC.locationNote.trim();
   if(SC.locations.length>1){
     h+='<div class="field" style="margin-top:.6rem"><label>Context on your location preference<span class="req">*</span></label>'+
       '<textarea oninput="SC.locationNote=this.value" style="min-height:55px" placeholder="e.g. prefer studio but in-home works for winter">'+esc(SC.locationNote)+'</textarea></div>';
-    if(locNoteMissing) h+='<div class="aw" style="margin-top:.25rem">\u26a0 Please add context on your location preference.</div>';
+    if(locNoteMissing) h+='<div class="aw" style="margin-top:.25rem">Please add context on your location preference.</div>';
   }
   if(SC.locations.indexOf('in-home')>-1){
     h+='<div class="note" style="margin-top:.65rem;margin-bottom:.65rem">In-home lessons are not guaranteed and are based on instructor availability.</div>';
@@ -1545,7 +1544,8 @@ function rSchedForm(){
   h+='<div class="card">';
   h+='<h2 style="margin-bottom:.15rem">When are you available?</h2>';
   if(!isEdit){
-    h+='<p style="font-size:13px;color:var(--text2);margin-bottom:.6rem">Add the days and time windows that work for your family. More options = better chances of a great fit.</p>';
+    h+='<p style="font-size:13px;color:var(--text2);margin-bottom:.35rem">Add the days and time windows that work for your family. More options = better chances of a great fit.</p>';
+    if(SC.durations.length) h+='<div style="font-size:11px;color:var(--text4);margin-bottom:.6rem">Pricing is estimated and varies by day and teacher. Your final tuition will be confirmed in your enrollment proposal. See estimates for each time window below.</div>';
     h+='<div style="background:var(--bg3);border-radius:var(--r);padding:.55rem .75rem;margin-bottom:.75rem;font-size:12px;color:var(--text3);line-height:1.8">';
     h+='<div style="display:flex;flex-wrap:wrap;gap:5px;align-items:center">';
     h+='<span style="font-size:11px;color:var(--text4);margin-right:3px">Priority:</span>';
@@ -1588,16 +1588,14 @@ function rSchedForm(){
     h+='<button class="btn btn-p btn-sm" style="margin-bottom:.75rem" onclick="var ni=SC.slots.length;SC.slots.push(blankSlot());SC.slotEditing[ni]=true;render()">+ Add another time window</button>';
   }
   if(!hasCompleteSlot){
-    h+='<div class="aw" style="margin-top:0;margin-bottom:.5rem">\u26a0 Please add at least one time window with a day, start time, and end time.</div>';
+    h+='<div class="aw" style="margin-top:0;margin-bottom:.5rem">Please add at least one time window with a day, start time, and end time.</div>';
   } else if(missingEndTime){
-    h+='<div class="aw" style="margin-top:0;margin-bottom:.5rem">\u26a0 Please select an end time for each time window.</div>';
+    h+='<div class="aw" style="margin-top:0;margin-bottom:.5rem">Please select an end time for each time window.</div>';
   } else if(missingStartTime){
-    h+='<div class="aw" style="margin-top:0;margin-bottom:.5rem">\u26a0 Please select a start time for each time window.</div>';
+    h+='<div class="aw" style="margin-top:0;margin-bottom:.5rem">Please select a start time for each time window.</div>';
   }
-  h+='<div class="field" style="margin-top:.35rem"><label>Instrument or subject notes (optional)</label>'+
-    '<input type="text" placeholder="e.g. Piano, but open to keyboard or theory" value="'+esc(SC.instrumentNote)+'" oninput="SC.instrumentNote=this.value"></div>';
   h+='<div class="field"><label>Anything else we should know? (optional)</label>'+
-    '<textarea placeholder="Your child\'s learning style, musical interests, scheduling context, or anything else that helps us find the right fit." oninput="SC.notes=this.value">'+esc(SC.notes)+'</textarea></div>';
+    '<textarea placeholder="Add anything that would help us understand your child and your scheduling needs, including your child\'s learning style, taste in music, their previous experience, or details about your scheduling preferences" oninput="SC.notes=this.value">'+esc(SC.notes)+'</textarea></div>';
   h+='</div>';
 
   // Split lesson section (below time windows)
@@ -1610,7 +1608,7 @@ function rSchedForm(){
   var submitLbl=isEdit?'Save Changes':'Submit Availability';
   h+='<div style="margin-top:1rem">';
   if(SC.submitError){
-    h+='<div class="aw" style="margin-top:0;margin-bottom:.75rem;font-size:13px;padding:.65rem .85rem">\u26a0\ufe0f '+esc(SC.submitError)+'</div>';
+    h+='<div class="aw" style="margin-top:0;margin-bottom:.75rem;font-size:13px;padding:.65rem .85rem">'+esc(SC.submitError)+'</div>';
   }
   if(SC.busy){
     h+='<button class="btn btn-p btn-full" disabled><span class="spin">\u21bb</span> Saving...</button>';
@@ -1942,7 +1940,7 @@ function rEnrollment(){
     return h+'<div class="card"><p style="color:var(--text3)">Nothing here yet. We\'ll update this as soon as your enrollment details are ready.</p></div>';
   }
 
-  var locMap={studio:'Keylab \u00b7 94 Luquer St, 11231','in-home':'In-home',virtual:'Virtual'};
+  var locMap={studio:'at Keylab','in-home':'In-home',virtual:'Virtual'};
   var avOpen=isTruthy(publicCfg.availabilityOpen);
 
   students.forEach(function(s){
@@ -1969,7 +1967,7 @@ function rEnrollment(){
       var _ce=s.currentEnrollment||{};
       var _cePrice=parseFloat(_ce.monthlyPrice)||0;
       var _cePriceStr=_cePrice>0?('$'+Math.round(_cePrice)+'/mo'):'';
-      var _ceLocMap={studio:'Keylab \u00b7 94 Luquer St, 11231','in-home':'In-home',virtual:'Virtual'};
+      var _ceLocMap={studio:'at Keylab','in-home':'In-home',virtual:'Virtual'};
       h+='<div class="card">';
       h+='<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem">Current Enrollment \u2014 Active</div>';
       h+='<span class="chip c-good" style="margin-bottom:.75rem;display:inline-block">Active</span>';

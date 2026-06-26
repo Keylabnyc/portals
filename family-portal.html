@@ -212,7 +212,7 @@ function _gotoSchedulingForStudent(id) {
   SC.slots = [blankSlot(), blankSlot(), blankSlot()];
   SC.durations = []; SC.locations = [];
   SC.street = ''; SC.apt = ''; SC.city = ''; SC.state = 'NY'; SC.zip = '';
-  SC.instrument = ''; SC.instrumentNote = ''; SC.notes = ''; SC.locationNote = ''; SC.durationNote = '';
+  SC.instrument = ''; SC.instrumentNote = ''; SC.notes = ''; SC.locationNote = ''; SC.durationNote = ''; SC.locNoteTouched = false;
   SC.teacherPref = ''; SC.pendingChanges = false; SC.submitError = ''; SC.justSubmitted = false;
   SC.splitLesson = false;
   SC.splitChild = {name:'', age:'', instrument:'', instrumentOther:'', notes:''};
@@ -685,7 +685,7 @@ function rStuBlock(st, i){
 function toggleScLoc(v){
   var idx=SC.locations.indexOf(v);
   if(idx>-1) SC.locations.splice(idx,1); else SC.locations.push(v);
-  if(SC.locations.length<=1) SC.locationNote='';
+  if(SC.locations.length<=1){SC.locationNote='';SC.locNoteTouched=false;}
   render();
 }
 function toggleScDur(d){
@@ -1505,7 +1505,7 @@ function rSchedForm(){
   h+='<h2 style="margin-bottom:.15rem">Where would you like lessons?</h2>';
   h+='<div class="dur-row">'+LOCS.map(function(x){
     var on=SC.locations.indexOf(x.v)>-1;
-    return '<button class="db'+(on?' on':'')+'" onclick="toggleScLoc(&apos;'+x.v+'&apos;)">'+x.l+'</button>';
+    return '<button class="db'+(on?' on':'')+'" onclick="toggleScLoc(&apos;'+x.v+'&apos;);render()">'+x.l+'</button>';
   }).join('')+'</div>';
   if(locMissing){
     h+='<div class="aw">Please select a lesson location.</div>';
@@ -1513,8 +1513,8 @@ function rSchedForm(){
   var locNoteMissing=SC.locations.length>1&&!SC.locationNote.trim();
   if(SC.locations.length>1){
     h+='<div class="field" style="margin-top:.6rem"><label>Context on your location preference<span class="req">*</span></label>'+
-      '<textarea oninput="SC.locationNote=this.value" style="min-height:55px" placeholder="e.g. Prefer in-home but open to lessons at Keylab">'+esc(SC.locationNote)+'</textarea></div>';
-    if(locNoteMissing) h+='<div class="aw" style="margin-top:.25rem">Please add context on your location preference.</div>';
+      '<textarea oninput="SC.locationNote=this.value;SC.locNoteTouched=true" style="min-height:55px" placeholder="e.g. Prefer in-home but open to lessons at Keylab">'+esc(SC.locationNote)+'</textarea></div>';
+    if(locNoteMissing&&SC.locNoteTouched) h+='<div class="aw" style="margin-top:.25rem">Please add context on your location preference.</div>';
   }
   if(SC.locations.indexOf('in-home')>-1){
     h+='<div class="note" style="margin-top:.65rem;margin-bottom:.65rem">In-home lessons are not guaranteed and are based on instructor availability. In-home lessons are typically priced slightly higher than studio lessons to account for teacher travel time.</div>';
@@ -1602,7 +1602,8 @@ function rSchedForm(){
   // Submit
   var durNoteMissing=SC.durations.length>1&&!SC.durationNote.trim();
   var locNoteMissing=SC.locations.length>1&&!SC.locationNote.trim();
-  var missingRequired=instMissing||durMissing||locMissing||durNoteMissing||locNoteMissing||!hasCompleteSlot||missingEndTime||missingStartTime;
+  var inHomeAddrMissing=SC.locations.indexOf('in-home')>-1&&!SC.street.trim();
+  var missingRequired=instMissing||durMissing||locMissing||durNoteMissing||locNoteMissing||inHomeAddrMissing||!hasCompleteSlot||missingEndTime||missingStartTime;
   var submitLbl=isEdit?'Save Changes':'Submit Availability';
   h+='<div style="margin-top:1rem">';
   if(SC.submitError){
@@ -1667,8 +1668,8 @@ function rSlot(slot, i, isEdit){
   h+='</div>';
   h+='<div class="g3" style="margin-bottom:.55rem">';
   h+='<div><label>Day</label><select onchange="SC.slots['+i+'].day=this.value;SC.slots['+i+'].start=&apos;&apos;;SC.slots['+i+'].end=&apos;&apos;;render()">'+dayOpts+'</select></div>';
-  h+='<div><label>Earliest start time</label><select onchange="SC.slots['+i+'].start=this.value">'+tOpts(slot.start,slot.day,'Earliest start...')+'</select></div>';
-  h+='<div><label>Latest end time</label><select onchange="SC.slots['+i+'].end=this.value">'+tOpts(slot.end,slot.day,'Latest end...')+'</select></div>';
+  h+='<div><label>Earliest start time</label><select onchange="SC.slots['+i+'].start=this.value;render()">'+tOpts(slot.start,slot.day,'Earliest start...')+'</select></div>';
+  h+='<div><label>Latest end time</label><select onchange="SC.slots['+i+'].end=this.value;render()">'+tOpts(slot.end,slot.day,'Latest end...')+'</select></div>';
   h+='</div>';
   h+='<div class="pref-row"><label style="margin-bottom:4px">How well does this work for you?</label>';
   h+='<div class="pref-btns">'+prefBtns+'</div>';
@@ -1803,6 +1804,7 @@ function doSubmitSched(){
   if(!SC.locations.length){SC.submitError='Please select at least one lesson location.';render();return;}
   if(SC.durations.length>1&&!SC.durationNote.trim()){SC.submitError='Please add context on your duration preference.';render();return;}
   if(SC.locations.length>1&&!SC.locationNote.trim()){SC.submitError='Please add context on your location preference.';render();return;}
+  if(SC.locations.indexOf('in-home')>-1&&!SC.street.trim()){SC.submitError='Please enter your street address for in-home lessons.';render();return;}
   var activeSlots=SC.slots.filter(function(s,i){ return !SC.slotDeleted[i]; });
   var hasSlot=activeSlots.some(function(s){return s.day&&s.start&&s.end;});
   if(!hasSlot){SC.submitError='Please add at least one complete time window (day, start time, and end time).';render();return;}

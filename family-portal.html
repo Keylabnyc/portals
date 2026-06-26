@@ -1240,8 +1240,7 @@ function rSplitLessonSection(){
   h+='<label class="agree-lbl" for="split-chk" style="font-size:11px;font-weight:400;color:var(--text3)">Split Lesson Request</label>';
   h+='</div></div>';
   if(SC.splitLesson){
-    var _splitAmt=has60?'$30':'$20';
-    h+='<div class="note" style="margin-bottom:.75rem">Add a younger sibling for a short 10 or 15 minute lesson. The primary student will have a longer lesson, and the 2nd child will have a short mini-lesson. Split lessons are not guaranteed, and must be reviewed and approved. If approved, a recurring monthly surcharge of '+_splitAmt+' will be added for split lessons.</div>';
+    h+='<div class="note" style="margin-bottom:.75rem">Add a younger sibling to split a 45 or 60 minute lesson between two children. The primary student will have a longer lesson, and the 2nd child will have a short mini-lesson. Split lessons are not guaranteed, and must be reviewed and approved. If approved, a recurring monthly surcharge will be added for split lessons.<br><br><strong>Split Lesson Surcharge</strong><br>\u2022 60 minutes \u2014 $30 per month<br>\u2022 45 minutes \u2014 $20 per month</div>';
     h+='<div class="field"><label>Second child\'s full name<span class="req">*</span></label>';
     h+='<input type="text" placeholder="Full name" value="'+esc(SC.splitChild.name)+'" oninput="SC.splitChild.name=this.value"></div>';
     var sc2Age=parseInt(SC.splitChild.age,10);

@@ -1924,6 +1924,9 @@ function _fmtPriceBox(s){
     if(_oneTime>0)    h+='<div class="prop-row" style="border-bottom:none;font-size:12px"><span class="prop-lbl">One-time fee (first payment only)</span><span class="prop-val">$'+Math.round(_oneTime)+'</span></div>';
     h+='</div>';
   }
+  if(s.lessonLocation==='in-home'){
+    h+='<div class="note" style="margin-top:.5rem">In-home lessons are based on teacher availability and are not guaranteed. In-home lessons are typically priced slightly higher than studio lessons to account for teacher travel time.</div>';
+  }
   return h;
 }
 
@@ -2128,6 +2131,9 @@ function rEnrollment(){
           h+='<div class="prop-row" style="margin-top:.4rem;padding-top:.7rem;border-top:1.5px solid var(--border2);border-bottom:none">';
           h+='<span class="prop-lbl" style="font-weight:700;color:var(--text)">Monthly tuition</span>';
           h+='<span class="price-big">'+displayPriceStr+'</span></div>';
+          if(isInHome){
+            h+='<div class="note" style="margin-top:.5rem">In-home lessons are based on teacher availability and are not guaranteed. In-home lessons are typically priced slightly higher than studio lessons to account for teacher travel time.</div>';
+          }
           if(s.isProrated&&parseFloat(s.proratedFirstMonth)>0){
             h+='<div class="prop-row" style="border-bottom:none"><span class="prop-lbl">First month (prorated)</span>';
             h+='<span class="prop-val">$'+Math.round(parseFloat(s.proratedFirstMonth))+'</span></div>';

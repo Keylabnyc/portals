@@ -1519,7 +1519,8 @@ function rSchedForm(){
   if(SC.locations.indexOf('in-home')>-1){
     h+='<div class="note" style="margin-top:.65rem;margin-bottom:.65rem">In-home lessons are not guaranteed and are based on instructor availability. In-home lessons are typically priced slightly higher than studio lessons to account for teacher travel time.</div>';
     h+='<div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:.5rem">Address required for in-home requests</div>';
-    h+='<div class="field"><label>Street address</label><input type="text" placeholder="e.g. 123 Atlantic Ave" value="'+esc(SC.street)+'" oninput="SC.street=this.value"></div>';
+    h+='<div class="field"><label>Street address<span class="req">*</span></label><input type="text" placeholder="e.g. 123 Atlantic Ave" value="'+esc(SC.street)+'" oninput="SC.street=this.value;render()"></div>';
+    if(!SC.street.trim()) h+='<div class="aw" style="margin-top:.25rem">Please enter your street address so we can coordinate in-home lessons.</div>';
     h+='<div class="g2"><div class="field"><label>Apt</label><input type="text" placeholder="Apt 2B" value="'+esc(SC.apt)+'" oninput="SC.apt=this.value"></div>';
     h+='<div class="field"><label>City</label><input type="text" placeholder="Brooklyn" value="'+esc(SC.city)+'" oninput="SC.city=this.value"></div></div>';
     h+='<div class="g2"><div class="field"><label>State</label><input type="text" placeholder="NY" maxlength="2" value="'+esc(SC.state||'NY')+'" oninput="SC.state=this.value"></div>';
@@ -1613,7 +1614,15 @@ function rSchedForm(){
     h+='<button class="btn btn-p btn-full" disabled><span class="spin">\u21bb</span> Saving...</button>';
   } else if(missingRequired&&!SC.submitError&&!SC.submitted){
     h+='<button class="btn btn-p btn-full" disabled style="opacity:.5">'+submitLbl+'</button>';
-    h+='<div style="text-align:center;font-size:12px;color:var(--text3);margin-top:.4rem">Complete the required sections above to submit.</div>';
+    var _hints=[];
+    if(instMissing) _hints.push('select an instrument');
+    if(durMissing) _hints.push('select a lesson duration');
+    if(durNoteMissing) _hints.push('add context on your duration preference');
+    if(locMissing) _hints.push('select a lesson location');
+    if(locNoteMissing) _hints.push('add context on your location preference');
+    if(inHomeAddrMissing) _hints.push('enter your street address for in-home lessons');
+    if(!hasCompleteSlot||missingEndTime||missingStartTime) _hints.push('add at least one complete time window with day, start time, and end time');
+    if(_hints.length) h+='<div style="text-align:center;font-size:12px;color:var(--text3);margin-top:.4rem">Still needed: '+_hints.join('; ')+'.</div>';
   } else {
     h+='<button class="btn btn-p btn-full" onclick="doSubmitSched()">'+submitLbl+'</button>';
   }

@@ -1241,17 +1241,17 @@ function rSplitLessonSection(){
   h+='</div></div>';
   if(SC.splitLesson){
     var _splitAmt=has60?'$30':'$20';
-    h+='<div class="note" style="margin-bottom:.75rem">Add a younger sibling for a short 10 or 15 minute lesson. The primary student will have a longer lesson, and the 2nd child will have a short mini-lesson. Split lessons are not guaranteed, and must be reviewed and approved. If approved, a recurring monthly surcharge of '+_splitAmt+' will be added for split lessons.<br><br><span style="font-size:11px;color:var(--text4)">* We welcome children ages 5 and up. We\u2019re open to 4-year-olds with exceptional focus and a strong interest in music.</span></div>';
+    h+='<div class="note" style="margin-bottom:.75rem">Add a younger sibling for a short 10 or 15 minute lesson. The primary student will have a longer lesson, and the 2nd child will have a short mini-lesson. Split lessons are not guaranteed, and must be reviewed and approved. If approved, a recurring monthly surcharge of '+_splitAmt+' will be added for split lessons.</div>';
     h+='<div class="field"><label>Second child\'s full name<span class="req">*</span></label>';
     h+='<input type="text" placeholder="Full name" value="'+esc(SC.splitChild.name)+'" oninput="SC.splitChild.name=this.value"></div>';
     var sc2Age=parseInt(SC.splitChild.age,10);
     h+='<div class="field"><label>Second child\'s age<span class="req">*</span></label>';
     h+='<select onchange="SC.splitChild.age=this.value;render()">'+
       '<option value=""'+(SC.splitChild.age===''?' selected':'')+'>Select age...</option>'+
-      ['4','5','6'].map(function(a){return '<option value="'+a+'"'+(SC.splitChild.age===a?' selected':'')+'>'+a+'</option>';}).join('')+
+      ['4','5','6'].map(function(a){return '<option value="'+a+'"'+(SC.splitChild.age===a?' selected':'')+'>'+a+(a==='4'?' *':'')+' </option>';}).join('')+
       '</select></div>';
     if(SC.splitChild.age&&sc2Age===4){
-      h+='<div class="aw" style="margin-top:.25rem;margin-bottom:.5rem">We\u2019ll reach out to learn more about your 4-year-old before confirming their spot.</div>';
+      h+='<div class="aw" style="margin-top:.25rem;margin-bottom:.5rem">We take children ages 5 and up, but we\u2019re open to potentially working with 4-year-olds who have exceptional focus and a strong interest in music.</div>';
     }
     var sc2InstrOpts='<option value="">Select...</option>'+INSTRUMENTS.map(function(x){
       return '<option value="'+esc(x)+'"'+(SC.splitChild.instrument===x?' selected':'')+'>'+esc(x)+'</option>';

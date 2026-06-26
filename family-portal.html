@@ -1237,22 +1237,21 @@ function rSplitLessonSection(){
   h+='<div style="display:flex;align-items:center;padding:.35rem 0;margin-bottom:.5rem">';
   h+='<div class="agree-box" style="margin:0">';
   h+='<input type="checkbox" id="split-chk"'+(SC.splitLesson?' checked':'')+' onchange="SC.splitLesson=this.checked;render()">';
-  h+='<label class="agree-lbl" for="split-chk" style="font-size:11px;font-weight:400;color:var(--text3)">Split lesson between two children</label>';
+  h+='<label class="agree-lbl" for="split-chk" style="font-size:11px;font-weight:400;color:var(--text3)">Split Lesson Request</label>';
   h+='</div></div>';
   if(SC.splitLesson){
-    if(has60){
-      h+='<div class="note" style="margin-bottom:.75rem">Please note: if you\'d like to split a 60-minute slot evenly (30 minutes per child), this will be scheduled as two separate back-to-back lessons and priced accordingly \u2014 not as a single shared lesson. If you\'d like an uneven split within one lesson, like splitting a 60 minute time slot into a 45 minute lesson and a short 15 minute lesson, a monthly surcharge of $30 will be added to the monthly price.</div>';
-    } else {
-      h+='<div class="note" style="margin-bottom:.75rem">A monthly surcharge of $20 will be added to the monthly price for split lessons.</div>';
-    }
+    var _splitAmt=has60?'$30':'$20';
+    h+='<div class="note" style="margin-bottom:.75rem">Add a younger sibling for a short 10 or 15 minute lesson. The primary student will have a longer lesson, and the 2nd child will have a short mini-lesson. Split lessons are not guaranteed, and must be reviewed and approved. If approved, a recurring monthly surcharge of '+_splitAmt+' will be added for split lessons.<br><br><span style="font-size:11px;color:var(--text4)">* We welcome children ages 5 and up. We\u2019re open to 4-year-olds with exceptional focus and a strong interest in music.</span></div>';
     h+='<div class="field"><label>Second child\'s full name<span class="req">*</span></label>';
     h+='<input type="text" placeholder="Full name" value="'+esc(SC.splitChild.name)+'" oninput="SC.splitChild.name=this.value"></div>';
     var sc2Age=parseInt(SC.splitChild.age,10);
     h+='<div class="field"><label>Second child\'s age<span class="req">*</span></label>';
-    h+='<input type="number" inputmode="numeric" min="1" max="18" placeholder="Age" value="'+esc(SC.splitChild.age)+'" oninput="SC.splitChild.age=this.value" onchange="render()"></div>';
-    if(SC.splitChild.age&&!isNaN(sc2Age)&&sc2Age<5){
-      var _sc2Name=SC.splitChild.name.trim()?esc(SC.splitChild.name.trim()):'your second child';
-      h+='<div class="note" style="margin-bottom:.75rem;color:var(--at)">Our lessons are designed for children ages 5 and up. If '+_sc2Name+' is younger than 5 and shows strong focus and musical aptitude, we\u2019d love to hear from you \u2014 we\u2019ll reach out to see if we can find the right fit.</div>';
+    h+='<select onchange="SC.splitChild.age=this.value;render()">'+
+      '<option value=""'+(SC.splitChild.age===''?' selected':'')+'>Select age...</option>'+
+      ['4','5','6'].map(function(a){return '<option value="'+a+'"'+(SC.splitChild.age===a?' selected':'')+'>'+a+'</option>';}).join('')+
+      '</select></div>';
+    if(SC.splitChild.age&&sc2Age===4){
+      h+='<div class="aw" style="margin-top:.25rem;margin-bottom:.5rem">We\u2019ll reach out to learn more about your 4-year-old before confirming their spot.</div>';
     }
     var sc2InstrOpts='<option value="">Select...</option>'+INSTRUMENTS.map(function(x){
       return '<option value="'+esc(x)+'"'+(SC.splitChild.instrument===x?' selected':'')+'>'+esc(x)+'</option>';
@@ -1515,7 +1514,7 @@ function rSchedForm(){
   var locNoteMissing=SC.locations.length>1&&!SC.locationNote.trim();
   if(SC.locations.length>1){
     h+='<div class="field" style="margin-top:.6rem"><label>Context on your location preference<span class="req">*</span></label>'+
-      '<textarea oninput="SC.locationNote=this.value" style="min-height:55px" placeholder="e.g. prefer studio but in-home works for winter">'+esc(SC.locationNote)+'</textarea></div>';
+      '<textarea oninput="SC.locationNote=this.value" style="min-height:55px" placeholder="e.g. Prefer in-home but open to lessons at Keylab">'+esc(SC.locationNote)+'</textarea></div>';
     if(locNoteMissing) h+='<div class="aw" style="margin-top:.25rem">Please add context on your location preference.</div>';
   }
   if(SC.locations.indexOf('in-home')>-1){
@@ -1588,7 +1587,7 @@ function rSchedForm(){
     h+='<button class="btn btn-p btn-sm" style="margin-bottom:.75rem" onclick="var ni=SC.slots.length;SC.slots.push(blankSlot());SC.slotEditing[ni]=true;render()">+ Add another time window</button>';
   }
   if(!hasCompleteSlot){
-    h+='<div class="aw" style="margin-top:0;margin-bottom:.5rem">Please add at least one time window with a day, start time, and end time.</div>';
+    h+='<div class="aw" style="margin-top:0;margin-bottom:.5rem">Please add at least one time window with a day, start time, end time, and priority.</div>';
   } else if(missingEndTime){
     h+='<div class="aw" style="margin-top:0;margin-bottom:.5rem">Please select an end time for each time window.</div>';
   } else if(missingStartTime){

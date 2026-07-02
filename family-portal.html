@@ -1041,6 +1041,7 @@ function rHome(){
     var ph=s.phase||'';
     var firstName=s.studentName?(s.studentName.trim().split(' ')[0]):'';
     var avSubmitted=isTruthy(s.availabilitySubmitted);
+    var avLocked=isTruthy(s.availabilityLocked);
     var hasProp=ph==='Proposal'||ph==='Confirmed to Enroll'||ph==='Enrolled'||ph==='Enrollment Change';
     var hasTrial=ph==='Trial Booked';
     var isHolding=ph==='Holding';
@@ -1092,7 +1093,9 @@ function rHome(){
       h+='</div>';
       h+='<span class="chip '+lbl.cls+'">'+esc(lbl.text)+'</span>';
       h+='</div>';
-      if(hasTrial){
+      if(avLocked){
+        h+='<div style="font-size:12px;color:var(--text4)">We are working on a time slot for '+esc(firstName)+' and their availability is temporarily locked. Please contact <a href="mailto:info@keylab.nyc">info@keylab.nyc</a> for assistance.</div>';
+      } else if(hasTrial){
         var trialDetails=[];
         if(s.trialDay) trialDetails.push(s.trialDay);
         if(s.trialDate) trialDetails.push(s.trialDate);
@@ -1134,13 +1137,13 @@ function rHome(){
       if((ph==='Proposal'||ph==='Confirmed to Enroll')&&!isAccepted){
         ctas.push('<button class="btn btn-p btn-sm" onclick="gotoEnrollment()">Review and Accept Proposal</button>');
       }
-      if(avOpen&&!avSubmitted&&(ph==='Leads'||ph==='Pending')&&!hasProp&&!hasTrial&&!isWithdrawn&&!isEnrolled){
+      if(!avLocked&&avOpen&&!avSubmitted&&(ph==='Leads'||ph==='Pending')&&!hasProp&&!hasTrial&&!isWithdrawn&&!isEnrolled){
         ctas.push('<button class="btn btn-p btn-sm" onclick="_gotoSchedulingForStudent(&apos;'+esc(s.studentId)+'&apos;)">Submit availability</button>');
       }
-      if(!avSubmitted&&ph==='Holding'){
+      if(!avLocked&&!avSubmitted&&ph==='Holding'){
         ctas.push('<button class="btn btn-p btn-sm" onclick="_gotoSchedulingForStudent(&apos;'+esc(s.studentId)+'&apos;)">Submit availability</button>');
       }
-      if(avSubmitted&&(ph==='Leads'||ph==='Pending'||ph==='Holding')){
+      if(!avLocked&&avSubmitted&&(ph==='Leads'||ph==='Pending'||ph==='Holding')){
         ctas.push('<button class="btn btn-p btn-sm" onclick="_gotoSchedulingForStudent(&apos;'+esc(s.studentId)+'&apos;)">Review / Update Availability</button>');
       }
       if(ctas.length) h+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:.5rem">'+ctas.join('')+'</div>';
@@ -1169,6 +1172,11 @@ function rScheduling(){
   for(var _i=0;_i<students.length;_i++){ if(students[_i].studentId===SC.studentId){_scStu=students[_i];break;} }
   var _enType=(_scStu&&_scStu.enrollmentType)||'';
   var _isReturning=_enType.toLowerCase().indexOf('returning')===0;
+
+  if(_scStu&&(_scStu.availabilityLocked==='TRUE'||_scStu.availabilityLocked===true)){
+    var _lockFirstName=(_scStu.studentName||'This student').split(' ')[0];
+    return '<p style="color:var(--text3)">We are working on a time slot for '+esc(_lockFirstName)+' and their availability is temporarily locked. Please contact <a href="mailto:info@keylab.nyc">info@keylab.nyc</a> for assistance.</p>';
+  }
 
   var h='';
   h+='<h1>Your Availability</h1>';
@@ -2253,7 +2261,9 @@ function rEnrollment(){
       if(students.length===1) h+='<span class="stu-name" style="font-size:18px;margin-bottom:.4rem;display:inline-block">'+esc(s.studentName)+'</span>';
       h+='<span class="chip '+esc(lbl.cls)+'">'+esc(lbl.text)+'</span>';
       h+='</div>';
-      if(ph==='Holding'){
+      if(isTruthy(s.availabilityLocked)){
+        h+='<p style="font-size:13px;color:var(--text2);margin:0">We are working on a time slot for '+esc(firstName)+' and their availability is temporarily locked. Please contact <a href="mailto:info@keylab.nyc">info@keylab.nyc</a> for assistance.</p>';
+      } else if(ph==='Holding'){
         if(isTruthy(s.availabilitySubmitted)){
           h+='<p style="font-size:13px;color:var(--text2);margin:0">We\'ve received '+esc(firstName)+'\u2019s availability and are working on scheduling. We\'ll reach out as soon as we have a time slot for them.</p>';
         } else {

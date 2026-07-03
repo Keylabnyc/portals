@@ -242,7 +242,7 @@ function _gotoSchedulingForStudent(id) {
   SC.studentId = id;
   SC.loaded = false; SC.submitted = false; SC.isFirstSubmission = true;
   SC.editMode = false; SC.slotEditing = {}; SC.slotDeleted = {}; SC.slotNotes = {}; SC.slotSaveAttempted = {};
-  SC.submittedAt = ''; SC.source = '';
+  SC.submittedAt = '';
   SC.slots = [blankSlot(), blankSlot(), blankSlot()];
   SC.durations = []; SC.locations = [];
   SC.street = ''; SC.apt = ''; SC.city = ''; SC.state = 'NY'; SC.zip = '';
@@ -420,7 +420,7 @@ function newStuDraft(){
   return {name:'',age:'',dob:'',instrument:'',instrumentOther:'',skill:'',
     location:'studio',durations:[],school:'',grade:'',howHeard:'',notes:''};
 }
-function blankSlot(){ return {day:'',start:'',end:'',pref:''}; }
+function blankSlot(){ return {day:'',start:'',end:'',pref:'',source:''}; }
 
 // ============================================================
 // API
@@ -1395,14 +1395,18 @@ function rLockedAvSummary(){
   return h;
 }
 
+// Small "Added by admin" pill, shown per-slot (not per-submission) — a slot
+// keeps this tag permanently once tagged, through edits and saves, since the
+// origin is tracked on the slot itself (source1-6 on AVAILABILITY_REQUESTS)
+// rather than as a one-time submission-level flag.
+function _adminSlotPill(){
+  return ' <span style="display:inline-block;background:var(--bbg);color:var(--bt);border:1px solid var(--blue);font-size:10px;font-weight:600;padding:1px 7px;border-radius:9px;vertical-align:middle;white-space:nowrap">Added by admin</span>';
+}
 function rSchedViewMode(){
   var h='';
-  // Header — submitted timestamp, plus an "Added by admin" pill when this
-  // record originated from an admin-entered availability entry rather than
-  // a family submission (SC.source set in loadSchedSubmission()).
-  var _addedByAdminPill=SC.source==='admin'?
-    ' <span style="display:inline-block;background:var(--bbg);color:var(--bt);border:1px solid var(--blue);font-size:11px;font-weight:600;padding:1px 8px;border-radius:10px;vertical-align:middle">Added by admin</span>':'';
-  h+='<div style="font-size:13px;color:var(--text3);margin-bottom:1rem">\u2713 Availability submitted'+(SC.submittedAt?' \u00b7 '+esc(String(SC.submittedAt)):'')+_addedByAdminPill+'</div>';
+  // Header — submitted timestamp only; per-slot origin is shown next to
+  // each individual time window below, not at the submission level.
+  h+='<div style="font-size:13px;color:var(--text3);margin-bottom:1rem">\u2713 Availability submitted'+(SC.submittedAt?' \u00b7 '+esc(String(SC.submittedAt)):'')+'</div>';
 
   // Lesson details card — each row independently editable
   var locLabels={'studio':'at Keylab','in-home':'In-home','virtual':'Virtual'};
@@ -1490,7 +1494,7 @@ function rSchedViewMode(){
       }).join('');
       h+='<div class="av-slot" style="margin-bottom:.6rem">';
       h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem">';
-      h+='<div style="font-size:11px;color:var(--text4);text-transform:uppercase;letter-spacing:.08em;font-family:\'DM Mono\',monospace">Editing time window '+(i+1)+'</div>';
+      h+='<div style="font-size:11px;color:var(--text4);text-transform:uppercase;letter-spacing:.08em;font-family:\'DM Mono\',monospace">Editing time window '+(i+1)+(slot.source==='admin'?_adminSlotPill():'')+'</div>';
       h+='<button class="btn btn-d btn-xs" onclick="SC.slotSaveAttempted['+i+']=false;SC.slotEditing['+i+']=false;render()">Cancel</button>';
       h+='</div>';
       h+='<div class="g3" style="margin-bottom:.55rem">';
@@ -1523,7 +1527,7 @@ function rSchedViewMode(){
       var timeRange=(slot.start||'')+(slot.end?' \u2013 '+slot.end:'');
       h+='<div class="av-slot" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.4rem;margin-bottom:.4rem">';
       h+='<div style="flex:1;min-width:160px">';
-      h+='<div style="font-weight:500;font-size:14px">'+esc(slot.day||'')+'</div>';
+      h+='<div style="font-weight:500;font-size:14px">'+esc(slot.day||'')+(slot.source==='admin'?_adminSlotPill():'')+'</div>';
       h+='<div style="font-size:12px;color:var(--text3);display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:2px">'+esc(timeRange)+(prefChip2?' '+prefChip2:'')+'</div>';
       if(SC.durations.length&&slot.day) h+=rSlotPricing(slot.day);
       h+='</div>';
@@ -1535,8 +1539,12 @@ function rSchedViewMode(){
     }
   });
   if(!hasSlots) h+='<p style="color:var(--text3)">No time windows on file.</p>';
-  // Add time window button
-  h+='<button class="btn btn-p btn-sm" style="margin-top:.5rem" onclick="var ni=SC.slots.length;SC.slots.push(blankSlot());SC.slotEditing[ni]=true;SC.justSubmitted=false;render()">+ Add a time window</button>';
+  // Add time window button — hidden once 6 active windows already exist
+  // (schema cap on AVAILABILITY_REQUESTS is day1-day6).
+  var _activeSlotCount=SC.slots.filter(function(s,i){return !SC.slotDeleted[i]&&s.day;}).length;
+  if(_activeSlotCount<6){
+    h+='<button class="btn btn-p btn-sm" style="margin-top:.5rem" onclick="var ni=SC.slots.length;SC.slots.push(blankSlot());SC.slotEditing[ni]=true;SC.justSubmitted=false;render()">+ Add a time window</button>';
+  }
   h+='</div>';
 
   // Split lesson section (below time windows)
@@ -1830,20 +1838,30 @@ function loadSchedSubmission(){
       SC.instrumentNote=sub.instrumentNote||''; SC.notes=sub.notes||'';
       SC.teacherPref=sub.teacherPref||'';
       SC.submittedAt=sub.submittedAt||'';
-      SC.source=sub.source||'';
       SC.submitted=true;
       SC.isFirstSubmission=false;
       SC.editMode=false;
       SC.pendingChanges=false;
       SC.slotEditing={}; SC.slotDeleted={}; SC.slotNotes={}; SC.slotSaveAttempted={};
       var slots=[];
+      var slotSavedNotes=[];
       for(var k=1;k<=6;k++){
-        var d=sub['day'+k],s=sub['start'+k],e=sub['end'+k],p=sub['rank'+k];
-        if(d||s) slots.push({day:d||'',start:s||'',end:e||'',pref:p||''});
+        var d=sub['day'+k],s=sub['start'+k],e=sub['end'+k],p=sub['rank'+k],so=sub['source'+k];
+        if(d||s){ slots.push({day:d||'',start:s||'',end:e||'',pref:p||'',source:so||''}); slotSavedNotes.push(sub['note'+k]||''); }
       }
+      // Merge in any admin-added slots not yet saved into this student's own
+      // record (returned separately by doGetFamilyAvailability as
+      // pendingAdminSlots) — shown as regular, editable slot rows tagged
+      // "Added by admin" until the family saves, at which point they become
+      // part of the saved record like any other slot.
+      var pending=Array.isArray(sub.pendingAdminSlots)?sub.pendingAdminSlots:[];
+      pending.forEach(function(p2){
+        slots.push({day:p2.day||'',start:p2.start||'',end:p2.end||'',pref:p2.rank||'',source:'admin'});
+        slotSavedNotes.push(p2.note||'');
+      });
       SC.slots=slots.length?slots:[blankSlot(),blankSlot(),blankSlot()];
       SC.slotNotes={};
-      for(var _n=0;_n<slots.length;_n++){var _nv=sub['note'+(_n+1)];if(_nv) SC.slotNotes[_n]=_nv;}
+      for(var _n=0;_n<slots.length;_n++){var _nv=slotSavedNotes[_n];if(_nv) SC.slotNotes[_n]=_nv;}
       SC.durationNote=sub.durationNote||''; SC.locationNote=sub.locationNote||'';
       SC.splitLesson=sub.splitLesson==='TRUE'||sub.splitLesson===true;
       SC.splitChild={
@@ -1857,7 +1875,6 @@ function loadSchedSubmission(){
       SC.isFirstSubmission = true;
       SC.editMode = false;
       SC.submitted = false;
-      SC.source = '';
       SC.slots = [blankSlot(), blankSlot(), blankSlot()];
       SC.durations = []; SC.locations = [];
       SC.street = ''; SC.apt = ''; SC.city = ''; SC.state = 'NY'; SC.zip = '';
@@ -1877,10 +1894,14 @@ function _saveSlotsAndDetails(cb){
   var activeSlots=SC.slots.filter(function(s,i){ return !SC.slotDeleted[i]; });
   var notesPayload={};
   var deletedNotes=[];
+  var dismissedAdminSlotKeys=[];
   var submIdx=0;
   SC.slots.forEach(function(s,origIdx){
     if(SC.slotDeleted[origIdx]){
       deletedNotes.push({day:s.day||'',note:SC.slotNotes[origIdx]||''});
+      if(s.source==='admin'&&s.day){
+        dismissedAdminSlotKeys.push((s.day||'')+'|'+(s.start||'')+'|'+(s.end||''));
+      }
     } else {
       if(SC.slotNotes[origIdx]) notesPayload[submIdx]=SC.slotNotes[origIdx];
       submIdx++;
@@ -1895,6 +1916,7 @@ function _saveSlotsAndDetails(cb){
     teacherPref:SC.teacherPref||'',
     slotNotes:notesPayload,
     deletedNotes:deletedNotes,
+    dismissedAdminSlotKeys:dismissedAdminSlotKeys,
     isEdit:isEdit,
     splitLesson:SC.splitLesson?'TRUE':'FALSE',
     splitChildName:SC.splitChild.name||'',
@@ -1942,6 +1964,8 @@ function doSubmitSched(){
   var activeSlots=SC.slots.filter(function(s,i){ return !SC.slotDeleted[i]; });
   var hasSlot=activeSlots.some(function(s){return s.day&&s.start&&s.end;});
   if(!hasSlot){SC.submitError='Please add at least one complete time window (day, start time, and end time).';render();return;}
+  var _filledSlotCount=activeSlots.filter(function(s){return s.day;}).length;
+  if(_filledSlotCount>6){SC.submitError='You can have up to 6 time windows. Please remove one before saving.';render();return;}
   var missingTime=activeSlots.some(function(s){return s.day&&(!s.start||!s.end);});
   // Split lesson validation
   if(SC.splitLesson){

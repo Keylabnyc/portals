@@ -1094,9 +1094,7 @@ function rHome(){
       h+='</div>';
       h+='<span class="chip '+lbl.cls+'">'+esc(lbl.text)+'</span>';
       h+='</div>';
-      if(avLocked){
-        h+='<div style="font-size:12px;color:var(--text4)">We are working on a time slot for '+esc(firstName)+' and their availability is temporarily locked. Please contact <a href="mailto:info@keylab.nyc">info@keylab.nyc</a> for assistance.</div>';
-      } else if(hasTrial){
+      if(hasTrial){
         var trialDetails=[];
         if(s.trialDay) trialDetails.push(s.trialDay);
         if(s.trialDate) trialDetails.push(s.trialDate);
@@ -1125,6 +1123,8 @@ function rHome(){
         if(propDetails.length) h+='<div style="font-size:13px;color:var(--text3);margin-bottom:.35rem">'+esc(propDetails.join(' \u00b7 '))+'</div>';
         if(s.startDate) h+='<div style="font-size:12px;color:var(--text3);margin-bottom:.35rem">Starts '+esc(_fmtFamilyDate(s.startDate))+'</div>';
         if(s.monthlyPrice) h+='<div style="font-size:14px;font-weight:600;font-family:\'DM Mono\',monospace;color:var(--acc);margin-bottom:.35rem">'+fmtPrice(s.monthlyPrice)+'/mo</div>';
+      } else if(avLocked){
+        h+='<div style="font-size:12px;color:var(--text4)">We are working on a time slot for '+esc(firstName)+' and their availability is temporarily locked. Please contact <a href="mailto:info@keylab.nyc">info@keylab.nyc</a> for assistance.</div>';
       } else if(!isWithdrawn&&avSubmitted){
         h+='<div style="font-size:12px;color:var(--text4)">We\'ve received your availability. We\'ll be in touch as soon as possible with an update.</div>';
       } else if(!isWithdrawn&&!avSubmitted&&(ph==='Leads'||ph==='Pending')){
@@ -1141,7 +1141,7 @@ function rHome(){
       if(!avLocked&&avOpen&&!avSubmitted&&(ph==='Leads'||ph==='Pending')&&!hasProp&&!hasTrial&&!isWithdrawn&&!isEnrolled){
         ctas.push('<button class="btn btn-p btn-sm" onclick="_gotoSchedulingForStudent(&apos;'+esc(s.studentId)+'&apos;)">Submit availability</button>');
       }
-      if(!avLocked&&!avSubmitted&&ph==='Holding'){
+      if(!avLocked&&avOpen&&!avSubmitted&&ph==='Holding'){
         ctas.push('<button class="btn btn-p btn-sm" onclick="_gotoSchedulingForStudent(&apos;'+esc(s.studentId)+'&apos;)">Submit availability</button>');
       }
       if(!avLocked&&avSubmitted&&(ph==='Leads'||ph==='Pending'||ph==='Holding')){

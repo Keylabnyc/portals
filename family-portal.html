@@ -1174,8 +1174,17 @@ function rScheduling(){
   var _isReturning=_enType.toLowerCase().indexOf('returning')===0;
 
   if(_scStu&&(_scStu.availabilityLocked==='TRUE'||_scStu.availabilityLocked===true)){
+    // Same data load the rest of this function relies on below — reuse it here so
+    // a locked student never flashes "nothing to show" before their submission loads.
+    if(SC.loading){
+      return '<div style="text-align:center;padding:3rem"><span class="spin" style="font-size:20px">\u21bb</span></div>';
+    }
     var _lockFirstName=(_scStu.studentName||'This student').split(' ')[0];
-    return '<p style="color:var(--text3)">We are working on a time slot for '+esc(_lockFirstName)+' and their availability is temporarily locked. Please contact <a href="mailto:info@keylab.nyc">info@keylab.nyc</a> for assistance.</p>';
+    var _lockMsg='<p style="color:var(--text3)">We are working on a time slot for '+esc(_lockFirstName)+' and their availability is temporarily locked. Please contact <a href="mailto:info@keylab.nyc">info@keylab.nyc</a> for assistance.</p>';
+    if(SC.loaded&&!SC.isFirstSubmission){
+      return rLockedAvSummary()+_lockMsg;
+    }
+    return _lockMsg;
   }
 
   var h='';
@@ -1318,6 +1327,70 @@ function rSplitLessonSection(){
     h+='<div class="field"><label>Tell us about your 2nd child<span class="req">*</span></label>';
     h+='<textarea placeholder="Please tell us about your 2nd child and what you are looking for in a lesson experience for them." oninput="SC.splitChild.notes=this.value">'+esc(SC.splitChild.notes)+'</textarea></div>';
   }
+  return h;
+}
+
+// Static, fully read-only summary of a family's already-submitted availability —
+// used only when a student is locked, so they can see what they submitted without
+// any way to change it. Mirrors rSchedViewMode's structure and labels exactly
+// (all copy reused verbatim from there / prefMap) but strips every interactive
+// element (no dropdowns, no pills, no Edit/Delete/Add buttons, no submit footer).
+function rLockedAvSummary(){
+  var h='';
+  var locLabels={'studio':'at Keylab','in-home':'In-home','virtual':'Virtual'};
+  var locDisplay=SC.locations.map(function(l){return locLabels[l]||l;}).join(', ')||'\u2014';
+  var durDisplay=SC.durations.map(function(d){return d+' min';}).join(', ')||'\u2014';
+  var tchDisplay=SC.teacherPref||'No preference';
+  var monoFont='font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:.06em;font-family:"DM Mono",monospace;margin-bottom:.4rem';
+
+  h+='<div style="font-size:13px;color:var(--text3);margin-bottom:1rem">\u2713 Availability submitted'+(SC.submittedAt?' \u00b7 '+esc(String(SC.submittedAt)):'')+'</div>';
+
+  h+='<div class="card"><h2>Lesson Details</h2>';
+  h+='<div style="padding:.35rem 0;border-bottom:.5px solid var(--border)">';
+  h+='<div style="'+monoFont+'">Instrument</div>';
+  h+='<div style="font-size:14px">'+esc(SC.instrument||'\u2014')+'</div>';
+  h+='</div>';
+  h+='<div style="padding:.35rem 0;border-bottom:.5px solid var(--border)">';
+  h+='<div style="'+monoFont+'">Location</div>';
+  h+='<div style="font-size:14px">'+esc(locDisplay)+'</div>';
+  h+='</div>';
+  h+='<div style="padding:.35rem 0;border-bottom:.5px solid var(--border)">';
+  h+='<div style="'+monoFont+'">Duration</div>';
+  h+='<div style="font-size:14px">'+esc(durDisplay)+'</div>';
+  h+='</div>';
+  h+='<div style="padding:.35rem 0">';
+  h+='<div style="'+monoFont+'">Teacher preference</div>';
+  h+='<div style="font-size:14px">'+esc(tchDisplay)+'</div>';
+  h+='</div>';
+  h+='</div>';
+
+  var prefMap={preferred:'Preferred',next:'Next Best Option',possible:'Possible',least:'Least Preferred'};
+  var prefStyles2={
+    preferred:'background:var(--gbg);color:var(--gt);border:1px solid var(--green)',
+    next:'background:var(--bbg);color:var(--bt);border:1px solid var(--blue)',
+    possible:'background:rgba(0,0,0,.08);color:var(--blue);border:1px solid var(--border2)',
+    least:'background:var(--rbg);color:var(--rt);border:1px solid var(--red)'
+  };
+  h+='<div class="card"><h2>Your Available Times</h2>';
+  var hasSlots=false;
+  SC.slots.forEach(function(slot){
+    if(!slot.day&&!slot.start) return;
+    hasSlots=true;
+    var prefLabel=prefMap[slot.pref]||'';
+    var prefChip2=slot.pref&&prefStyles2[slot.pref]
+      ?'<span style="'+prefStyles2[slot.pref]+';font-size:10px;font-weight:600;padding:2px 8px;border-radius:8px;font-family:monospace;letter-spacing:.03em;white-space:nowrap">'+prefLabel+'</span>'
+      :'';
+    var timeRange=(slot.start||'')+(slot.end?' \u2013 '+slot.end:'');
+    h+='<div class="av-slot" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.4rem;margin-bottom:.4rem">';
+    h+='<div style="flex:1;min-width:160px">';
+    h+='<div style="font-weight:500;font-size:14px">'+esc(slot.day||'')+'</div>';
+    h+='<div style="font-size:12px;color:var(--text3);display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:2px">'+esc(timeRange)+(prefChip2?' '+prefChip2:'')+'</div>';
+    if(SC.durations.length&&slot.day) h+=rSlotPricing(slot.day);
+    h+='</div>';
+    h+='</div>';
+  });
+  if(!hasSlots) h+='<p style="color:var(--text3)">No time windows on file.</p>';
+  h+='</div>';
   return h;
 }
 

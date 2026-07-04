@@ -2036,8 +2036,8 @@ function _fmtPriceBox(s){
   var _prorStr=_prorated?('$'+Math.round(parseFloat(s.proratedFirstMonth))):'';
   var _splitFee=parseFloat(s.splitLessonFee)||0;
   var _oneTime=parseFloat(s.oneTimeCharge)||0;
-  var _sibDisc=parseFloat(s.siblingDiscAmt)||0;
-  var _pctDisc=parseFloat(s.pctDiscAmt)||0;
+  var _sibPctVal=parseFloat(s.sibPct)||0;
+  var _pctDiscVal=parseFloat(s.pctDisc)||0;
   var _dolDisc=parseFloat(s.dollarDisc)||0;
   var _adj=parseFloat(s.adjMonthly)||0;
   var _baseLesson=_price-_splitFee;
@@ -2069,15 +2069,15 @@ function _fmtPriceBox(s){
   h+='</div>';
 
   // Itemized fee breakdown — shown below price box when any add-ons exist
-  var _hasItems=_splitFee>0||_oneTime>0||_sibDisc>0||_pctDisc>0||_dolDisc>0||(_adj!==0);
+  var _hasItems=_splitFee>0||_oneTime>0||_sibPctVal>0||_pctDiscVal>0||_dolDisc>0||(_adj!==0);
   if(_hasItems){
     h+='<div style="margin-top:.4rem;border-top:1px solid var(--border2);padding-top:.5rem">';
     h+='<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.35rem">Fee breakdown</div>';
     if(_baseLesson>0) h+='<div class="prop-row" style="border-bottom:none;font-size:12px"><span class="prop-lbl">Lesson fee</span><span class="prop-val">$'+Math.round(_baseLesson)+'</span></div>';
     if(_splitFee>0)   h+='<div class="prop-row" style="border-bottom:none;font-size:12px"><span class="prop-lbl">Split lesson fee'+(s.splitLessonNote?' \u2014 '+esc(s.splitLessonNote):'')+'</span><span class="prop-val">+$'+Math.round(_splitFee)+'/mo</span></div>';
-    if(_sibDisc>0)    h+='<div class="prop-row" style="border-bottom:none;font-size:12px;color:var(--green)"><span class="prop-lbl">Sibling discount</span><span class="prop-val">&minus;$'+Math.round(_sibDisc)+'/mo</span></div>';
-    if(_pctDisc>0)    h+='<div class="prop-row" style="border-bottom:none;font-size:12px;color:var(--green)"><span class="prop-lbl">Discount'+(s.pctDiscountNote?' \u2014 '+esc(s.pctDiscountNote):'')+'</span><span class="prop-val">&minus;$'+Math.round(_pctDisc)+'/mo</span></div>';
-    if(_dolDisc>0)    h+='<div class="prop-row" style="border-bottom:none;font-size:12px;color:var(--green)"><span class="prop-lbl">Discount'+(s.dollarDiscountNote?' \u2014 '+esc(s.dollarDiscountNote):'')+'</span><span class="prop-val">&minus;$'+Math.round(_dolDisc)+'/mo</span></div>';
+    if(_sibPctVal>0)  h+='<div class="prop-row" style="border-bottom:none;font-size:12px;color:var(--green)"><span class="prop-lbl">Sibling discount</span><span class="prop-val">'+Math.round(_sibPctVal)+'%</span></div>';
+    if(_pctDiscVal>0) h+='<div class="prop-row" style="border-bottom:none;font-size:12px;color:var(--green)"><span class="prop-lbl">Discount'+(s.pctDiscountNote?' \u2014 '+esc(s.pctDiscountNote):'')+'</span><span class="prop-val">'+Math.round(_pctDiscVal)+'%</span></div>';
+    if(_dolDisc>0)    h+='<div class="prop-row" style="border-bottom:none;font-size:12px;color:var(--green)"><span class="prop-lbl">Discount'+(s.dollarDiscountNote?' \u2014 '+esc(s.dollarDiscountNote):'')+'</span><span class="prop-val">&minus;$'+Math.round(_dolDisc)+'</span></div>';
     if(_adj!==0){var _adjSign=_adj<0?'&minus;':'+';var _adjCol=_adj<0?'var(--green)':'var(--rt)';h+='<div class="prop-row" style="border-bottom:none;font-size:12px;color:'+_adjCol+'"><span class="prop-lbl">Adjustment'+(s.adjustmentNote?' \u2014 '+esc(s.adjustmentNote):'')+'</span><span class="prop-val">'+_adjSign+'$'+Math.round(Math.abs(_adj))+'/mo</span></div>';}
     if(_oneTime>0)    h+='<div class="prop-row" style="border-bottom:none;font-size:12px"><span class="prop-lbl">One-time fee (first payment only)</span><span class="prop-val">$'+Math.round(_oneTime)+'</span></div>';
     h+='</div>';
@@ -2263,13 +2263,13 @@ function rEnrollment(){
           if(parseFloat(s.monthlyRaw)>0&&Math.round(parseFloat(s.monthlyRaw))!==Math.round(parseFloat(s.monthlyPrice))){
             h+='<div class="prop-row"><span class="prop-lbl">Base monthly rate</span><span class="prop-val">$'+Math.round(parseFloat(s.monthlyRaw))+'</span></div>';
           }
-          if(parseFloat(s.siblingDiscAmt)>0){
-            h+='<div class="prop-row"><span class="prop-lbl">Sibling discount'+(parseFloat(s.sibPct)>0?' ('+Math.round(parseFloat(s.sibPct))+'%)':'')+'</span>';
-            h+='<span class="prop-val" style="color:var(--green)">\u2212$'+Math.round(parseFloat(s.siblingDiscAmt))+'</span></div>';
+          if(parseFloat(s.sibPct)>0){
+            h+='<div class="prop-row"><span class="prop-lbl" style="color:var(--green)">Sibling discount</span>';
+            h+='<span class="prop-val" style="color:var(--green)">'+Math.round(parseFloat(s.sibPct))+'%</span></div>';
           }
-          if(parseFloat(s.pctDiscAmt)>0){
-            h+='<div class="prop-row"><span class="prop-lbl">Discount'+(parseFloat(s.pctDisc)>0?' ('+Math.round(parseFloat(s.pctDisc))+'%)':'')+(s.pctDiscountNote?' \u2014 '+esc(s.pctDiscountNote):'')+'</span>';
-            h+='<span class="prop-val" style="color:var(--green)">\u2212$'+Math.round(parseFloat(s.pctDiscAmt))+'</span></div>';
+          if(parseFloat(s.pctDisc)>0){
+            h+='<div class="prop-row"><span class="prop-lbl" style="color:var(--green)">Discount'+(s.pctDiscountNote?' \u2014 '+esc(s.pctDiscountNote):'')+'</span>';
+            h+='<span class="prop-val" style="color:var(--green)">'+Math.round(parseFloat(s.pctDisc))+'%</span></div>';
           }
           if(parseFloat(s.dollarDisc)>0){
             h+='<div class="prop-row"><span class="prop-lbl">Discount'+(s.dollarDiscountNote?' \u2014 '+esc(s.dollarDiscountNote):'')+'</span>';
@@ -2296,11 +2296,8 @@ function rEnrollment(){
             h+='<div class="prop-row" style="border-bottom:none"><span class="prop-lbl">First month (prorated)</span>';
             h+='<span class="prop-val">$'+Math.round(parseFloat(s.proratedFirstMonth))+'</span></div>';
           }
-          if(parseFloat(s.subMonths)>0||parseFloat(s.lessonCount)>0){
-            var _yp=[];
-            if(parseFloat(s.subMonths)>0) _yp.push(Math.round(parseFloat(s.subMonths))+' billing months');
-            if(parseFloat(s.lessonCount)>0) _yp.push(Math.round(parseFloat(s.lessonCount))+' lessons scheduled');
-            h+='<div style="font-size:11px;color:var(--text4);margin-top:.35rem;text-align:right">'+_yp.join(' \u00b7 ')+'</div>';
+          if(parseFloat(s.subMonths)>0){
+            h+='<div style="font-size:11px;color:var(--text4);margin-top:.35rem;text-align:right">'+Math.round(parseFloat(s.subMonths))+' billing months</div>';
           }
 
           // Next steps / managing enrollment

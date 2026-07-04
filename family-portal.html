@@ -1103,17 +1103,7 @@ function rHome(){
         if(trialDetails.length) h+='<div style="font-size:13px;color:var(--text3);margin-bottom:.35rem">'+esc(trialDetails.join(' \u00b7 '))+'</div>';
         h+='<div style="font-size:12px;color:var(--text4)">We\'re looking forward to meeting your family! We\'ll be in touch as soon as possible with an update.</div>';
       } else if(isHolding){
-        var holdDetails=[];
-        if(s.day) holdDetails.push(s.day);
-        if(s.time) holdDetails.push(s.time);
-        if(s.teacher) holdDetails.push(s.teacher);
-        if(s.lessonLocation) holdDetails.push(locMap[s.lessonLocation]||s.lessonLocation);
-        if(holdDetails.length) h+='<div style="font-size:13px;color:var(--text3);margin-bottom:.35rem">'+esc(holdDetails.join(' \u00b7 '))+'</div>';
-        if(avSubmitted){
-          h+='<div style="font-size:12px;color:var(--text4)">We\'ve received your availability and are working on scheduling. We\'ll be in touch as soon as possible with an update.</div>';
-        } else {
-          h+='<div style="font-size:12px;color:var(--text4)">We\'ve got a spot pending for '+esc(firstName)+'\u2019s '+esc(s.instrument||'lessons')+' lessons. We\'ll be in touch soon with an update.</div>';
-        }
+        h+='<div style="font-size:12px;color:var(--text4)">We have a hold in place for '+esc(firstName)+' on '+esc(s.day)+'s at '+esc(s.time)+' with our teacher '+esc(s.teacher)+'. Holds aren\'t guaranteed time slots, and can change. We\'ll be in touch with an update soon!</div>';
       } else if(hasProp&&!isAccepted){
         var propDetails=[];
         if(s.day) propDetails.push(s.day);
@@ -2368,11 +2358,11 @@ function rEnrollment(){
       if(isTruthy(s.availabilityLocked)){
         h+='<p style="font-size:13px;color:var(--text2);margin:0">We are working on a time slot for '+esc(firstName)+' and their availability is temporarily locked. Please contact <a href="mailto:info@keylab.nyc">info@keylab.nyc</a> for assistance.</p>';
       } else if(ph==='Holding'){
+        h+='<p style="font-size:13px;color:var(--text2);margin:0 0 .6rem">We have a hold in place for '+esc(firstName)+' on '+esc(s.day)+'s at '+esc(s.time)+' with our teacher '+esc(s.teacher)+'. Holds aren\'t guaranteed time slots, and can change. We\'ll be in touch with an update soon!</p>';
         if(isTruthy(s.availabilitySubmitted)){
-          h+='<p style="font-size:13px;color:var(--text2);margin:0">We\'ve received '+esc(firstName)+'\u2019s availability and are working on scheduling. We\'ll reach out as soon as we have a time slot for them.</p>';
+          h+='<button class="btn btn-p btn-sm" onclick="_gotoSchedulingForStudent(&apos;'+esc(s.studentId)+'&apos;)">Review / Update Availability</button>';
         } else {
-          h+='<p style="font-size:13px;color:var(--text2);margin:0 0 .6rem">We have a potential spot pending for '+esc(firstName)+'\u2019s '+esc(s.instrument||'lessons')+' lessons. We\'ll be in touch soon with an update. In the meantime, if your scheduling needs have changed, use the button below to add or update your availability.</p>';
-          h+='<button class="btn btn-p btn-sm" onclick="_gotoSchedulingForStudent(&apos;'+esc(s.studentId)+'&apos;)">Submit '+esc(firstName)+'\u2019s availability</button>';
+          h+='<button class="btn btn-p btn-sm" onclick="_gotoSchedulingForStudent(&apos;'+esc(s.studentId)+'&apos;)">Submit availability</button>';
         }
       } else if(ph==='Trial Booked'){
         h+='<p style="font-size:13px;color:var(--text2);margin:0">'+esc(firstName)+'\u2019s trial lesson is scheduled. After the trial, we\'ll be in touch with next steps.</p>';

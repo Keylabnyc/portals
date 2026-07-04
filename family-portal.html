@@ -146,7 +146,7 @@ var familyParents = {p1:'', p2:''};
 var familyAddress = {street:'', apt:''};
 var _familyLoading = false;
 var _lastFamilyLoadAt = 0;
-var publicCfg = {availabilityOpen:'FALSE',schedulingBillingUrl:'https://www.keylab.opus1.io/login'};
+var publicCfg = {availabilityOpen:'FALSE',schedulingBillingUrl:''};
 var MSG = {m:'', t:''};
 var busy = false; // generic submitting flag
 
@@ -1079,7 +1079,7 @@ function rHome(){
         h+='</div>';
       } else if(s.tcAcceptedAt||s.tcAcceptedName){
         h+='<div class="msg ms">\u2713 Proposal and policies accepted'+(s.tcAcceptedName?' by '+esc(s.tcAcceptedName):'')+
-          (s.tcAcceptedAt?' on '+esc(_fmtFamilyTs(s.tcAcceptedAt)):'')+'.</div>';
+          (s.tcAcceptedAt?' on '+esc(_fmtFamilyTs(s.tcAcceptedAt))+' at '+esc(_fmtFamilyTime(s.tcAcceptedAt)):'')+'.</div>';
         h+='<div style="margin-top:.6rem;display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-p btn-sm" onclick="gotoEnrollment()">Review Proposal and Policies</button><a class="btn btn-p btn-sm" href="'+publicCfg.schedulingBillingUrl+'" target="_blank">Scheduling &amp; Billing \u2192</a></div>';
       } else {
         h+='<div style="margin-top:.6rem;display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-p btn-sm" onclick="gotoEnrollment()">Review Proposal and Policies</button><a class="btn btn-p btn-sm" href="'+publicCfg.schedulingBillingUrl+'" target="_blank">Scheduling &amp; Billing \u2192</a></div>';
@@ -2221,7 +2221,7 @@ function rEnrollment(){
         if(s.tcAcceptedAt||s.tcAcceptedName){
           h+='<div class="msg ms" style="margin-top:1rem">';
           h+='\u2713 Proposal and policies accepted'+(s.tcAcceptedName?' by '+esc(s.tcAcceptedName):'')+
-            (s.tcAcceptedAt?' on '+esc(_fmtFamilyTs(s.tcAcceptedAt)):'')+'.</div>';
+            (s.tcAcceptedAt?' on '+esc(_fmtFamilyTs(s.tcAcceptedAt))+' at '+esc(_fmtFamilyTime(s.tcAcceptedAt)):'')+'.</div>';
         }
         // 2. Review Policies toggle button (directly below banner)
         h+='<div style="margin-top:1rem;border-top:1px solid var(--border);padding-top:.85rem">';
@@ -2507,7 +2507,7 @@ function rPolicyText(isInHome){
     '</ul>'+
 
     '<h3>CLIENT CANCELLATIONS &amp; MAKE-UP LESSONS</h3><ul>'+
-    '<li>Clients must cancel lessons directly through the booking system at <a href="'+publicCfg.schedulingBillingUrl+'" target="_blank">keylab.opus1.io/login</a></li>'+
+    '<li>Clients must cancel lessons directly through the booking system at <a href="'+publicCfg.schedulingBillingUrl+'" target="_blank">your account portal</a></li>'+
     '<li>Keylab does not offer make-up lessons or credits for client-canceled lessons, but if you have to miss a lesson, let us know and we\'ll coordinate with your teacher to provide an assignment for your child</li>'+
     '<li>Courtesy credits may be offered at our discretion for emergencies or special cases, but these are rare and are not guaranteed</li>'+
     '<li>To book a make-up lesson using a courtesy credit, do not email us, and instead click \u201cuse\u201d on the credit to book your make-up online</li>'+

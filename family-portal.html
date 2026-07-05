@@ -1078,6 +1078,17 @@ function rHome(){
         h+='<a class="btn btn-p btn-sm" href="'+publicCfg.schedulingBillingUrl+'" target="_blank">Scheduling &amp; Billing \u2192</a>';
         h+='</div>';
       } else if(s.tcAcceptedAt||s.tcAcceptedName){
+        // What Happens Next — elevated card, first thing shown on Home for accepted-but-not-enrolled students.
+        h+=(_isNewFamily(s.enrollmentType)
+        ?('<div style="margin-bottom:.75rem;background:var(--bbg);border:1px solid var(--blue);border-radius:var(--rl);padding:1rem">'+
+          '<div style="font-size:15px;font-weight:700;color:var(--bt);margin-bottom:.4rem">What Happens Next</div>'+
+          '<p style="font-size:14px;color:var(--bt);margin:0">Only one more step to go! Please use the login information in your proposal acceptance confirmation email to pay the invoice in your account.</p>'+
+          '<div style="margin-top:.75rem"><a href="'+publicCfg.schedulingBillingUrl+'" target="_blank" class="btn btn-p btn-sm">Pay Invoice</a></div>'+
+          '</div>')
+        :('<div style="margin-bottom:.75rem;background:var(--bbg);border:1px solid var(--blue);border-radius:var(--rl);padding:1rem">'+
+          '<div style="font-size:15px;font-weight:700;color:var(--bt);margin-bottom:.4rem">What Happens Next</div>'+
+          '<p style="font-size:14px;color:var(--bt);margin:0">I\u2019ll schedule '+esc(firstName)+'&rsquo;s lessons for the school year and process their enrollment on the admin side using the payment method active in your account. Your card will be charged for the first month once enrollment is processed, and automatic flat rate monthly payments will be processed on the 1st of each month through June.</p>'+
+          '</div>'));
         h+='<div class="msg ms">\u2713 Proposal and policies accepted'+(s.tcAcceptedName?' by '+esc(s.tcAcceptedName):'')+
           (s.tcAcceptedAt?' on '+esc(_fmtFamilyTs(s.tcAcceptedAt))+' at '+esc(_fmtFamilyTime(s.tcAcceptedAt)):'')+'.</div>';
         h+='<div style="margin-top:.6rem;display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-p btn-sm" onclick="gotoEnrollment()">Review Proposal and Policies</button><a class="btn btn-p btn-sm" href="'+publicCfg.schedulingBillingUrl+'" target="_blank">Scheduling &amp; Billing \u2192</a></div>';

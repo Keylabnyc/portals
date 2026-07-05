@@ -1099,27 +1099,42 @@ function rHome(){
       if(hasTrial){
         var trialDateFmt=_fmtFamilyDate(s.trialDate);
         var trialTeacherName=s.trialTeacher||'';
+        var trialDur=s.trialDuration||'';
+        var trialInstr=s.instrument||'';
         if(s.lessonLocation==='in-home'){
           var trialAddrParts=[];
           if(familyAddress.street) trialAddrParts.push(familyAddress.street);
           if(familyAddress.apt) trialAddrParts.push('Apt '+familyAddress.apt);
           var trialAddr=trialAddrParts.join(', ');
-          h+='<div style="font-size:12px;color:var(--text4)">An in-home trial lesson has been scheduled for '+esc(firstName)+' on '+esc(trialDateFmt)+' at '+esc(s.trialTime)+' at '+esc(trialAddr)+'. '+esc(trialTeacherName)+' will look forward to seeing you then!</div>';
+          h+='<div style="font-size:12px;color:var(--text4)">A trial in-home '+esc(trialDur)+' minute '+esc(trialInstr)+' lesson has been scheduled for '+esc(firstName)+' with '+esc(trialTeacherName)+' on '+esc(trialDateFmt)+' at '+esc(s.trialTime)+' at '+esc(trialAddr)+'. '+esc(trialTeacherName)+' will look forward to meeting you then!</div>';
         } else if(s.lessonLocation==='virtual'){
-          h+='<div style="font-size:12px;color:var(--text4)">A virtual trial lesson has been scheduled for '+esc(firstName)+' on '+esc(trialDateFmt)+' at '+esc(s.trialTime)+' with our teacher '+esc(trialTeacherName)+'. You can access '+esc(trialTeacherName)+'\u2019s zoom link in the scheduling and billing area on the home page.</div>';
+          h+='<div style="font-size:12px;color:var(--text4)">A trial virtual '+esc(trialDur)+' minute '+esc(trialInstr)+' lesson has been scheduled for '+esc(firstName)+' with '+esc(trialTeacherName)+' on '+esc(trialDateFmt)+' at '+esc(s.trialTime)+'. Please use the family portal to access '+esc(trialTeacherName)+'\u2019s zoom link. '+esc(trialTeacherName)+' is looking forward to meeting '+esc(firstName)+' then!</div>';
         } else {
-          h+='<div style="font-size:12px;color:var(--text4)">A trial lesson has been scheduled for '+esc(firstName)+' on '+esc(trialDateFmt)+' at '+esc(s.trialTime)+' '+esc(locMap.studio)+'. We\'ll look forward to seeing you then!</div>';
+          h+='<div style="font-size:12px;color:var(--text4)">A trial '+esc(trialDur)+' minute '+esc(trialInstr)+' lesson has been scheduled for '+esc(firstName)+' with '+esc(trialTeacherName)+' on '+esc(trialDateFmt)+' at '+esc(s.trialTime)+' '+esc(locMap.studio)+'. We\'ll look forward to seeing you then!</div>';
         }
       } else if(isHolding){
-        h+='<div style="font-size:12px;color:var(--text4)">We have a hold in place for '+esc(firstName)+' on '+esc(s.day)+'s at '+esc(s.time)+' with our teacher '+esc(s.teacher)+'. Holds aren\'t guaranteed time slots, and can change. We\'ll be in touch with an update soon!</div>';
+        var holdDur=s.durationBase||'';
+        var holdInstr=s.instrument||'';
+        if(s.lessonLocation==='in-home'){
+          h+='<div style="font-size:12px;color:var(--text4)">'+esc(firstName)+' has a hold placed for '+esc(holdDur)+' minute in-home '+esc(holdInstr)+' lessons with our teacher '+esc(s.teacher)+' for '+esc(s.day)+'s at '+esc(s.time)+'. Holds are not guaranteed time slots and can change. We\'ll be in touch with an update soon!</div>';
+        } else if(s.lessonLocation==='virtual'){
+          h+='<div style="font-size:12px;color:var(--text4)">'+esc(firstName)+' has a hold placed for '+esc(holdDur)+' minute virtual '+esc(holdInstr)+' lessons with our teacher '+esc(s.teacher)+' for '+esc(s.day)+'s at '+esc(s.time)+'. Holds are not guaranteed time slots and can change. We\'ll be in touch with an update soon!</div>';
+        } else {
+          h+='<div style="font-size:12px;color:var(--text4)">'+esc(firstName)+' has a hold placed for '+esc(holdDur)+' minute '+esc(holdInstr)+' lessons with our teacher '+esc(s.teacher)+' for '+esc(s.day)+'s at '+esc(s.time)+' at Keylab. Holds are not guaranteed time slots and can change. We\'ll be in touch with an update soon!</div>';
+        }
       } else if(hasProp&&!isAccepted){
-        var propDetails=[];
-        if(s.day) propDetails.push(s.day);
-        if(s.time) propDetails.push(s.time);
-        if(s.teacher) propDetails.push(s.teacher);
-        if(s.lessonLocation) propDetails.push(locMap[s.lessonLocation]||s.lessonLocation);
-        if(propDetails.length) h+='<div style="font-size:13px;color:var(--text3);margin-bottom:.35rem">'+esc(propDetails.join(' \u00b7 '))+'</div>';
-        if(s.startDate) h+='<div style="font-size:12px;color:var(--text3);margin-bottom:.35rem">Starts '+esc(_fmtFamilyDate(s.startDate))+'</div>';
+        var propDur=s.durationBase||'';
+        var propInstr=s.instrument||'';
+        var propStart=s.startDate?_fmtFamilyDate(s.startDate):'';
+        if(s.day&&s.time&&s.teacher&&propDur&&propInstr){
+          var propSentence='Please review and accept '+esc(firstName)+'\u2019s proposal for '+esc(propDur)+' minute ';
+          if(s.lessonLocation==='in-home') propSentence+='in-home ';
+          else if(s.lessonLocation==='virtual') propSentence+='virtual ';
+          propSentence+=esc(propInstr)+' lessons with '+esc(s.teacher)+' on '+esc(s.day)+'s at '+esc(s.time);
+          if(s.lessonLocation!=='in-home'&&s.lessonLocation!=='virtual') propSentence+=' at Keylab';
+          propSentence+=propStart?', to begin on '+esc(propStart)+'.':'.';
+          h+='<div style="font-size:13px;color:var(--text3);margin-bottom:.35rem">'+propSentence+'</div>';
+        }
         if(s.monthlyPrice) h+='<div style="font-size:14px;font-weight:600;font-family:\'DM Mono\',monospace;color:var(--acc);margin-bottom:.35rem">'+fmtPrice(s.monthlyPrice)+'/mo</div>';
       } else if(avLocked){
         h+='<div style="font-size:12px;color:var(--text4)">We are working on a time slot for '+esc(firstName)+' and their availability is temporarily locked. Please contact <a href="mailto:info@keylab.nyc">info@keylab.nyc</a> for assistance.</div>';
@@ -2363,7 +2378,15 @@ function rEnrollment(){
       if(isTruthy(s.availabilityLocked)){
         h+='<p style="font-size:13px;color:var(--text2);margin:0">We are working on a time slot for '+esc(firstName)+' and their availability is temporarily locked. Please contact <a href="mailto:info@keylab.nyc">info@keylab.nyc</a> for assistance.</p>';
       } else if(ph==='Holding'){
-        h+='<p style="font-size:13px;color:var(--text2);margin:0 0 .6rem">We have a hold in place for '+esc(firstName)+' on '+esc(s.day)+'s at '+esc(s.time)+' with our teacher '+esc(s.teacher)+'. Holds aren\'t guaranteed time slots, and can change. We\'ll be in touch with an update soon!</p>';
+        var _enHoldDur=s.durationBase||'';
+        var _enHoldInstr=s.instrument||'';
+        if(s.lessonLocation==='in-home'){
+          h+='<p style="font-size:13px;color:var(--text2);margin:0 0 .6rem">'+esc(firstName)+' has a hold placed for '+esc(_enHoldDur)+' minute in-home '+esc(_enHoldInstr)+' lessons with our teacher '+esc(s.teacher)+' for '+esc(s.day)+'s at '+esc(s.time)+'. Holds are not guaranteed time slots and can change. We\'ll be in touch with an update soon!</p>';
+        } else if(s.lessonLocation==='virtual'){
+          h+='<p style="font-size:13px;color:var(--text2);margin:0 0 .6rem">'+esc(firstName)+' has a hold placed for '+esc(_enHoldDur)+' minute virtual '+esc(_enHoldInstr)+' lessons with our teacher '+esc(s.teacher)+' for '+esc(s.day)+'s at '+esc(s.time)+'. Holds are not guaranteed time slots and can change. We\'ll be in touch with an update soon!</p>';
+        } else {
+          h+='<p style="font-size:13px;color:var(--text2);margin:0 0 .6rem">'+esc(firstName)+' has a hold placed for '+esc(_enHoldDur)+' minute '+esc(_enHoldInstr)+' lessons with our teacher '+esc(s.teacher)+' for '+esc(s.day)+'s at '+esc(s.time)+' at Keylab. Holds are not guaranteed time slots and can change. We\'ll be in touch with an update soon!</p>';
+        }
         if(isTruthy(s.availabilitySubmitted)){
           h+='<button class="btn btn-p btn-sm" onclick="_gotoSchedulingForStudent(&apos;'+esc(s.studentId)+'&apos;)">Review / Update Availability</button>';
         } else {
@@ -2372,16 +2395,18 @@ function rEnrollment(){
       } else if(ph==='Trial Booked'){
         var _enTrialDateFmt=_fmtFamilyDate(s.trialDate);
         var _enTrialTeacherName=s.trialTeacher||'';
+        var _enTrialDur=s.trialDuration||'';
+        var _enTrialInstr=s.instrument||'';
         if(s.lessonLocation==='in-home'){
           var _enTrialAddrParts=[];
           if(familyAddress.street) _enTrialAddrParts.push(familyAddress.street);
           if(familyAddress.apt) _enTrialAddrParts.push('Apt '+familyAddress.apt);
           var _enTrialAddr=_enTrialAddrParts.join(', ');
-          h+='<p style="font-size:13px;color:var(--text2);margin:0">An in-home trial lesson has been scheduled for '+esc(firstName)+' on '+esc(_enTrialDateFmt)+' at '+esc(s.trialTime)+' at '+esc(_enTrialAddr)+'. '+esc(_enTrialTeacherName)+' will look forward to seeing you then!</p>';
+          h+='<p style="font-size:13px;color:var(--text2);margin:0">A trial in-home '+esc(_enTrialDur)+' minute '+esc(_enTrialInstr)+' lesson has been scheduled for '+esc(firstName)+' with '+esc(_enTrialTeacherName)+' on '+esc(_enTrialDateFmt)+' at '+esc(s.trialTime)+' at '+esc(_enTrialAddr)+'. '+esc(_enTrialTeacherName)+' will look forward to meeting you then!</p>';
         } else if(s.lessonLocation==='virtual'){
-          h+='<p style="font-size:13px;color:var(--text2);margin:0">A virtual trial lesson has been scheduled for '+esc(firstName)+' on '+esc(_enTrialDateFmt)+' at '+esc(s.trialTime)+' with our teacher '+esc(_enTrialTeacherName)+'. You can access '+esc(_enTrialTeacherName)+'\u2019s zoom link in the scheduling and billing area on the home page.</p>';
+          h+='<p style="font-size:13px;color:var(--text2);margin:0">A trial virtual '+esc(_enTrialDur)+' minute '+esc(_enTrialInstr)+' lesson has been scheduled for '+esc(firstName)+' with '+esc(_enTrialTeacherName)+' on '+esc(_enTrialDateFmt)+' at '+esc(s.trialTime)+'. Please use the family portal to access '+esc(_enTrialTeacherName)+'\u2019s zoom link. '+esc(_enTrialTeacherName)+' is looking forward to meeting '+esc(firstName)+' then!</p>';
         } else {
-          h+='<p style="font-size:13px;color:var(--text2);margin:0">A trial lesson has been scheduled for '+esc(firstName)+' on '+esc(_enTrialDateFmt)+' at '+esc(s.trialTime)+' '+esc(locMap.studio)+'. We\'ll look forward to seeing you then!</p>';
+          h+='<p style="font-size:13px;color:var(--text2);margin:0">A trial '+esc(_enTrialDur)+' minute '+esc(_enTrialInstr)+' lesson has been scheduled for '+esc(firstName)+' with '+esc(_enTrialTeacherName)+' on '+esc(_enTrialDateFmt)+' at '+esc(s.trialTime)+' '+esc(locMap.studio)+'. We\'ll look forward to seeing you then!</p>';
         }
       } else if(ph==='Withdrawn'){
         h+='<p style="font-size:13px;color:var(--text2);margin:0">'+esc(firstName)+' is not currently enrolled. Please contact us at <a href="mailto:info@keylab.nyc">info@keylab.nyc</a> if you have questions.</p>';

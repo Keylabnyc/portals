@@ -1078,18 +1078,6 @@ function rHome(){
         h+='<a class="btn btn-p btn-sm" href="'+publicCfg.schedulingBillingUrl+'" target="_blank">Scheduling &amp; Billing \u2192</a>';
         h+='</div>';
       } else if(s.tcAcceptedAt||s.tcAcceptedName){
-        // What Happens Next — first thing shown on Home for accepted-but-not-enrolled students.
-        // Same elevated blue card + same approved copy as rEnrollment(); kept in sync manually since not extracted to a shared helper.
-        h+=(_isNewFamily(s.enrollmentType)
-        ?('<div style="margin-bottom:.75rem;background:var(--bbg);border:1px solid var(--blue);border-radius:var(--rl);padding:1rem">'+
-          '<div style="font-size:15px;font-weight:700;color:var(--bt);margin-bottom:.4rem">What Happens Next</div>'+
-          '<p style="font-size:14px;color:var(--bt);margin:0">To confirm '+esc(firstName)+'&rsquo;s time slot'+(s.teacher?' with '+esc(s.teacher):'')+', please use the button to log into your scheduling and billing account and pay the first month invoice within 48 hours.</p>'+
-          '<div style="margin-top:.75rem"><a href="'+publicCfg.schedulingBillingUrl+'" target="_blank" class="btn btn-p btn-sm">Pay Invoice</a></div>'+
-          '</div>')
-        :('<div style="margin-bottom:.75rem;background:var(--bbg);border:1px solid var(--blue);border-radius:var(--rl);padding:1rem">'+
-          '<div style="font-size:15px;font-weight:700;color:var(--bt);margin-bottom:.4rem">What Happens Next</div>'+
-          '<p style="font-size:14px;color:var(--bt);margin:0">I\u2019ll schedule '+esc(firstName)+'&rsquo;s lessons for the school year and process their enrollment on the admin side using the payment method active in your account. You\u2019ll be billed for the first month when the enrollment is processed, and automatic flat rate monthly payments will be scheduled and processed on the 1st of each month until the last payment in June.</p>'+
-          '</div>'));
         h+='<div class="msg ms">\u2713 Proposal and policies accepted'+(s.tcAcceptedName?' by '+esc(s.tcAcceptedName):'')+
           (s.tcAcceptedAt?' on '+esc(_fmtFamilyTs(s.tcAcceptedAt))+' at '+esc(_fmtFamilyTime(s.tcAcceptedAt)):'')+'.</div>';
         h+='<div style="margin-top:.6rem;display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-p btn-sm" onclick="gotoEnrollment()">Review Proposal and Policies</button><a class="btn btn-p btn-sm" href="'+publicCfg.schedulingBillingUrl+'" target="_blank">Scheduling &amp; Billing \u2192</a></div>';
@@ -2225,11 +2213,17 @@ function rEnrollment(){
       if(hasPrice&&!(isAccepted||isFullyEnrolled)){
         h+=_fmtPriceBox(s);
       }
-      // ── What Happens Next + Acceptance banner + Review Policies button + self-release (in display order) ──
-      // Required order: (1) What Happens Next (2) banner (3) Review Policies button (4) policies content (5) Tuition Details (6) self-release
+      // ── Welcome/status line + What Happens Next + Review Policies button + self-release (in display order) ──
+      // Required order: (1) welcome/status line (2) What Happens Next (3) Review Policies button (4) policies content (5) Tuition Details (6) self-release
       var tc=_tcState(sid);
       if(isFullyEnrolled||isAccepted){
-        // 1. What Happens Next — first thing shown once accepted, elevated card. Only pre-enrollment; disappears once admin marks Enrolled.
+        // 1. Always-visible: welcome + acceptance status line (replaces old separate banner)
+        if(s.tcAcceptedAt||s.tcAcceptedName){
+          h+='<div class="msg ms" style="margin-top:1rem">';
+          h+='Welcome to Keylab! Thanks for accepting '+esc(firstName)+'&rsquo;s proposal'+
+            (s.tcAcceptedAt?' on '+esc(_fmtFamilyTs(s.tcAcceptedAt)):'')+'.</div>';
+        }
+        // 2. What Happens Next — elevated card, only pre-enrollment; disappears once admin marks Enrolled.
         if(isAccepted&&!isFullyEnrolled){
           h+=(_isNewFamily(s.enrollmentType)
           ?('<div style="margin-top:1rem;background:var(--bbg);border:1px solid var(--blue);border-radius:var(--rl);padding:1rem">'+
@@ -2239,16 +2233,10 @@ function rEnrollment(){
             '</div>')
           :('<div style="margin-top:1rem;background:var(--bbg);border:1px solid var(--blue);border-radius:var(--rl);padding:1rem">'+
             '<div style="font-size:15px;font-weight:700;color:var(--bt);margin-bottom:.4rem">What Happens Next</div>'+
-            '<p style="font-size:14px;color:var(--bt);margin:0">I\u2019ll schedule '+esc(firstName)+'&rsquo;s lessons for the school year and process their enrollment on the admin side using the payment method active in your account. You\u2019ll be billed for the first month when the enrollment is processed, and automatic flat rate monthly payments will be scheduled and processed on the 1st of each month until the last payment in June.</p>'+
+            '<p style="font-size:14px;color:var(--bt);margin:0">I\u2019ll schedule '+esc(firstName)+'&rsquo;s lessons for the school year and process their enrollment on the admin side using the payment method active in your account. Your card will be charged for the first month once enrollment is processed, and automatic flat rate monthly payments will be processed on the 1st of each month through June.</p>'+
             '</div>'));
         }
-        // 2. Always-visible: acceptance confirmation banner
-        if(s.tcAcceptedAt||s.tcAcceptedName){
-          h+='<div class="msg ms" style="margin-top:1rem">';
-          h+='\u2713 Proposal and policies accepted'+(s.tcAcceptedName?' by '+esc(s.tcAcceptedName):'')+
-            (s.tcAcceptedAt?' on '+esc(_fmtFamilyTs(s.tcAcceptedAt))+' at '+esc(_fmtFamilyTime(s.tcAcceptedAt)):'')+'.</div>';
-        }
-        // 3. Review Policies toggle button (directly below banner)
+        // 3. Review Policies toggle button
         h+='<div style="margin-top:1rem;border-top:1px solid var(--border);padding-top:.85rem">';
         h+='<button class="btn btn-p btn-sm" onclick="_enrExpanded[&apos;'+esc(sid)+'&apos;]=!_enrExpanded[&apos;'+esc(sid)+'&apos;];render()">'+(_exp?'Hide policies':'Review Policies')+'</button>';
         h+='</div>';

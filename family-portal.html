@@ -1234,8 +1234,8 @@ function rHome(){
           '<div style="margin-top:.75rem"><a href="'+publicCfg.schedulingBillingUrl+'" target="_blank" class="btn btn-p btn-sm">Pay Invoice</a></div>'+
           '</div>')
         :('<div style="margin-bottom:.75rem;background:var(--bbg);border:1px solid var(--blue);border-radius:var(--rl);padding:1rem">'+
-          '<div style="font-size:15px;font-weight:700;color:var(--bt);margin-bottom:.4rem">What Happens Next</div>'+
-          '<p style="font-size:14px;color:var(--bt);margin:0">I\u2019ll schedule '+esc(firstName)+'&rsquo;s lessons for the school year and process their enrollment on the admin side using the payment method active in your account. Your card will be charged for the first installment once enrollment is processed, and automatic flat rate monthly payments will be processed on the 1st of each month from the 2nd month of '+esc(firstName)+'&rsquo;s enrollment for the duration of their enrollment.</p>'+
+          '<div style="font-size:15px;font-weight:700;color:var(--bt);margin-bottom:.4rem">Welcome Back! What Happens Next</div>'+
+          '<p style="font-size:14px;color:var(--bt);margin:0">I\u2019ll schedule '+esc(firstName)+'&rsquo;s lessons for the school year and process their enrollment on the admin side using the payment method active in your account. Your card will be charged for the first installment once enrollment is processed, and automatic flat rate monthly payments will be processed on the 1st of each month from the 2nd month of '+esc(firstName)+'&rsquo;s enrollment. Check your email for confirmation and details and let us know if you need any help!</p>'+
           '</div>'));
         h+='<div class="msg ms">\u2713 Proposal and policies accepted'+(s.tcAcceptedName?' by '+esc(s.tcAcceptedName):'')+
           (s.tcAcceptedAt?' on '+esc(_fmtFamilyTs(s.tcAcceptedAt))+' at '+esc(_fmtFamilyTime(s.tcAcceptedAt)):'')+'.</div>';
@@ -2411,8 +2411,8 @@ function rEnrollment(){
             '<div style="margin-top:.75rem"><a href="'+publicCfg.schedulingBillingUrl+'" target="_blank" class="btn btn-p btn-sm">Pay Invoice</a></div>'+
             '</div>')
           :('<div style="margin-top:1rem;background:var(--bbg);border:1px solid var(--blue);border-radius:var(--rl);padding:1rem">'+
-            '<div style="font-size:15px;font-weight:700;color:var(--bt);margin-bottom:.4rem">What Happens Next</div>'+
-            '<p style="font-size:14px;color:var(--bt);margin:0">I\u2019ll schedule '+esc(firstName)+'&rsquo;s lessons for the school year and process their enrollment on the admin side using the payment method active in your account. Your card will be charged for the first installment once enrollment is processed, and automatic flat rate monthly payments will be processed on the 1st of each month from the 2nd month of '+esc(firstName)+'&rsquo;s enrollment for the duration of their enrollment.</p>'+
+            '<div style="font-size:15px;font-weight:700;color:var(--bt);margin-bottom:.4rem">Welcome Back! What Happens Next</div>'+
+            '<p style="font-size:14px;color:var(--bt);margin:0">I\u2019ll schedule '+esc(firstName)+'&rsquo;s lessons for the school year and process their enrollment on the admin side using the payment method active in your account. Your card will be charged for the first installment once enrollment is processed, and automatic flat rate monthly payments will be processed on the 1st of each month from the 2nd month of '+esc(firstName)+'&rsquo;s enrollment. Check your email for confirmation and details and let us know if you need any help!</p>'+
             '</div>'));
         }
         // 3. Review Policies toggle button

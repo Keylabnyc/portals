@@ -196,12 +196,29 @@ function _fmtFamilyDate(iso){
   return days[d.getDay()] + ', ' + months[d.getMonth()] + ' ' + date + suffix;
 }
 
-// login form
+// "Remember me" persistent session — small localStorage wrapper, safe to
+// call even where storage is unavailable/blocked.
+function _klSaveSession(token, familyId){
+  try{ localStorage.setItem('kl_family_session', JSON.stringify({token:token, familyId:familyId})); }catch(e){}
+}
+function _klReadSession(){
+  try{
+    var raw=localStorage.getItem('kl_family_session');
+    if(!raw) return null;
+    return JSON.parse(raw);
+  }catch(e){ return null; }
+}
+function _klClearSession(){
+  try{ localStorage.removeItem('kl_family_session'); }catch(e){}
+}
+
+// login form — step 'email' (just the email field) or 'password' (email
+// confirmed, either show the password field or the "needs setup" prompt)
 var LF = (function(){
   try{
     var e=sessionStorage.getItem('kl_email')||'';
-    return {email:e};
-  } catch(e){ return {email:''}; }
+    return {email:e, step:'email', password:'', remember:true, needsSetup:false, checking:false};
+  } catch(e){ return {email:'', step:'email', password:'', remember:true, needsSetup:false, checking:false}; }
 })();
 
 // lookup
@@ -210,7 +227,7 @@ var LK = {name:'', matches:[], done:false};
 // forgot password / reset password
 var RESET_TOKEN = '';
 var FP = {email:'', done:false, success:false, error:'', busy:false};
-var SPW = {pw1:'', pw2:'', busy:false, error:'', success:false};
+var SPW = {pw1:'', pw2:'', busy:false, error:'', success:false, checking:false, invalid:false, email:''};
 
 // register form
 var RF = {
@@ -573,39 +590,80 @@ function rLocked(){
 // LOGIN
 // ============================================================
 function rLogin(){
+  // Step 1: email only. We don't yet know whether this account has a
+  // password, so there's nothing else useful to show or ask for.
+  if(LF.step!=='password'){
+    var contBtn=LF.checking
+      ?'<button class="btn btn-p" disabled><span class="spin">\u21bb</span> Checking...</button>'
+      :'<button class="btn btn-p" onclick="doCheckEmail()">Continue</button>';
+    return '<h1>Welcome back!</h1>'+
+      '<p>Sign in below to access your family portal.</p>'+
+      '<div class="card">'+
+      '<h2>Sign In</h2>'+
+      '<div class="field"><label>Your email address<span class="req">*</span></label>'+
+      '<input id="le" type="email" autocomplete="username" inputmode="email" placeholder="e.g. jane@example.com" value="'+esc(LF.email)+'" oninput="LF.email=this.value" onkeydown="if(event.keyCode===13)doCheckEmail()"></div>'+
+      contBtn+'</div>'+
+      '<p style="font-size:13px;color:var(--text3)">New to Keylab? <a href="#" onclick="event.preventDefault();PAGE=&apos;lookup&apos;;LK={name:&apos;&apos;,matches:[],done:false};render()">Get started here.</a></p>'+
+      '<p style="font-size:12px;color:var(--text4)">Having trouble logging in? Email us at <a href="mailto:info@keylab.nyc">info@keylab.nyc</a> and we\'ll get you sorted out right away.</p>';
+  }
+
+  // Step 2, account has no password yet: only the setup prompt, never a
+  // password field for a password that doesn't exist.
+  var backLink='<p style="font-size:13px;color:var(--text3)"><a href="#" onclick="event.preventDefault();doBackToEmailStep()">\u2190 Use a different email</a></p>';
+  if(LF.needsSetup){
+    var setupBtnInner = LF.settingUp
+      ? '<button class="btn btn-p btn-sm" disabled><span class="spin">\u21bb</span> Sending...</button>'
+      : '<button class="btn btn-p btn-sm" onclick="doBeginResetFromLogin()">Please create a password</button>';
+    return '<h1>Welcome back!</h1>'+
+      '<div class="card"><p style="font-size:13px;color:var(--text3);margin:0 0 .5rem 0">'+esc(LF.email)+'</p>'+
+      '<p style="font-size:13px;margin:0 0 .5rem 0">You need to set up a password before signing in.</p>'+
+      setupBtnInner+'</div>'+
+      backLink;
+  }
+
+  // Step 2, account has a password: the actual sign-in form.
   var btn=busy
     ?'<button class="btn btn-p" disabled><span class="spin">\u21bb</span> Signing in...</button>'
     :'<button class="btn btn-p" onclick="doLogin()">Sign In</button>';
-  var setupBtnInner = LF.settingUp
-    ? '<button class="btn btn-p btn-sm" disabled><span class="spin">\u21bb</span> Sending...</button>'
-    : '<button class="btn btn-p btn-sm" onclick="doBeginResetFromLogin()">Please create a password</button>';
-  var setupBtn = LF.needsSetup
-    ? '<div class="card" style="margin-top:.5rem"><p style="font-size:13px;margin:0 0 .5rem 0">You need to set up a password before signing in.</p>'+
-      setupBtnInner+'</div>'
-    : '';
   return '<h1>Welcome back!</h1>'+
-    '<p>Sign in below to access your family portal.</p>'+
     '<div class="card">'+
     '<h2>Sign In</h2>'+
-    '<div class="field"><label>Your email address<span class="req">*</span></label>'+
-    '<input id="le" type="email" autocomplete="username" inputmode="email" placeholder="e.g. jane@example.com" value="'+esc(LF.email)+'" oninput="LF.email=this.value" onkeydown="if(event.keyCode===13)doLogin()"></div>'+
+    '<p style="font-size:13px;color:var(--text3);margin:0 0 .5rem 0">'+esc(LF.email)+'</p>'+
     '<div class="field"><label>Password<span class="req">*</span></label>'+
     '<input id="lp" type="password" autocomplete="current-password" value="'+esc(LF.password||'')+'" oninput="LF.password=this.value" onkeydown="if(event.keyCode===13)doLogin()"></div>'+
+    '<label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer;margin-bottom:.6rem"><input type="checkbox" id="lf-remember" style="width:14px;height:14px" '+(LF.remember?'checked':'')+' onchange="LF.remember=this.checked"> Remember me</label>'+
     btn+'</div>'+
-    setupBtn+
     '<p style="font-size:13px;color:var(--text3)"><a href="#" onclick="event.preventDefault();PAGE=&apos;forgotpw&apos;;FP={email:LF.email,done:false,success:false,error:&apos;&apos;,busy:false};render()">Forgot your password? Reset it here</a></p>'+
-    '<p style="font-size:13px;color:var(--text3)">New to Keylab? <a href="#" onclick="event.preventDefault();PAGE=&apos;lookup&apos;;LK={name:&apos;&apos;,matches:[],done:false};render()">Get started here.</a></p>'+
+    backLink+
     '<p style="font-size:12px;color:var(--text4)">Having trouble logging in? Email us at <a href="mailto:info@keylab.nyc">info@keylab.nyc</a> and we\'ll get you sorted out right away.</p>';
 }
 
-function doLogin(){
+function doBackToEmailStep(){
+  LF.step='email'; LF.password=''; LF.needsSetup=false; render();
+}
+
+function doCheckEmail(){
   var email=(document.getElementById('le')||{}).value||LF.email;
-  var password=(document.getElementById('lp')||{}).value||LF.password||'';
   LF.email=email.trim().toLowerCase();
-  LF.password=password;
   if(!LF.email||LF.email.indexOf('@')===-1){showMsg('Please enter a valid email address.','e');return;}
+  LF.checking=true; render();
+  api({action:'familyCheckEmail', data:{email:LF.email}}, function(e,r){
+    LF.checking=false;
+    if(e||!r||!r.ok){
+      showMsg(r&&r.error?r.error:'We couldn\'t find an account with that email address. Please check your email or contact us at info@keylab.nyc.','e');
+      render(); return;
+    }
+    LF.step='password';
+    LF.needsSetup=!r.hasPassword;
+    render();
+  });
+}
+
+function doLogin(){
+  var password=(document.getElementById('lp')||{}).value||LF.password||'';
+  LF.password=password;
   if(!LF.password){showMsg('Please enter your password.','e');return;}
-  busy=true; LF.needsSetup=false; render();
+  busy=true; render();
   api({action:'familyLogin', data:{familyEmail:LF.email, familyPassword:LF.password}}, function(e,r){
     busy=false;
     if(e||!r||!r.ok){
@@ -615,6 +673,7 @@ function doLogin(){
     }
     TOKEN=r.token; FAMILY_ID=r.familyId;
     try{sessionStorage.setItem('kl_email',LF.email);}catch(e){}
+    if(LF.remember) _klSaveSession(r.token, r.familyId);
     loadFamily();
   });
 }
@@ -681,9 +740,16 @@ function doBeginReset(){
 // SET / RESET PASSWORD (reached via emailed ?resetToken= link)
 // ============================================================
 function rSetPassword(){
+  if(SPW.checking){
+    return '<div style="text-align:center;padding:4rem;color:var(--text3)"><span class="spin" style="font-size:22px">\u21bb</span></div>';
+  }
+  if(SPW.invalid){
+    return '<h1>Reset your Family Portal password</h1>'+
+      '<p style="color:var(--rt)">Your reset link has expired. Please go to the Family Portal to get a fresh reset link</p>'+
+      '<button class="btn btn-p" onclick="PAGE=&apos;login&apos;;render()">Back to Sign In</button>';
+  }
   if(SPW.success){
-    return '<h1>Your password has been reset!</h1>'+
-      '<button class="btn btn-p" onclick="PAGE=&apos;login&apos;;render()">Continue to Sign In</button>';
+    return '<div style="text-align:center;padding:4rem;color:var(--text3)"><span class="spin" style="font-size:22px">\u21bb</span></div>';
   }
   var btn=SPW.busy
     ?'<button class="btn btn-p" disabled><span class="spin">\u21bb</span> Saving...</button>'
@@ -692,6 +758,8 @@ function rSetPassword(){
     '<p style="font-size:13px;color:var(--text3)">Your password must be at least 8 characters and is case-sensitive.</p>'+
     (SPW.error?'<p style="color:var(--rt)">'+esc(SPW.error)+'</p>':'')+
     '<div class="card">'+
+    (SPW.email?'<input type="email" autocomplete="username" value="'+esc(SPW.email)+'" readonly style="position:absolute;left:-9999px" aria-hidden="true">'+
+      '<p style="font-size:13px;color:var(--text3);margin:0 0 .6rem 0">Setting a password for <strong>'+esc(SPW.email)+'</strong></p>':'')+
     '<div class="field"><label>New password<span class="req">*</span></label>'+
     '<input id="spw1" type="password" autocomplete="new-password" value="'+esc(SPW.pw1)+'" oninput="SPW.pw1=this.value"></div>'+
     '<div class="field"><label>Confirm password<span class="req">*</span></label>'+
@@ -713,8 +781,18 @@ function doCompleteReset(){
       SPW.error=(r&&r.error)||'Something went wrong. Please try again.';
       render(); return;
     }
+    // Auto-login — they just proved their identity via the emailed link,
+    // no reason to make them re-type the password they only just set.
     SPW.success=true;
     render();
+    if(r.token&&r.familyId){
+      TOKEN=r.token; FAMILY_ID=r.familyId;
+      _klSaveSession(r.token, r.familyId);
+      loadFamily();
+    } else {
+      // Fallback, only if the server didn't return a token for some reason
+      PAGE='login'; render();
+    }
   });
 }
 
@@ -1387,7 +1465,19 @@ function rHome(){
   h+='<hr class="divider">';
   h+=_rHomeParent2();
   h+='<p style="font-size:12px;color:var(--text4)">Questions? Email us at <a href="mailto:info@keylab.nyc">info@keylab.nyc</a>.</p>';
+  h+='<p style="font-size:12px;color:var(--text4)"><a href="#" onclick="event.preventDefault();doSignOut()">Sign Out</a></p>';
   return h;
+}
+
+// Now needed because sessions persist across visits ("Remember me") —
+// previously closing the tab was the only way to end a session.
+function doSignOut(){
+  _klClearSession();
+  TOKEN=''; FAMILY_ID='';
+  students=[];
+  PAGE='login';
+  LF.step='email'; LF.password=''; LF.needsSetup=false;
+  render();
 }
 
 // ============================================================
@@ -3037,11 +3127,42 @@ function boot(){
       if(r.schedulingBillingUrl) publicCfg.schedulingBillingUrl=r.schedulingBillingUrl;
     }
     if(resetTokenFromUrl){
+      // A reset/setup link — check it's actually still valid before showing
+      // the set-password form, so a bookmarked or already-used link fails
+      // clearly right away instead of after the family fills out the form.
       RESET_TOKEN = resetTokenFromUrl;
       PAGE = 'setpw';
-    } else {
-      PAGE = 'login';
+      SPW.checking = true;
+      render();
+      api({action:'familyValidateResetToken', data:{resetToken:resetTokenFromUrl}}, function(e2,r2){
+        SPW.checking = false;
+        if(e2||!r2||!r2.ok){
+          SPW.invalid = true;
+        } else {
+          SPW.email = r2.email||'';
+        }
+        render();
+      });
+      return;
     }
+    // No reset link — check for a remembered session before showing the
+    // login screen at all, so a returning family with "Remember me" on
+    // skips straight into the portal.
+    var saved = _klReadSession();
+    if(saved && saved.token){
+      api({action:'familyCheckSession', data:{familyToken:saved.token}}, function(e3,r3){
+        if(!e3&&r3&&r3.ok){
+          TOKEN=saved.token; FAMILY_ID=r3.familyId;
+          loadFamily();
+          return;
+        }
+        _klClearSession();
+        PAGE = 'login';
+        render();
+      });
+      return;
+    }
+    PAGE = 'login';
     render();
   });
 }

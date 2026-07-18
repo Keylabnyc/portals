@@ -57,6 +57,8 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 .tab:hover{color:var(--text);background:rgba(255,255,255,.5)}
 .tab.on{color:#fff;background:var(--acc);border-color:var(--acc)}
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.login-cards{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1rem}
+@media(max-width:560px){.login-cards{grid-template-columns:1fr}}
 .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
 .prop-row{display:flex;justify-content:space-between;align-items:baseline;padding:6px 0;border-bottom:.5px solid var(--border)}
 .prop-row:last-child{border-bottom:none}
@@ -236,7 +238,8 @@ var RF = {
   // Second parent is always optional and collapsed by default (showParent2)
   // — revealed only via the "+ Add a second parent" link.
   showParent2:false, parent2Name:'', parent2Email:'', parent2Phone:'',
-  students:[newStuDraft()]
+  students:[newStuDraft()],
+  step:'info' // 'info' (Step 1) or 'availability' (Step 2)
 };
 
 // scheduling
@@ -258,7 +261,8 @@ var SC = {
   teachers:[],
   splitLesson:false,
   splitChild:{name:'',age:'',instrument:'',instrumentOther:'',notes:''},
-  source:''
+  source:'',
+  waitlist:null // null = unanswered, true/false = family's choice, only relevant when the selected instrument currently has no teacher
 };
 
 // instrument edit state — keyed by studentId: {editing:bool, val:'', other:'', busy:false}
@@ -280,12 +284,28 @@ function _gotoSchedulingForStudent(id) {
   SC.street = ''; SC.apt = ''; SC.city = ''; SC.state = 'NY'; SC.zip = '';
   SC.instrument = ''; SC.instrumentNote = ''; SC.notes = ''; SC.locationNote = ''; SC.durationNote = ''; SC.locNoteTouched = false;
   SC.teacherPref = ''; SC.pendingChanges = false; SC.submitError = ''; SC.justSubmitted = false;
+  SC.waitlist = null;
   SC.splitLesson = false;
   SC.splitChild = {name:'', age:'', instrument:'', instrumentOther:'', notes:''};
   for(var i=0;i<students.length;i++){
     if(students[i].studentId===id){ SC.instrument = students[i].instrument || ''; break; }
   }
   gotoScheduling();
+}
+
+// Instrument-to-teacher matching — mirrors the admin-side
+// _teacherTeachesInstrument()/_anyTeacherTeachesInstrument() pattern
+// (EnrollmentAdmin.html), reading the same TEACHERS.instruments JSON-array
+// field via SC.teachers (returned by the unauthenticated getFamilyTeachers
+// call).
+function _famTeacherTeachesInstrument(teacher, instrument){
+  if(!instrument) return false;
+  var arr=[]; try{ arr=JSON.parse(teacher.instruments||'[]'); }catch(ex){}
+  return arr.indexOf(instrument)>-1;
+}
+function _famAvailableTeachers(instrument){
+  if(!instrument) return SC.teachers;
+  return SC.teachers.filter(function(t){ return _famTeacherTeachesInstrument(t,instrument); });
 }
 
 // tc — keyed by studentId
@@ -587,14 +607,20 @@ function rLogin(){
     var contBtn=LF.checking
       ?'<button class="btn btn-p" disabled><span class="spin">\u21bb</span> Checking...</button>'
       :'<button class="btn btn-p" onclick="doCheckEmail()">Continue</button>';
-    return '<h1>Welcome back!</h1>'+
-      '<p>Sign in below to access your family portal.</p>'+
+    return '<h1>Welcome to Keylab</h1>'+
+      '<div class="login-cards">'+
       '<div class="card">'+
       '<h2>Sign In</h2>'+
+      '<p style="font-size:12px;color:var(--text3);margin-bottom:.6rem">Already a Keylab family? Sign in below.</p>'+
       '<div class="field"><label>Your email address<span class="req">*</span></label>'+
       '<input id="le" type="email" autocomplete="username" inputmode="email" placeholder="e.g. jane@example.com" value="'+esc(LF.email)+'" oninput="LF.email=this.value" onkeydown="if(event.keyCode===13)doCheckEmail()"></div>'+
       contBtn+'</div>'+
-      '<p style="font-size:13px;color:var(--text3)">New to Keylab? <a href="#" onclick="event.preventDefault();PAGE=&apos;lookup&apos;;LK={name:&apos;&apos;,matches:[],done:false};render()">Get started here.</a></p>'+
+      '<div class="card">'+
+      '<h2>New Family</h2>'+
+      '<p style="font-size:12px;color:var(--text3);margin-bottom:.6rem">New to Keylab? Create your account and submit your child\u2019s availability in less than 5 minutes.</p>'+
+      '<button class="btn btn-p" onclick="PAGE=&apos;lookup&apos;;LK={name:&apos;&apos;,matches:[],done:false};render()">Register Now</button>'+
+      '</div>'+
+      '</div>'+
       '<p style="font-size:12px;color:var(--text4)">Having trouble logging in? Email us at <a href="mailto:info@keylab.nyc">info@keylab.nyc</a> and we\'ll get you sorted out right away.</p>';
   }
 
@@ -845,8 +871,14 @@ function selectMatch(i){
 // REGISTER
 // ============================================================
 function rRegister(){
-  var h='<h1>Tell us about your family</h1>'+
-    '<p>We\'re excited to work with you! Fill out the form below and we\'ll be in touch within one to two business days. We look forward to meeting your family.</p>';
+  if(RF.step==='availability') return rRegisterAvailability();
+  return rRegisterInfo();
+}
+
+function rRegisterInfo(){
+  var h='<div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:.5rem">Step 1 of 2 \u00b7 Your Info</div>';
+  h+='<h1>Tell us about your family</h1>'+
+    '<p>We\'re excited to have your family join Keylab! Submit your family\'s info, then set your child\'s availability for lessons \u2014 we\'ll be in touch within two business days with an update</p>';
 
   // Parent card
   h+='<div class="card"><h2>Parent or Guardian</h2>';
@@ -889,12 +921,22 @@ function rRegister(){
     h+='<button class="add-btn" onclick="RF.students.push(newStuDraft());render()">+ Add another child</button>';
   }
 
-  // SMS + submit
+  // SMS + continue to Step 2
   h+='<div class="note">By submitting this form, you agree to receive text messages from Keylab. We only send scheduling confirmations and reminders, and minimal notifications about upcoming lessons and classes. We will not share your information with anyone. Reply STOP to unsubscribe.</div>';
   h+=busy
-    ?'<button class="btn btn-p btn-full" disabled><span class="spin">\u21bb</span> Submitting...</button>'
-    :'<button class="btn btn-p btn-full" onclick="doRegister()">Submit</button>';
+    ?'<button class="btn btn-p btn-full" disabled><span class="spin">\u21bb</span> Continuing...</button>'
+    :'<button class="btn btn-p btn-full" onclick="doGoToAvailabilityStep()">Set Your Child\'s Availability</button>';
   h+='<p style="font-size:12px;color:var(--text4);margin-top:.75rem">Already have an account? <a href="#" onclick="event.preventDefault();PAGE=&apos;login&apos;;render()">Sign in here.</a></p>';
+  return h;
+}
+
+function rRegisterAvailability(){
+  var h='<div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:.5rem">Step 2 of 2 \u00b7 Set Your Child\'s Availability</div>';
+  h+='<h1>Your Availability</h1>';
+  h+='<p>Tell us when your family is available for lessons this school year. The more you share, the better we can find a time that works well for everyone.</p>';
+  h+='<p style="font-size:13px;color:var(--text3)"><a href="#" onclick="event.preventDefault();RF.step=&apos;info&apos;;render()">\u2190 Back to your info</a></p>';
+  h+=_rNewFamilyAvailIntro();
+  h+=rSchedForm(true);
   return h;
 }
 
@@ -911,15 +953,8 @@ function rStuBlock(st, i){
   var skillOpts='<option value="">Select...</option>'+SKILL_LEVELS.map(function(x){
     return '<option value="'+esc(x)+'"'+(st.skill===x?' selected':'')+'>'+esc(x)+'</option>';
   }).join('');
-  var locOpts=LOCS.map(function(x){
-    return '<option value="'+esc(x.v)+'"'+(st.location===x.v?' selected':'')+'>'+esc(x.l)+'</option>';
-  }).join('');
   var howOpts='<option value="">Select...</option>'+HOW_HEARD.map(function(x){
     return '<option value="'+esc(x)+'"'+(st.howHeard===x?' selected':'')+'>'+esc(x)+'</option>';
-  }).join('');
-  var durs=['30','45','60'].map(function(d){
-    var on=st.durations&&st.durations.indexOf(d)>-1;
-    return '<button class="db'+(on?' on':'')+'" onclick="toggleDur('+i+',&apos;'+d+'&apos;)">'+d+' min</button>';
   }).join('');
 
   var h='<div class="card" style="position:relative">';
@@ -953,16 +988,6 @@ function rStuBlock(st, i){
   h+='<div class="field"><label>Experience level<span class="req">*</span></label>'+
     '<select onchange="RF.students['+i+'].skill=this.value">'+skillOpts+'</select>'+
     '<div class="hint">Choose Beginner if your child has never taken lessons before -- everyone starts somewhere!</div></div>';
-  h+='<div class="field"><label>Lesson location<span class="req">*</span></label>'+
-    '<select onchange="RF.students['+i+'].location=this.value;render()">'+locOpts+'</select></div>';
-  if(st.location==='in-home'){
-    h+='<div class="note">In-home lessons are available in Carroll Gardens, Cobble Hill, Brooklyn Heights, Gowanus, Red Hook, and nearby neighborhoods. A small additional monthly fee applies.</div>';
-  } else if(st.location==='virtual'){
-    h+='<div class="note">Virtual lessons are available anywhere. We\'ll send you a link before each session.</div>';
-  }
-  h+='<div class="field"><label>Lesson duration preference<span class="req">*</span></label>'+
-    '<div class="hint" style="margin-bottom:6px">Select all that work for your family -- we\'ll talk through what\'s right when we follow up.</div>'+
-    '<div class="dur-row">'+durs+'</div></div>';
   h+='<div class="field"><label>How did you hear about Keylab?<span class="req">*</span></label>'+
     '<select onchange="RF.students['+i+'].howHeard=this.value">'+howOpts+'</select></div>';
   h+='<div class="field"><label>Anything you\'d like us to know?</label>'+
@@ -998,7 +1023,7 @@ function syncRF(){
   map.forEach(function(f){ var el=document.getElementById(f[0]); if(el) RF[f[1]]=el.value; });
 }
 
-function doRegister(){
+function doGoToAvailabilityStep(){
   syncRF();
   if(!RF.parent1Name.trim()){showMsg('Please enter your first and last name.','e');return;}
   if(!RF.parent1Email.trim()){showMsg('Please enter your email address.','e');return;}
@@ -1035,10 +1060,24 @@ function doRegister(){
     if(!s.skill){showMsg('Please select an experience level for '+sn+'.','e');return;}
     if(!s.school.trim()){showMsg('Please enter a school for '+sn+' (or N/A).','e');return;}
     if(!s.grade.trim()){showMsg('Please enter a grade for '+sn+' (or N/A).','e');return;}
-    if(!s.durations||!s.durations.length){showMsg('Please select at least one lesson duration for '+sn+'.','e');return;}
     if(!s.howHeard){showMsg('Please let us know how you heard about Keylab.','e');return;}
   }
-  busy=true; render();
+  // Move to Step 2 — SC (the exact same state the returning-family
+  // availability screen uses) is seeded with the instrument already picked
+  // in Step 1, so rSchedForm() doesn't ask for it a second time.
+  var s0=RF.students[0];
+  SC.instrument=s0.instrument==='Other'?(s0.instrumentOther||'Other'):s0.instrument;
+  SC.waitlist=null;
+  if(!SC.teachers.length) loadSchedTeachers();
+  RF.step='availability';
+  render();
+}
+
+function doCompleteRegistration(){
+  SC.submitError='';
+  var _err=_validateSchedForm();
+  if(_err){SC.submitError=_err;render();return;}
+  SC.busy=true; render();
   var s0=RF.students[0];
   var extraNote=RF.students.length>1
     ?('\n\nAdditional children: '+RF.students.slice(1).map(function(x){
@@ -1052,26 +1091,35 @@ function doRegister(){
     street:RF.street.trim(), apt:RF.apt.trim(), city:RF.city.trim(),
     state:RF.state.trim()||'NY', zip:RF.zip.trim(),
     studentName:s0.name.trim(),
-    instrument:s0.instrument==='Other'?(s0.instrumentOther||'Other'):s0.instrument,
+    instrument:SC.instrument,
     age:s0.age, birthdate:s0.dob, school:s0.school, grade:s0.grade,
-    skillLevel:s0.skill, lessonLocation:s0.location,
-    durationPref:s0.durations.join(','), howHeard:s0.howHeard,
+    skillLevel:s0.skill, howHeard:s0.howHeard,
     notes:(s0.notes||'')+extraNote
   };
   api({action:'familyRegister', data:payload}, function(e,r){
-    busy=false;
     if(e||!r||!r.ok){
-      showMsg((r&&r.error)||'Something went wrong. Please try again or email us at info@keylab.nyc.','e');
+      SC.busy=false;
+      SC.submitError=(r&&r.error)||'Something went wrong. Please try again or email us at info@keylab.nyc.';
       render(); return;
     }
-    if(r.token && r.familyId){
-      TOKEN=r.token; FAMILY_ID=r.familyId;
-      _klSaveSession(r.token, r.familyId);
-      loadFamily();
-      return;
+    if(!r.token||!r.familyId||!r.studentId){
+      SC.busy=false;
+      SC.submitError='Something went wrong creating your account. Please try again or email us at info@keylab.nyc.';
+      render(); return;
     }
-    // Fallback, only if the server didn't return a session token for some reason
-    PAGE='reg-done'; render();
+    TOKEN=r.token; FAMILY_ID=r.familyId;
+    _klSaveSession(r.token, r.familyId);
+    SC.studentId=r.studentId;
+    // Account now exists — immediately save the Step 2 availability answers
+    // under it, via the exact same save path the returning-family screen
+    // uses. If this one call somehow fails, the account still exists and
+    // loadFamily() below lands the family on Home, where the normal
+    // "Submit availability" button lets them finish that one step
+    // separately — nothing about their Step 1/Step 2 answers is lost.
+    _saveSlotsAndDetails(function(ok){
+      SC.busy=false;
+      loadFamily();
+    },true);
   });
 }
 
@@ -1566,6 +1614,34 @@ function resendP2Setup(){
 // ============================================================
 // SCHEDULING TAB
 // ============================================================
+// The "how this works" card shown to a family submitting availability for
+// the first time (not returning) — shared between the logged-in scheduling
+// screen and the new-family registration flow's Step 2, so both show
+// identical guidance rather than two copies that could drift.
+function _rNewFamilyAvailIntro(){
+  var h='<div class="card" style="margin-bottom:1rem">';
+  h+='<h2>How To Submit Your Availability</h2>';
+  h+='<ul style="padding-left:1.2rem;color:var(--text2);font-size:13px;line-height:1.75">';
+  h+='<li>Select the days and times that work best for your family. You can add as many time windows as you like -- the more options you give us, the easier it is to find a great fit.</li>';
+  h+='<li>For each time window you add, select a start time, end time, and priority level (Preferred, Next Best, Possible, or Least Preferred).</li>';
+  h+='<li>Choose your preferred lesson duration. If you select more than one, let us know if you have a preference or are open to any of your choices.</li>';
+  h+='<li>If you have a location preference (studio or in-home), let us know. If you select more than one option, let us know details on your preferences. In-home lessons are not guaranteed, but we\'ll do our best if we have a teacher available.</li>';
+  h+='<li>After you submit, you\'ll see a summary of your availability here and you can log in to review or make changes.</li>';
+  h+='<li>When we have a spot for you, we\'ll reach out with a proposed lesson time and pricing details.</li>';
+  h+='<li>Questions? Email us at <a href="mailto:info@keylab.nyc">info@keylab.nyc</a>.</li>';
+  h+='</ul>';
+  h+='<div style="margin-top:1.25rem;padding-top:1rem;border-top:1px solid var(--border)">';
+  h+='<h2 style="margin-bottom:.5rem">Tuition Pricing</h2>';
+  h+='<ul style="padding-left:1.2rem;color:var(--text2);font-size:13px;line-height:1.75">';
+  h+='<li>Estimated monthly tuition is provided to help you plan your budget for the school year. Your actual tuition may be higher or lower based on day of the week, start date, location and other factors.</li>';
+  h+='<li>Pricing is flat rate monthly and will be the same regardless of the number of lessons scheduled in any given calendar month.</li>';
+  h+='</ul>';
+  h+='<p style="font-size:13px;color:var(--text2);margin-top:.75rem">Questions? Email us at <a href="mailto:info@keylab.nyc">info@keylab.nyc</a>.</p>';
+  h+='</div>';
+  h+='</div>';
+  return h;
+}
+
 function rScheduling(){
   if(!isTruthy(publicCfg.availabilityOpen)){
     return '<p style="color:var(--text3)">Scheduling is not currently open. We\'ll let you know as soon as it is!</p>';
@@ -1607,26 +1683,7 @@ function rScheduling(){
     h+='<li>If we\'re unable to find an opening with your regular teacher during your requested availability, we\'ll reach out to offer you a time with your regular teacher that is open but not within your requested availability, or time slots with a new teacher that we feel will be a good fit for your child.</li>';
     h+='</ul></div>';
   } else {
-    h+='<div class="card" style="margin-bottom:1rem">';
-    h+='<h2>How To Submit Your Availability</h2>';
-    h+='<ul style="padding-left:1.2rem;color:var(--text2);font-size:13px;line-height:1.75">';
-    h+='<li>Select the days and times that work best for your family. You can add as many time windows as you like -- the more options you give us, the easier it is to find a great fit.</li>';
-    h+='<li>For each time window you add, select a start time, end time, and priority level (Preferred, Next Best, Possible, or Least Preferred).</li>';
-    h+='<li>Choose your preferred lesson duration. If you select more than one, let us know if you have a preference or are open to any of your choices.</li>';
-    h+='<li>If you have a location preference (studio or in-home), let us know. If you select more than one option, let us know details on your preferences. In-home lessons are not guaranteed, but we\'ll do our best if we have a teacher available.</li>';
-    h+='<li>After you submit, you\'ll see a summary of your availability here and you can log in to review or make changes.</li>';
-    h+='<li>When we have a spot for you, we\'ll reach out with a proposed lesson time and pricing details.</li>';
-    h+='<li>Questions? Email us at <a href="mailto:info@keylab.nyc">info@keylab.nyc</a>.</li>';
-    h+='</ul>';
-    h+='<div style="margin-top:1.25rem;padding-top:1rem;border-top:1px solid var(--border)">';
-    h+='<h2 style="margin-bottom:.5rem">Tuition Pricing</h2>';
-    h+='<ul style="padding-left:1.2rem;color:var(--text2);font-size:13px;line-height:1.75">';
-    h+='<li>Estimated monthly tuition is provided to help you plan your budget for the school year. Your actual tuition may be higher or lower based on day of the week, start date, location and other factors.</li>';
-    h+='<li>Pricing is flat rate monthly and will be the same regardless of the number of lessons scheduled in any given calendar month.</li>';
-    h+='</ul>';
-    h+='<p style="font-size:13px;color:var(--text2);margin-top:.75rem">Questions? Email us at <a href="mailto:info@keylab.nyc">info@keylab.nyc</a>.</p>';
-    h+='</div>';
-    h+='</div>';
+    h+=_rNewFamilyAvailIntro();
   }
 
   if(students.length>1&&SC.studentId){
@@ -1693,7 +1750,7 @@ function rViewDurPills(){
 }
 function rViewTchOpts(){
   var o='<option value=""'+(SC.teacherPref===''?' selected':'')+'>No preference</option>';
-  SC.teachers.forEach(function(t){
+  _famAvailableTeachers(SC.instrument).forEach(function(t){
     o+='<option value="'+esc(t.teacherName)+'"'+(SC.teacherPref===t.teacherName?' selected':'')+'>'+esc(t.teacherName)+'</option>';
   });
   return o;
@@ -1998,7 +2055,7 @@ function saveSlotLocal(i){
   render();
 }
 
-function rSchedForm(){
+function rSchedForm(forReg){
   var isEdit=!SC.isFirstSubmission;
   var h='';
   if(isEdit){
@@ -2073,15 +2130,30 @@ function rSchedForm(){
   }
   h+='</div>';
 
-  // Step 3: Teacher preference
+  // Step 3: Teacher preference — filtered to teachers who actually teach the
+  // selected instrument. If nobody currently teaches it, this becomes a
+  // waitlist prompt instead of a dropdown (see doSaveFamilyAvailability for
+  // how the answer is persisted/surfaced to admin).
+  var _availTchs=_famAvailableTeachers(SC.instrument);
+  var _noTeacherForInstrument=!!SC.instrument&&SC.teachers.length>0&&_availTchs.length===0;
   h+='<div class="card">';
-  h+='<h2 style="margin-bottom:.15rem">Do you have a teacher preference?</h2>';
-  h+='<p style="font-size:13px;color:var(--text3);margin-bottom:.75rem">If you have a teacher preference, let us know. Leave this blank if you do not have a preference. <a href="https://keylab.nyc/our-teachers" target="_blank" style="color:var(--bt)">View our teachers.</a></p>';
-  var tchOpts2='<option value=""'+(SC.teacherPref===''?' selected':'')+'>No preference</option>';
-  SC.teachers.forEach(function(t){
-    tchOpts2+='<option value="'+esc(t.teacherName)+'"'+(SC.teacherPref===t.teacherName?' selected':'')+'>'+esc(t.teacherName)+'</option>';
-  });
-  h+='<select onchange="SC.teacherPref=this.value;render()" style="margin-bottom:0">'+tchOpts2+'</select>';
+  if(_noTeacherForInstrument){
+    h+='<h2 style="margin-bottom:.15rem">We don\u2019t currently have a teacher for '+esc(SC.instrument)+'</h2>';
+    h+='<p style="font-size:13px;color:var(--text3);margin-bottom:.75rem">Would you like to be placed on a waitlist for '+esc(SC.instrument)+' lessons? We\u2019ll reach out as soon as a teacher becomes available.</p>';
+    h+='<div class="dur-row">'+
+      '<button class="db'+(SC.waitlist===true?' on':'')+'" onclick="SC.waitlist=true;render()">Yes, add me to the waitlist</button>'+
+      '<button class="db'+(SC.waitlist===false?' on':'')+'" onclick="SC.waitlist=false;render()">No thanks</button>'+
+      '</div>';
+    if(SC.waitlist===null){
+      h+='<div class="aw" style="margin-top:.5rem">Please let us know if you\u2019d like to be added to the waitlist.</div>';
+    } else if(SC.waitlist===false){
+      h+='<div class="note" style="margin-top:.65rem">No problem — we\u2019ll still process the rest of your submission, and we\u2019ll follow up with you directly about '+esc(SC.instrument)+' lessons.</div>';
+    }
+  } else {
+    h+='<h2 style="margin-bottom:.15rem">Do you have a teacher preference?</h2>';
+    h+='<p style="font-size:13px;color:var(--text3);margin-bottom:.75rem">If you have a teacher preference, let us know. Leave this blank if you do not have a preference. <a href="https://keylab.nyc/our-teachers" target="_blank" style="color:var(--bt)">View our teachers.</a></p>';
+    h+='<select onchange="SC.teacherPref=this.value;render()" style="margin-bottom:0">'+rViewTchOpts()+'</select>';
+  }
   h+='</div>';
 
   // Step 4: Available times
@@ -2149,8 +2221,10 @@ function rSchedForm(){
   var durNoteMissing=SC.durations.length>1&&!SC.durationNote.trim();
   var locNoteMissing=SC.locations.length>1&&!SC.locationNote.trim();
   var inHomeAddrMissing=SC.locations.indexOf('in-home')>-1&&!SC.street.trim();
-  var missingRequired=instMissing||durMissing||locMissing||durNoteMissing||locNoteMissing||inHomeAddrMissing||!hasCompleteSlot||missingEndTime||missingStartTime;
-  var submitLbl=isEdit?'Save Changes':'Submit Availability';
+  var waitlistMissing=_noTeacherForInstrument&&SC.waitlist===null;
+  var missingRequired=instMissing||durMissing||locMissing||durNoteMissing||locNoteMissing||inHomeAddrMissing||waitlistMissing||!hasCompleteSlot||missingEndTime||missingStartTime;
+  var submitLbl=forReg?'Complete Registration':(isEdit?'Save Changes':'Submit Availability');
+  var submitFn=forReg?'doCompleteRegistration()':'doSubmitSched()';
   h+='<div style="margin-top:1rem">';
   if(SC.submitError){
     h+='<div class="aw" style="margin-top:0;margin-bottom:.75rem;font-size:13px;padding:.65rem .85rem">'+esc(SC.submitError)+'</div>';
@@ -2161,7 +2235,7 @@ function rSchedForm(){
     h+='<button class="btn btn-p btn-full" disabled style="opacity:.5">'+submitLbl+'</button>';
     h+='<div style="text-align:center;font-size:12px;color:var(--text3);margin-top:.4rem">Complete the required sections above to submit.</div>';
   } else {
-    h+='<button class="btn btn-p btn-full" onclick="doSubmitSched()">'+submitLbl+'</button>';
+    h+='<button class="btn btn-p btn-full" onclick="'+submitFn+'">'+submitLbl+'</button>';
   }
   h+='</div>';
   return h;
@@ -2244,6 +2318,7 @@ function loadSchedSubmission(){
       SC.instrumentNote=sub.instrumentNote||''; SC.notes=sub.notes||'';
       SC.teacherPref=sub.teacherPref||'';
       SC.submittedAt=sub.submittedAt||'';
+      SC.waitlist=isTruthy(sub.instrumentUnavailable)?isTruthy(sub.instrumentWaitlist):null;
       SC.submitted=true;
       SC.isFirstSubmission=false;
       SC.editMode=false;
@@ -2295,7 +2370,7 @@ function loadSchedSubmission(){
 
 // Save current SC state to backend — used by both doSubmitSched and _saveDetailsInline
 // cb(true) on success, cb(false) on failure
-function _saveSlotsAndDetails(cb){
+function _saveSlotsAndDetails(cb,isNewRegistration){
   var isEdit=!SC.isFirstSubmission;
   var activeSlots=SC.slots.filter(function(s,i){ return !SC.slotDeleted[i]; });
   var notesPayload={};
@@ -2313,13 +2388,26 @@ function _saveSlotsAndDetails(cb){
       submIdx++;
     }
   });
+  var _saveAvailTchs=_famAvailableTeachers(SC.instrument);
+  var _saveNoTeacher=!!SC.instrument&&SC.teachers.length>0&&_saveAvailTchs.length===0;
+  // If SC.teacherPref no longer matches any teacher who teaches the
+  // currently-selected instrument (e.g. the family picked a teacher, then
+  // changed instrument), the dropdown already visually shows "No
+  // preference" since no <option> matches — but the raw SC.teacherPref
+  // variable itself is untouched. Sanitize it here so what actually gets
+  // saved matches what the family sees, instead of silently submitting a
+  // mismatched pairing they never had a chance to notice or correct.
+  var _saveTeacherPref=(SC.teacherPref&&_saveAvailTchs.some(function(t){return t.teacherName===SC.teacherPref;}))?SC.teacherPref:'';
   fapi('saveFamilyAvailability', {
     studentId:SC.studentId, duration:SC.durations.join(','), location:SC.locations.join(','),
     street:SC.street, apt:SC.apt, city:SC.city, state:SC.state, zip:SC.zip,
     slots:activeSlots, instrument:SC.instrument||'', instrumentNote:SC.instrumentNote, notes:SC.notes,
     locationNote:SC.locationNote, durationNote:SC.durationNote,
     teacherAcknowledged:false,
-    teacherPref:SC.teacherPref||'',
+    teacherPref:_saveTeacherPref,
+    instrumentUnavailable:_saveNoTeacher,
+    instrumentWaitlist:_saveNoTeacher&&SC.waitlist===true,
+    isNewRegistration:!!isNewRegistration,
     slotNotes:notesPayload,
     deletedNotes:deletedNotes,
     dismissedAdminSlotKeys:dismissedAdminSlotKeys,
@@ -2348,9 +2436,14 @@ function _saveSlotsAndDetails(cb){
   });
 }
 
-function doSubmitSched(){
-  SC.submitError='';
-  // Auto-commit any open slot DOM values before validating
+// Auto-commits any open slot DOM values, then validates the current SC
+// state. Returns an error string (show it and stop) or '' if valid. Shared
+// by doSubmitSched() (existing availability screen) and
+// doCompleteRegistration() (new-family registration Step 2) so both paths
+// enforce identical rules — deliberately does NOT check SC.studentId, since
+// that doesn't exist yet during registration; callers that need it (only
+// doSubmitSched) check it separately first.
+function _validateSchedForm(){
   SC.slots.forEach(function(slot,i){
     if(SC.slotDeleted[i]) return;
     var dayEl=document.getElementById('slot-day-'+i);
@@ -2360,28 +2453,27 @@ function doSubmitSched(){
     if(startEl) slot.start=startEl.value;
     if(endEl) slot.end=endEl.value;
   });
-  if(!SC.studentId){SC.submitError='Please select a child.';render();return;}
-  if(!SC.instrument){SC.submitError='Please select an instrument.';render();return;}
-  if(!SC.durations.length){SC.submitError='Please select at least one lesson duration.';render();return;}
-  if(!SC.locations.length){SC.submitError='Please select at least one lesson location.';render();return;}
-  if(SC.durations.length>1&&!SC.durationNote.trim()){SC.submitError='Please add context on your duration preference.';render();return;}
-  if(SC.locations.length>1&&!SC.locationNote.trim()){SC.submitError='Please add context on your location preference.';render();return;}
-  if(SC.locations.indexOf('in-home')>-1&&!SC.street.trim()){SC.submitError='Please enter your street address for in-home lessons.';render();return;}
+  if(!SC.instrument) return 'Please select an instrument.';
+  if(!SC.durations.length) return 'Please select at least one lesson duration.';
+  if(!SC.locations.length) return 'Please select at least one lesson location.';
+  if(SC.durations.length>1&&!SC.durationNote.trim()) return 'Please add context on your duration preference.';
+  if(SC.locations.length>1&&!SC.locationNote.trim()) return 'Please add context on your location preference.';
+  if(SC.locations.indexOf('in-home')>-1&&!SC.street.trim()) return 'Please enter your street address for in-home lessons.';
+  var _noTeach=!!SC.instrument&&SC.teachers.length>0&&_famAvailableTeachers(SC.instrument).length===0;
+  if(_noTeach&&SC.waitlist===null) return 'Please let us know if you\u2019d like to be added to the waitlist.';
   var activeSlots=SC.slots.filter(function(s,i){ return !SC.slotDeleted[i]; });
   var hasSlot=activeSlots.some(function(s){return s.day&&s.start&&s.end;});
-  if(!hasSlot){SC.submitError='Please add at least one complete time window (day, start time, and end time).';render();return;}
+  if(!hasSlot) return 'Please add at least one complete time window (day, start time, and end time).';
   var _filledSlotCount=activeSlots.filter(function(s){return s.day;}).length;
-  if(_filledSlotCount>6){SC.submitError='You can have up to 6 time windows. Please remove one before saving.';render();return;}
+  if(_filledSlotCount>6) return 'You can have up to 6 time windows. Please remove one before saving.';
   var missingTime=activeSlots.some(function(s){return s.day&&(!s.start||!s.end);});
-  // Split lesson validation
   if(SC.splitLesson){
-    if(!SC.splitChild.name.trim()){SC.submitError='Please enter the second child\'s full name.';render();return;}
-    if(!SC.splitChild.age){SC.submitError='Please enter the second child\'s age.';render();return;}
-    if(!SC.splitChild.instrument){SC.submitError='Please select an instrument for the second child.';render();return;}
-    if(SC.splitChild.instrument==='Other'&&!SC.splitChild.instrumentOther.trim()){SC.submitError='Please describe the second child\'s instrument.';render();return;}
-    if(!SC.splitChild.notes.trim()){SC.submitError='Please tell us about your second child in the split lesson section.';render();return;}
+    if(!SC.splitChild.name.trim()) return 'Please enter the second child\'s full name.';
+    if(!SC.splitChild.age) return 'Please enter the second child\'s age.';
+    if(!SC.splitChild.instrument) return 'Please select an instrument for the second child.';
+    if(SC.splitChild.instrument==='Other'&&!SC.splitChild.instrumentOther.trim()) return 'Please describe the second child\'s instrument.';
+    if(!SC.splitChild.notes.trim()) return 'Please tell us about your second child in the split lesson section.';
   }
-  // One window per day validation
   var daysSeen={};
   var dupDay=null;
   activeSlots.forEach(function(s){
@@ -2391,16 +2483,22 @@ function doSubmitSched(){
     }
   });
   var missingPref=activeSlots.some(function(s){return s.day&&!s.pref;});
-  // Build per-day error list for missing time or pref
   var incompleteSlotDays=[];
   activeSlots.forEach(function(s){
     if(s.day&&(!s.start||!s.end||!s.pref)) incompleteSlotDays.push(s.day);
   });
   if(missingTime||missingPref){
-    SC.submitError='Please select start time, end time, and priority for each day'+(incompleteSlotDays.length?' ('+incompleteSlotDays.join(', ')+')':'')+'.';
-    render();return;
+    return 'Please select start time, end time, and priority for each day'+(incompleteSlotDays.length?' ('+incompleteSlotDays.join(', ')+')':'')+'.';
   }
-  if(dupDay){SC.submitError='You\'ve already added a window for '+dupDay+'.';render();return;}
+  if(dupDay) return 'You\'ve already added a window for '+dupDay+'.';
+  return '';
+}
+
+function doSubmitSched(){
+  SC.submitError='';
+  if(!SC.studentId){SC.submitError='Please select a child.';render();return;}
+  var _err=_validateSchedForm();
+  if(_err){SC.submitError=_err;render();return;}
   SC.busy=true; render();
   _saveSlotsAndDetails(function(ok){
     SC.busy=false;
@@ -3124,6 +3222,10 @@ function boot(){
       publicCfg.availabilityOpen=r.availabilityOpen;
       if(r.schedulingBillingUrl) publicCfg.schedulingBillingUrl=r.schedulingBillingUrl;
       if(r.closures) EST_CLOSURES=r.closures;
+      if(r.instruments){
+        var _fInstr=r.instruments.split(',').map(function(x){return x.trim();}).filter(Boolean);
+        if(_fInstr.length) INSTRUMENTS=_fInstr;
+      }
     }
     if(resetTokenFromUrl){
       // A reset/setup link — check it's actually still valid before showing

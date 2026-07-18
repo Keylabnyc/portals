@@ -460,7 +460,7 @@ function rSlotPricing(day){
 }
 
 function newStuDraft(){
-  return {name:'',age:'',dob:'',instrument:'',instrumentOther:'',skill:'',
+  return {name:'',dob:'',instrument:'',instrumentOther:'',skill:'',
     location:'studio',durations:[],school:'',grade:'',howHeard:'',notes:''};
 }
 function blankSlot(){ return {day:'',start:'',end:'',pref:'',source:''}; }
@@ -502,6 +502,40 @@ function _formatPhone(raw){
   if(digits.length===11&&digits.charAt(0)==='1') digits=digits.substring(1);
   if(digits.length!==10) return null;
   return '('+digits.substring(0,3)+') '+digits.substring(3,6)+'-'+digits.substring(6);
+}
+// Parses a birth-date string (digits in MM/DD/YYYY order, any punctuation
+// stripped) into a real Date, or null if it doesn't resolve to a valid,
+// non-future calendar date. Mirrors _formatPhone()'s normalize-at-
+// validation-time approach rather than reformatting on every keystroke.
+function _parseDob(raw){
+  var digits=String(raw||'').replace(/\D/g,'');
+  if(digits.length!==8) return null;
+  var mo=parseInt(digits.substring(0,2),10), da=parseInt(digits.substring(2,4),10), yr=parseInt(digits.substring(4,8),10);
+  if(mo<1||mo>12||da<1||da>31) return null;
+  var d=new Date(yr,mo-1,da);
+  if(d.getFullYear()!==yr||d.getMonth()!==mo-1||d.getDate()!==da) return null;
+  if(d.getTime()>Date.now()) return null;
+  return d;
+}
+// Formats a birth-date string into a consistent 'MM/DD/YYYY' display, or
+// null if it doesn't parse to a valid date.
+function _formatDob(raw){
+  var d=_parseDob(raw);
+  if(!d) return null;
+  var mo=String(d.getMonth()+1); if(mo.length<2) mo='0'+mo;
+  var da=String(d.getDate()); if(da.length<2) da='0'+da;
+  return mo+'/'+da+'/'+d.getFullYear();
+}
+// Computes age in whole years from a birth-date string. Returns null if the
+// date doesn't parse.
+function _ageFromDob(raw){
+  var d=_parseDob(raw);
+  if(!d) return null;
+  var today=new Date();
+  var age=today.getFullYear()-d.getFullYear();
+  var m=today.getMonth()-d.getMonth();
+  if(m<0||(m===0&&today.getDate()<d.getDate())) age--;
+  return age;
 }
 // Builds the familyParents state object from a getProposal() response —
 // used at all three call sites (loadFamily, gotoEnrollment's two branches)
@@ -964,20 +998,21 @@ function rStuBlock(st, i){
   h+='<h2>'+lbl+'</h2>';
   h+='<div class="field"><label>Child\'s full name<span class="req">*</span></label>'+
     '<input type="text" placeholder="e.g. Emma Smith" value="'+esc(st.name)+'" oninput="RF.students['+i+'].name=this.value"></div>';
-  h+='<div class="g2">';
-  h+='<div class="field"><label>Age<span class="req">*</span></label>'+
-    '<input type="number" min="4" max="18" placeholder="e.g. 9" value="'+esc(st.age)+'" oninput="RF.students['+i+'].age=this.value"></div>';
-  h+='<div class="field"><label>Date of birth</label>'+
-    '<input type="text" inputmode="numeric" placeholder="MM/DD/YYYY" value="'+esc(st.dob)+'" oninput="RF.students['+i+'].dob=this.value">'+
-    '<div class="hint">Optional -- helps us know your child better!</div></div>';
+  var _dobAge=_ageFromDob(st.dob);
+  h+='<div class="field"><label>Date of birth<span class="req">*</span></label>'+
+    '<input type="text" inputmode="numeric" placeholder="MM/DD/YYYY" value="'+esc(st.dob)+'" oninput="RF.students['+i+'].dob=this.value" onblur="render()">';
+  if(_dobAge!==null){
+    h+='<div class="hint">Age: '+_dobAge+'</div>';
+  }
+  if(_dobAge!==null&&_dobAge<5){
+    h+='<div class="aw" style="margin-top:.25rem">We take children ages 5 and up, but we\u2019re open to potentially working with 4-year-olds who have exceptional focus and a strong interest in music.</div>';
+  }
   h+='</div>';
   h+='<div class="g2">';
   h+='<div class="field"><label>School<span class="req">*</span></label>'+
-    '<input type="text" placeholder="e.g. PS 58" value="'+esc(st.school)+'" oninput="RF.students['+i+'].school=this.value">'+
-    '<div class="hint">Enter N/A if not applicable.</div></div>';
+    '<input type="text" placeholder="e.g. PS 58" value="'+esc(st.school)+'" oninput="RF.students['+i+'].school=this.value"></div>';
   h+='<div class="field"><label>Grade<span class="req">*</span></label>'+
-    '<input type="text" placeholder="e.g. 4th" value="'+esc(st.grade)+'" oninput="RF.students['+i+'].grade=this.value">'+
-    '<div class="hint">Enter N/A if not applicable.</div></div>';
+    '<input type="text" placeholder="e.g. 4th" value="'+esc(st.grade)+'" oninput="RF.students['+i+'].grade=this.value"></div>';
   h+='</div>';
   h+='<div class="field"><label>Instrument or subject<span class="req">*</span></label>'+
     '<select onchange="RF.students['+i+'].instrument=this.value;if(this.value!==&apos;Other&apos;)RF.students['+i+'].instrumentOther=&apos;&apos;;render()">'+instOpts+'</select></div>';
@@ -986,8 +1021,7 @@ function rStuBlock(st, i){
       '<input type="text" placeholder="e.g. Cello, Recorder, Harmonica..." value="'+esc(st.instrumentOther||'')+'" oninput="RF.students['+i+'].instrumentOther=this.value"></div>';
   }
   h+='<div class="field"><label>Experience level<span class="req">*</span></label>'+
-    '<select onchange="RF.students['+i+'].skill=this.value">'+skillOpts+'</select>'+
-    '<div class="hint">Choose Beginner if your child has never taken lessons before -- everyone starts somewhere!</div></div>';
+    '<select onchange="RF.students['+i+'].skill=this.value">'+skillOpts+'</select></div>';
   h+='<div class="field"><label>How did you hear about Keylab?<span class="req">*</span></label>'+
     '<select onchange="RF.students['+i+'].howHeard=this.value">'+howOpts+'</select></div>';
   h+='<div class="field"><label>Anything you\'d like us to know?</label>'+
@@ -1054,12 +1088,15 @@ function doGoToAvailabilityStep(){
     var s=RF.students[i];
     var sn=s.name.trim()||('child '+(i+1));
     if(!s.name.trim()){showMsg('Please enter a name for '+sn+'.','e');return;}
-    if(!s.age){showMsg('Please enter the age for '+sn+'.','e');return;}
+    if(!s.dob.trim()){showMsg('Please enter a date of birth for '+sn+'.','e');return;}
+    var _dobFmt=_formatDob(s.dob);
+    if(!_dobFmt){showMsg('Please enter a valid date of birth for '+sn+'.','e');return;}
+    s.dob=_dobFmt;
     if(!s.instrument){showMsg('Please select an instrument for '+sn+'.','e');return;}
     if(s.instrument==='Other'&&!(s.instrumentOther||'').trim()){showMsg('Please describe the instrument for '+sn+'.','e');return;}
     if(!s.skill){showMsg('Please select an experience level for '+sn+'.','e');return;}
-    if(!s.school.trim()){showMsg('Please enter a school for '+sn+' (or N/A).','e');return;}
-    if(!s.grade.trim()){showMsg('Please enter a grade for '+sn+' (or N/A).','e');return;}
+    if(!s.school.trim()){showMsg('Please enter a school for '+sn+'.','e');return;}
+    if(!s.grade.trim()){showMsg('Please enter a grade for '+sn+'.','e');return;}
     if(!s.howHeard){showMsg('Please let us know how you heard about Keylab.','e');return;}
   }
   // Move to Step 2 — SC (the exact same state the returning-family
@@ -1081,7 +1118,7 @@ function doCompleteRegistration(){
   var s0=RF.students[0];
   var extraNote=RF.students.length>1
     ?('\n\nAdditional children: '+RF.students.slice(1).map(function(x){
-        return x.name+' ('+x.instrument+', age '+x.age+')';
+        return x.name+' ('+x.instrument+', age '+_ageFromDob(x.dob)+')';
       }).join(', ')):'';
   var payload={
     parent1Name:RF.parent1Name.trim(), parent1Email:RF.parent1Email.trim(),
@@ -1092,7 +1129,7 @@ function doCompleteRegistration(){
     state:RF.state.trim()||'NY', zip:RF.zip.trim(),
     studentName:s0.name.trim(),
     instrument:SC.instrument,
-    age:s0.age, birthdate:s0.dob, school:s0.school, grade:s0.grade,
+    age:_ageFromDob(s0.dob), birthdate:s0.dob, school:s0.school, grade:s0.grade,
     skillLevel:s0.skill, howHeard:s0.howHeard,
     notes:(s0.notes||'')+extraNote
   };

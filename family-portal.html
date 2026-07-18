@@ -336,18 +336,9 @@ var EST_RATES = {30:65, 45:91, 60:115};
 var EST_TAX_RATE = (6.2+1.45+0.6+3.4+0.4)/100;
 var EST_TEACHER_HOURLY = 50;
 var EST_SUB_MONTHS = 10;
-var EST_CLOSURES = {
-  '2026-09-21':1,'2026-10-12':1,'2026-11-11':1,
-  '2026-11-26':1,'2026-11-27':1,'2026-11-28':1,'2026-11-29':1,
-  '2026-12-24':1,'2026-12-25':1,'2026-12-26':1,'2026-12-27':1,
-  '2026-12-28':1,'2026-12-29':1,'2026-12-30':1,'2026-12-31':1,
-  '2027-01-01':1,'2027-01-02':1,'2027-01-03':1,'2027-01-18':1,
-  '2027-02-15':1,'2027-02-16':1,'2027-02-17':1,'2027-02-18':1,
-  '2027-02-19':1,'2027-02-20':1,'2027-02-21':1,
-  '2027-04-22':1,'2027-04-23':1,'2027-04-24':1,'2027-04-25':1,
-  '2027-04-26':1,'2027-04-27':1,'2027-04-28':1,'2027-04-29':1,
-  '2027-04-30':1,'2027-05-01':1,'2027-05-02':1,'2027-05-31':1
-};
+// Populated live from the server (getPublicConfig) on load — never hardcoded.
+// See _rebuildClosures analog in EnrollmentAdmin.html for the same pattern.
+var EST_CLOSURES = {};
 var EST_DIDX = {Monday:1,Tuesday:2,Wednesday:3,Thursday:4,Friday:5,Saturday:6};
 
 function estLessonCount(day){
@@ -631,7 +622,7 @@ function rLogin(){
     '<p style="font-size:13px;color:var(--text3);margin:0 0 .5rem 0">'+esc(LF.email)+'</p>'+
     '<div class="field"><label>Password<span class="req">*</span></label>'+
     '<input id="lp" type="password" autocomplete="current-password" value="'+esc(LF.password||'')+'" oninput="LF.password=this.value" onkeydown="if(event.keyCode===13)doLogin()"></div>'+
-    '<label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer;margin-bottom:.6rem"><input type="checkbox" id="lf-remember" style="width:14px;height:14px" '+(LF.remember?'checked':'')+' onchange="LF.remember=this.checked"> Remember me</label>'+
+    '<label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer;margin-bottom:.6rem"><input type="checkbox" id="lf-remember" style="width:14px;height:14px;-webkit-appearance:checkbox;appearance:auto" '+(LF.remember?'checked':'')+' onchange="LF.remember=this.checked"> Remember me</label>'+
     btn+'</div>'+
     '<p style="font-size:13px;color:var(--text3)"><a href="#" onclick="event.preventDefault();PAGE=&apos;forgotpw&apos;;FP={email:LF.email,done:false,success:false,error:&apos;&apos;,busy:false};render()">Forgot your password? Reset it here</a></p>'+
     backLink+
@@ -813,9 +804,9 @@ function rLookup(){
       '<p style="font-size:13px;color:var(--text3)">Already have an account? <a href="#" onclick="event.preventDefault();PAGE=&apos;login&apos;;render()">Sign in here.</a></p>';
   }
   if(!LK.matches.length){
-    return '<h1>You\'re in the right place!</h1>'+
-      '<p>We don\'t have a record for "'+esc(LK.name)+'" yet. Fill out the form below and we\'ll be in touch within one to two business days.</p>'+
-      '<button class="btn btn-p" style="margin-bottom:.75rem" onclick="PAGE=&apos;register&apos;;render()">Continue to Sign-Up Form</button>'+
+    return '<h1>Create Your Account</h1>'+
+      '<p>We don\'t have a record for "'+esc(LK.name)+'" yet. Click here to create your account and submit your children\'s availability for lessons. We\'ll be in touch within 2 business days with an update.</p>'+
+      '<button class="btn btn-p" style="margin-bottom:.75rem" onclick="PAGE=&apos;register&apos;;render()">Create Account</button>'+
       '<br><button class="btn btn-p btn-sm" style="margin-top:.4rem" onclick="LK={name:&apos;&apos;,matches:[],done:false};render()">Try a different name</button>';
   }
   var cards=LK.matches.map(function(m,i){
@@ -1073,6 +1064,13 @@ function doRegister(){
       showMsg((r&&r.error)||'Something went wrong. Please try again or email us at info@keylab.nyc.','e');
       render(); return;
     }
+    if(r.token && r.familyId){
+      TOKEN=r.token; FAMILY_ID=r.familyId;
+      _klSaveSession(r.token, r.familyId);
+      loadFamily();
+      return;
+    }
+    // Fallback, only if the server didn't return a session token for some reason
     PAGE='reg-done'; render();
   });
 }
@@ -3125,6 +3123,7 @@ function boot(){
     if(!e&&r&&r.ok){
       publicCfg.availabilityOpen=r.availabilityOpen;
       if(r.schedulingBillingUrl) publicCfg.schedulingBillingUrl=r.schedulingBillingUrl;
+      if(r.closures) EST_CLOSURES=r.closures;
     }
     if(resetTokenFromUrl){
       // A reset/setup link — check it's actually still valid before showing

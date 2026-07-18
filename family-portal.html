@@ -1000,7 +1000,7 @@ function rStuBlock(st, i){
     '<input type="text" placeholder="e.g. Emma Smith" value="'+esc(st.name)+'" oninput="RF.students['+i+'].name=this.value"></div>';
   var _dobAge=_ageFromDob(st.dob);
   h+='<div class="field"><label>Date of birth<span class="req">*</span></label>'+
-    '<input type="text" inputmode="numeric" placeholder="MM/DD/YYYY" value="'+esc(st.dob)+'" oninput="RF.students['+i+'].dob=this.value" onblur="render()">';
+    '<input type="text" inputmode="numeric" placeholder="MM/DD/YYYY" value="'+esc(st.dob)+'" oninput="RF.students['+i+'].dob=this.value" onblur="RF.students['+i+'].dob=_formatDob(this.value)||this.value;render()">';
   if(_dobAge!==null){
     h+='<div class="hint">Age: '+_dobAge+'</div>';
   }

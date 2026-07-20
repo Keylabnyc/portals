@@ -232,7 +232,7 @@ var LF = (function(){
 })();
 
 // lookup
-var LK = {name:'', matches:[], done:false};
+var LK = {email:'', matches:[], done:false};
 
 // forgot password / reset password
 var RESET_TOKEN = '';
@@ -657,7 +657,7 @@ function rLogin(){
       '<div class="card">'+
       '<h2>New Family</h2>'+
       '<p style="font-size:12px;color:var(--text3);margin-bottom:.6rem">New to Keylab? Create your account and submit your child\u2019s availability in less than 5 minutes.</p>'+
-      '<button class="btn btn-p" onclick="PAGE=&apos;lookup&apos;;LK={name:&apos;&apos;,matches:[],done:false};render()">Register Now</button>'+
+      '<button class="btn btn-p" onclick="PAGE=&apos;lookup&apos;;LK={email:&apos;&apos;,matches:[],done:false};render()">Register Now</button>'+
       '</div>'+
       '</div>'+
       '<p style="font-size:12px;color:var(--text4)">Having trouble logging in? Email us at <a href="mailto:info@keylab.nyc">info@keylab.nyc</a> and we\'ll get you sorted out right away.</p>';
@@ -860,19 +860,22 @@ function rLookup(){
     var btn=busy
       ?'<button class="btn btn-p" disabled><span class="spin">\u21bb</span> Checking...</button>'
       :'<button class="btn btn-p" onclick="doLookup()">Check</button>';
+    // PLACEHOLDER COPY -- functional switch from name to email search approved,
+    // exact wording below is Claude's draft, not AC's given text. Flag for
+    // AC's sign-off before treating as final.
     return '<h1>Let\'s get started!</h1>'+
-      '<p>First, let\'s check if we already have your family in our system. Enter your first and last name below.</p>'+
+      '<p>First, let\'s check if we already have your family in our system. Enter your email address below.</p>'+
       '<div class="card">'+
-      '<div class="field"><label>Your first and last name<span class="req">*</span></label>'+
-      '<input id="lkn" type="text" autocomplete="name" placeholder="e.g. Jane Smith" value="'+esc(LK.name)+'" oninput="LK.name=this.value" onkeydown="if(event.keyCode===13)doLookup()"></div>'+
+      '<div class="field"><label>Your email address<span class="req">*</span></label>'+
+      '<input id="lkn" type="email" autocomplete="email" inputmode="email" placeholder="e.g. jane@email.com" value="'+esc(LK.email)+'" oninput="LK.email=this.value" onkeydown="if(event.keyCode===13)doLookup()"></div>'+
       btn+'</div>'+
       '<p style="font-size:13px;color:var(--text3)">Already have an account? <a href="#" onclick="event.preventDefault();PAGE=&apos;login&apos;;render()">Sign in here.</a></p>';
   }
   if(!LK.matches.length){
     return '<h1>Create Your Account</h1>'+
-      '<p>We don\'t have a record for "'+esc(LK.name)+'" yet. Click here to create your account and submit your children\'s availability for lessons. We\'ll be in touch within 2 business days with an update.</p>'+
+      '<p>We don\'t have a record for "'+esc(LK.email)+'" yet. Click here to create your account and submit your children\'s availability for lessons. We\'ll be in touch within 2 business days with an update.</p>'+
       '<button class="btn btn-p" style="margin-bottom:.75rem" onclick="PAGE=&apos;register&apos;;render()">Create Account</button>'+
-      '<br><button class="btn btn-p btn-sm" style="margin-top:.4rem" onclick="LK={name:&apos;&apos;,matches:[],done:false};render()">Try a different name</button>';
+      '<br><button class="btn btn-p btn-sm" style="margin-top:.4rem" onclick="LK={email:&apos;&apos;,matches:[],done:false};render()">Try a different email</button>';
   }
   var cards=LK.matches.map(function(m,i){
     var child=m.firstChildFirstName?'Child on file: '+esc(m.firstChildFirstName):(m.childCount+' student'+(m.childCount!==1?'s':'')+' on file');
@@ -883,18 +886,18 @@ function rLookup(){
       '</div>';
   }).join('');
   return '<h1>Is this your family?</h1>'+
-    '<p>We found the following'+(LK.matches.length>1?' records':' record')+' for "'+esc(LK.name)+'":</p>'+
+    '<p>We found the following'+(LK.matches.length>1?' records':' record')+' for "'+esc(LK.email)+'":</p>'+
     cards+
     '<button class="btn btn-p btn-sm" style="margin-top:.25rem" onclick="PAGE=&apos;register&apos;;render()">This isn\'t me -- start fresh</button>'+
     '<p style="font-size:12px;color:var(--text4);margin-top:.75rem">If nothing looks right, go ahead and start fresh. You can also email us at <a href="mailto:info@keylab.nyc">info@keylab.nyc</a>.</p>';
 }
 
 function doLookup(){
-  var name=(document.getElementById('lkn')||{}).value||LK.name;
-  LK.name=name.trim();
-  if(!LK.name){showMsg('Please enter your first and last name.','e');return;}
+  var email=(document.getElementById('lkn')||{}).value||LK.email;
+  LK.email=email.trim();
+  if(!LK.email){showMsg('Please enter your email address.','e');return;}
   busy=true; render();
-  api({action:'familyLookup', data:{familyName:LK.name}}, function(e,r){
+  api({action:'familyLookup', data:{email:LK.email}}, function(e,r){
     busy=false; LK.done=true;
     LK.matches=(r&&r.found&&r.matches)?r.matches:[];
     render();
@@ -2662,7 +2665,6 @@ function _fmtPriceBox(s,showFirstPaymentNote){
   var _hasItems=_splitFee>0||_oneTime>0||_sibPctVal>0||_pctDiscVal>0||_dolDisc>0||(_adj!==0);
   if(_hasItems){
     h+='<div style="margin-top:.4rem;padding-top:.5rem;border-top:1px solid var(--border2)">';
-    if(_baseLesson>0) h+='<div class="prop-row" style="border-bottom:none;font-size:12px"><span class="prop-lbl">Monthly Price</span><span class="prop-val">$'+Math.round(_baseLesson)+'</span></div>';
     if(_splitFee>0)   h+='<div class="prop-row" style="border-bottom:none;font-size:12px"><span class="prop-lbl">Split lesson fee'+(s.splitLessonNote?' \u2014 '+esc(s.splitLessonNote):'')+'</span><span class="prop-val">+$'+Math.round(_splitFee)+'/mo</span></div>';
     if(_sibPctVal>0)  h+='<div class="prop-row" style="border-bottom:none;font-size:12px;color:var(--green)"><span class="prop-lbl">Sibling discount</span><span class="prop-val">'+Math.round(_sibPctVal)+'%</span></div>';
     if(_pctDiscVal>0) h+='<div class="prop-row" style="border-bottom:none;font-size:12px;color:var(--green)"><span class="prop-lbl">Discount applied'+(s.pctDiscountNote?' \u2014 '+esc(s.pctDiscountNote):'')+'</span><span class="prop-val">'+Math.round(_pctDiscVal)+'%</span></div>';
@@ -2670,9 +2672,6 @@ function _fmtPriceBox(s,showFirstPaymentNote){
     if(_adj!==0){var _adjSign=_adj<0?'&minus;':'+';var _adjCol=_adj<0?'var(--green)':'var(--rt)';h+='<div class="prop-row" style="border-bottom:none;font-size:12px;color:'+_adjCol+'"><span class="prop-lbl">Adjustment'+(s.adjustmentNote?' \u2014 '+esc(s.adjustmentNote):'')+'</span><span class="prop-val">'+_adjSign+'$'+Math.round(Math.abs(_adj))+'/mo</span></div>';}
     if(_oneTime>0)    h+='<div class="prop-row" style="border-bottom:none;font-size:12px"><span class="prop-lbl">One-time fee (first payment only)</span><span class="prop-val">$'+Math.round(_oneTime)+'</span></div>';
     h+='</div>';
-  }
-  if(parseFloat(s.subMonths)>0){
-    h+='<div style="font-size:11px;color:var(--text4);margin-top:.35rem;text-align:right">'+Math.round(parseFloat(s.subMonths))+' billing months</div>';
   }
   if(showFirstPaymentNote){
     h+='<div style="margin-top:.5rem;padding-top:.5rem;border-top:1px solid var(--border2);font-size:11px;color:var(--text3)">Your first payment will be processed at the time of enrollment. Automatic monthly payments will begin processing on the 1st of the month from your second month of lessons.</div>';

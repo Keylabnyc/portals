@@ -860,11 +860,8 @@ function rLookup(){
     var btn=busy
       ?'<button class="btn btn-p" disabled><span class="spin">\u21bb</span> Checking...</button>'
       :'<button class="btn btn-p" onclick="doLookup()">Check</button>';
-    // PLACEHOLDER COPY -- functional switch from name to email search approved,
-    // exact wording below is Claude's draft, not AC's given text. Flag for
-    // AC's sign-off before treating as final.
     return '<h1>Let\'s get started!</h1>'+
-      '<p>First, let\'s check if we already have your family in our system. Enter your email address below.</p>'+
+      '<p>First, let\'s check if we already have your family in our system. Enter your email address.</p>'+
       '<div class="card">'+
       '<div class="field"><label>Your email address<span class="req">*</span></label>'+
       '<input id="lkn" type="email" autocomplete="email" inputmode="email" placeholder="e.g. jane@email.com" value="'+esc(LK.email)+'" oninput="LK.email=this.value" onkeydown="if(event.keyCode===13)doLookup()"></div>'+
@@ -873,7 +870,7 @@ function rLookup(){
   }
   if(!LK.matches.length){
     return '<h1>Create Your Account</h1>'+
-      '<p>We don\'t have a record for "'+esc(LK.email)+'" yet. Click here to create your account and submit your children\'s availability for lessons. We\'ll be in touch within 2 business days with an update.</p>'+
+      '<p>We don\'t have that email on file. Click here to create your account and submit your children\'s availability for lessons. We\'ll be in touch within 2 business days with an update.</p>'+
       '<button class="btn btn-p" style="margin-bottom:.75rem" onclick="PAGE=&apos;register&apos;;render()">Create Account</button>'+
       '<br><button class="btn btn-p btn-sm" style="margin-top:.4rem" onclick="LK={email:&apos;&apos;,matches:[],done:false};render()">Try a different email</button>';
   }

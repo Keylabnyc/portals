@@ -295,9 +295,6 @@ function _gotoSchedulingForStudent(id) {
   SC.waitlist = null;
   SC.splitLesson = false;
   SC.splitChild = {name:'', age:'', instrument:'', instrumentOther:'', notes:''};
-  for(var i=0;i<students.length;i++){
-    if(students[i].studentId===id){ SC.instrument = students[i].instrument || ''; break; }
-  }
   gotoScheduling();
 }
 
@@ -2361,11 +2358,9 @@ function rSlot(slot, i, isEdit){
 function loadSchedSubmission(){
   if(SC.loaded||!SC.studentId) return;
   SC.loading=true; render();
-  var _curStu=null;
-  for(var _si=0;_si<students.length;_si++){ if(students[_si].studentId===SC.studentId){_curStu=students[_si];break;} }
   fapi('getFamilyAvailability', {studentId:SC.studentId}, function(e,r){
     SC.loaded=true; SC.loading=false;
-    SC.instrument=(_curStu&&_curStu.instrument)||'';
+    SC.instrument=''; // never auto-populated -- the family must always actively choose (per AC, July 2026)
     if(!e&&r&&r.ok&&r.submission){
       var sub=r.submission;
       SC.durations=sub.duration?(sub.duration+'').split(',').filter(Boolean):[]; SC.locations=sub.location?(sub.location+'').split(',').filter(Boolean):[];

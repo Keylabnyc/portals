@@ -1580,6 +1580,7 @@ function _rHomeParent2(){
         (familyParents.p1Email?'<a href="mailto:'+esc(familyParents.p1Email)+'">'+esc(familyParents.p1)+'</a>':esc(familyParents.p1))+
         (familyParents.p1Email?' <span style="color:var(--text4)">('+esc(familyParents.p1Email)+')</span>':'')+
         '</div>';
+      h+='<div style="font-size:12px;color:var(--gt)">'+esc(familyParents.p1)+' is a co-manager for this account</div>';
     } else {
       h+='<div style="font-size:12px;color:var(--text4)">No contact info on file.</div>';
     }
@@ -1592,7 +1593,7 @@ function _rHomeParent2(){
       (familyParents.p2Email?'<a href="mailto:'+esc(familyParents.p2Email)+'">'+esc(familyParents.p2)+'</a>':esc(familyParents.p2))+
       (familyParents.p2Email?' <span style="color:var(--text4)">('+esc(familyParents.p2Email)+')</span>':'')+'</div>';
     if(familyParents.p2HasPassword){
-      h+='<div style="font-size:12px;color:var(--gt)">\u2713 Password is set</div>';
+      h+='<div style="font-size:12px;color:var(--gt)">'+esc(familyParents.p2)+' is a co-manager for this account</div>';
     } else if(INV.sent){
       h+='<div class="msg ms">Check their email \u2014 we\u2019ve sent '+esc(familyParents.p2Email)+' a link to create a password. Once they set it, they can sign in anytime with their own email and password.</div>';
     } else {
@@ -1687,7 +1688,6 @@ function _rNewFamilyAvailIntro(){
   h+='<h2 style="margin-bottom:.5rem">Tuition Pricing</h2>';
   h+='<ul style="padding-left:1.2rem;color:var(--text2);font-size:13px;line-height:1.75">';
   h+='<li>Estimated monthly tuition is provided to help you plan your budget for the school year. Your actual tuition may be higher or lower based on day of the week, start date, location and other factors.</li>';
-  h+='<li>Pricing is flat rate monthly and will be the same regardless of the number of lessons scheduled in any given calendar month.</li>';
   h+='</ul>';
   h+='<p style="font-size:13px;color:var(--text2);margin-top:.75rem">Questions? Email us at <a href="mailto:info@keylab.nyc">info@keylab.nyc</a>.</p>';
   h+='</div>';
@@ -2667,7 +2667,7 @@ function _fmtPriceBox(s,showFirstPaymentNote){
     if(_pctDiscVal>0) h+='<div class="prop-row" style="border-bottom:none;font-size:12px;color:var(--green)"><span class="prop-lbl">Discount applied'+(s.pctDiscountNote?' \u2014 '+esc(s.pctDiscountNote):'')+'</span><span class="prop-val">'+Math.round(_pctDiscVal)+'%</span></div>';
     if(_dolDisc>0)    h+='<div class="prop-row" style="border-bottom:none;font-size:12px;color:var(--green)"><span class="prop-lbl">Discount applied'+(s.dollarDiscountNote?' \u2014 '+esc(s.dollarDiscountNote):'')+'</span><span class="prop-val">&minus;$'+Math.round(_dolDisc)+'</span></div>';
     if(_adj!==0){var _adjSign=_adj<0?'&minus;':'+';var _adjCol=_adj<0?'var(--green)':'var(--rt)';h+='<div class="prop-row" style="border-bottom:none;font-size:12px;color:'+_adjCol+'"><span class="prop-lbl">Adjustment'+(s.adjustmentNote?' \u2014 '+esc(s.adjustmentNote):'')+'</span><span class="prop-val">'+_adjSign+'$'+Math.round(Math.abs(_adj))+'/mo</span></div>';}
-    if(_oneTime>0)    h+='<div class="prop-row" style="border-bottom:none;font-size:12px"><span class="prop-lbl">One-time fee (first payment only)</span><span class="prop-val">$'+Math.round(_oneTime)+'</span></div>';
+    if(_oneTime>0)    h+='<div class="prop-row" style="border-bottom:none;font-size:12px"><span class="prop-lbl">One-time fee (first payment only)'+(s.oneTimeChargeNote?' \u2014 '+esc(s.oneTimeChargeNote):'')+'</span><span class="prop-val">$'+Math.round(_oneTime)+'</span></div>';
     h+='</div>';
   }
   if(showFirstPaymentNote){

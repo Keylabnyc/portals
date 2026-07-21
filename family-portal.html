@@ -1171,6 +1171,29 @@ function _applyProposalResp(r){
   _lastFamilyLoadAt=Date.now();
 }
 
+// Prefetches Scheduling-tab data as soon as the family's own data is
+// available, instead of waiting for the family to click into that tab.
+// Skipped entirely while availability submission isn't open, since the
+// Scheduling tab doesn't even appear in that case (see rApp()) — no point
+// fetching data for a tab nobody can click into. If publicCfg hasn't
+// resolved yet at this exact moment (its own fetch runs independently), this
+// just falls back to the original load-on-click behavior for that one
+// visit — never worse than before, just not sped up that one time.
+// getFamilyTeachers has no per-student dependency, so it's always safe to
+// prefetch. Availability (loadSchedSubmission) needs a specific studentId —
+// for a single-student family we already know which one, so that's
+// prefetched too. Multi-student families still see a "pick a child" screen
+// with nothing to wait on until they choose, since we can't know in advance
+// which child they'll pick without fetching every child's data speculatively.
+function _prefetchSchedulingData(){
+  if(!isTruthy(publicCfg.availabilityOpen)) return;
+  if(!SC.teachers.length) loadSchedTeachers();
+  if(students.length===1&&!SC.studentId){
+    SC.studentId=students[0].studentId;
+    loadSchedSubmission();
+  }
+}
+
 function loadFamily(){
   PAGE='home'; TAB='home'; students=[]; _familyLoading=true; render();
   fapi('getProposal', {}, function(e,r){
@@ -1180,6 +1203,7 @@ function loadFamily(){
       render(); return;
     }
     _applyProposalResp(r);
+    _prefetchSchedulingData();
     render();
   });
 }
@@ -3379,6 +3403,7 @@ function boot(){
       if(_sessionOk === true && _propArrived){
         if(!_propErr && _propResp && _propResp.ok){
           _applyProposalResp(_propResp);
+          _prefetchSchedulingData();
           PAGE='home'; TAB='home'; _familyLoading=false;
           render();
         } else {

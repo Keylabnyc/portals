@@ -2094,7 +2094,7 @@ function rSchedViewMode(){
   if(SC.pendingChanges||SC.submitError||SC.busy||SC.justSubmitted){
     h+='<div style="margin-top:1.25rem">';
     if(SC.justSubmitted){
-      h+='<div class="msg ms">\u2713 Changes saved. We\'ll be in touch as soon as possible.</div>';
+      h+='<div class="msg ms">'+(SC.justSubmittedWasFirst?'\u2713 Your availability has been submitted! We\'ll be in touch with an update as soon as possible.':'\u2713 Your availability has been updated. We\'ll be in touch with an update as soon as possible.')+'</div>';
     } else {
       if(SC.submitError){
         h+='<div class="aw" style="margin-top:0;margin-bottom:.75rem;font-size:13px;padding:.65rem .85rem">'+esc(SC.submitError)+'</div>';
@@ -2590,6 +2590,12 @@ function doSubmitSched(){
       SC.submitted=true;
       SC.submitError='';
       SC.justSubmitted=true;
+      // Snapshot BEFORE flipping isFirstSubmission below, so the confirmation
+      // banner (which reads this snapshot, not the live flag) correctly shows
+      // "submitted!" for a genuine first-timer even though isFirstSubmission
+      // is about to become false for any subsequent save this session.
+      SC.justSubmittedWasFirst=SC.isFirstSubmission;
+      SC.isFirstSubmission=false;
       // Check for unsubmitted siblings to nudge
       _siblingNudgeId='';
       var _avOpen=isTruthy(publicCfg.availabilityOpen);

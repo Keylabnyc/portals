@@ -1164,6 +1164,13 @@ function rRegDone(){
 // ============================================================
 // APP SHELL (logged in)
 // ============================================================
+function _applyProposalResp(r){
+  students=r.proposals||[];
+  familyParents=_famParentsFromResp(r);
+  familyAddress={street:r.street||'',apt:r.apt||''};
+  _lastFamilyLoadAt=Date.now();
+}
+
 function loadFamily(){
   PAGE='home'; TAB='home'; students=[]; _familyLoading=true; render();
   fapi('getProposal', {}, function(e,r){
@@ -1172,10 +1179,7 @@ function loadFamily(){
       showMsg((r&&r.error)||'Something went wrong loading your information. Please try again.','e');
       render(); return;
     }
-    students=r.proposals||[];
-    familyParents=_famParentsFromResp(r);
-    familyAddress={street:r.street||'',apt:r.apt||''};
-    _lastFamilyLoadAt=Date.now();
+    _applyProposalResp(r);
     render();
   });
 }
@@ -3302,6 +3306,13 @@ function boot(){
     resetTokenFromUrl = params.get('resetToken') || '';
   } catch(e) { /* URLSearchParams unsupported \u2014 treat as no token */ }
 
+  // Public settings (availability status, closures, instrument list) don't
+  // depend on login state, and nothing below needs them before the first
+  // render — so this now fires independently instead of gating every other
+  // branch behind it (previously even a brand-new visitor's login screen
+  // waited on this). If it happens to resolve after the main content is
+  // already showing, it re-renders so config-dependent UI (e.g. whether the
+  // Scheduling tab appears) never gets stuck on default values.
   api({action:'getPublicConfig', data:{}}, function(e,r){
     if(!e&&r&&r.ok){
       publicCfg.availabilityOpen=r.availabilityOpen;
@@ -3311,46 +3322,88 @@ function boot(){
         var _fInstr=r.instruments.split(',').map(function(x){return x.trim();}).filter(Boolean);
         if(_fInstr.length) INSTRUMENTS=_fInstr;
       }
-    }
-    if(resetTokenFromUrl){
-      // A reset/setup link — check it's actually still valid before showing
-      // the set-password form, so a bookmarked or already-used link fails
-      // clearly right away instead of after the family fills out the form.
-      RESET_TOKEN = resetTokenFromUrl;
-      PAGE = 'setpw';
-      SPW.checking = true;
       render();
-      api({action:'familyValidateResetToken', data:{resetToken:resetTokenFromUrl}}, function(e2,r2){
-        SPW.checking = false;
-        if(e2||!r2||!r2.ok){
-          SPW.invalid = true;
-        } else {
-          SPW.email = r2.email||'';
-        }
-        render();
-      });
-      return;
     }
-    // No reset link — check for a remembered session before showing the
-    // login screen at all, so a returning family with "Remember me" on
-    // skips straight into the portal.
-    var saved = _klReadSession();
-    if(saved && saved.token){
-      api({action:'familyCheckSession', data:{familyToken:saved.token}}, function(e3,r3){
-        if(!e3&&r3&&r3.ok){
-          TOKEN=saved.token; FAMILY_ID=r3.familyId; MY_PARENT_SLOT=saved.parent||'parent1';
-          loadFamily();
-          return;
-        }
+  });
+
+  if(resetTokenFromUrl){
+    // A reset/setup link — check it's actually still valid before showing
+    // the set-password form, so a bookmarked or already-used link fails
+    // clearly right away instead of after the family fills out the form.
+    RESET_TOKEN = resetTokenFromUrl;
+    PAGE = 'setpw';
+    SPW.checking = true;
+    render();
+    api({action:'familyValidateResetToken', data:{resetToken:resetTokenFromUrl}}, function(e2,r2){
+      SPW.checking = false;
+      if(e2||!r2||!r2.ok){
+        SPW.invalid = true;
+      } else {
+        SPW.email = r2.email||'';
+      }
+      render();
+    });
+    return;
+  }
+
+  // No reset link — check for a remembered session before showing the
+  // login screen at all, so a returning family with "Remember me" on
+  // skips straight into the portal.
+  var saved = _klReadSession();
+  if(saved && saved.token){
+    // familyCheckSession() (confirms the login is still valid, and renews
+    // it) and getProposal() (the actual portal data) now fire at the same
+    // time instead of one after another. getProposal() independently
+    // validates the same saved token server-side (requireFamily() in
+    // enrollment_code.gs), so login safety isn't affected by not waiting
+    // for the check to finish first — this just turns two sequential round
+    // trips into one for a returning family. TOKEN/MY_PARENT_SLOT are set
+    // immediately from the already-saved session (not from the server)
+    // since we already have them locally.
+    TOKEN = saved.token;
+    MY_PARENT_SLOT = saved.parent || 'parent1';
+
+    var _sessionOk = null;    // null = pending, true/false once resolved
+    var _propArrived = false, _propErr = null, _propResp = null;
+
+    var _bootSettle = function(){
+      if(_sessionOk === false){
+        // Saved login isn't valid — discard whatever the data fetch
+        // returned (even if it already arrived) and show the login screen.
         _klClearSession();
+        TOKEN=''; FAMILY_ID=''; MY_PARENT_SLOT='';
         PAGE = 'login';
         render();
-      });
-      return;
-    }
-    PAGE = 'login';
-    render();
-  });
+        return;
+      }
+      if(_sessionOk === true && _propArrived){
+        if(!_propErr && _propResp && _propResp.ok){
+          _applyProposalResp(_propResp);
+          PAGE='home'; TAB='home'; _familyLoading=false;
+          render();
+        } else {
+          // Login's confirmed valid but this particular fetch hit a
+          // hiccup — fall back to the normal single-call load path.
+          loadFamily();
+        }
+      }
+    };
+
+    api({action:'familyCheckSession', data:{familyToken:saved.token}}, function(e3,r3){
+      _sessionOk = (!e3 && r3 && r3.ok) ? true : false;
+      if(_sessionOk) FAMILY_ID = r3.familyId;
+      _bootSettle();
+    });
+
+    fapi('getProposal', {}, function(e4,r4){
+      _propArrived = true; _propErr = e4; _propResp = r4;
+      _bootSettle();
+    });
+    return;
+  }
+
+  PAGE = 'login';
+  render();
 }
 
 document.addEventListener('DOMContentLoaded', function(){

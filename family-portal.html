@@ -2938,9 +2938,7 @@ function rEnrollment(){
       if(students.length===1) h+='<span class="stu-name" style="font-size:18px;margin-bottom:.4rem;display:inline-block">'+esc(s.studentName)+'</span>';
       h+=_renderChips(lbl);
       h+='</div>';
-      if(isTruthy(s.availabilityLocked)){
-        h+='<p style="font-size:13px;color:var(--text2);margin:0">We are working on a time slot for '+esc(firstName)+' and their availability is temporarily locked. Please contact <a href="mailto:info@keylab.nyc">info@keylab.nyc</a> for assistance.</p>';
-      } else if(ph==='Holding'){
+      if(ph==='Holding'){
         var _enHoldDur=s.durationBase||'';
         var _enHoldInstr=s.instrument||'';
         if(s.lessonLocation==='in-home'){
@@ -2973,6 +2971,8 @@ function rEnrollment(){
         }
       } else if(ph==='Withdrawn'){
         h+='<p style="font-size:13px;color:var(--text2);margin:0">'+esc(firstName)+' is not currently enrolled. Please contact us at <a href="mailto:info@keylab.nyc">info@keylab.nyc</a> if you have questions.</p>';
+      } else if(isTruthy(s.availabilityLocked)){
+        h+='<p style="font-size:13px;color:var(--text2);margin:0">We are working on a time slot for '+esc(firstName)+' and their availability is temporarily locked. Please contact <a href="mailto:info@keylab.nyc">info@keylab.nyc</a> for assistance.</p>';
       } else if(isTruthy(s.availabilitySubmitted)){
         // Leads, Pending, or other early phases \u2014 availability already submitted
         h+='<p style="font-size:13px;color:var(--text2);margin:0">We\'ve received '+esc(firstName)+'\u2019s availability. We\'ll be in touch as soon as we have an update.</p>';

@@ -1374,6 +1374,14 @@ function _rHomeQuickActions(){
   return h;
 }
 
+function _rHomeActionButtons(mainLabel){
+  var h='<div style="margin-top:.6rem;display:flex;flex-direction:column;gap:12px">';
+  h+='<div><button class="btn btn-p btn-sm" onclick="gotoEnrollment()">'+esc(mainLabel)+'</button></div>';
+  h+='<div><a class="btn btn-p btn-sm" href="'+publicCfg.schedulingBillingUrl+'" target="_blank">Scheduling &amp; Billing \u2192</a>'+
+    '<p style="font-size:12px;color:var(--text3);margin-top:.3rem">Check your schedule, cancel a lesson, update your payment info, or download invoices.</p></div>';
+  h+='</div>';
+  return h;
+}
 function _rHomeSelfRelease(s){
   // Collapsible section rendered INSIDE the dashboard card (no outer card wrapper)
   var age=parseInt(s.age,10);
@@ -1391,17 +1399,18 @@ function _rHomeSelfRelease(s){
     h+='<span style="font-size:16px;color:var(--text4)">'+(open?'\u2039':'\u203a')+'</span>';
     h+='</div>';
   } else {
-    h+='<button class="btn btn-p btn-sm" onclick="_srOpen[&apos;'+esc(s.studentId)+'&apos;]=!_srOpen[&apos;'+esc(s.studentId)+'&apos;];render()">Authorize self-release (for ages 10 and up)</button>';
+    h+='<button class="btn btn-p btn-sm" onclick="_srOpen[&apos;'+esc(s.studentId)+'&apos;]=!_srOpen[&apos;'+esc(s.studentId)+'&apos;];render()">Authorize self-release</button>';
+    h+='<p style="font-size:12px;color:var(--text3);margin-top:.3rem">Optional. For children ages 10 to 17 who can arrive and leave by themselves.</p>';
   }
   if(open){
     h+='<div style="padding:.5rem 0 .25rem">';
     if(granted){
-      h+='<div class="msg ms">\u2713 Permission granted \u2014 '+esc(s.studentName)+' may arrive and depart unaccompanied.</div>';
+      h+='<div class="msg ms">\u2713 Permission granted on '+esc(_fmtFamilyTs(s.selfReleaseGrantedAt))+' at '+esc(_fmtFamilyTime(s.selfReleaseGrantedAt))+' \u2014 '+esc(s.studentName)+' may arrive and depart unaccompanied.</div>';
     } else {
       h+='<p style="font-size:13px;color:var(--text2);margin-bottom:.75rem">If you would like '+esc(s.studentName)+' to be able to arrive at and depart from lessons without a parent or guardian present, check the box below and submit. This is optional.</p>';
       h+='<div class="agree-box">'+
         '<input type="checkbox" id="sr-hm-chk-'+esc(s.studentId)+'" onchange="document.getElementById(&apos;sr-hm-btn-'+esc(s.studentId)+'&apos;).disabled=!this.checked">'+
-        '<label class="agree-lbl" for="sr-hm-chk-'+esc(s.studentId)+'">I grant permission for '+esc(s.studentName)+' to arrive at and depart from Keylab unaccompanied. I acknowledge that Keylab and its instructors assume no supervisory responsibility or liability for the student outside of their designated lesson time. I accept full responsibility for the student\u2019s transportation, safety, and conduct prior to, during, and immediately following their scheduled lesson.</label>'+
+        '<label class="agree-lbl" for="sr-hm-chk-'+esc(s.studentId)+'">I authorize my child to arrive at and depart from Keylab without adult accompaniment. I accept full responsibility for their transportation to and from Keylab; for their safety prior to and following their scheduled lesson; and for their conduct at all times before, during, and after their lesson.</label>'+
       '</div>';
       h+=_srBusy[s.studentId]
         ?'<button class="btn btn-p btn-full" disabled><span class="spin">\u21bb</span> Submitting...</button>'
@@ -1458,13 +1467,10 @@ function rHome(){
       if(s.monthlyPrice) h+=_fmtPriceBox(s,false);
       if(ph==='Enrollment Change'){
         h+='<div class="msg mi" style="margin-top:.5rem">'+esc(firstName)+'\u2019s current enrollment will remain active until you accept the new proposal. Once accepted, we\u2019ll process the new enrollment and get '+esc(firstName)+'\u2019s new lesson schedule on the books, and the current enrollment will be archived.</div>';
-        h+='<div style="margin-top:.6rem;display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-p btn-sm" onclick="gotoEnrollment()">Review New Proposal</button><a class="btn btn-p btn-sm" href="'+publicCfg.schedulingBillingUrl+'" target="_blank">Scheduling &amp; Billing \u2192</a></div>';
+        h+=_rHomeActionButtons('Review New Proposal');
       } else if(isEnrolled){
         h+='<div class="msg ms">\u2713 '+esc(firstName)+' is enrolled! See below for details on how to manage their enrollment.</div>';
-        h+='<div style="margin-top:.6rem;display:flex;gap:8px;flex-wrap:wrap">';
-        h+='<button class="btn btn-p btn-sm" onclick="gotoEnrollment()">Review Enrollment Details</button>';
-        h+='<a class="btn btn-p btn-sm" href="'+publicCfg.schedulingBillingUrl+'" target="_blank">Scheduling &amp; Billing \u2192</a>';
-        h+='</div>';
+        h+=_rHomeActionButtons('Review Enrollment Details');
       } else if(s.tcAcceptedAt||s.tcAcceptedName){
         // What Happens Next — elevated card, first thing shown on Home for accepted-but-not-enrolled students.
         h+=(_isNewFamily(s.enrollmentType)
@@ -1479,9 +1485,9 @@ function rHome(){
           '</div>'));
         h+='<div class="msg ms">\u2713 Proposal and policies accepted'+(s.tcAcceptedName?' by '+esc(s.tcAcceptedName):'')+
           (s.tcAcceptedAt?' on '+esc(_fmtFamilyTs(s.tcAcceptedAt))+' at '+esc(_fmtFamilyTime(s.tcAcceptedAt)):'')+'.</div>';
-        h+='<div style="margin-top:.6rem;display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-p btn-sm" onclick="gotoEnrollment()">Review Proposal and Policies</button><a class="btn btn-p btn-sm" href="'+publicCfg.schedulingBillingUrl+'" target="_blank">Scheduling &amp; Billing \u2192</a></div>';
+        h+=_rHomeActionButtons('Review Proposal and Policies');
       } else {
-        h+='<div style="margin-top:.6rem;display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-p btn-sm" onclick="gotoEnrollment()">Review Proposal and Policies</button><a class="btn btn-p btn-sm" href="'+publicCfg.schedulingBillingUrl+'" target="_blank">Scheduling &amp; Billing \u2192</a></div>';
+        h+=_rHomeActionButtons('Review Proposal and Policies');
       }
       h+=_rHomeSelfRelease(s);
       h+='</div>';
@@ -3003,13 +3009,13 @@ function rSelfReleaseSection(){
     var granted=!!s.selfReleaseGrantedAt;
     h+='<div class="card"><h2>Unaccompanied Arrival &amp; Departure Permission</h2>';
     if(granted){
-      h+='<div class="msg ms">\u2713 Permission granted on '+esc(String(s.selfReleaseGrantedAt))+'</div>';
+      h+='<div class="msg ms">\u2713 Permission granted on '+esc(_fmtFamilyTs(s.selfReleaseGrantedAt))+' at '+esc(_fmtFamilyTime(s.selfReleaseGrantedAt))+'</div>';
       h+='<p style="font-size:12px;color:var(--text3)">'+esc(s.studentName)+' has permission to arrive at and depart from lessons unaccompanied.</p>';
     } else {
       h+='<p>If you would like '+esc(s.studentName)+' to be able to arrive at and depart from lessons without a parent or guardian present, please read and submit the permission below.</p>';
       h+='<div class="agree-box">'+
         '<input type="checkbox" id="sr-chk-'+esc(s.studentId)+'" onchange="document.getElementById(&apos;sr-btn-'+esc(s.studentId)+'&apos;).disabled=!this.checked">'+
-        '<label class="agree-lbl" for="sr-chk-'+esc(s.studentId)+'">I grant permission for '+esc(s.studentName)+' to arrive at and depart from Keylab unaccompanied. I acknowledge that Keylab and its instructors assume no supervisory responsibility or liability for the student outside of their designated lesson time. I accept full responsibility for the student\u2019s transportation, safety, and conduct prior to, during, and immediately following their scheduled lesson.</label>'+
+        '<label class="agree-lbl" for="sr-chk-'+esc(s.studentId)+'">I authorize my child to arrive at and depart from Keylab without adult accompaniment. I accept full responsibility for their transportation to and from Keylab; for their safety prior to and following their scheduled lesson; and for their conduct at all times before, during, and after their lesson.</label>'+
       '</div>';
       h+=_srBusy[s.studentId]
         ?'<button class="btn btn-p btn-full" disabled><span class="spin">\u21bb</span> Submitting...</button>'

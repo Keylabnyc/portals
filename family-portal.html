@@ -169,22 +169,38 @@ function _isNewFamily(enrollmentType){
   return true;
 }
 function _fmtFamilyTs(iso){
-  // Formats a full ISO timestamp (e.g. 2026-06-25T14:32:00.000Z) as 'June 25, 2026'
+  // Server timestamps (tcAcceptedAt, selfReleaseGrantedAt, etc.) are written
+  // via makeTs() as 'M/d/yy h:mm a' (already Eastern local time) -- NOT
+  // ISO 8601. Parsing a non-ISO string via `new Date(str)` is
+  // implementation-defined per spec and was confirmed to produce wrong
+  // dates/times in some browsers, so this parses that exact format
+  // explicitly via regex instead of trusting the Date constructor.
+  // Falls back to genuine-ISO parsing for any legacy/other-format value.
   if(!iso) return '';
+  var s = String(iso).trim();
+  var months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  var m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})\s+\d{1,2}:\d{2}\s*[AP]M$/i);
+  if(m){
+    var mo=parseInt(m[1],10), dy=parseInt(m[2],10), yr=parseInt(m[3],10);
+    if(yr<100) yr+=2000;
+    if(mo>=1&&mo<=12) return months[mo-1]+' '+dy+', '+yr;
+  }
   var d = new Date(iso);
   if(isNaN(d.getTime())) return String(iso);
-  var months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
   return months[d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear();
 }
 function _fmtFamilyTime(iso){
-  // Formats the time-of-day portion of a full ISO timestamp as '2:32 PM' (local time)
+  // See _fmtFamilyTs() above -- same explicit-parse fix, same reason.
   if(!iso) return '';
+  var s = String(iso).trim();
+  var m = s.match(/^\d{1,2}\/\d{1,2}\/\d{2,4}\s+(\d{1,2}):(\d{2})\s*([AP]M)$/i);
+  if(m) return m[1]+':'+m[2]+' '+m[3].toUpperCase();
   var d = new Date(iso);
   if(isNaN(d.getTime())) return '';
-  var h = d.getHours(), m = d.getMinutes();
+  var h = d.getHours(), mnt = d.getMinutes();
   var ampm = h >= 12 ? 'PM' : 'AM';
   var h12 = h % 12; if (h12 === 0) h12 = 12;
-  var mm = m < 10 ? '0' + m : String(m);
+  var mm = mnt < 10 ? '0' + mnt : String(mnt);
   return h12 + ':' + mm + ' ' + ampm;
 }
 function _fmtFamilyDate(iso){

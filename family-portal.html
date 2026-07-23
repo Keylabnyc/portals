@@ -272,6 +272,7 @@ var SC = {
   street:'', apt:'', city:'', state:'NY', zip:'',
   slots:[blankSlot(), blankSlot(), blankSlot()],
   instrument:'', instrumentNote:'', notes:'', locationNote:'', durationNote:'',
+  origInstrument:'', origDurations:[], origLocations:[],
   busy:false, submitted:false, loaded:false, submitError:'', justSubmitted:false,
   teacherPref:'',
   submittedAt:'',
@@ -307,6 +308,7 @@ function _gotoSchedulingForStudent(id) {
   SC.durations = []; SC.locations = [];
   SC.street = ''; SC.apt = ''; SC.city = ''; SC.state = 'NY'; SC.zip = '';
   SC.instrument = ''; SC.instrumentNote = ''; SC.notes = ''; SC.locationNote = ''; SC.durationNote = ''; SC.locNoteTouched = false;
+  SC.origInstrument = ''; SC.origDurations = []; SC.origLocations = [];
   SC.teacherPref = ''; SC.pendingChanges = false; SC.submitError = ''; SC.justSubmitted = false;
   SC.waitlist = null;
   SC.splitLesson = false;
@@ -1916,14 +1918,17 @@ function rLockedAvSummary(){
   h+='<div style="padding:.35rem 0;border-bottom:.5px solid var(--border)">';
   h+='<div style="'+monoFont+'">Instrument</div>';
   h+='<div style="font-size:14px">'+esc(SC.instrument||'\u2014')+'</div>';
+  if(SC.instrumentNote) h+='<div style="font-size:12px;color:var(--text3);font-style:italic;margin-top:2px">'+esc(SC.instrumentNote)+'</div>';
   h+='</div>';
   h+='<div style="padding:.35rem 0;border-bottom:.5px solid var(--border)">';
   h+='<div style="'+monoFont+'">Location</div>';
   h+='<div style="font-size:14px">'+esc(locDisplay)+'</div>';
+  if(SC.locationNote) h+='<div style="font-size:12px;color:var(--text3);font-style:italic;margin-top:2px">'+esc(SC.locationNote)+'</div>';
   h+='</div>';
   h+='<div style="padding:.35rem 0;border-bottom:.5px solid var(--border)">';
   h+='<div style="'+monoFont+'">Duration</div>';
   h+='<div style="font-size:14px">'+esc(durDisplay)+'</div>';
+  if(SC.durationNote) h+='<div style="font-size:12px;color:var(--text3);font-style:italic;margin-top:2px">'+esc(SC.durationNote)+'</div>';
   h+='</div>';
   h+='<div style="padding:.35rem 0">';
   h+='<div style="'+monoFont+'">Teacher preference</div>';
@@ -1968,6 +1973,16 @@ function rLockedAvSummary(){
 function _adminSlotPill(){
   return ' <span style="display:inline-block;background:var(--bbg);color:var(--bt);border:1px solid var(--blue);font-size:10px;font-weight:600;padding:1px 7px;border-radius:9px;vertical-align:middle;white-space:nowrap">Added by admin</span>';
 }
+// Order-independent array comparison -- used to detect whether the family's
+// duration/location selections have actually changed from what they
+// originally submitted (re-ordering the same set of pills shouldn't count
+// as a change).
+function _arraysEqualAsSets(a,b){
+  if(!a||!b||a.length!==b.length) return false;
+  var as=a.slice().sort(),bs=b.slice().sort();
+  for(var i=0;i<as.length;i++){ if(as[i]!==bs[i]) return false; }
+  return true;
+}
 function rSchedViewMode(){
   var h='';
   // Header — submitted timestamp only; per-slot origin is shown next to
@@ -1991,14 +2006,17 @@ function rSchedViewMode(){
     h+='<div style="padding:.35rem 0;border-bottom:.5px solid var(--border)">';
     h+='<div style="'+monoFont+'">Instrument</div>';
     h+='<div style="font-size:14px">'+esc(SC.instrument||'\u2014')+'</div>';
+    if(SC.instrumentNote) h+='<div style="font-size:12px;color:var(--text3);font-style:italic;margin-top:2px">'+esc(SC.instrumentNote)+'</div>';
     h+='</div>';
     h+='<div style="padding:.35rem 0;border-bottom:.5px solid var(--border)">';
     h+='<div style="'+monoFont+'">Location</div>';
     h+='<div style="font-size:14px">'+esc(locDisplay)+'</div>';
+    if(SC.locationNote) h+='<div style="font-size:12px;color:var(--text3);font-style:italic;margin-top:2px">'+esc(SC.locationNote)+'</div>';
     h+='</div>';
     h+='<div style="padding:.35rem 0;border-bottom:.5px solid var(--border)">';
     h+='<div style="'+monoFont+'">Duration</div>';
     h+='<div style="font-size:14px">'+esc(durDisplay)+'</div>';
+    if(SC.durationNote) h+='<div style="font-size:12px;color:var(--text3);font-style:italic;margin-top:2px">'+esc(SC.durationNote)+'</div>';
     h+='</div>';
     h+='<div style="padding:.35rem 0">';
     h+='<div style="'+monoFont+'">Teacher preference</div>';
@@ -2006,7 +2024,16 @@ function rSchedViewMode(){
     h+='</div>';
     h+='<button class="btn btn-p btn-sm" style="margin-top:.6rem" onclick="SC.lessonDetailsEditing=true;render()">Edit</button>';
   } else {
-    // EDIT MODE — the fields, plus a Done button to return to the summary
+    // EDIT MODE — the fields, plus a Done button to return to the summary.
+    // Each field below shows a required context-note prompt once its value
+    // has changed from the family's original submission (AC-requested, this
+    // session) -- reuses the same instrumentNote/durationNote/locationNote
+    // fields already used for the ">1 selected" case on first submission;
+    // _validateSchedForm() enforces these are filled in before Save & Submit.
+    var _instrChanged=SC.instrument!==SC.origInstrument;
+    var _durChanged=!_arraysEqualAsSets(SC.durations,SC.origDurations);
+    var _locChanged=!_arraysEqualAsSets(SC.locations,SC.origLocations);
+
     h+='<div style="padding:.35rem 0;border-bottom:.5px solid var(--border)">';
     h+='<div style="'+monoFont+'">Instrument</div>';
     h+='<select onchange="SC.instrument=this.value;SC.pendingChanges=true;render()" style="margin-top:.3rem;margin-bottom:0">'+
@@ -2015,16 +2042,28 @@ function rSchedViewMode(){
         return '<option value="'+esc(x)+'"'+(SC.instrument===x?' selected':'')+'>'+esc(x)+'</option>';
       }).join('')+
       '</select>';
+    if(_instrChanged){
+      h+='<div class="field" style="margin-top:.5rem"><label>Why the change?<span class="req">*</span></label>'+
+        '<textarea oninput="SC.instrumentNote=this.value" style="min-height:50px" placeholder="Let us know what changed">'+esc(SC.instrumentNote)+'</textarea></div>';
+    }
     h+='</div>';
 
     h+='<div style="padding:.35rem 0;border-bottom:.5px solid var(--border)">';
     h+='<div style="'+monoFont+'">Location</div>';
     h+='<div class="dur-row" style="margin-top:.3rem">'+rViewLocPills()+'</div>';
+    if(_locChanged){
+      h+='<div class="field" style="margin-top:.5rem"><label>Why the change?<span class="req">*</span></label>'+
+        '<textarea oninput="SC.locationNote=this.value" style="min-height:50px" placeholder="Let us know what changed">'+esc(SC.locationNote)+'</textarea></div>';
+    }
     h+='</div>';
 
     h+='<div style="padding:.35rem 0;border-bottom:.5px solid var(--border)">';
     h+='<div style="'+monoFont+'">Duration</div>';
     h+='<div class="dur-row" style="margin-top:.3rem">'+rViewDurPills()+'</div>';
+    if(_durChanged){
+      h+='<div class="field" style="margin-top:.5rem"><label>Why the change?<span class="req">*</span></label>'+
+        '<textarea oninput="SC.durationNote=this.value" style="min-height:50px" placeholder="Let us know what changed">'+esc(SC.durationNote)+'</textarea></div>';
+    }
     h+='</div>';
 
     h+='<div style="padding:.35rem 0">';
@@ -2498,6 +2537,13 @@ function loadSchedSubmission(){
       }
       var sub=r.submission;
       SC.durations=sub.duration?(sub.duration+'').split(',').filter(Boolean):[]; SC.locations=sub.location?(sub.location+'').split(',').filter(Boolean):[];
+      // Snapshot of what was originally submitted -- used to detect whether
+      // the family has changed instrument/duration/location on this edit, so
+      // we can require a context note only when something actually changed
+      // (AC-requested, this session; see _validateSchedForm()).
+      SC.origInstrument=SC.instrument;
+      SC.origDurations=SC.durations.slice();
+      SC.origLocations=SC.locations.slice();
       SC.street=sub.street||''; SC.apt=sub.apt||'';
       SC.city=sub.city||''; SC.state=sub.state||'NY'; SC.zip=sub.zip||'';
       SC.instrumentNote=sub.instrumentNote||''; SC.notes=sub.notes||'';
@@ -2544,6 +2590,7 @@ function loadSchedSubmission(){
       SC.submitted = false;
       SC.slots = [blankSlot(), blankSlot(), blankSlot()];
       SC.durations = []; SC.locations = [];
+      SC.origInstrument = ''; SC.origDurations = []; SC.origLocations = [];
       SC.street = ''; SC.apt = ''; SC.city = ''; SC.state = 'NY'; SC.zip = '';
       SC.instrumentNote = ''; SC.notes = ''; SC.locationNote = ''; SC.durationNote = '';
       SC.teacherPref = ''; SC.pendingChanges = false; SC.submitError = ''; SC.justSubmitted = false;
@@ -2645,6 +2692,14 @@ function _validateSchedForm(){
   if(SC.durations.length>1&&!SC.durationNote.trim()) return 'Please add context on your duration preference.';
   if(SC.locations.length>1&&!SC.locationNote.trim()) return 'Please add context on your location preference.';
   if(SC.locations.indexOf('in-home')>-1&&!SC.street.trim()) return 'Please enter your street address for in-home lessons.';
+  // Changed-from-original-submission checks -- only meaningful once a prior
+  // submission actually exists to compare against (AC-requested, this
+  // session). A first-time submission has nothing to have "changed" from.
+  if(!SC.isFirstSubmission){
+    if(SC.instrument!==SC.origInstrument&&!SC.instrumentNote.trim()) return 'Please tell us why you\u2019re changing instruments.';
+    if(!_arraysEqualAsSets(SC.durations,SC.origDurations)&&!SC.durationNote.trim()) return 'Please tell us why you\u2019re changing your duration preference.';
+    if(!_arraysEqualAsSets(SC.locations,SC.origLocations)&&!SC.locationNote.trim()) return 'Please tell us why you\u2019re changing your location preference.';
+  }
   var _noTeach=!!SC.instrument&&SC.teachers.length>0&&_famAvailableTeachers(SC.instrument).length===0;
   if(_noTeach&&SC.waitlist===null) return 'Please let us know if you\u2019d like to be added to the waitlist.';
   var activeSlots=SC.slots.filter(function(s,i){ return !SC.slotDeleted[i]; });

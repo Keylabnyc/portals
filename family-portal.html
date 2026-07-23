@@ -2089,8 +2089,8 @@ function rSchedViewMode(){
       h+='</div>';
       h+='<div class="g3" style="margin-bottom:.55rem">';
       h+='<div><label>Day</label><select id="slot-day-'+i+'" onchange="SC.slots['+i+'].day=this.value;SC.slots['+i+'].start=\'\';SC.slots['+i+'].end=\'\';SC.pendingChanges=true;render()">'+dayOpts+'</select></div>';
-      h+='<div><label>Earliest start time</label><select id="slot-start-'+i+'" onchange="SC.slots['+i+'].start=this.value;SC.pendingChanges=true">'+tOptsFn(slot.start,slot.day,'Earliest start...')+'</select></div>';
-      h+='<div><label>Latest end time</label><select id="slot-end-'+i+'" onchange="SC.slots['+i+'].end=this.value;SC.pendingChanges=true">'+tOptsFn(slot.end,slot.day,'Latest end...')+'</select></div>';
+      h+='<div><label>Earliest start time</label><select id="slot-start-'+i+'" onchange="SC.slots['+i+'].start=this.value;SC.pendingChanges=true;_schRefreshSubmit()">'+tOptsFn(slot.start,slot.day,'Earliest start...')+'</select></div>';
+      h+='<div><label>Latest end time</label><select id="slot-end-'+i+'" onchange="SC.slots['+i+'].end=this.value;SC.pendingChanges=true;_schRefreshSubmit()">'+tOptsFn(slot.end,slot.day,'Latest end...')+'</select></div>';
       h+='</div>';
       h+='<div class="pref-row"><label style="margin-bottom:4px">How well does this work for you?</label>';
       h+='<div class="pref-btns">'+prefBtns+'</div>';
@@ -2182,6 +2182,56 @@ function saveSlotLocal(i){
   render();
 }
 
+// Single source of truth for "is the scheduling form valid enough to submit"
+// -- used by rSchedForm()'s full render AND by _schRefreshSubmit() (the
+// lightweight, non-full-render refresh fired from field oninput/onchange
+// handlers). Computed purely from SC state (day/start/end are already
+// written directly onto SC.slots by their onchange handlers), so no DOM
+// reads are needed here.
+function _schMissingState(){
+  var instMissing=!SC.instrument;
+  var durMissing=!SC.durations.length;
+  var locMissing=!SC.locations.length;
+  var durNoteMissing=SC.durations.length>1&&!SC.durationNote.trim();
+  var locNoteMissing=SC.locations.length>1&&!SC.locationNote.trim();
+  var inHomeAddrMissing=SC.locations.indexOf('in-home')>-1&&!SC.street.trim();
+  var _availTchs2=_famAvailableTeachers(SC.instrument);
+  var _noTeacherForInstrument2=!!SC.instrument&&SC.teachers.length>0&&_availTchs2.length===0;
+  var waitlistMissing=_noTeacherForInstrument2&&SC.waitlist===null;
+  var hasCompleteSlot=false,missingEndTime=false,missingStartTime=false;
+  SC.slots.forEach(function(slot,i){
+    if(SC.slotDeleted[i])return;
+    if(slot.day&&slot.start&&slot.end)hasCompleteSlot=true;
+    if(slot.day&&slot.start&&!slot.end)missingEndTime=true;
+    if(slot.day&&!slot.start&&slot.end)missingStartTime=true;
+  });
+  var missingRequired=instMissing||durMissing||locMissing||durNoteMissing||locNoteMissing||inHomeAddrMissing||waitlistMissing||!hasCompleteSlot||missingEndTime||missingStartTime;
+  return {instMissing:instMissing,durMissing:durMissing,locMissing:locMissing,
+    durNoteMissing:durNoteMissing,locNoteMissing:locNoteMissing,inHomeAddrMissing:inHomeAddrMissing,
+    noTeacherForInstrument:_noTeacherForInstrument2,waitlistMissing:waitlistMissing,
+    hasCompleteSlot:hasCompleteSlot,missingEndTime:missingEndTime,missingStartTime:missingStartTime,
+    missingRequired:missingRequired};
+}
+// Lightweight refresh fired from oninput/onchange on fields whose handlers
+// deliberately don't call the full render() (to avoid losing cursor position
+// mid-keystroke -- see architecture notes). Re-checks whether the form is now
+// submittable and toggles just the Submit button + the handful of per-field
+// warnings directly via the DOM, instead of re-rendering the whole form.
+function _schRefreshSubmit(){
+  var m=_schMissingState();
+  var btn=document.getElementById('sch-submit-btn');
+  var hint=document.getElementById('sch-submit-hint');
+  if(btn){
+    var block=m.missingRequired&&!SC.submitError&&!SC.submitted;
+    btn.disabled=block;
+    btn.style.opacity=block?'.5':'';
+    if(hint)hint.style.display=block?'block':'none';
+  }
+  var durWarn=document.getElementById('sch-durnote-warn');
+  if(durWarn)durWarn.style.display=m.durNoteMissing?'block':'none';
+  var locWarn=document.getElementById('sch-locnote-warn');
+  if(locWarn)locWarn.style.display=(m.locNoteMissing&&SC.locNoteTouched)?'block':'none';
+}
 function rSchedForm(forReg){
   var isEdit=!SC.isFirstSubmission;
   var h='';
@@ -2221,8 +2271,8 @@ function rSchedForm(forReg){
   var durNoteMissing=SC.durations.length>1&&!SC.durationNote.trim();
   if(SC.durations.length>1){
     h+='<div class="field" style="margin-top:.5rem"><label>Context on your duration preference<span class="req">*</span></label>'+
-      '<textarea oninput="SC.durationNote=this.value" style="min-height:55px" placeholder="e.g. prefer 45 min but open to 60 depending on cost">'+esc(SC.durationNote)+'</textarea></div>';
-    if(durNoteMissing) h+='<div class="aw" style="margin-top:.25rem">Please add context on your duration preference.</div>';
+      '<textarea oninput="SC.durationNote=this.value;_schRefreshSubmit()" style="min-height:55px" placeholder="e.g. prefer 45 min but open to 60 depending on cost">'+esc(SC.durationNote)+'</textarea></div>';
+    h+='<div id="sch-durnote-warn" class="aw" style="margin-top:.25rem;display:'+(durNoteMissing?'block':'none')+'">Please add context on your duration preference.</div>';
   }
   if(durMissing){
     h+='<div class="aw">Please select a lesson duration to see pricing and continue.</div>';
@@ -2243,13 +2293,13 @@ function rSchedForm(forReg){
   var locNoteMissing=SC.locations.length>1&&!SC.locationNote.trim();
   if(SC.locations.length>1){
     h+='<div class="field" style="margin-top:.6rem"><label>Context on your location preference<span class="req">*</span></label>'+
-      '<textarea oninput="SC.locationNote=this.value;SC.locNoteTouched=true" style="min-height:55px" placeholder="e.g. Prefer in-home but open to lessons at Keylab">'+esc(SC.locationNote)+'</textarea></div>';
-    if(locNoteMissing&&SC.locNoteTouched) h+='<div class="aw" style="margin-top:.25rem">Please add context on your location preference.</div>';
+      '<textarea oninput="SC.locationNote=this.value;SC.locNoteTouched=true;_schRefreshSubmit()" style="min-height:55px" placeholder="e.g. Prefer in-home but open to lessons at Keylab">'+esc(SC.locationNote)+'</textarea></div>';
+    h+='<div id="sch-locnote-warn" class="aw" style="margin-top:.25rem;display:'+((locNoteMissing&&SC.locNoteTouched)?'block':'none')+'">Please add context on your location preference.</div>';
   }
   if(SC.locations.indexOf('in-home')>-1){
     h+='<div class="note" style="margin-top:.65rem;margin-bottom:.65rem">In-home lessons are not guaranteed and are based on instructor availability. In-home lessons are typically priced slightly higher than studio lessons to account for teacher travel time.</div>';
     h+='<div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:.5rem">Address required for in-home requests</div>';
-    h+='<div class="field"><label>Street address</label><input type="text" placeholder="e.g. 123 Atlantic Ave" value="'+esc(SC.street)+'" oninput="SC.street=this.value"></div>';
+    h+='<div class="field"><label>Street address</label><input type="text" placeholder="e.g. 123 Atlantic Ave" value="'+esc(SC.street)+'" oninput="SC.street=this.value;_schRefreshSubmit()"></div>';
     h+='<div class="g2"><div class="field"><label>Apt</label><input type="text" placeholder="Apt 2B" value="'+esc(SC.apt)+'" oninput="SC.apt=this.value"></div>';
     h+='<div class="field"><label>City</label><input type="text" placeholder="Brooklyn" value="'+esc(SC.city)+'" oninput="SC.city=this.value"></div></div>';
     h+='<div class="g2"><div class="field"><label>State</label><input type="text" placeholder="NY" maxlength="2" value="'+esc(SC.state||'NY')+'" oninput="SC.state=this.value"></div>';
@@ -2358,11 +2408,15 @@ function rSchedForm(forReg){
   }
   if(SC.busy){
     h+='<button class="btn btn-p btn-full" disabled><span class="spin">\u21bb</span> Saving...</button>';
-  } else if(missingRequired&&!SC.submitError&&!SC.submitted){
-    h+='<button class="btn btn-p btn-full" disabled style="opacity:.5">'+submitLbl+'</button>';
-    h+='<div style="text-align:center;font-size:12px;color:var(--text3);margin-top:.4rem">Complete the required sections above to submit.</div>';
   } else {
-    h+='<button class="btn btn-p btn-full" onclick="'+submitFn+'">'+submitLbl+'</button>';
+    // Button always carries its onclick and a stable id -- disabled state is
+    // just an attribute/style toggle from here on, so _schRefreshSubmit()
+    // (fired from field oninput/onchange handlers that deliberately skip a
+    // full render()) can unlock it the moment a required field is filled in,
+    // without needing a full re-render to notice.
+    var _mrNow=missingRequired&&!SC.submitError&&!SC.submitted;
+    h+='<button id="sch-submit-btn" class="btn btn-p btn-full" onclick="'+submitFn+'"'+(_mrNow?' disabled style="opacity:.5"':'')+'>'+submitLbl+'</button>';
+    h+='<div id="sch-submit-hint" style="text-align:center;font-size:12px;color:var(--text3);margin-top:.4rem;display:'+(_mrNow?'block':'none')+'">Complete the required sections above to submit.</div>';
   }
   h+='</div>';
   return h;

@@ -515,6 +515,16 @@ function esc(s){
     .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 function isTruthy(v){ return v===true||v==='TRUE'||v==='true'; }
+// Effective duration = base + extra minutes (v223). Mirrors the admin file's
+// _effDur() and calcPrice()'s own effDur=dur+extra formula, so a family sees
+// the same real lesson length the admin priced and scheduled, not just the
+// base number with any extra time silently dropped. Returns '' when base is
+// falsy, matching the pre-existing empty-string convention these fields use.
+function _effDur(base,extra){
+  var b=parseInt(base)||0;
+  if(!b)return'';
+  return String(b+(parseInt(extra)||0));
+}
 // Accepts common phone input styles (1234567890, (123) 456-7890,
 // +1 123-456-7890, with or without a leading country-code 1) and returns
 // a consistent '(123) 456-7890' format, or null if it doesn't reduce to a
@@ -1536,7 +1546,7 @@ function rHome(){
           h+='<div style="font-size:12px;color:var(--text4)">A trial '+esc(trialDur)+' minute '+esc(trialInstr)+' lesson has been scheduled for '+esc(firstName)+' with '+esc(trialTeacherName)+' on '+esc(trialDateFmt)+' at '+esc(s.trialTime)+' '+esc(locMap.studio)+'. We\'ll look forward to seeing you then!</div>';
         }
       } else if(isHolding){
-        var holdDur=s.durationBase||'';
+        var holdDur=_effDur(s.durationBase,s.durationExtra)||s.durationBase||'';
         var holdInstr=s.instrument||'';
         if(s.lessonLocation==='in-home'){
           h+='<div style="font-size:12px;color:var(--text4)">'+esc(firstName)+' has a hold placed for '+esc(holdDur)+' minute in-home '+esc(holdInstr)+' lessons with our teacher '+esc(s.teacher)+' for '+esc(s.day)+'s at '+esc(s.time)+'. Holds are not guaranteed time slots and can change. We\'ll be in touch with an update soon!</div>';
@@ -1546,7 +1556,7 @@ function rHome(){
           h+='<div style="font-size:12px;color:var(--text4)">'+esc(firstName)+' has a hold placed for '+esc(holdDur)+' minute '+esc(holdInstr)+' lessons with our teacher '+esc(s.teacher)+' for '+esc(s.day)+'s at '+esc(s.time)+' at Keylab. Holds are not guaranteed time slots and can change. We\'ll be in touch with an update soon!</div>';
         }
       } else if(hasProp&&!isAccepted){
-        var propDur=s.durationBase||'';
+        var propDur=_effDur(s.durationBase,s.durationExtra)||s.durationBase||'';
         var propInstr=s.instrument||'';
         var propStart=s.startDate?_fmtFamilyDate(s.startDate):'';
         if(s.day&&s.time&&s.teacher&&propDur&&propInstr){
@@ -2894,7 +2904,7 @@ function rEnrollment(){
         if(_ce.lessonLocation) _ceDetails.push(_ceLocMap[_ce.lessonLocation]||_ce.lessonLocation);
         h+='<div class="prop-row"><span class="prop-lbl">Lesson slot</span><span class="prop-val">'+esc(_ceDetails.join(' \u00b7 '))+'</span></div>';
       }
-      if(_ce.durationBase) h+='<div class="prop-row"><span class="prop-lbl">Duration</span><span class="prop-val">'+esc(_ce.durationBase)+' minutes</span></div>';
+      if(_ce.durationBase) h+='<div class="prop-row"><span class="prop-lbl">Duration</span><span class="prop-val">'+esc(_effDur(_ce.durationBase,_ce.durationExtra)||_ce.durationBase)+' minutes</span></div>';
       if(_cePriceStr) h+='<div class="prop-row"><span class="prop-lbl">Monthly rate</span><span class="prop-val" style="font-weight:600;color:var(--acc);font-family:\'DM Mono\',monospace">'+_cePriceStr+'</span></div>';
       h+='<div class="msg mi" style="margin-top:.75rem">'+esc(firstName)+'\u2019s current enrollment will remain active until you accept the new proposal. Once accepted, we\u2019ll process the new enrollment and get '+esc(firstName)+'\u2019s new lesson schedule on the books, and the current enrollment will be archived.</div>';
       h+='</div>';
@@ -2907,7 +2917,7 @@ function rEnrollment(){
         ['Teacher',s.teacher],
         ['Day',s.day],
         ['Time',s.time],
-        ['Duration',s.durationBase?s.durationBase+' minutes':null],
+        ['Duration',_effDur(s.durationBase,s.durationExtra)?_effDur(s.durationBase,s.durationExtra)+' minutes':null],
         ['Location',locMap[s.lessonLocation]||s.lessonLocation||null],
         ['Start Date',s.startDate?_fmtFamilyDate(s.startDate):(s.startMonth?'Starting month '+s.startMonth:null)]
       ];
@@ -2957,7 +2967,7 @@ function rEnrollment(){
         ['Teacher',s.teacher],
         ['Day',s.day],
         ['Time',s.time],
-        ['Duration',s.durationBase?s.durationBase+' minutes':null],
+        ['Duration',_effDur(s.durationBase,s.durationExtra)?_effDur(s.durationBase,s.durationExtra)+' minutes':null],
         ['Location',locMap[s.lessonLocation]||s.lessonLocation||null],
         ['Start Date',s.startDate?_fmtFamilyDate(s.startDate):(s.startMonth?'Starting month '+s.startMonth:null)]
       ];
@@ -3070,7 +3080,7 @@ function rEnrollment(){
       h+=_renderChips(lbl);
       h+='</div>';
       if(ph==='Holding'){
-        var _enHoldDur=s.durationBase||'';
+        var _enHoldDur=_effDur(s.durationBase,s.durationExtra)||s.durationBase||'';
         var _enHoldInstr=s.instrument||'';
         if(s.lessonLocation==='in-home'){
           h+='<p style="font-size:13px;color:var(--text2);margin:0 0 .6rem">'+esc(firstName)+' has a hold placed for '+esc(_enHoldDur)+' minute in-home '+esc(_enHoldInstr)+' lessons with our teacher '+esc(s.teacher)+' for '+esc(s.day)+'s at '+esc(s.time)+'. Holds are not guaranteed time slots and can change. We\'ll be in touch with an update soon!</p>';
@@ -3347,7 +3357,7 @@ function _downloadPolicyPdf(stuId){
     ['Teacher', stu.teacher],
     ['Day', stu.day],
     ['Time', stu.time],
-    ['Duration', stu.durationBase ? stu.durationBase + ' minutes' : null],
+    ['Duration', _effDur(stu.durationBase,stu.durationExtra) ? _effDur(stu.durationBase,stu.durationExtra) + ' minutes' : null],
     ['Location', locMap[stu.lessonLocation] || stu.lessonLocation || null]
   ];
   var detailsHtml = '';

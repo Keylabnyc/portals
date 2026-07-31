@@ -160,8 +160,13 @@ var busy = false; // generic submitting flag
 
 // Formats ISO date string as "Wednesday, September 16th"
 function _isNewFamily(enrollmentType){
-  // Returns true for families who need to set up payment (no card on file yet)
-  // Returning, 2nd Enrollment, and Adjusted Enrollment all have existing accounts
+  // v223: narrowed to ONLY the "Welcome Back!" header tenure question (has
+  // this family enrolled with us before) -- the payment/invoice-flow
+  // decision this used to also drive now runs on the separate
+  // needsManualInvoice flag instead, since "new to Keylab" and "no payment
+  // method on file" turned out to be two different questions with two
+  // different answers for most families (most new families already have a
+  // card on file from paying for their trial).
   var et=(enrollmentType||'').toLowerCase().trim();
   if(et.indexOf('returning')===0)return false;
   if(et==='2nd enrollment')return false;
@@ -583,7 +588,7 @@ function showMsg(m, t){
   setTimeout(function(){ MSG={m:'',t:''}; render(); }, 7000);
 }
 
-function phaseLabel(phase, avSubmitted, avOpen, tcAcceptedAt, enrollmentType){
+function phaseLabel(phase, avSubmitted, avOpen, tcAcceptedAt, needsManualInvoice){
   if(phase==='Leads'||phase==='Pending'){
     if(isTruthy(avSubmitted)) return [{text:'Availability has been submitted', cls:'c-info'}];
     return [{text: isTruthy(avOpen)?'Submit your availability':'Pending', cls:'c-pend'}];
@@ -603,9 +608,11 @@ function phaseLabel(phase, avSubmitted, avOpen, tcAcceptedAt, enrollmentType){
     if(phase==='Proposal'&&!_isAccepted){
       chips.push({text:'Review and accept proposal', cls:'c-good'});
     } else if(phase==='Confirmed to Enroll'){
-      if(_isNewFamily(enrollmentType)){
-        // A new family in Confirmed to Enroll is by definition unpaid — opusBillingConfirmed
-        // gates the move to Enrolled, so no separate payment-status lookup is needed here.
+      if(isTruthy(needsManualInvoice)){
+        // Only the rare manual-invoice case is "by definition unpaid" now --
+        // the common case is auto-billed on the payment method already on
+        // file, same as a returning family, so it gets the same
+        // "Processing enrollment" status instead (v223).
         chips.push({text:'Payment Due', cls:'c-danger'});
       } else {
         chips.push({text:'Processing enrollment', cls:'c-good'});
@@ -1502,7 +1509,7 @@ function rHome(){
   var hadDashboard=false;
   var anyEnrolled=false;
   students.forEach(function(s){
-    var lbl=phaseLabel(s.phase, s.availabilitySubmitted, avOpen, s.tcAcceptedAt, s.enrollmentType);
+    var lbl=phaseLabel(s.phase, s.availabilitySubmitted, avOpen, s.tcAcceptedAt, s.needsManualInvoice);
     var ph=s.phase||'';
     var firstName=s.studentName?(s.studentName.trim().split(' ')[0]):'';
     var avSubmitted=isTruthy(s.availabilitySubmitted);
@@ -1538,16 +1545,15 @@ function rHome(){
         h+=_rHomeActionButtons('Review Enrollment Details');
       } else if(s.tcAcceptedAt||s.tcAcceptedName){
         // What Happens Next — elevated card, first thing shown on Home for accepted-but-not-enrolled students.
-        h+=(_isNewFamily(s.enrollmentType)
-        ?('<div style="margin-bottom:.75rem;background:var(--bbg);border:1px solid var(--blue);border-radius:var(--rl);padding:1rem">'+
-          '<div style="font-size:15px;font-weight:700;color:var(--bt);margin-bottom:.4rem">What Happens Next</div>'+
-          '<p style="font-size:14px;color:var(--bt);margin:0">Only one more step to go to finalize '+esc(firstName)+'&rsquo;s enrollment! Please use the login info from your proposal acceptance confirmation email to pay the invoice in your account.</p>'+
-          '<div style="margin-top:.75rem"><a href="'+publicCfg.schedulingBillingUrl+'" target="_blank" class="btn btn-p btn-sm">Pay Invoice</a></div>'+
-          '</div>')
-        :('<div style="margin-bottom:.75rem;background:var(--bbg);border:1px solid var(--blue);border-radius:var(--rl);padding:1rem">'+
-          '<div style="font-size:15px;font-weight:700;color:var(--bt);margin-bottom:.4rem">Welcome Back! What Happens Next</div>'+
-          '<p style="font-size:14px;color:var(--bt);margin:0">I\u2019ll schedule '+esc(firstName)+'&rsquo;s lessons for the school year and process their enrollment on the admin side using the payment method active in your account. Your card will be charged for the first installment once enrollment is processed, and automatic flat rate monthly payments will be processed on the 1st of each month from the 2nd month of '+esc(firstName)+'&rsquo;s enrollment. Check your email for confirmation and details and let us know if you need any help!</p>'+
-          '</div>'));
+        var _needsInvoice=isTruthy(s.needsManualInvoice);
+        var _isReturningTenure=!_isNewFamily(s.enrollmentType);
+        h+='<div style="margin-bottom:.75rem;background:var(--bbg);border:1px solid var(--blue);border-radius:var(--rl);padding:1rem">'+
+          '<div style="font-size:15px;font-weight:700;color:var(--bt);margin-bottom:.4rem">'+(_isReturningTenure?'Welcome Back! What Happens Next':'What Happens Next')+'</div>'+
+          (_needsInvoice
+            ?('<p style="font-size:14px;color:var(--bt);margin:0">Only one more step to finish '+esc(firstName)+'&rsquo;s enrollment \u2014 click below to pay the invoice. You\u2019ll sign in with the login info from your proposal acceptance confirmation email.</p>'+
+              '<div style="margin-top:.75rem"><a href="'+publicCfg.schedulingBillingUrl+'" target="_blank" class="btn btn-p btn-sm">Pay Invoice</a></div>')
+            :('<p style="font-size:14px;color:var(--bt);margin:0">I\u2019ll schedule '+esc(firstName)+'&rsquo;s lessons for the school year and process their enrollment on the admin side using the payment method on file. Your card will be charged for the first payment once enrollment is processed, and automatic flat rate monthly payments will be processed on the 1st of each month from the 2nd month of '+esc(firstName)+'&rsquo;s enrollment. Check your email for confirmation and details and let us know if you need any help!</p>'))+
+          '</div>';
         h+='<div class="msg ms">\u2713 Proposal and policies accepted'+(s.tcAcceptedName?' by '+esc(s.tcAcceptedName):'')+
           (s.tcAcceptedAt?' on '+esc(_fmtFamilyTs(s.tcAcceptedAt))+' at '+esc(_fmtFamilyTime(s.tcAcceptedAt)):'')+'.</div>';
         h+=_rHomeActionButtons('Review Proposal and Policies');
@@ -2987,7 +2993,7 @@ function rEnrollment(){
       h+='</div>';
     } else if(isProposalPhase){
       // ── Full enrollment details ──
-      var _chips=phaseLabel(ph, s.availabilitySubmitted, avOpen, s.tcAcceptedAt, s.enrollmentType);
+      var _chips=phaseLabel(ph, s.availabilitySubmitted, avOpen, s.tcAcceptedAt, s.needsManualInvoice);
       var statusChip='';
       if(ph==='Proposal'&&!isAccepted){
         statusChip='<div style="margin-bottom:.75rem"><div style="font-size:18px;font-weight:700;color:var(--text);letter-spacing:-.01em;margin-bottom:.4rem">LESSON PROPOSAL FOR '+esc(s.studentName||' ')+'</div>'+_renderChips(_chips)+'</div>';
@@ -3026,16 +3032,15 @@ function rEnrollment(){
         }
         // 2. What Happens Next — elevated card, only pre-enrollment; disappears once admin marks Enrolled.
         if(isAccepted&&!isFullyEnrolled){
-          h+=(_isNewFamily(s.enrollmentType)
-          ?('<div style="margin-top:1rem;background:var(--bbg);border:1px solid var(--blue);border-radius:var(--rl);padding:1rem">'+
-            '<div style="font-size:15px;font-weight:700;color:var(--bt);margin-bottom:.4rem">What Happens Next</div>'+
-            '<p style="font-size:14px;color:var(--bt);margin:0">Only one more step to go to finalize '+esc(firstName)+'&rsquo;s enrollment! Please use the login info from your proposal acceptance confirmation email to pay the invoice in your account.</p>'+
-            '<div style="margin-top:.75rem"><a href="'+publicCfg.schedulingBillingUrl+'" target="_blank" class="btn btn-p btn-sm">Pay Invoice</a></div>'+
-            '</div>')
-          :('<div style="margin-top:1rem;background:var(--bbg);border:1px solid var(--blue);border-radius:var(--rl);padding:1rem">'+
-            '<div style="font-size:15px;font-weight:700;color:var(--bt);margin-bottom:.4rem">Welcome Back! What Happens Next</div>'+
-            '<p style="font-size:14px;color:var(--bt);margin:0">I\u2019ll schedule '+esc(firstName)+'&rsquo;s lessons for the school year and process their enrollment on the admin side using the payment method active in your account. Your card will be charged for the first installment once enrollment is processed, and automatic flat rate monthly payments will be processed on the 1st of each month from the 2nd month of '+esc(firstName)+'&rsquo;s enrollment. Check your email for confirmation and details and let us know if you need any help!</p>'+
-            '</div>'));
+          var _needsInvoice2=isTruthy(s.needsManualInvoice);
+          var _isReturningTenure2=!_isNewFamily(s.enrollmentType);
+          h+='<div style="margin-top:1rem;background:var(--bbg);border:1px solid var(--blue);border-radius:var(--rl);padding:1rem">'+
+            '<div style="font-size:15px;font-weight:700;color:var(--bt);margin-bottom:.4rem">'+(_isReturningTenure2?'Welcome Back! What Happens Next':'What Happens Next')+'</div>'+
+            (_needsInvoice2
+              ?('<p style="font-size:14px;color:var(--bt);margin:0">Only one more step to finish '+esc(firstName)+'&rsquo;s enrollment \u2014 click below to pay the invoice. You\u2019ll sign in with the login info from your proposal acceptance confirmation email.</p>'+
+                '<div style="margin-top:.75rem"><a href="'+publicCfg.schedulingBillingUrl+'" target="_blank" class="btn btn-p btn-sm">Pay Invoice</a></div>')
+              :('<p style="font-size:14px;color:var(--bt);margin:0">I\u2019ll schedule '+esc(firstName)+'&rsquo;s lessons for the school year and process their enrollment on the admin side using the payment method on file. Your card will be charged for the first payment once enrollment is processed, and automatic flat rate monthly payments will be processed on the 1st of each month from the 2nd month of '+esc(firstName)+'&rsquo;s enrollment. Check your email for confirmation and details and let us know if you need any help!</p>'))+
+            '</div>';
         }
         // 3. Review Policies toggle button
         h+='<div style="margin-top:1rem;border-top:1px solid var(--border);padding-top:.85rem">';
@@ -3075,17 +3080,17 @@ function rEnrollment(){
           h+='</div>';
         }
       } else if(hasPrice&&!isAccepted&&!isFullyEnrolled){
-        var _isNew1=_isNewFamily(s.enrollmentType);
+        var _needsInvoice3=isTruthy(s.needsManualInvoice);
         h+='<div class="card"><h2>Lesson Policies</h2>';
-        h+=_isNew1
+        h+=_needsInvoice3
           ?'<p>Please take a look at our policies below and let us know if you have any questions. Once you\'ve accepted, the next step is to log into your scheduling and billing account and pay the first month invoice to confirm '+esc(firstName)+'&rsquo;s spot.</p>'
-          :'<p>Please take a look at our policies below and let us know if you have any questions. Once you\'ve accepted, I\'ll get '+esc(firstName)+'&rsquo;s lessons scheduled for the school year and process their enrollment using the payment method active in your account.</p>';
+          :'<p>Please take a look at our policies below and let us know if you have any questions. Once you\'ve accepted, I\'ll get '+esc(firstName)+'&rsquo;s lessons scheduled for the school year and process their enrollment using the payment method on file.</p>';
         h+=rPolicyText(isInHome);
         h+='<div class="agree-box" id="tc-agree-box-'+esc(sid)+'" style="'+(tc.checked?'border-color:var(--green);background:rgba(255,255,255,.5)':'')+'">';
         h+='<input type="checkbox" id="tc-chk-'+esc(sid)+'"'+(tc.checked?' checked':'')+' onchange="_tcState(&apos;'+esc(sid)+'&apos;).checked=this.checked;tcRefresh(&apos;'+esc(sid)+'&apos;)">';
-        h+=_isNew1
-          ?('<label class="agree-lbl" for="tc-chk-'+esc(sid)+'">'+'By accepting this proposal, I acknowledge that I have read and accept Keylab\u2019s enrollment policies, and I understand that '+esc(firstName)+'\u2019s spot will be confirmed once payment for the first month of lessons has been processed.</label></div>')
-          :('<label class="agree-lbl" for="tc-chk-'+esc(sid)+'">'+'By accepting this proposal, I acknowledge that I have read and accept Keylab\u2019s enrollment policies, and I am authorizing Keylab to schedule my child\u2019s lessons, bill my card on file for the first month of lessons, and schedule recurring automatic flat-monthly payments based on the proposal details.</label></div>');
+        h+=_needsInvoice3
+          ?('<label class="agree-lbl" for="tc-chk-'+esc(sid)+'">'+'I acknowledge that I have read and accept Keylab\u2019s enrollment policies, and agree to submit payment for the first month of lessons which will also schedule automatic flat-rate monthly payments for the duration of the enrollment. I acknowledge that if payment is not submitted within two business days from when this proposal was accepted, that the time slot may be given to another family</label></div>')
+          :('<label class="agree-lbl" for="tc-chk-'+esc(sid)+'">'+'I acknowledge that I have read and accept Keylab\u2019s enrollment policies, and I am authorizing Keylab to schedule my child\u2019s lessons for the school year, bill the payment method on file for the first payment, and schedule recurring automatic flat-monthly payments based on the proposal details.</label></div>');
         var canSubmit=tc.checked&&tc.name.trim().length>0;
         var _pOpts='';
         if(familyParents.p1) _pOpts+='<option value="'+esc(familyParents.p1)+'"'+(tc.name===familyParents.p1?' selected':'')+'>'+esc(familyParents.p1)+'</option>';
@@ -3109,7 +3114,7 @@ function rEnrollment(){
 
     } else {
       // ── Non-proposal students: status card ──
-      var lbl=phaseLabel(ph, s.availabilitySubmitted, avOpen, s.tcAcceptedAt, s.enrollmentType);
+      var lbl=phaseLabel(ph, s.availabilitySubmitted, avOpen, s.tcAcceptedAt, s.needsManualInvoice);
       h+='<div class="card">';
       h+='<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:.5rem">';
       if(students.length===1) h+='<span class="stu-name" style="font-size:18px;margin-bottom:.4rem;display:inline-block">'+esc(s.studentName)+'</span>';
@@ -3502,9 +3507,11 @@ function doSubmitTC(studentId){
 // ============================================================
 function boot(){
   var resetTokenFromUrl = '';
+  var loginTokenFromUrl = '';
   try {
     var params = new URLSearchParams(window.location.search);
     resetTokenFromUrl = params.get('resetToken') || '';
+    loginTokenFromUrl = params.get('token') || '';
   } catch(e) { /* URLSearchParams unsupported \u2014 treat as no token */ }
 
   // Public settings (availability status, closures, instrument list) don't
@@ -3526,6 +3533,35 @@ function boot(){
       render();
     }
   });
+
+  if(loginTokenFromUrl){
+    // A magic-login link from an emailed [portalLink] button. This token is
+    // already a fully valid family session token -- issued server-side with
+    // the exact same familyToken_ storage a normal login produces -- it was
+    // just never consumed here before now, so clicking "Log in to the
+    // Family Portal" from an email did nothing but open a normal login
+    // screen with a dead parameter sitting in the URL. Strip it from the
+    // address bar immediately, same reasoning as the resetToken case above,
+    // then use it exactly like a successful login.
+    try {
+      if (window.history && window.history.replaceState) {
+        window.history.replaceState(null, '', window.location.pathname);
+      }
+    } catch(e) { /* non-fatal -- worst case the URL just isn't cleaned up */ }
+    TOKEN = loginTokenFromUrl;
+    // Which parent clicked isn't known from this token alone (it's issued
+    // per-family, not per-parent) -- 'parent1' is the same fallback the
+    // remembered-session path below already uses in the equivalent
+    // unknown-parent case.
+    MY_PARENT_SLOT = 'parent1';
+    // Remembered so returning to the portal within this token's own real
+    // expiry doesn't require clicking the emailed link again. familyId is
+    // left blank here -- doGetProposal() never returns it to the client,
+    // and nothing client-side actually depends on it beyond this bookkeeping.
+    _klSaveSession(TOKEN, '', MY_PARENT_SLOT);
+    loadFamily();
+    return;
+  }
 
   if(resetTokenFromUrl){
     // Strip the token out of the address bar immediately -- it's a

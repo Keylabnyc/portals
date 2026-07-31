@@ -1238,10 +1238,18 @@ function loadFamily(){
 
 function rApp(){
   var avOpen=isTruthy(publicCfg.availabilityOpen);
-  var tabs='<div class="tabs">'+
+  // Sign Out lives in this persistent shell (not inside any individual tab's
+  // content) so it's always reachable no matter what state that tab is in --
+  // v223, fixes a real dead end: rHome()'s zero-students branch returned
+  // before ever reaching its own Sign Out link, so anyone whose account
+  // resolved to no students had no way back to the login screen at all.
+  var tabs='<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:2rem">'+
+    '<div class="tabs" style="margin-bottom:0">'+
     '<div class="tab'+(TAB==='home'?' on':'')+'" onclick="TAB=&apos;home&apos;;render()">Home</div>'+
     (avOpen?'<div class="tab'+(TAB==='scheduling'?' on':'')+'" onclick="gotoScheduling()">Scheduling</div>':'')+
     '<div class="tab'+(TAB==='enrollment'?' on':'')+'" onclick="gotoEnrollment()">Enrollment</div>'+
+    '</div>'+
+    '<a href="#" style="font-size:12px;color:var(--text4);white-space:nowrap" onclick="event.preventDefault();doSignOut()">Sign Out</a>'+
     '</div>';
   var content='';
   if(TAB==='home')         content=rHome();
@@ -1601,7 +1609,6 @@ function rHome(){
   h+='<hr class="divider">';
   h+=_rHomeParent2();
   h+='<p style="font-size:12px;color:var(--text4)">Questions? Email us at <a href="mailto:info@keylab.nyc">info@keylab.nyc</a>.</p>';
-  h+='<p style="font-size:12px;color:var(--text4)"><a href="#" onclick="event.preventDefault();doSignOut()">Sign Out</a></p>';
   return h;
 }
 

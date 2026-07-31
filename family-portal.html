@@ -253,7 +253,7 @@ var LK = {email:'', matches:[], done:false};
 // forgot password / reset password
 var RESET_TOKEN = '';
 var FP = {email:'', done:false, success:false, error:'', busy:false};
-var SPW = {pw1:'', pw2:'', busy:false, error:'', success:false, checking:false, invalid:false, email:''};
+var SPW = {pw1:'', pw2:'', busy:false, error:'', success:false, checking:false, invalid:false, email:'', resending:false, resent:false};
 
 // register form
 var RF = {
@@ -828,9 +828,21 @@ function rSetPassword(){
     return '<div style="text-align:center;padding:4rem;color:var(--text3)"><span class="spin" style="font-size:22px">\u21bb</span></div>';
   }
   if(SPW.invalid){
+    if(SPW.resent){
+      return '<h1>Reset your Family Portal password</h1>'+
+        '<p>We\u2019ve sent a fresh reset link to <strong>'+esc(SPW.email)+'</strong>. Check your email and click the new link to continue.</p>'+
+        '<button class="btn btn-p" onclick="PAGE=&apos;login&apos;;render()">Back to Sign In</button>';
+    }
+    var resendBtn=SPW.email
+      ?(SPW.resending
+        ?'<button class="btn btn-p" disabled><span class="spin">\u21bb</span> Sending...</button>'
+        :'<button class="btn btn-p" onclick="doResendResetLink()">Send me a new link</button>')
+      :'';
     return '<h1>Reset your Family Portal password</h1>'+
-      '<p style="color:var(--rt)">Your reset link has expired. Please go to the Family Portal to get a fresh reset link</p>'+
-      '<button class="btn btn-p" onclick="PAGE=&apos;login&apos;;render()">Back to Sign In</button>';
+      '<p style="color:var(--rt)">This reset link has expired.</p>'+
+      (resendBtn?'<div style="display:flex;gap:8px;flex-wrap:wrap">'+resendBtn+
+        '<button class="btn btn-s" onclick="PAGE=&apos;login&apos;;render()">Back to Sign In</button></div>'
+      :'<button class="btn btn-p" onclick="PAGE=&apos;login&apos;;render()">Back to Sign In</button>');
   }
   if(SPW.success){
     return '<div style="text-align:center;padding:4rem;color:var(--text3)"><span class="spin" style="font-size:22px">\u21bb</span></div>';
@@ -877,6 +889,23 @@ function doCompleteReset(){
       // Fallback, only if the server didn't return a token for some reason
       PAGE='login'; render();
     }
+  });
+}
+
+// One-click resend from the expired-link screen (v223) -- reuses the same
+// familyBeginReset action the normal "Forgot your password?" flow already
+// uses, just with the email we already know from the (now-dead) token
+// itself, so the family never has to navigate back and re-type it.
+function doResendResetLink(){
+  if(!SPW.email)return;
+  SPW.resending=true; render();
+  api({action:'familyBeginReset', data:{email:SPW.email}}, function(e,r){
+    SPW.resending=false;
+    if(e||!r||!r.ok){
+      showMsg((r&&r.error)||'Something went wrong. Please try again.','e');
+      render(); return;
+    }
+    SPW.resent=true; render();
   });
 }
 
@@ -3499,6 +3528,19 @@ function boot(){
   });
 
   if(resetTokenFromUrl){
+    // Strip the token out of the address bar immediately -- it's a
+    // single-use, short-lived credential and should never be the URL a
+    // family ends up bookmarking. replaceState leaves the current page
+    // exactly as-is but rewrites what the browser considers "this page's
+    // URL" to the plain portal address, so any bookmark saved from this
+    // point forward (including mid-flow) is the correct, durable one --
+    // not a link that's guaranteed to eventually stop working.
+    try {
+      if (window.history && window.history.replaceState) {
+        window.history.replaceState(null, '', window.location.pathname);
+      }
+    } catch(e) { /* non-fatal -- worst case the URL just isn't cleaned up */ }
+
     // A reset/setup link — check it's actually still valid before showing
     // the set-password form, so a bookmarked or already-used link fails
     // clearly right away instead of after the family fills out the form.
@@ -3510,6 +3552,7 @@ function boot(){
       SPW.checking = false;
       if(e2||!r2||!r2.ok){
         SPW.invalid = true;
+        SPW.email = (r2&&r2.email)||'';
       } else {
         SPW.email = r2.email||'';
       }

@@ -3293,57 +3293,22 @@ function rEnrollment(){
       }
 
     } else {
-      // ── Non-proposal students: status card ──
-      var lbl=phaseLabel(ph, s.availabilitySubmitted, avOpen, s.tcAcceptedAt, s.needsManualInvoice);
-      h+='<div class="card">';
-      h+='<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:.5rem">';
-      if(students.length===1) h+='<span class="stu-name" style="font-size:18px;margin-bottom:.4rem;display:inline-block">'+esc(s.studentName)+'</span>';
-      h+=_renderChips(lbl);
-      h+='</div>';
+      // ── Non-proposal students: action button only ──
+      // Status message and header now come from _rChildStatusSummary() above
+      // (shown once per section, v224) -- this block used to repeat the same
+      // phase message a second time here, which is exactly the visible
+      // duplication AC caught live on the Enrollment tab. Kept: the
+      // phase-specific action button, since _rChildStatusSummary()
+      // deliberately does not include CTAs (those stay tab-specific).
+      var _enBtn='';
       if(ph==='Holding'){
-        var _enHoldDur=_effDur(s.durationBase,s.durationExtra)||s.durationBase||'';
-        var _enHoldInstr=s.instrument||'';
-        if(s.lessonLocation==='in-home'){
-          h+='<p style="font-size:13px;color:var(--text2);margin:0 0 .6rem">'+esc(firstName)+' has a hold placed for '+esc(_enHoldDur)+' minute in-home '+esc(_enHoldInstr)+' lessons with our teacher '+esc(s.teacher)+' for '+esc(s.day)+'s at '+esc(s.time)+'. Holds are not guaranteed time slots and can change. We\'ll be in touch with an update soon!</p>';
-        } else if(s.lessonLocation==='virtual'){
-          h+='<p style="font-size:13px;color:var(--text2);margin:0 0 .6rem">'+esc(firstName)+' has a hold placed for '+esc(_enHoldDur)+' minute virtual '+esc(_enHoldInstr)+' lessons with our teacher '+esc(s.teacher)+' for '+esc(s.day)+'s at '+esc(s.time)+'. Holds are not guaranteed time slots and can change. We\'ll be in touch with an update soon!</p>';
-        } else {
-          h+='<p style="font-size:13px;color:var(--text2);margin:0 0 .6rem">'+esc(firstName)+' has a hold placed for '+esc(_enHoldDur)+' minute '+esc(_enHoldInstr)+' lessons with our teacher '+esc(s.teacher)+' for '+esc(s.day)+'s at '+esc(s.time)+' at Keylab. Holds are not guaranteed time slots and can change. We\'ll be in touch with an update soon!</p>';
-        }
-        if(isTruthy(s.availabilitySubmitted)){
-          h+='<button class="btn btn-p btn-sm" onclick="_gotoSchedulingForStudent(&apos;'+esc(s.studentId)+'&apos;)">Review / Update Availability</button>';
-        } else {
-          h+='<button class="btn btn-p btn-sm" onclick="_gotoSchedulingForStudent(&apos;'+esc(s.studentId)+'&apos;)">Submit availability</button>';
-        }
-      } else if(ph==='Trial Booked'){
-        var _enTrialDateFmt=_fmtFamilyDate(s.trialDate);
-        var _enTrialTeacherName=s.trialTeacher||'';
-        var _enTrialDur=s.trialDuration||'';
-        var _enTrialInstr=s.instrument||'';
-        if(s.lessonLocation==='in-home'){
-          var _enTrialAddrParts=[];
-          if(familyAddress.street) _enTrialAddrParts.push(familyAddress.street);
-          if(familyAddress.apt) _enTrialAddrParts.push('Apt '+familyAddress.apt);
-          var _enTrialAddr=_enTrialAddrParts.join(', ');
-          h+='<p style="font-size:13px;color:var(--text2);margin:0">A trial in-home '+esc(_enTrialDur)+' minute '+esc(_enTrialInstr)+' lesson has been scheduled for '+esc(firstName)+' with '+esc(_enTrialTeacherName)+' on '+esc(_enTrialDateFmt)+' at '+esc(s.trialTime)+' at '+esc(_enTrialAddr)+'. '+esc(_enTrialTeacherName)+' will look forward to meeting you then!</p>';
-        } else if(s.lessonLocation==='virtual'){
-          h+='<p style="font-size:13px;color:var(--text2);margin:0">A trial virtual '+esc(_enTrialDur)+' minute '+esc(_enTrialInstr)+' lesson has been scheduled for '+esc(firstName)+' with '+esc(_enTrialTeacherName)+' on '+esc(_enTrialDateFmt)+' at '+esc(s.trialTime)+'. Please use the family portal to access '+esc(_enTrialTeacherName)+'\u2019s zoom link. '+esc(_enTrialTeacherName)+' is looking forward to meeting '+esc(firstName)+' then!</p>';
-        } else {
-          h+='<p style="font-size:13px;color:var(--text2);margin:0">A trial '+esc(_enTrialDur)+' minute '+esc(_enTrialInstr)+' lesson has been scheduled for '+esc(firstName)+' with '+esc(_enTrialTeacherName)+' on '+esc(_enTrialDateFmt)+' at '+esc(s.trialTime)+' '+esc(locMap.studio)+'. We\'ll look forward to seeing you then!</p>';
-        }
-      } else if(ph==='Withdrawn'){
-        h+='<p style="font-size:13px;color:var(--text2);margin:0">'+esc(firstName)+' is not currently enrolled. Please contact us at <a href="mailto:info@keylab.nyc">info@keylab.nyc</a> if you have questions.</p>';
-      } else if(isTruthy(s.availabilityLocked)){
-        h+='<p style="font-size:13px;color:var(--text2);margin:0">We are working on a time slot for '+esc(firstName)+' and their availability is temporarily locked. Please contact <a href="mailto:info@keylab.nyc">info@keylab.nyc</a> for assistance.</p>';
-      } else if(isTruthy(s.availabilitySubmitted)){
-        // Leads, Pending, or other early phases \u2014 availability already submitted
-        h+='<p style="font-size:13px;color:var(--text2);margin:0">We\'ve received '+esc(firstName)+'\u2019s availability. We\'ll be in touch as soon as we have an update.</p>';
-      } else {
-        // Leads, Pending, or other early phases \u2014 no availability submitted yet
-        h+='<p style="font-size:13px;color:var(--text2);margin:0 0 .6rem">We don\'t have '+esc(firstName)+'\u2019s availability yet. Let us know when '+esc(firstName)+' can take lessons so we can start finding the right time slot.</p>';
-        h+='<button class="btn btn-p btn-sm" onclick="_gotoSchedulingForStudent(&apos;'+esc(s.studentId)+'&apos;)">Submit '+esc(firstName)+'\u2019s availability</button>';
+        _enBtn=isTruthy(s.availabilitySubmitted)
+          ?'<button class="btn btn-p btn-sm" onclick="_gotoSchedulingForStudent(&apos;'+esc(s.studentId)+'&apos;)">Review / Update Availability</button>'
+          :'<button class="btn btn-p btn-sm" onclick="_gotoSchedulingForStudent(&apos;'+esc(s.studentId)+'&apos;)">Submit availability</button>';
+      } else if(ph!=='Trial Booked'&&ph!=='Withdrawn'&&!isTruthy(s.availabilityLocked)&&!isTruthy(s.availabilitySubmitted)){
+        _enBtn='<button class="btn btn-p btn-sm" onclick="_gotoSchedulingForStudent(&apos;'+esc(s.studentId)+'&apos;)">Submit '+esc(firstName)+'\u2019s availability</button>';
       }
-      h+='</div>';
+      if(_enBtn) h+='<div class="card">'+_enBtn+'</div>';
     }
   });
 

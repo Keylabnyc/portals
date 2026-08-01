@@ -3559,8 +3559,15 @@ function boot(){
     // left blank here -- doGetProposal() never returns it to the client,
     // and nothing client-side actually depends on it beyond this bookkeeping.
     _klSaveSession(TOKEN, '', MY_PARENT_SLOT);
-    loadFamily();
-    return;
+    // Deliberately no loadFamily() + return here. Falling through into the
+    // remembered-session block below (which reads back the session just
+    // saved above) instead of loading directly means this token gets the
+    // exact same familyCheckSession() validation that a returning login
+    // gets -- if the token turns out to be invalid for any reason, the
+    // family is dropped back to the login screen with a clear message,
+    // instead of landing on a populated-looking shell with nothing in it
+    // and no way back in. Was a real gap: a family that ever hit an
+    // invalid/expired link had no path forward except emailing us.
   }
 
   if(resetTokenFromUrl){

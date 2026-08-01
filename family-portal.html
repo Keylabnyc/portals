@@ -278,7 +278,7 @@ var SC = {
   slots:[blankSlot(), blankSlot(), blankSlot()],
   instrument:'', instrumentNote:'', notes:'', locationNote:'', durationNote:'',
   origInstrument:'', origDurations:[], origLocations:[],
-  busy:false, submitted:false, loaded:false, submitError:'', justSubmitted:false,
+  busy:false, submitted:false, loaded:false, submitError:'', justSubmitted:false, loadError:'',
   teacherPref:'',
   submittedAt:'',
   editMode:false,
@@ -299,6 +299,11 @@ var SC = {
 var _instrEdit = {};
 // sibling nudge: studentId of next unsubmitted sibling after a successful submit, or ''
 var _siblingNudgeId = '';
+// Set when a fresh (uncached) getProposal load genuinely fails, on either
+// the Home or Enrollment tab -- kept distinct from an empty 'students'
+// array so neither tab ever confuses a technical failure with a
+// confirmed-empty account.
+var _familyLoadError = '';
 // self-release expand state: keyed by studentId; true = expanded
 var _srOpen = {};
 
@@ -306,7 +311,7 @@ var _srOpen = {};
 // Always use this instead of inline SC mutations on home-tab CTAs.
 function _gotoSchedulingForStudent(id) {
   SC.studentId = id;
-  SC.loaded = false; SC.submitted = false; SC.isFirstSubmission = true;
+  SC.loaded = false; SC.submitted = false; SC.isFirstSubmission = true; SC.loadError = '';
   SC.editMode = false; SC.slotEditing = {}; SC.slotDeleted = {}; SC.slotNotes = {}; SC.slotSaveAttempted = {}; SC.lessonDetailsEditing = false;
   SC.submittedAt = '';
   SC.slots = [blankSlot(), blankSlot(), blankSlot()];
@@ -1259,11 +1264,13 @@ function _prefetchSchedulingData(){
 }
 
 function loadFamily(){
-  PAGE='home'; TAB='home'; students=[]; _familyLoading=true; render();
+  PAGE='home'; TAB='home'; students=[]; _familyLoading=true; _familyLoadError=''; render();
   fapi('getProposal', {}, function(e,r){
     _familyLoading=false;
     if(e||!r||!r.ok){
-      showMsg((r&&r.error)||'Something went wrong loading your information. Please try again.','e');
+      var _lfMsg=(r&&r.error)||'We couldn\u2019t load your family\u2019s information. This is usually temporary \u2014 try again in a moment, or email us at info@keylab.nyc if it keeps happening.';
+      showMsg(_lfMsg,'e');
+      _familyLoadError=_lfMsg;
       render(); return;
     }
     _applyProposalResp(r);
@@ -1305,10 +1312,19 @@ function gotoEnrollment(){
     return;
   }
   _familyLoading=true;
+  _familyLoadError='';
   render();
   fapi('getProposal', {}, function(e, r){
-    if(!e && r && r.ok){ students = r.proposals || []; familyParents=_famParentsFromResp(r); familyAddress={street:r.street||'',apt:r.apt||''}; _lastFamilyLoadAt=Date.now(); }
     _familyLoading=false;
+    if(!e && r && r.ok){
+      students = r.proposals || []; familyParents=_famParentsFromResp(r); familyAddress={street:r.street||'',apt:r.apt||''}; _lastFamilyLoadAt=Date.now();
+    } else if(!students.length){
+      // A genuine fetch failure with nothing already cached to fall back on
+      // -- deliberately NOT the same as "confirmed empty." Surfaced as a
+      // clear, retry-able message instead of silently showing "Nothing here
+      // yet," which would otherwise look identical to a real empty account.
+      _familyLoadError=(r&&r.error)||'We couldn\u2019t load your enrollment details. This is usually temporary \u2014 try again in a moment, or email us at info@keylab.nyc if it keeps happening.';
+    }
     render();
   });
 }
@@ -1500,6 +1516,11 @@ function rHome(){
   if(_familyLoading){
     return h+'<div style="text-align:center;padding:3rem"><span class="spin" style="font-size:20px">\u21bb</span></div>';
   }
+  if(_familyLoadError){
+    h+='<div class="card"><p style="color:var(--text3)">'+esc(_familyLoadError)+'</p>'+
+      '<button class="btn btn-s btn-sm" style="margin-top:.5rem" onclick="loadFamily()">Try Again</button></div>';
+    return h;
+  }
   if(!students.length){
     h+='<div class="card"><p style="color:var(--text3)">We\'re still getting your information set up. We\'ll reach out soon. In the meantime, feel free to email us at <a href="mailto:info@keylab.nyc">info@keylab.nyc</a>.</p></div>';
     return h;
@@ -1507,6 +1528,10 @@ function rHome(){
   var avOpen=isTruthy(publicCfg.availabilityOpen);
   var locMap={studio:'at Keylab','in-home':'In-home',virtual:'Virtual'};
   var hadDashboard=false;
+  // Self-release is a fact about the child, not about one enrollment -- a
+  // student with more than one enrollment (e.g. two instruments) should
+  // only see the self-release control once, not once per enrollment card.
+  var _srShownFor={};
   var anyEnrolled=false;
   students.forEach(function(s){
     var lbl=phaseLabel(s.phase, s.availabilitySubmitted, avOpen, s.tcAcceptedAt, s.needsManualInvoice);
@@ -1560,7 +1585,10 @@ function rHome(){
       } else {
         h+=_rHomeActionButtons('Review Proposal and Policies');
       }
-      h+=_rHomeSelfRelease(s);
+      if(!_srShownFor[s.studentName]){
+        h+=_rHomeSelfRelease(s);
+        _srShownFor[s.studentName]=true;
+      }
       h+='</div>';
       hadDashboard=true;
       if(isEnrolled) anyEnrolled=true;
@@ -1569,6 +1597,7 @@ function rHome(){
       h+='<div class="card-stu">';
       h+='<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:.6rem">';
       h+='<div><span class="stu-name" style="font-size:18px">'+esc(s.studentName)+'</span>';
+      if(s.instrument) h+='<div style="font-size:12px;color:var(--text4);margin-top:5px">'+esc(s.instrument)+'</div>';
       h+='</div>';
       h+=_renderChips(lbl);
       h+='</div>';
@@ -1813,12 +1842,22 @@ function rScheduling(){
   var _enType=(_scStu&&_scStu.enrollmentType)||'';
   var _isReturning=_enType.toLowerCase().indexOf('returning')===0;
 
-  if(_scStu&&(_scStu.availabilityLocked==='TRUE'||_scStu.availabilityLocked===true)){
-    // Same data load the rest of this function relies on below — reuse it here so
-    // a locked student never flashes "nothing to show" before their submission loads.
+  // Same data load the rest of this function relies on below — checked here,
+  // ahead of both the locked and unlocked branches, so a load failure can
+  // never be mistaken for "nothing submitted" (which would otherwise hide a
+  // locked student's real summary, or show an unlocked student a blank form
+  // that risks overwriting a real submission on save).
+  if(_scStu){
     if(SC.loading){
       return '<div style="text-align:center;padding:3rem"><span class="spin" style="font-size:20px">\u21bb</span></div>';
     }
+    if(SC.loadError){
+      return '<div class="card"><p style="color:var(--text3)">'+esc(SC.loadError)+'</p>'+
+        '<button class="btn btn-s btn-sm" style="margin-top:.5rem" onclick="SC.loadError=&apos;&apos;;loadSchedSubmission()">Try Again</button></div>';
+    }
+  }
+
+  if(_scStu&&(_scStu.availabilityLocked==='TRUE'||_scStu.availabilityLocked===true)){
     var _lockFirstName=(_scStu.studentName||'This student').split(' ')[0];
     var _lockMsg='<p style="color:var(--text3)">We are working on a time slot for '+esc(_lockFirstName)+' and their availability is temporarily locked. Please contact <a href="mailto:info@keylab.nyc">info@keylab.nyc</a> for assistance.</p>';
     if(SC.loaded&&!SC.isFirstSubmission){
@@ -1845,8 +1884,9 @@ function rScheduling(){
 
   if(students.length>1&&SC.studentId){
     var _scName='';
-    for(var _ni=0;_ni<students.length;_ni++){ if(students[_ni].studentId===SC.studentId){_scName=students[_ni].studentName;break;} }
-    if(_scName) h+='<div style="font-size:13px;color:var(--text3);margin-bottom:1rem">Submitting for: <strong style="color:var(--text)">'+esc(_scName)+'</strong> \u00b7 <a href="#" onclick="TAB=&apos;home&apos;;render();return false" style="color:var(--acc)">Back to home</a></div>';
+    var _scInstr='';
+    for(var _ni=0;_ni<students.length;_ni++){ if(students[_ni].studentId===SC.studentId){_scName=students[_ni].studentName;_scInstr=students[_ni].instrument||'';break;} }
+    if(_scName) h+='<div style="font-size:13px;color:var(--text3);margin-bottom:1rem">Submitting for: <strong style="color:var(--text)">'+esc(_scName)+(_scInstr?' \u2014 '+esc(_scInstr):'')+'</strong> \u00b7 <a href="#" onclick="TAB=&apos;home&apos;;render();return false" style="color:var(--acc)">Back to home</a></div>';
   }
 
   if(!SC.studentId){
@@ -1854,7 +1894,8 @@ function rScheduling(){
     if(students.length>1){
       _btnHtml+='<p style="font-size:13px;color:var(--text3);margin-bottom:.75rem">Select a child to submit availability for:</p>';
       students.forEach(function(stu){
-        _btnHtml+='<button class="btn btn-p" style="margin-bottom:.5rem;margin-right:.5rem" onclick="_gotoSchedulingForStudent(&apos;'+esc(stu.studentId)+'&apos;)">'+esc(stu.studentName)+'</button>';
+        var _pkLbl=stu.studentName+(stu.instrument?' \u2014 '+stu.instrument:'');
+        _btnHtml+='<button class="btn btn-p" style="margin-bottom:.5rem;margin-right:.5rem" onclick="_gotoSchedulingForStudent(&apos;'+esc(stu.studentId)+'&apos;)">'+esc(_pkLbl)+'</button>';
       });
     } else if(students.length===1){
       _btnHtml+='<button class="btn btn-p" onclick="_gotoSchedulingForStudent(&apos;'+esc(students[0].studentId)+'&apos;)">Submit availability for '+esc(students[0].studentName)+'</button>';
@@ -1885,10 +1926,11 @@ function _rSiblingNudge(){
   for(var i=0;i<students.length;i++){ if(students[i].studentId===_siblingNudgeId){sib=students[i];break;} }
   if(!sib) return '';
   var sibFirst=sib.studentName?(sib.studentName.trim().split(' ')[0]):'your other child';
+  var sibLabel=sib.studentName+(sib.instrument?' \u2014 '+sib.instrument:'');
   return '<div class="card" style="margin-top:1.25rem;border:1.5px solid var(--green)">'+
-    '<div style="font-weight:600;font-size:14px;margin-bottom:.4rem">\u2713 Done! Submit for '+esc(sib.studentName)+'?</div>'+
-    '<p style="font-size:13px;color:var(--text3);margin-bottom:.75rem">You can also submit availability for '+esc(sibFirst)+' now, or come back any time.</p>'+
-    '<button class="btn btn-p btn-sm" onclick="_siblingNudgeId=&apos;&apos;;_gotoSchedulingForStudent(&apos;'+esc(sib.studentId)+'&apos;)">Submit for '+esc(sibFirst)+'</button>'+
+    '<div style="font-weight:600;font-size:14px;margin-bottom:.4rem">\u2713 Done! Submit for '+esc(sibLabel)+'?</div>'+
+    '<p style="font-size:13px;color:var(--text3);margin-bottom:.75rem">You can also submit availability for '+esc(sibLabel)+' now, or come back any time.</p>'+
+    '<button class="btn btn-p btn-sm" onclick="_siblingNudgeId=&apos;&apos;;_gotoSchedulingForStudent(&apos;'+esc(sib.studentId)+'&apos;)">Submit for '+esc(sibFirst)+(sib.instrument?' ('+esc(sib.instrument)+')':'')+'</button>'+
     '</div>';
 }
 
@@ -2576,11 +2618,26 @@ function rSlot(slot, i, isEdit){
 
 function loadSchedSubmission(){
   if(SC.loaded||!SC.studentId) return;
-  SC.loading=true; render();
+  SC.loading=true; SC.loadError=''; render();
   fapi('getFamilyAvailability', {studentId:SC.studentId}, function(e,r){
-    SC.loaded=true; SC.loading=false;
+    SC.loading=false;
+    if(e||!r||!r.ok){
+      // A real fetch failure -- SC.loaded deliberately stays false so no
+      // downstream check (the locked-summary gate, the view-mode/blank-form
+      // choice) can mistake "we couldn't load this" for "nothing was ever
+      // submitted." Surfaced as a clear, retry-able message instead, naming
+      // the specific child whose availability failed to load when known.
+      var _lsFirst='';
+      for(var _lsi=0;_lsi<students.length;_lsi++){
+        if(students[_lsi].studentId===SC.studentId){ _lsFirst=(students[_lsi].studentName||'').split(' ')[0]; break; }
+      }
+      SC.loadError=(r&&r.error)||('We couldn\u2019t load '+(_lsFirst||'this child\u2019s')+' availability. This is usually temporary \u2014 try again in a moment, or email us at info@keylab.nyc if it keeps happening.');
+      render();
+      return;
+    }
+    SC.loaded=true;
     SC.instrument=''; // default: blank until the family's first-ever submission
-    if(!e&&r&&r.ok&&r.submission){
+    if(r.submission){
       // A submission already exists -- pre-fill from the student's current
       // instrument so a returning family doesn't have to re-pick every time
       // (per AC, July 2026: blank only applies until the FIRST submission).
@@ -2903,12 +2960,19 @@ function rEnrollment(){
   if(_familyLoading){
     return h+'<div style="text-align:center;padding:3rem"><span class="spin" style="font-size:20px">\u21bb</span></div>';
   }
+  if(_familyLoadError){
+    return h+'<div class="card"><p style="color:var(--text3)">'+esc(_familyLoadError)+'</p>'+
+      '<button class="btn btn-s btn-sm" style="margin-top:.5rem" onclick="gotoEnrollment()">Try Again</button></div>';
+  }
   if(!students.length){
     return h+'<div class="card"><p style="color:var(--text3)">Nothing here yet. We\'ll update this as soon as your enrollment details are ready.</p></div>';
   }
 
   var locMap={studio:'at Keylab','in-home':'In-home',virtual:'Virtual'};
   var avOpen=isTruthy(publicCfg.availabilityOpen);
+  // Self-release is a fact about the child, not about one enrollment -- see
+  // the matching tracker in rHome() for the full reasoning.
+  var _srShownFor={};
 
   students.forEach(function(s){
     var ph=s.phase||'';
@@ -2926,6 +2990,7 @@ function rEnrollment(){
     if(students.length>1){
       h+='<div style="margin-top:2.5rem;margin-bottom:1rem;border-top:2px solid var(--border2);padding-top:1.25rem">';
       h+='<span class="stu-name">'+esc(s.studentName||'Student')+'</span>';
+      if(s.instrument) h+='<div style="font-size:12px;color:var(--text4);margin-top:4px">'+esc(s.instrument)+'</div>';
       h+='</div>';
     }
 
@@ -2953,7 +3018,7 @@ function rEnrollment(){
       // ── New proposal section ──
       h+='<div class="card" style="margin-top:1rem">';
       h+='<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem">New Proposal \u2014 Pending Your Review</div>';
-      h+='<div style="margin-bottom:.75rem"><div style="font-size:18px;font-weight:700;color:var(--text);letter-spacing:-.01em;margin-bottom:.4rem">LESSON PROPOSAL FOR '+esc(s.studentName||firstName)+'</div><span class="chip c-warn" style="display:inline-block">Review and accept</span></div>';
+      h+='<div style="margin-bottom:.75rem"><div style="font-size:18px;font-weight:700;color:var(--text);letter-spacing:-.01em;margin-bottom:.4rem">LESSON PROPOSAL FOR '+esc(s.studentName||firstName)+(s.instrument?' \u2014 '+esc(s.instrument):'')+'</div><span class="chip c-warn" style="display:inline-block">Review and accept</span></div>';
       var _npRows=[
         ['Instrument',s.instrument],
         ['Teacher',s.teacher],
@@ -2996,7 +3061,7 @@ function rEnrollment(){
       var _chips=phaseLabel(ph, s.availabilitySubmitted, avOpen, s.tcAcceptedAt, s.needsManualInvoice);
       var statusChip='';
       if(ph==='Proposal'&&!isAccepted){
-        statusChip='<div style="margin-bottom:.75rem"><div style="font-size:18px;font-weight:700;color:var(--text);letter-spacing:-.01em;margin-bottom:.4rem">LESSON PROPOSAL FOR '+esc(s.studentName||' ')+'</div>'+_renderChips(_chips)+'</div>';
+        statusChip='<div style="margin-bottom:.75rem"><div style="font-size:18px;font-weight:700;color:var(--text);letter-spacing:-.01em;margin-bottom:.4rem">LESSON PROPOSAL FOR '+esc(s.studentName||' ')+(s.instrument?' \u2014 '+esc(s.instrument):'')+'</div>'+_renderChips(_chips)+'</div>';
       } else if(_chips.length){
         statusChip='<div style="margin-bottom:.75rem">'+_renderChips(_chips)+'</div>';
       }
@@ -3060,8 +3125,11 @@ function rEnrollment(){
           h+=_fmtPriceBox(s,false);
           h+='</div>';
         }
-        // 6. Self-release section (always last in this card)
-        h+=_rHomeSelfRelease(s);
+        // 6. Self-release section (always last in this card) -- once per child
+        if(!_srShownFor[s.studentName]){
+          h+=_rHomeSelfRelease(s);
+          _srShownFor[s.studentName]=true;
+        }
         h+='</div>';
 
         if(_exp&&isFullyEnrolled){
@@ -3106,7 +3174,13 @@ function rEnrollment(){
            '<button id="tc-submit-btn-'+esc(sid)+'" class="btn btn-p btn-full" onclick="doSubmitTC(&apos;'+esc(sid)+'&apos;)" '+(canSubmit?'':'disabled style="opacity:0.4"')+'>Accept Proposal</button>';
         h+='</div>';
       } else {
-        // Phase but no pricing yet
+        // Phase but no pricing yet -- a genuine (if rare) in-between state:
+        // the student has reached Proposal or later but no valid price has
+        // come through on this proposal (e.g. it's still being finalized).
+        // Previously this showed nothing but a bare policies section, with
+        // no way for the family to tell "this is expected, check back soon"
+        // apart from "something is broken."
+        h+='<div class="card"><p style="color:var(--text3)">We\u2019re still finalizing '+esc(firstName||'your child\u2019s')+' proposal details. Check back soon, or contact us at <a href="mailto:info@keylab.nyc">info@keylab.nyc</a> if you have questions.</p></div>';
         h+='<div class="card"><h2>Lesson Policies</h2>';
         h+=rPolicyCollapsible(false, isInHome, sid);
         h+='</div>';
@@ -3207,8 +3281,16 @@ function doGrantSelfRelease(studentId){
   fapi('saveSelfRelease',{studentId:studentId},function(e,r){
     _srBusy[studentId]=false;
     if(e||!r||!r.ok){showMsg((r&&r.error)||'Something went wrong. Please try again.','e');render();return;}
-    var s=students.filter(function(x){return x.studentId===studentId;})[0];
-    if(s) s.selfReleaseGrantedAt=r.grantedAt||new Date().toISOString();
+    var clicked=students.filter(function(x){return x.studentId===studentId;})[0];
+    var grantedAt=r.grantedAt||new Date().toISOString();
+    if(clicked){
+      // Patch every enrollment sharing this exact name, matching the
+      // backend's sync -- self-release is a fact about the child, not just
+      // the one enrollment whose button was clicked.
+      students.forEach(function(s){
+        if(s.studentName===clicked.studentName&&!s.selfReleaseGrantedAt) s.selfReleaseGrantedAt=grantedAt;
+      });
+    }
     showMsg('Permission submitted. Thank you!','s');
     render();
   });
@@ -3483,6 +3565,17 @@ function doSubmitTC(studentId){
   fapi('submitTandC', {studentId:studentId, acceptedName:name, policySnapshot:policySnapshot}, function(e,r){
     tc.busy=false;
     if(e||!r||!r.ok){showMsg((r&&r.error)||'Something went wrong. Please try again.','e');render();return;}
+    if(r.alreadyAccepted){
+      // Not an error -- most likely a duplicate click or a second open tab.
+      // Re-fetch the real, current state instead of trusting local patching
+      // (which may already be stale/out of sync in this scenario) and show
+      // a calm confirmation rather than the success toast used for a fresh
+      // acceptance.
+      TC[studentId]={checked:false,name:'',busy:false};
+      showMsg('This has already been accepted \u2014 you\u2019re all set!','s');
+      gotoEnrollment();
+      return;
+    }
     var ts=r.acceptedAt||'';
     for(var i=0;i<students.length;i++){
       if(students[i].studentId===studentId){

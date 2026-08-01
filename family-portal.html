@@ -289,6 +289,7 @@ var SC = {
   pendingChanges:false,
   isFirstSubmission:true,
   teachers:[],
+  teachersError:'',
   splitLesson:false,
   splitChild:{name:'',age:'',instrument:'',instrumentOther:'',notes:''},
   source:'',
@@ -339,6 +340,49 @@ function _famTeacherTeachesInstrument(teacher, instrument){
 function _famAvailableTeachers(instrument){
   if(!instrument) return SC.teachers;
   return SC.teachers.filter(function(t){ return _famTeacherTeachesInstrument(t,instrument); });
+}
+
+// Distinct days currently entered across the family's active (non-deleted)
+// time windows. Used only for the teacher-preference day filter below --
+// deliberately not read anywhere else, since nothing else in this form
+// needs to know "which days" as a set.
+function _famSelectedDays(){
+  var days=[];
+  SC.slots.forEach(function(slot,i){
+    if(SC.slotDeleted[i]) return;
+    if(slot.day&&days.indexOf(slot.day)===-1) days.push(slot.day);
+  });
+  return days;
+}
+
+// True if this teacher generally works at least one of the given days.
+// Two deliberate safety defaults, both to avoid a worse failure mode than
+// showing an imperfect match: (1) if the family hasn't entered any days
+// yet, don't filter at all -- there's nothing real to filter against. (2)
+// if this teacher's daysAvail was never configured by admin, don't filter
+// them out either -- their schedule being blank in the system isn't
+// evidence they're unavailable, just that it was never entered, and hiding
+// a real teacher because of a data-entry gap would be its own false
+// impression, just aimed at the teacher/admin instead of the family.
+function _famTeacherWorksAnyDay(teacher,days){
+  if(!days.length) return true;
+  var da={};
+  try{ da=JSON.parse(teacher.daysAvail||'{}'); }catch(e){}
+  if(!Object.keys(da).length) return true;
+  return days.some(function(d){ return !!da[d]; });
+}
+
+// Instrument AND day filtered -- used only for the teacher-preference
+// dropdown (rViewTchOpts()) and its save-time sanitization. The
+// instrument-only _famAvailableTeachers() above remains untouched and is
+// still what drives the separate "no teacher for this instrument at all,
+// join the waitlist?" logic everywhere that already uses it -- a day
+// mismatch is a different, much softer situation (someone teaches this
+// instrument, just maybe not on the family's specific days) and shouldn't
+// trigger that same permanent-sounding prompt.
+function _famAvailableTeachersForPref(instrument){
+  var days=_famSelectedDays();
+  return _famAvailableTeachers(instrument).filter(function(t){ return _famTeacherWorksAnyDay(t,days); });
 }
 
 // tc — keyed by studentId
@@ -1289,7 +1333,7 @@ function rApp(){
   var tabs='<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:2rem">'+
     '<div class="tabs" style="margin-bottom:0">'+
     '<div class="tab'+(TAB==='home'?' on':'')+'" onclick="TAB=&apos;home&apos;;render()">Home</div>'+
-    (avOpen?'<div class="tab'+(TAB==='scheduling'?' on':'')+'" onclick="gotoScheduling()">Scheduling</div>':'')+
+    (avOpen?'<div class="tab'+(TAB==='scheduling'?' on':'')+'" onclick="gotoScheduling()">Availability</div>':'')+
     '<div class="tab'+(TAB==='enrollment'?' on':'')+'" onclick="gotoEnrollment()">Enrollment</div>'+
     '</div>'+
     '<a href="#" style="font-size:12px;color:var(--text4);white-space:nowrap" onclick="event.preventDefault();doSignOut()">Sign Out</a>'+
@@ -1339,9 +1383,20 @@ function gotoScheduling(){
 }
 
 function loadSchedTeachers(){
+  SC.teachersError='';
   fapi('getFamilyTeachers', {}, function(e,r){
     if(!e&&r&&r.ok&&Array.isArray(r.teachers)){
       SC.teachers=r.teachers;
+      render();
+    } else {
+      // Previously silent -- SC.teachers stayed empty with no indication
+      // anything went wrong, which quietly disabled the teacher-preference
+      // dropdown AND the "no teacher for this instrument, join the
+      // waitlist?" prompt (both are gated on SC.teachers being non-empty).
+      // A family could submit for an instrument nobody teaches and never
+      // be asked about the waitlist, simply because this background load
+      // failed. Surfaced now so it's visible and retry-able.
+      SC.teachersError='We couldn\u2019t load teacher information.';
       render();
     }
   });
@@ -1510,6 +1565,110 @@ function _rHomeSelfRelease(s){
   return h;
 }
 
+// Compact per-child status summary -- header (name + instrument), phase
+// chips, key schedule/price details once a real slot exists, and a short
+// phase-appropriate status line. Shared across Home, Enrollment, and
+// Availability tabs so the same facts and the same wording show wherever a
+// family looks, rather than three separately-hand-written copies drifting
+// apart over time. Returns inner content only -- callers wrap this in their
+// own card container. Note: this is the first place Home (and Availability)
+// show an explicit Withdrawn message -- previously only Enrollment did, a
+// deliberate AC-approved divergence from an earlier session, now
+// superseded by AC's explicit "same details on all three pages" instruction.
+function _rChildStatusSummary(s){
+  var avOpen=isTruthy(publicCfg.availabilityOpen);
+  var locMap={studio:'at Keylab','in-home':'In-home',virtual:'Virtual'};
+  var lbl=phaseLabel(s.phase, s.availabilitySubmitted, avOpen, s.tcAcceptedAt, s.needsManualInvoice);
+  var ph=s.phase||'';
+  var firstName=s.studentName?(s.studentName.trim().split(' ')[0]):'';
+  var avSubmitted=isTruthy(s.availabilitySubmitted);
+  var avLocked=isTruthy(s.availabilityLocked);
+  var hasProp=ph==='Proposal'||ph==='Confirmed to Enroll'||ph==='Enrolled'||ph==='Enrollment Change';
+  var hasTrial=ph==='Trial Booked';
+  var isHolding=ph==='Holding';
+  var isWithdrawn=ph==='Withdrawn';
+  var isEnrolled=(ph==='Enrolled');
+  var isAccepted=!!s.tcAcceptedAt;
+  var showDashboard=(isEnrolled||ph==='Enrollment Change'||(hasProp&&isAccepted));
+
+  var h='<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:.6rem">';
+  h+='<div><span class="stu-name" style="font-size:18px">'+esc(s.studentName)+'</span>';
+  if(s.instrument) h+='<div style="font-size:12px;color:var(--text4);margin-top:5px">'+esc(s.instrument)+'</div>';
+  h+='</div>'+_renderChips(lbl)+'</div>';
+
+  if(showDashboard){
+    var details=[];
+    if(s.day) details.push(s.day);
+    if(s.time) details.push(s.time);
+    if(s.teacher) details.push(s.teacher);
+    if(s.lessonLocation) details.push(locMap[s.lessonLocation]||s.lessonLocation);
+    if(details.length) h+='<div style="font-size:13px;color:var(--text3);margin-bottom:.3rem">'+esc(details.join(' \u00b7 '))+'</div>';
+    if(s.startDate) h+='<div style="font-size:12px;color:var(--text3);margin-bottom:.3rem">Starts '+esc(_fmtFamilyDate(s.startDate))+'</div>';
+    if(s.monthlyPrice) h+=_fmtPriceBox(s,false);
+    if(ph==='Enrollment Change'){
+      h+='<div class="msg mi" style="margin-top:.5rem">'+esc(firstName)+'\u2019s current enrollment will remain active until you accept the new proposal. Once accepted, we\u2019ll process the new enrollment and get '+esc(firstName)+'\u2019s new lesson schedule on the books, and the current enrollment will be archived.</div>';
+    } else if(isEnrolled){
+      h+='<div class="msg ms">\u2713 '+esc(firstName)+' is enrolled! See below for details on how to manage their enrollment.</div>';
+    } else if(s.tcAcceptedAt||s.tcAcceptedName){
+      h+='<div class="msg ms">\u2713 Proposal and policies accepted'+(s.tcAcceptedName?' by '+esc(s.tcAcceptedName):'')+
+        (s.tcAcceptedAt?' on '+esc(_fmtFamilyTs(s.tcAcceptedAt))+' at '+esc(_fmtFamilyTime(s.tcAcceptedAt)):'')+'.</div>';
+    }
+  } else if(hasTrial){
+    var trialDateFmt=_fmtFamilyDate(s.trialDate);
+    var trialTeacherName=s.trialTeacher||'';
+    var trialDur=s.trialDuration||'';
+    var trialInstr=s.instrument||'';
+    if(s.lessonLocation==='in-home'){
+      var trialAddrParts=[];
+      if(familyAddress.street) trialAddrParts.push(familyAddress.street);
+      if(familyAddress.apt) trialAddrParts.push('Apt '+familyAddress.apt);
+      var trialAddr=trialAddrParts.join(', ');
+      h+='<div style="font-size:12px;color:var(--text4)">A trial in-home '+esc(trialDur)+' minute '+esc(trialInstr)+' lesson has been scheduled for '+esc(firstName)+' with '+esc(trialTeacherName)+' on '+esc(trialDateFmt)+' at '+esc(s.trialTime)+' at '+esc(trialAddr)+'. '+esc(trialTeacherName)+' will look forward to meeting you then!</div>';
+    } else if(s.lessonLocation==='virtual'){
+      h+='<div style="font-size:12px;color:var(--text4)">A trial virtual '+esc(trialDur)+' minute '+esc(trialInstr)+' lesson has been scheduled for '+esc(firstName)+' with '+esc(trialTeacherName)+' on '+esc(trialDateFmt)+' at '+esc(s.trialTime)+'. Please use the family portal to access '+esc(trialTeacherName)+'\u2019s zoom link. '+esc(trialTeacherName)+' is looking forward to meeting '+esc(firstName)+' then!</div>';
+    } else {
+      h+='<div style="font-size:12px;color:var(--text4)">A trial '+esc(trialDur)+' minute '+esc(trialInstr)+' lesson has been scheduled for '+esc(firstName)+' with '+esc(trialTeacherName)+' on '+esc(trialDateFmt)+' at '+esc(s.trialTime)+' '+esc(locMap.studio)+'. We\'ll look forward to seeing you then!</div>';
+    }
+  } else if(isHolding){
+    var holdDur=_effDur(s.durationBase,s.durationExtra)||s.durationBase||'';
+    var holdInstr=s.instrument||'';
+    if(s.lessonLocation==='in-home'){
+      h+='<div style="font-size:12px;color:var(--text4)">'+esc(firstName)+' has a hold placed for '+esc(holdDur)+' minute in-home '+esc(holdInstr)+' lessons with our teacher '+esc(s.teacher)+' for '+esc(s.day)+'s at '+esc(s.time)+'. Holds are not guaranteed time slots and can change. We\'ll be in touch with an update soon!</div>';
+    } else if(s.lessonLocation==='virtual'){
+      h+='<div style="font-size:12px;color:var(--text4)">'+esc(firstName)+' has a hold placed for '+esc(holdDur)+' minute virtual '+esc(holdInstr)+' lessons with our teacher '+esc(s.teacher)+' for '+esc(s.day)+'s at '+esc(s.time)+'. Holds are not guaranteed time slots and can change. We\'ll be in touch with an update soon!</div>';
+    } else {
+      h+='<div style="font-size:12px;color:var(--text4)">'+esc(firstName)+' has a hold placed for '+esc(holdDur)+' minute '+esc(holdInstr)+' lessons with our teacher '+esc(s.teacher)+' for '+esc(s.day)+'s at '+esc(s.time)+' at Keylab. Holds are not guaranteed time slots and can change. We\'ll be in touch with an update soon!</div>';
+    }
+  } else if(hasProp&&!isAccepted){
+    var propDur=_effDur(s.durationBase,s.durationExtra)||s.durationBase||'';
+    var propInstr=s.instrument||'';
+    var propStart=s.startDate?_fmtFamilyDate(s.startDate):'';
+    if(s.day&&s.time&&s.teacher&&propDur&&propInstr){
+      var propSentence='Please review and accept '+esc(firstName)+'\u2019s proposal for '+esc(propDur)+' minute ';
+      if(s.lessonLocation==='in-home') propSentence+='in-home ';
+      else if(s.lessonLocation==='virtual') propSentence+='virtual ';
+      propSentence+=esc(propInstr)+' lessons with '+esc(s.teacher)+' on '+esc(s.day)+'s at '+esc(s.time);
+      if(s.lessonLocation!=='in-home'&&s.lessonLocation!=='virtual') propSentence+=' at Keylab';
+      propSentence+=propStart?', to begin on '+esc(propStart)+'.':'.';
+      h+='<div style="font-size:13px;color:var(--text3);margin-bottom:.35rem">'+propSentence+'</div>';
+    }
+    if(s.monthlyPrice) h+=_fmtPriceBox(s,false);
+  } else if(isWithdrawn){
+    h+='<div style="font-size:12px;color:var(--text4)">'+esc(firstName)+' is not currently enrolled. Please contact us at <a href="mailto:info@keylab.nyc">info@keylab.nyc</a> if you have questions.</div>';
+  } else if(avLocked){
+    h+='<div style="font-size:12px;color:var(--text4)">We are working on a time slot for '+esc(firstName)+' and their availability is temporarily locked. Please contact <a href="mailto:info@keylab.nyc">info@keylab.nyc</a> for assistance.</div>';
+  } else if(avSubmitted){
+    h+='<div style="font-size:12px;color:var(--text4)">We\'ve received your availability. We\'ll be in touch as soon as possible with an update.</div>';
+  } else if(ph==='Leads'||ph==='Pending'){
+    if(avOpen){
+      h+='<div style="font-size:12px;color:var(--text4)">Please let us know when '+esc(firstName)+' is available for lessons.</div>';
+    } else {
+      h+='<div style="font-size:12px;color:var(--text4)">We\'re not accepting availability submissions right now. We\'ll be in touch soon.</div>';
+    }
+  }
+  return h;
+}
+
 function rHome(){
   var h='<h1>Hi there!</h1>'+
     '<p>Please use this page to submit your children\'s availability for the school year, or to check your child\'s enrollment status if you have already submitted your availability. We\'ll be in touch as soon as possible with an update.</p>';
@@ -1526,7 +1685,6 @@ function rHome(){
     return h;
   }
   var avOpen=isTruthy(publicCfg.availabilityOpen);
-  var locMap={studio:'at Keylab','in-home':'In-home',virtual:'Virtual'};
   var hadDashboard=false;
   // Self-release is a fact about the child, not about one enrollment -- a
   // student with more than one enrollment (e.g. two instruments) should
@@ -1534,7 +1692,6 @@ function rHome(){
   var _srShownFor={};
   var anyEnrolled=false;
   students.forEach(function(s){
-    var lbl=phaseLabel(s.phase, s.availabilitySubmitted, avOpen, s.tcAcceptedAt, s.needsManualInvoice);
     var ph=s.phase||'';
     var firstName=s.studentName?(s.studentName.trim().split(' ')[0]):'';
     var avSubmitted=isTruthy(s.availabilitySubmitted);
@@ -1550,26 +1707,13 @@ function rHome(){
     if(showDashboard){
       // ── Dashboard: accepted or enrolled ──
       h+='<div class="card">';
-      h+='<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:.75rem">';
-      h+='<div><span class="stu-name" style="font-size:18px">'+esc(s.studentName)+'</span>';
-      if(s.instrument) h+='<div style="font-size:12px;color:var(--text4);margin-top:5px">'+esc(s.instrument)+'</div>';
-      h+='</div>'+_renderChips(lbl)+'</div>';
-      var details=[];
-      if(s.day) details.push(s.day);
-      if(s.time) details.push(s.time);
-      if(s.teacher) details.push(s.teacher);
-      if(s.lessonLocation) details.push(locMap[s.lessonLocation]||s.lessonLocation);
-      if(details.length) h+='<div style="font-size:13px;color:var(--text3);margin-bottom:.3rem">'+esc(details.join(' \u00b7 '))+'</div>';
-      if(s.startDate) h+='<div style="font-size:12px;color:var(--text3);margin-bottom:.3rem">Starts '+esc(_fmtFamilyDate(s.startDate))+'</div>';
-      if(s.monthlyPrice) h+=_fmtPriceBox(s,false);
+      h+=_rChildStatusSummary(s);
       if(ph==='Enrollment Change'){
-        h+='<div class="msg mi" style="margin-top:.5rem">'+esc(firstName)+'\u2019s current enrollment will remain active until you accept the new proposal. Once accepted, we\u2019ll process the new enrollment and get '+esc(firstName)+'\u2019s new lesson schedule on the books, and the current enrollment will be archived.</div>';
         h+=_rHomeActionButtons('Review New Proposal');
       } else if(isEnrolled){
-        h+='<div class="msg ms">\u2713 '+esc(firstName)+' is enrolled! See below for details on how to manage their enrollment.</div>';
         h+=_rHomeActionButtons('Review Enrollment Details');
       } else if(s.tcAcceptedAt||s.tcAcceptedName){
-        // What Happens Next — elevated card, first thing shown on Home for accepted-but-not-enrolled students.
+        // What Happens Next — elevated card, shown on Home for accepted-but-not-enrolled students.
         var _needsInvoice=isTruthy(s.needsManualInvoice);
         var _isReturningTenure=!_isNewFamily(s.enrollmentType);
         h+='<div style="margin-bottom:.75rem;background:var(--bbg);border:1px solid var(--blue);border-radius:var(--rl);padding:1rem">'+
@@ -1579,8 +1723,6 @@ function rHome(){
               '<div style="margin-top:.75rem"><a href="'+publicCfg.schedulingBillingUrl+'" target="_blank" class="btn btn-p btn-sm">Pay Invoice</a></div>')
             :('<p style="font-size:14px;color:var(--bt);margin:0">I\u2019ll schedule '+esc(firstName)+'&rsquo;s lessons for the school year and process their enrollment on the admin side using the payment method on file. Your card will be charged for the first payment once enrollment is processed, and automatic flat rate monthly payments will be processed on the 1st of each month from the 2nd month of '+esc(firstName)+'&rsquo;s enrollment. Check your email for confirmation and details and let us know if you need any help!</p>'))+
           '</div>';
-        h+='<div class="msg ms">\u2713 Proposal and policies accepted'+(s.tcAcceptedName?' by '+esc(s.tcAcceptedName):'')+
-          (s.tcAcceptedAt?' on '+esc(_fmtFamilyTs(s.tcAcceptedAt))+' at '+esc(_fmtFamilyTime(s.tcAcceptedAt)):'')+'.</div>';
         h+=_rHomeActionButtons('Review Proposal and Policies');
       } else {
         h+=_rHomeActionButtons('Review Proposal and Policies');
@@ -1595,63 +1737,7 @@ function rHome(){
     } else {
       // ── Non-dashboard states ──
       h+='<div class="card-stu">';
-      h+='<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:.6rem">';
-      h+='<div><span class="stu-name" style="font-size:18px">'+esc(s.studentName)+'</span>';
-      if(s.instrument) h+='<div style="font-size:12px;color:var(--text4);margin-top:5px">'+esc(s.instrument)+'</div>';
-      h+='</div>';
-      h+=_renderChips(lbl);
-      h+='</div>';
-      if(hasTrial){
-        var trialDateFmt=_fmtFamilyDate(s.trialDate);
-        var trialTeacherName=s.trialTeacher||'';
-        var trialDur=s.trialDuration||'';
-        var trialInstr=s.instrument||'';
-        if(s.lessonLocation==='in-home'){
-          var trialAddrParts=[];
-          if(familyAddress.street) trialAddrParts.push(familyAddress.street);
-          if(familyAddress.apt) trialAddrParts.push('Apt '+familyAddress.apt);
-          var trialAddr=trialAddrParts.join(', ');
-          h+='<div style="font-size:12px;color:var(--text4)">A trial in-home '+esc(trialDur)+' minute '+esc(trialInstr)+' lesson has been scheduled for '+esc(firstName)+' with '+esc(trialTeacherName)+' on '+esc(trialDateFmt)+' at '+esc(s.trialTime)+' at '+esc(trialAddr)+'. '+esc(trialTeacherName)+' will look forward to meeting you then!</div>';
-        } else if(s.lessonLocation==='virtual'){
-          h+='<div style="font-size:12px;color:var(--text4)">A trial virtual '+esc(trialDur)+' minute '+esc(trialInstr)+' lesson has been scheduled for '+esc(firstName)+' with '+esc(trialTeacherName)+' on '+esc(trialDateFmt)+' at '+esc(s.trialTime)+'. Please use the family portal to access '+esc(trialTeacherName)+'\u2019s zoom link. '+esc(trialTeacherName)+' is looking forward to meeting '+esc(firstName)+' then!</div>';
-        } else {
-          h+='<div style="font-size:12px;color:var(--text4)">A trial '+esc(trialDur)+' minute '+esc(trialInstr)+' lesson has been scheduled for '+esc(firstName)+' with '+esc(trialTeacherName)+' on '+esc(trialDateFmt)+' at '+esc(s.trialTime)+' '+esc(locMap.studio)+'. We\'ll look forward to seeing you then!</div>';
-        }
-      } else if(isHolding){
-        var holdDur=_effDur(s.durationBase,s.durationExtra)||s.durationBase||'';
-        var holdInstr=s.instrument||'';
-        if(s.lessonLocation==='in-home'){
-          h+='<div style="font-size:12px;color:var(--text4)">'+esc(firstName)+' has a hold placed for '+esc(holdDur)+' minute in-home '+esc(holdInstr)+' lessons with our teacher '+esc(s.teacher)+' for '+esc(s.day)+'s at '+esc(s.time)+'. Holds are not guaranteed time slots and can change. We\'ll be in touch with an update soon!</div>';
-        } else if(s.lessonLocation==='virtual'){
-          h+='<div style="font-size:12px;color:var(--text4)">'+esc(firstName)+' has a hold placed for '+esc(holdDur)+' minute virtual '+esc(holdInstr)+' lessons with our teacher '+esc(s.teacher)+' for '+esc(s.day)+'s at '+esc(s.time)+'. Holds are not guaranteed time slots and can change. We\'ll be in touch with an update soon!</div>';
-        } else {
-          h+='<div style="font-size:12px;color:var(--text4)">'+esc(firstName)+' has a hold placed for '+esc(holdDur)+' minute '+esc(holdInstr)+' lessons with our teacher '+esc(s.teacher)+' for '+esc(s.day)+'s at '+esc(s.time)+' at Keylab. Holds are not guaranteed time slots and can change. We\'ll be in touch with an update soon!</div>';
-        }
-      } else if(hasProp&&!isAccepted){
-        var propDur=_effDur(s.durationBase,s.durationExtra)||s.durationBase||'';
-        var propInstr=s.instrument||'';
-        var propStart=s.startDate?_fmtFamilyDate(s.startDate):'';
-        if(s.day&&s.time&&s.teacher&&propDur&&propInstr){
-          var propSentence='Please review and accept '+esc(firstName)+'\u2019s proposal for '+esc(propDur)+' minute ';
-          if(s.lessonLocation==='in-home') propSentence+='in-home ';
-          else if(s.lessonLocation==='virtual') propSentence+='virtual ';
-          propSentence+=esc(propInstr)+' lessons with '+esc(s.teacher)+' on '+esc(s.day)+'s at '+esc(s.time);
-          if(s.lessonLocation!=='in-home'&&s.lessonLocation!=='virtual') propSentence+=' at Keylab';
-          propSentence+=propStart?', to begin on '+esc(propStart)+'.':'.';
-          h+='<div style="font-size:13px;color:var(--text3);margin-bottom:.35rem">'+propSentence+'</div>';
-        }
-        if(s.monthlyPrice) h+=_fmtPriceBox(s,false);
-      } else if(avLocked){
-        h+='<div style="font-size:12px;color:var(--text4)">We are working on a time slot for '+esc(firstName)+' and their availability is temporarily locked. Please contact <a href="mailto:info@keylab.nyc">info@keylab.nyc</a> for assistance.</div>';
-      } else if(!isWithdrawn&&avSubmitted){
-        h+='<div style="font-size:12px;color:var(--text4)">We\'ve received your availability. We\'ll be in touch as soon as possible with an update.</div>';
-      } else if(!isWithdrawn&&!avSubmitted&&(ph==='Leads'||ph==='Pending')){
-        if(avOpen){
-          h+='<div style="font-size:12px;color:var(--text4)">Please let us know when '+esc(firstName)+' is available for lessons.</div>';
-        } else {
-          h+='<div style="font-size:12px;color:var(--text4)">We\'re not accepting availability submissions right now. We\'ll be in touch soon.</div>';
-        }
-      }
+      h+=_rChildStatusSummary(s);
       var ctas=[];
       if((ph==='Proposal'||ph==='Confirmed to Enroll')&&!isAccepted){
         ctas.push('<button class="btn btn-p btn-sm" onclick="gotoEnrollment()">Review and Accept Proposal</button>');
@@ -1830,7 +1916,7 @@ function _rNewFamilyAvailIntro(){
 
 function rScheduling(){
   if(!isTruthy(publicCfg.availabilityOpen)){
-    return '<p style="color:var(--text3)">Scheduling is not currently open. We\'ll let you know as soon as it is!</p>';
+    return '<p style="color:var(--text3)">Availability submission is not currently open. We\'ll let you know as soon as it is!</p>';
   }
   if(_familyLoading){
     return '<div style="text-align:center;padding:3rem"><span class="spin" style="font-size:20px">\u21bb</span></div>';
@@ -1857,16 +1943,22 @@ function rScheduling(){
     }
   }
 
+  // Compact status summary — same content/wording as Home and Enrollment —
+  // shown above everything else on this tab so a family never has to leave
+  // Availability to remember a child's overall status.
+  var _scStatusCard=_scStu?('<div class="card" style="margin-bottom:1rem">'+_rChildStatusSummary(_scStu)+'</div>'):'';
+
   if(_scStu&&(_scStu.availabilityLocked==='TRUE'||_scStu.availabilityLocked===true)){
     var _lockFirstName=(_scStu.studentName||'This student').split(' ')[0];
     var _lockMsg='<p style="color:var(--text3)">We are working on a time slot for '+esc(_lockFirstName)+' and their availability is temporarily locked. Please contact <a href="mailto:info@keylab.nyc">info@keylab.nyc</a> for assistance.</p>';
     if(SC.loaded&&!SC.isFirstSubmission){
-      return rLockedAvSummary()+_lockMsg;
+      return _scStatusCard+rLockedAvSummary()+_lockMsg;
     }
-    return _lockMsg;
+    return _scStatusCard+_lockMsg;
   }
 
   var h='';
+  h+=_scStatusCard;
   h+='<h1>Your Availability</h1>';
   h+='<p>Tell us when your family is available for lessons this school year. The more you share, the better we can find a time that works well for everyone.</p>';
 
@@ -1949,7 +2041,7 @@ function rViewDurPills(){
 }
 function rViewTchOpts(){
   var o='<option value=""'+(SC.teacherPref===''?' selected':'')+'>No preference</option>';
-  _famAvailableTeachers(SC.instrument).forEach(function(t){
+  _famAvailableTeachersForPref(SC.instrument).forEach(function(t){
     o+='<option value="'+esc(t.teacherName)+'"'+(SC.teacherPref===t.teacherName?' selected':'')+'>'+esc(t.teacherName)+'</option>';
   });
   return o;
@@ -2162,6 +2254,7 @@ function rSchedViewMode(){
 
     h+='<div style="padding:.35rem 0">';
     h+='<div style="'+monoFont+'">Teacher preference</div>';
+    if(SC.teachersError) h+='<div class="aw" style="margin:.3rem 0">'+esc(SC.teachersError)+' <a href="#" onclick="event.preventDefault();loadSchedTeachers()" style="color:var(--bt)">Try again</a></div>';
     h+='<select onchange="SC.teacherPref=this.value;SC.pendingChanges=true;render()" style="margin-top:.3rem;margin-bottom:0">'+rViewTchOpts()+'</select>';
     h+='</div>';
 
@@ -2440,33 +2533,8 @@ function rSchedForm(forReg){
   }
   h+='</div>';
 
-  // Step 3: Teacher preference — filtered to teachers who actually teach the
-  // selected instrument. If nobody currently teaches it, this becomes a
-  // waitlist prompt instead of a dropdown (see doSaveFamilyAvailability for
-  // how the answer is persisted/surfaced to admin).
-  var _availTchs=_famAvailableTeachers(SC.instrument);
-  var _noTeacherForInstrument=!!SC.instrument&&SC.teachers.length>0&&_availTchs.length===0;
-  h+='<div class="card">';
-  if(_noTeacherForInstrument){
-    h+='<h2 style="margin-bottom:.15rem">We don\u2019t currently have a teacher for '+esc(SC.instrument)+'</h2>';
-    h+='<p style="font-size:13px;color:var(--text3);margin-bottom:.75rem">Would you like to be placed on a waitlist for '+esc(SC.instrument)+' lessons? We\u2019ll reach out as soon as a teacher becomes available.</p>';
-    h+='<div class="dur-row">'+
-      '<button class="db'+(SC.waitlist===true?' on':'')+'" onclick="SC.waitlist=true;render()">Yes, add me to the waitlist</button>'+
-      '<button class="db'+(SC.waitlist===false?' on':'')+'" onclick="SC.waitlist=false;render()">No thanks</button>'+
-      '</div>';
-    if(SC.waitlist===null){
-      h+='<div class="aw" style="margin-top:.5rem">Please let us know if you\u2019d like to be added to the waitlist.</div>';
-    } else if(SC.waitlist===false){
-      h+='<div class="note" style="margin-top:.65rem">No problem — we\u2019ll still process the rest of your submission, and we\u2019ll follow up with you directly about '+esc(SC.instrument)+' lessons.</div>';
-    }
-  } else {
-    h+='<h2 style="margin-bottom:.15rem">Do you have a teacher preference?</h2>';
-    h+='<p style="font-size:13px;color:var(--text3);margin-bottom:.75rem">If you have a teacher preference, let us know. Leave this blank if you do not have a preference. <a href="https://keylab.nyc/our-teachers" target="_blank" style="color:var(--bt)">View our teachers.</a></p>';
-    h+='<select onchange="SC.teacherPref=this.value;render()" style="margin-bottom:0">'+rViewTchOpts()+'</select>';
-  }
-  h+='</div>';
-
-  // Step 4: Available times
+  // Step 3: Available times (moved ahead of Teacher preference so a real
+  // set of days exists before that section tries to filter teachers by it)
   h+='<div class="card">';
   h+='<h2 style="margin-bottom:.15rem">When are you available?</h2>';
   if(!isEdit){
@@ -2522,6 +2590,42 @@ function rSchedForm(forReg){
   }
   h+='<div class="field"><label>Anything else we should know? (optional)</label>'+
     '<textarea placeholder="Add anything that would help us understand your child and your scheduling needs, including your child\'s learning style, taste in music, their previous experience, or details about your scheduling preferences" oninput="SC.notes=this.value">'+esc(SC.notes)+'</textarea></div>';
+  h+='</div>';
+
+  // Step 4: Teacher preference — filtered to teachers who actually teach the
+  // selected instrument AND are generally available on at least one of the
+  // days just entered above. If nobody currently teaches the instrument at
+  // all, this becomes a waitlist prompt instead of a dropdown (that check
+  // stays instrument-only, see _famAvailableTeachers -- a day mismatch is a
+  // softer, different situation and gets its own note below instead).
+  var _availTchs=_famAvailableTeachers(SC.instrument);
+  var _noTeacherForInstrument=!!SC.instrument&&SC.teachers.length>0&&_availTchs.length===0;
+  var _availTchsForPref=_famAvailableTeachersForPref(SC.instrument);
+  var _noTeacherForDays=!_noTeacherForInstrument&&_availTchs.length>0&&_famSelectedDays().length>0&&_availTchsForPref.length===0;
+  h+='<div class="card">';
+  if(SC.teachersError){
+    h+='<div class="aw" style="margin-bottom:.5rem">'+esc(SC.teachersError)+' Teacher-preference options and waitlist prompts may not be accurate right now. <a href="#" onclick="event.preventDefault();loadSchedTeachers()" style="color:var(--bt)">Try again</a></div>';
+  }
+  if(_noTeacherForInstrument){
+    h+='<h2 style="margin-bottom:.15rem">We don\u2019t currently have a teacher for '+esc(SC.instrument)+'</h2>';
+    h+='<p style="font-size:13px;color:var(--text3);margin-bottom:.75rem">Would you like to be placed on a waitlist for '+esc(SC.instrument)+' lessons? We\u2019ll reach out as soon as a teacher becomes available.</p>';
+    h+='<div class="dur-row">'+
+      '<button class="db'+(SC.waitlist===true?' on':'')+'" onclick="SC.waitlist=true;render()">Yes, add me to the waitlist</button>'+
+      '<button class="db'+(SC.waitlist===false?' on':'')+'" onclick="SC.waitlist=false;render()">No thanks</button>'+
+      '</div>';
+    if(SC.waitlist===null){
+      h+='<div class="aw" style="margin-top:.5rem">Please let us know if you\u2019d like to be added to the waitlist.</div>';
+    } else if(SC.waitlist===false){
+      h+='<div class="note" style="margin-top:.65rem">No problem — we\u2019ll still process the rest of your submission, and we\u2019ll follow up with you directly about '+esc(SC.instrument)+' lessons.</div>';
+    }
+  } else {
+    h+='<h2 style="margin-bottom:.15rem">Do you have a teacher preference?</h2>';
+    h+='<p style="font-size:13px;color:var(--text3);margin-bottom:.75rem">If you have a teacher preference, let us know. Leave this blank if you do not have a preference. <a href="https://keylab.nyc/our-teachers" target="_blank" style="color:var(--bt)">View our teachers.</a></p>';
+    if(_noTeacherForDays){
+      h+='<div class="note" style="margin-bottom:.65rem">None of our current '+esc(SC.instrument)+' teachers generally work on the day(s) you selected, so we can\u2019t show a specific preference here \u2014 that\u2019s okay, go ahead and submit and we\u2019ll do our best to find a fit.</div>';
+    }
+    h+='<select onchange="SC.teacherPref=this.value;render()" style="margin-bottom:0">'+rViewTchOpts()+'</select>';
+  }
   h+='</div>';
 
   // Split lesson section (below time windows)
@@ -2733,13 +2837,18 @@ function _saveSlotsAndDetails(cb,isNewRegistration){
   var _saveAvailTchs=_famAvailableTeachers(SC.instrument);
   var _saveNoTeacher=!!SC.instrument&&SC.teachers.length>0&&_saveAvailTchs.length===0;
   // If SC.teacherPref no longer matches any teacher who teaches the
-  // currently-selected instrument (e.g. the family picked a teacher, then
-  // changed instrument), the dropdown already visually shows "No
+  // currently-selected instrument AND is available on the currently-selected
+  // days (e.g. the family picked a teacher, then changed instrument or
+  // changed their days), the dropdown already visually shows "No
   // preference" since no <option> matches — but the raw SC.teacherPref
   // variable itself is untouched. Sanitize it here so what actually gets
   // saved matches what the family sees, instead of silently submitting a
-  // mismatched pairing they never had a chance to notice or correct.
-  var _saveTeacherPref=(SC.teacherPref&&_saveAvailTchs.some(function(t){return t.teacherName===SC.teacherPref;}))?SC.teacherPref:'';
+  // mismatched pairing they never had a chance to notice or correct. Uses
+  // the day-aware list, not _saveAvailTchs above -- that one stays
+  // instrument-only on purpose, since it also drives the separate
+  // no-teacher-for-instrument/waitlist flag below.
+  var _saveAvailTchsForPref=_famAvailableTeachersForPref(SC.instrument);
+  var _saveTeacherPref=(SC.teacherPref&&_saveAvailTchsForPref.some(function(t){return t.teacherName===SC.teacherPref;}))?SC.teacherPref:'';
   fapi('saveFamilyAvailability', {
     studentId:SC.studentId, duration:SC.durations.join(','), location:SC.locations.join(','),
     street:SC.street, apt:SC.apt, city:SC.city, state:SC.state, zip:SC.zip,
@@ -2986,13 +3095,10 @@ function rEnrollment(){
     var displayPrice=parseFloat(s.monthlyPrice)||0;
     var displayPriceStr=displayPrice>0?'$'+displayPrice.toFixed(0):'--';
 
-    // ── Per-student section header ──
-    if(students.length>1){
-      h+='<div style="margin-top:2.5rem;margin-bottom:1rem;border-top:2px solid var(--border2);padding-top:1.25rem">';
-      h+='<span class="stu-name">'+esc(s.studentName||'Student')+'</span>';
-      if(s.instrument) h+='<div style="font-size:12px;color:var(--text4);margin-top:4px">'+esc(s.instrument)+'</div>';
-      h+='</div>';
-    }
+    // ── Compact status summary — same content/wording as Home and Availability ──
+    h+='<div class="card"'+(students.length>1?' style="margin-top:2.5rem"':'')+'>';
+    h+=_rChildStatusSummary(s);
+    h+='</div>';
 
     if(ph==='Enrollment Change'){
       // ── Enrollment Change: two-section layout ──

@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Keylab Teacher Portal</title>
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#ABABAB;--bg2:#B8B8B8;--bg3:#C8C8C8;--bg4:#D4D4D4;--bg5:#DEDEDE;
+  --border:#999;--border2:#888;--border3:#666;
+  --text:#0A0A0A;--text2:#181818;--text3:#2E2E2E;--text4:#525252;--text5:#757575;
+  --green:#1A6B3A;--gbg:#D4EDE0;--gt:#0B3D20;
+  --amber:#7A5000;--abg:#FAEABB;--at:#4A2E00;
+  --red:#962020;--rbg:#FAD4D4;--rt:#560A0A;
+  --blue:#1C4A82;--bbg:#D0E2F8;--bt:#0C2A52;
+  --acc:#1E3A6E;--r:5px;--rl:8px
+}
+body{background:var(--bg);color:var(--text);font-family:"Open Sans",sans-serif;font-size:14px;line-height:1.6;min-height:100vh;-webkit-font-smoothing:antialiased}
+.wrap{max-width:420px;margin:0 auto;padding:2rem 1.25rem 4rem}
+.login-w{margin:4rem auto 0;text-align:center}
+.login-brand{font-family:"DM Mono",monospace;font-size:15px;letter-spacing:.1em;color:var(--acc);margin-bottom:.3rem;font-weight:500}
+.login-sub{font-size:12px;color:var(--text4);margin-bottom:1.75rem}
+h1{font-size:20px;font-weight:400;margin-bottom:.4rem;color:var(--text)}
+h2{font-size:10px;font-weight:600;color:var(--acc);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.75rem;font-family:"DM Mono",monospace}
+p{color:var(--text3);margin-bottom:.75rem;line-height:1.65;font-size:13px}
+a{color:var(--bt);text-decoration:none}
+a:hover{text-decoration:underline}
+.card{background:rgba(255,255,255,.45);border:1px solid var(--border);border-radius:var(--rl);padding:1.25rem;margin-bottom:1rem;text-align:left}
+.msg{padding:10px 14px;border-radius:var(--r);font-size:13px;margin-bottom:1rem;border:1px solid;line-height:1.5}
+.ms{background:var(--gbg);color:var(--gt);border-color:var(--green)}
+.me{background:var(--rbg);color:var(--rt);border-color:var(--red)}
+input{background:rgba(255,255,255,.45);border:1px solid var(--border2);color:var(--text);border-radius:var(--r);padding:9px 10px;font-family:"Open Sans",sans-serif;font-size:14px;width:100%;outline:none;margin-top:4px;-webkit-appearance:none}
+input:focus{border-color:var(--acc);background:rgba(255,255,255,.65)}
+label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:.08em;display:block;font-family:"DM Mono",monospace}
+.field{margin-bottom:1rem}
+.req{color:var(--rt);margin-left:2px}
+.btn{padding:10px 16px;border-radius:var(--r);font-size:13px;cursor:pointer;border:1px solid transparent;font-family:"Open Sans",sans-serif;transition:background .1s,opacity .1s;display:inline-flex;align-items:center;justify-content:center;gap:6px;font-weight:600;line-height:1;letter-spacing:.01em;width:100%}
+.btn-p{background:#1a4fc4;color:#fff;border-color:#1a4fc4}.btn-p:hover{background:#1440a8;border-color:#1440a8}
+.btn-s{background:rgba(0,0,0,.12);color:var(--text2);border-color:var(--border2)}.btn-s:hover{background:rgba(0,0,0,.2);color:var(--text)}
+.btn:disabled{opacity:.35;cursor:not-allowed}
+.spin{display:inline-block;animation:spin .9s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.remember-row{display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer;margin-bottom:.8rem}
+.remember-row input{width:14px;height:14px;-webkit-appearance:checkbox;appearance:auto;margin:0;flex:0 0 auto}
+.linkline{font-size:13px;color:var(--text3);text-align:center;margin-top:.5rem}
+.tabbar{display:flex;gap:6px;margin-bottom:1rem;padding:5px;background:rgba(255,255,255,.35);border:1px solid var(--border);border-radius:10px}
+.tab{flex:1;text-align:center;padding:9px 8px;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--text4);background:transparent;cursor:pointer;border-radius:7px;font-family:"DM Mono",monospace;font-weight:600;border:1px solid transparent;transition:all .15s}
+.tab.on{color:#fff;background:var(--acc);border-color:var(--acc)}
+.thread-hd{font-size:10px;font-weight:600;color:var(--acc);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.75rem;font-family:"DM Mono",monospace}
+.empty-state{text-align:center;color:var(--text4);padding:2rem 1rem;font-size:13px}
+.msg-list{display:flex;flex-direction:column;gap:8px;margin-bottom:1rem;max-height:50vh;overflow-y:auto}
+.bubble-row{display:flex}
+.bubble-row.mine{justify-content:flex-end}
+.bubble{max-width:80%;background:rgba(255,255,255,.55);border:1px solid var(--border);border-radius:var(--rl);padding:.6rem .8rem}
+.bubble.mine{background:#1a4fc4;border-color:#1a4fc4;color:#fff}
+.bubble-sender{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--acc);font-family:"DM Mono",monospace;margin-bottom:.2rem}
+.bubble-text{font-size:13px;line-height:1.5;color:inherit}
+.bubble.mine .bubble-text{color:#fff}
+.bubble-time{font-size:10px;color:var(--text5);margin-top:.3rem}
+.bubble.mine .bubble-time{color:rgba(255,255,255,.7)}
+.composer{display:flex;gap:8px;align-items:flex-end}
+.composer textarea{background:rgba(255,255,255,.45);border:1px solid var(--border2);color:var(--text);border-radius:var(--r);padding:9px 10px;font-family:"Open Sans",sans-serif;font-size:14px;width:100%;outline:none;resize:none;min-height:44px;max-height:120px}
+.composer textarea:focus{border-color:var(--acc);background:rgba(255,255,255,.65)}
+.composer .btn{width:auto;flex:0 0 auto}
+.thread-list{display:flex;flex-direction:column;gap:6px}
+.thread-row{display:flex;justify-content:space-between;align-items:center;gap:8px;background:rgba(255,255,255,.45);border:1px solid var(--border);border-radius:var(--r);padding:.7rem .85rem;cursor:pointer;transition:background .12s}
+.thread-row:hover{background:rgba(255,255,255,.65)}
+.thread-row-main{min-width:0}
+.thread-row-name{font-size:13px;font-weight:600;color:var(--text)}
+.thread-row-preview{font-size:12px;color:var(--text4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.unread-badge{background:#1a4fc4;color:#fff;font-size:11px;font-weight:700;border-radius:10px;padding:1px 7px;flex:0 0 auto}
+.recipient-row{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:.6rem;font-size:12px;color:var(--text3)}
+.recipient-row label{display:flex;align-items:center;gap:5px;cursor:pointer;text-transform:none;letter-spacing:0;font-family:"Open Sans",sans-serif}
+.recipient-row input{width:14px;height:14px;-webkit-appearance:checkbox;appearance:auto;margin:0}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<script>
+'use strict';
+// ============================================================
+// STATE
+// ============================================================
+// PAGE values: boot | login | needsSetup | forgotpw | setpw | home
+var PAGE = 'boot';
+var TOKEN = '', TEACHER_ID = '', TEACHER_NAME = '';
+var HOME_TAB = 'family'; // 'family' | 'staff'
+var MSG = {m:'', t:''};
+var busy = false;
+var RESET_TOKEN = '';
+
+// Staff Messages state. STAFF_VIEW: 'list' (Admin, always pinned, + any
+// staff_staff threads) | 'picker' (start a new staff_staff conversation) |
+// 'thread' (one open conversation — admin or another staff member).
+var STAFF_VIEW = 'list';
+var STAFF_THREADS = {loading:false, list:[]};
+var STAFF_PICKER = {loading:false, query:'', all:[]};
+var ACTIVE_STAFF_THREAD = null; // {contactType:'admin'|'staff', otherId, otherName, messages, draft, sending, loading}
+
+// Family Messages state. FAMILY_VIEW: 'list' (existing conversations) |
+// 'picker' (start a new one — any family, confirmed 18 Aug §7 item 4) |
+// 'thread' (one open conversation).
+var FAMILY_VIEW = 'list';
+var FAMILY_THREADS = {loading:false, list:[]};
+var FAMILY_PICKER = {loading:false, query:'', all:[]};
+var ACTIVE_THREAD = null; // {familyId, parent1Name, parent2Name, messages, draft, sending, loading, notifyP1, notifyP2}
+
+// Login form state — single-screen email+password (not the family portal's
+// two-step flow) — confirmed with AC, see SPEC_MESSAGING_V1.md §4.
+var LF = {email:'', password:'', remember:true};
+
+// forgot password / reset password
+var FP = {email:'', done:false, success:false, error:'', busy:false};
+// set/reset password (reached via emailed ?resetToken= link)
+var SPW = {checking:false, invalid:false, resent:false, resending:false, email:'', pw1:'', pw2:'', busy:false, success:false, error:''};
+
+// ============================================================
+// API
+// ============================================================
+var GAS_URL = 'https://script.google.com/a/macros/keylab.nyc/s/AKfycbzY4K1XCbYZlj4fXksfwEZ3Kxbeolr9abRuifT-_TY4hgfPZP9gbL1dSCn1_zeFRsvl3g/exec';
+function api(payload, cb){
+  fetch(GAS_URL, {
+    method:'POST',
+    headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body: JSON.stringify(payload)
+  })
+  .then(function(res){ return res.json(); })
+  .then(function(r){ cb(null, r); })
+  .catch(function(e){ cb(e); });
+}
+function tapi(action, data, cb){
+  api({action:action, data:Object.assign({teacherToken:TOKEN}, data)}, cb);
+}
+
+// ============================================================
+// HELPERS
+// ============================================================
+function esc(s){
+  return String(s||'')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function showMsg(m, t){
+  MSG={m:m, t:t||'s'}; render();
+  setTimeout(function(){ MSG={m:'',t:''}; render(); }, 7000);
+}
+
+// "Remember me" persistent session — small localStorage wrapper, safe to
+// call even where storage is unavailable/blocked. Mirrors the family
+// portal's _klSaveSession()/_klReadSession()/_klClearSession() pattern.
+function _ktSaveSession(token, teacherId, teacherName){
+  try{ localStorage.setItem('kl_teacher_session', JSON.stringify({token:token, teacherId:teacherId, teacherName:teacherName||''})); }catch(e){}
+}
+function _ktReadSession(){
+  try{
+    var raw=localStorage.getItem('kl_teacher_session');
+    if(!raw) return null;
+    return JSON.parse(raw);
+  }catch(e){ return null; }
+}
+function _ktClearSession(){
+  try{ localStorage.removeItem('kl_teacher_session'); }catch(e){}
+}
+
+// ============================================================
+// RENDER ROOT
+// ============================================================
+function render(){
+  var el=document.getElementById('app');
+  if(!el) return;
+  var h='';
+  if(MSG.m) h+='<div class="msg m'+esc(MSG.t)+'">'+esc(MSG.m)+'</div>';
+  if(PAGE==='boot')          h+=rBoot();
+  else if(PAGE==='login')    h+=rLogin();
+  else if(PAGE==='forgotpw') h+=rForgotPassword();
+  else if(PAGE==='setpw')    h+=rSetPassword();
+  else                       h+=rHome();
+  el.innerHTML=h;
+}
+
+function loginHeader(){
+  return '<div class="login-brand">KEYLAB</div><div class="login-sub">Teacher Portal</div>';
+}
+
+// ============================================================
+// BOOT
+// ============================================================
+function rBoot(){
+  return '<div class="login-w">'+loginHeader()+'<div style="text-align:center;padding:2rem;color:var(--text3)"><span class="spin" style="font-size:22px">↻</span></div></div>';
+}
+
+// ============================================================
+// LOGIN — single screen, email + password + Remember me together
+// (not the family portal's two-step email-then-password flow)
+// ============================================================
+function rLogin(){
+  var btn=busy
+    ?'<button class="btn btn-p" disabled><span class="spin">↻</span> Signing in...</button>'
+    :'<button class="btn btn-p" onclick="doLogin()">Sign In</button>';
+  return '<div class="login-w">'+loginHeader()+
+    '<div class="field"><label>Email<span class="req">*</span></label>'+
+    '<input id="te" type="email" autocomplete="username" inputmode="email" value="'+esc(LF.email)+'" oninput="LF.email=this.value" onkeydown="if(event.keyCode===13)doLogin()"></div>'+
+    '<div class="field"><label>Password<span class="req">*</span></label>'+
+    '<input id="tp" type="password" autocomplete="current-password" value="'+esc(LF.password)+'" oninput="LF.password=this.value" onkeydown="if(event.keyCode===13)doLogin()"></div>'+
+    '<label class="remember-row"><input type="checkbox" id="tf-remember" '+(LF.remember?'checked':'')+' onchange="LF.remember=this.checked"> Remember me</label>'+
+    btn+
+    '<p class="linkline"><a href="#" onclick="event.preventDefault();PAGE=&apos;forgotpw&apos;;FP={email:LF.email,done:false,success:false,error:&apos;&apos;,busy:false};render()">Forgot your password?</a></p>'+
+    '</div>';
+}
+
+function doLogin(){
+  var email=(document.getElementById('te')||{}).value||LF.email;
+  var password=(document.getElementById('tp')||{}).value||LF.password;
+  LF.email=(email||'').trim().toLowerCase();
+  LF.password=password||'';
+  if(!LF.email||LF.email.indexOf('@')===-1){ showMsg('Please enter a valid email address.','e'); return; }
+  if(!LF.password){ showMsg('Please enter your password.','e'); return; }
+  busy=true; render();
+  api({action:'teacherLogin', data:{teacherEmail:LF.email, teacherPassword:LF.password}}, function(e,r){
+    busy=false;
+    if(e||!r||!r.ok){
+      if(r&&r.needsSetup){
+        // Account exists but has never had a password — reuse the same
+        // begin-reset flow "Forgot your password?" uses, since both land on
+        // the same set-new-password screen via email (mirrors the family
+        // portal's doBeginResetFromLogin()).
+        doBeginResetFromLogin();
+        return;
+      }
+      showMsg((r&&r.error)||'Login failed','e');
+      render(); return;
+    }
+    TOKEN=r.token; TEACHER_ID=r.teacherId; TEACHER_NAME=r.teacherName||'';
+    if(LF.remember) _ktSaveSession(r.token, r.teacherId, r.teacherName);
+    PAGE='home'; render();
+    loadFamilyThreads();
+  });
+}
+
+function doBeginResetFromLogin(){
+  busy=true; render();
+  api({action:'teacherBeginReset', data:{email:LF.email}}, function(e,r){
+    busy=false;
+    PAGE='forgotpw';
+    FP={email:LF.email, done:true, success:!!(r&&r.ok), error:(r&&r.error)||'', busy:false};
+    render();
+  });
+}
+
+// ============================================================
+// FORGOT PASSWORD
+// ============================================================
+function rForgotPassword(){
+  if(FP.done){
+    if(FP.success){
+      return '<div class="login-w">'+loginHeader()+
+        '<h1>Check your email</h1>'+
+        '<p>If that email is on file, we’ve sent a link to set your password.</p>'+
+        '<button class="btn btn-p" onclick="PAGE=&apos;login&apos;;render()">Back to Sign In</button></div>';
+    }
+    return '<div class="login-w">'+loginHeader()+
+      '<h1>Something went wrong</h1>'+
+      '<p style="color:var(--rt)">'+esc(FP.error||'Please try again.')+'</p>'+
+      '<button class="btn btn-p" onclick="FP={email:FP.email,done:false,success:false,error:&apos;&apos;,busy:false};render()">Try again</button>'+
+      '<button class="btn btn-s" style="margin-top:.5rem" onclick="PAGE=&apos;login&apos;;render()">Back to Sign In</button></div>';
+  }
+  var btn=FP.busy
+    ?'<button class="btn btn-p" disabled><span class="spin">↻</span> Sending...</button>'
+    :'<button class="btn btn-p" onclick="doBeginReset()">Send reset link</button>';
+  return '<div class="login-w">'+loginHeader()+
+    '<h1>Reset your password</h1>'+
+    '<div class="field"><label>Email<span class="req">*</span></label>'+
+    '<input id="fpe" type="email" autocomplete="username" inputmode="email" value="'+esc(FP.email)+'" oninput="FP.email=this.value" onkeydown="if(event.keyCode===13)doBeginReset()"></div>'+
+    btn+
+    '<p class="linkline"><a href="#" onclick="event.preventDefault();PAGE=&apos;login&apos;;render()">Back to Sign In</a></p></div>';
+}
+
+function doBeginReset(){
+  var email=(document.getElementById('fpe')||{}).value||FP.email;
+  FP.email=(email||'').trim().toLowerCase();
+  if(!FP.email||FP.email.indexOf('@')===-1){ showMsg('Please enter a valid email address.','e'); return; }
+  FP.busy=true; render();
+  api({action:'teacherBeginReset', data:{email:FP.email}}, function(e,r){
+    FP.busy=false;
+    FP.done=true;
+    FP.success=!!(r&&r.ok);
+    FP.error=(r&&r.error)||'';
+    render();
+  });
+}
+
+// ============================================================
+// SET / RESET PASSWORD (reached via emailed ?resetToken= link)
+// ============================================================
+function rSetPassword(){
+  if(SPW.checking){
+    return '<div class="login-w">'+loginHeader()+'<div style="text-align:center;padding:2rem;color:var(--text3)"><span class="spin" style="font-size:22px">↻</span></div></div>';
+  }
+  if(SPW.invalid){
+    if(SPW.resent){
+      return '<div class="login-w">'+loginHeader()+
+        '<h1>Check your email</h1>'+
+        '<p>We’ve sent a fresh reset link to <strong>'+esc(SPW.email)+'</strong>.</p>'+
+        '<button class="btn btn-p" onclick="PAGE=&apos;login&apos;;render()">Back to Sign In</button></div>';
+    }
+    var resendBtn=SPW.email
+      ?(SPW.resending
+        ?'<button class="btn btn-p" disabled><span class="spin">↻</span> Sending...</button>'
+        :'<button class="btn btn-p" onclick="doResendResetLink()">Send me a new link</button>')
+      :'';
+    return '<div class="login-w">'+loginHeader()+
+      '<h1>This link has expired</h1>'+
+      (resendBtn||'')+
+      '<button class="btn btn-s" style="margin-top:.5rem" onclick="PAGE=&apos;login&apos;;render()">Back to Sign In</button></div>';
+  }
+  if(SPW.success){
+    return '<div class="login-w">'+loginHeader()+'<div style="text-align:center;padding:2rem;color:var(--text3)"><span class="spin" style="font-size:22px">↻</span></div></div>';
+  }
+  var btn=SPW.busy
+    ?'<button class="btn btn-p" disabled><span class="spin">↻</span> Saving...</button>'
+    :'<button class="btn btn-p" onclick="doCompleteReset()">Save Password</button>';
+  return '<div class="login-w">'+loginHeader()+
+    '<h1>Set your password</h1>'+
+    '<p>Must be at least 8 characters.</p>'+
+    (SPW.error?'<p style="color:var(--rt)">'+esc(SPW.error)+'</p>':'')+
+    (SPW.email?'<p style="font-size:13px;color:var(--text3)">Setting a password for <strong>'+esc(SPW.email)+'</strong></p>':'')+
+    '<div class="field"><label>New password<span class="req">*</span></label>'+
+    '<input id="spw1" type="password" autocomplete="new-password" value="'+esc(SPW.pw1)+'" oninput="SPW.pw1=this.value"></div>'+
+    '<div class="field"><label>Confirm password<span class="req">*</span></label>'+
+    '<input id="spw2" type="password" autocomplete="new-password" value="'+esc(SPW.pw2)+'" oninput="SPW.pw2=this.value" onkeydown="if(event.keyCode===13)doCompleteReset()"></div>'+
+    btn+'</div>';
+}
+
+function doCompleteReset(){
+  var pw1=(document.getElementById('spw1')||{}).value||SPW.pw1;
+  var pw2=(document.getElementById('spw2')||{}).value||SPW.pw2;
+  SPW.pw1=pw1; SPW.pw2=pw2; SPW.error='';
+  if(!pw1||pw1.length<8){ SPW.error='Password must be at least 8 characters.'; render(); return; }
+  if(pw1!==pw2){ SPW.error='Passwords don\'t match'; render(); return; }
+  SPW.busy=true; render();
+  api({action:'teacherCompleteReset', data:{resetToken:RESET_TOKEN, newPassword:pw1}}, function(e,r){
+    SPW.busy=false;
+    if(e||!r||!r.ok){
+      SPW.error=(r&&r.error)||'Something went wrong. Please try again.';
+      render(); return;
+    }
+    SPW.success=true;
+    render();
+    if(r.token&&r.teacherId){
+      TOKEN=r.token; TEACHER_ID=r.teacherId; TEACHER_NAME=r.teacherName||'';
+      _ktSaveSession(r.token, r.teacherId, r.teacherName);
+      PAGE='home'; render();
+      loadFamilyThreads();
+    } else {
+      PAGE='login'; render();
+    }
+  });
+}
+
+function doResendResetLink(){
+  if(!SPW.email) return;
+  SPW.resending=true; render();
+  api({action:'teacherBeginReset', data:{email:SPW.email}}, function(e,r){
+    SPW.resending=false;
+    if(e||!r||!r.ok){
+      showMsg((r&&r.error)||'Something went wrong. Please try again.','e');
+      render(); return;
+    }
+    SPW.resent=true; render();
+  });
+}
+
+// ============================================================
+// HOME — two structurally separate areas (per AC, 18 Aug): Family Messages
+// and Staff Messages never share a list, so a teacher can't mistakenly send
+// a staff/admin message into a family thread. Family Messages (family<->
+// teacher threads) isn't built yet — that's next in the build order; this
+// screen already wires up Staff Messages' Teacher<->Admin thread, the one
+// piece confirmed as replacing Slack.
+// ============================================================
+function rHome(){
+  var tabs='<div class="tabbar">'+
+    '<div class="tab'+(HOME_TAB==='family'?' on':'')+'" onclick="switchTab(\'family\')">Family Messages</div>'+
+    '<div class="tab'+(HOME_TAB==='staff'?' on':'')+'" onclick="switchTab(\'staff\')">Staff Messages</div>'+
+    '</div>';
+  var body = HOME_TAB==='family' ? rFamilyMessagesTab() : rStaffMessagesTab();
+  return '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">'+
+    '<div class="login-brand" style="margin:0">KEYLAB</div>'+
+    '<a href="#" style="font-size:12px" onclick="event.preventDefault();doSignOut()">Sign Out</a></div>'+
+    tabs+body;
+}
+
+function switchTab(tab){
+  HOME_TAB=tab;
+  render();
+  if(tab==='staff' && STAFF_VIEW==='list' && !STAFF_THREADS.list.length && !STAFF_THREADS.loading) loadStaffThreads();
+  if(tab==='family' && FAMILY_VIEW==='list' && !FAMILY_THREADS.list.length && !FAMILY_THREADS.loading) loadFamilyThreads();
+}
+
+// ============================================================
+// FAMILY MESSAGES
+// ============================================================
+function rFamilyMessagesTab(){
+  if(FAMILY_VIEW==='picker') return rFamilyPicker();
+  if(FAMILY_VIEW==='thread') return rFamilyThread();
+  return rFamilyThreadList();
+}
+
+function rFamilyThreadList(){
+  var h='<button class="btn btn-p" style="margin-bottom:1rem" onclick="openFamilyPicker()">+ New Conversation</button>';
+  if(FAMILY_THREADS.loading){
+    return h+'<div style="text-align:center;padding:2rem;color:var(--text3)"><span class="spin" style="font-size:20px">↻</span></div>';
+  }
+  if(!FAMILY_THREADS.list.length){
+    return h+'<div class="empty-state">No messages yet — send a message to get started.</div>';
+  }
+  h+='<div class="thread-list">'+FAMILY_THREADS.list.map(function(t){
+    var names=[t.parent1Name,t.parent2Name].filter(Boolean).join(' & ')||'Family';
+    return '<div class="thread-row" onclick="openFamilyThread(\''+esc(t.familyId)+'\',\''+esc(t.parent1Name)+'\',\''+esc(t.parent2Name)+'\')">'+
+      '<div class="thread-row-main">'+
+      '<div class="thread-row-name">'+esc(names)+'</div>'+
+      '<div class="thread-row-preview">'+esc((t.lastMessageText||'').slice(0,60))+'</div>'+
+      '</div>'+
+      (t.unread?'<div class="unread-badge">'+t.unread+'</div>':'')+
+      '</div>';
+  }).join('')+'</div>';
+  return h;
+}
+
+function loadFamilyThreads(){
+  FAMILY_THREADS.loading=true; render();
+  api({action:'getTeacherFamilyThreads', data:{teacherToken:TOKEN}}, function(e,r){
+    FAMILY_THREADS.loading=false;
+    if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not load conversations.','e'); render(); return; }
+    FAMILY_THREADS.list=r.threads||[];
+    render();
+  });
+}
+
+function openFamilyPicker(){
+  FAMILY_VIEW='picker';
+  FAMILY_PICKER.query='';
+  render();
+  if(!FAMILY_PICKER.all.length) loadFamiliesDirectory();
+}
+
+function loadFamiliesDirectory(){
+  FAMILY_PICKER.loading=true; render();
+  api({action:'getFamiliesDirectory', data:{teacherToken:TOKEN}}, function(e,r){
+    FAMILY_PICKER.loading=false;
+    if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not load families.','e'); render(); return; }
+    FAMILY_PICKER.all=r.families||[];
+    render();
+  });
+}
+
+function rFamilyPicker(){
+  var h='<button class="btn btn-s" style="margin-bottom:1rem" onclick="FAMILY_VIEW=\'list\';render()">← Back</button>';
+  h+='<div class="field"><input type="text" placeholder="Search by family or student name" value="'+esc(FAMILY_PICKER.query)+'" oninput="FAMILY_PICKER.query=this.value;render()"></div>';
+  if(FAMILY_PICKER.loading){
+    return h+'<div style="text-align:center;padding:2rem;color:var(--text3)"><span class="spin" style="font-size:20px">↻</span></div>';
+  }
+  var q=FAMILY_PICKER.query.trim().toLowerCase();
+  var results=FAMILY_PICKER.all.filter(function(f){
+    if(!q) return true;
+    var hay=[f.parent1Name,f.parent2Name].concat(f.studentNames||[]).join(' ').toLowerCase();
+    return hay.indexOf(q)!==-1;
+  });
+  if(!results.length) return h+'<div class="empty-state">No families found.</div>';
+  h+='<div class="thread-list">'+results.map(function(f){
+    var names=[f.parent1Name,f.parent2Name].filter(Boolean).join(' & ')||'Family';
+    var kids=(f.studentNames||[]).join(', ');
+    return '<div class="thread-row" onclick="openFamilyThread(\''+esc(f.familyId)+'\',\''+esc(f.parent1Name)+'\',\''+esc(f.parent2Name)+'\')">'+
+      '<div class="thread-row-main">'+
+      '<div class="thread-row-name">'+esc(names)+'</div>'+
+      (kids?'<div class="thread-row-preview">'+esc(kids)+'</div>':'')+
+      '</div></div>';
+  }).join('')+'</div>';
+  return h;
+}
+
+function openFamilyThread(familyId, p1, p2){
+  ACTIVE_THREAD = {familyId:familyId, parent1Name:p1, parent2Name:p2, messages:[], draft:'', sending:false, loading:true, notifyP1:true, notifyP2:true};
+  FAMILY_VIEW='thread';
+  render();
+  api({action:'getConversation', data:{conversationType:'family_teacher', familyId:familyId, teacherId:TEACHER_ID, teacherToken:TOKEN}}, function(e,r){
+    if(!ACTIVE_THREAD || ACTIVE_THREAD.familyId!==familyId) return; // navigated away before this resolved
+    ACTIVE_THREAD.loading=false;
+    if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not load conversation.','e'); render(); return; }
+    ACTIVE_THREAD.messages=r.messages||[];
+    render();
+  });
+}
+
+function rFamilyThread(){
+  var t=ACTIVE_THREAD;
+  var names=[t.parent1Name,t.parent2Name].filter(Boolean).join(' & ')||'Family';
+  var h='<button class="btn btn-s" style="margin-bottom:1rem" onclick="FAMILY_VIEW=\'list\';ACTIVE_THREAD=null;loadFamilyThreads()">← Back</button>';
+  h+='<div class="thread-hd">'+esc(names)+'</div>';
+  if(t.loading){
+    return h+'<div style="text-align:center;padding:2rem;color:var(--text3)"><span class="spin" style="font-size:20px">↻</span></div>';
+  }
+  if(!t.messages.length){
+    h+='<div class="empty-state">No messages yet — send a message to get started.</div>';
+  } else {
+    h+='<div class="msg-list">'+t.messages.map(rMessageBubble).join('')+'</div>';
+  }
+  // Recipient choice only matters when there are two distinct parents on
+  // file — mirrors admin Comms' recipient picker (confirmed 18 Aug, SPEC §7
+  // item 3).
+  if(t.parent1Name && t.parent2Name){
+    h+='<div class="recipient-row">'+
+      '<label><input type="checkbox" '+(t.notifyP1?'checked':'')+' onchange="ACTIVE_THREAD.notifyP1=this.checked"> '+esc(t.parent1Name)+'</label>'+
+      '<label><input type="checkbox" '+(t.notifyP2?'checked':'')+' onchange="ACTIVE_THREAD.notifyP2=this.checked"> '+esc(t.parent2Name)+'</label>'+
+      '</div>';
+  }
+  var sendBtn=t.sending
+    ?'<button class="btn btn-p" disabled><span class="spin">↻</span></button>'
+    :'<button class="btn btn-p" onclick="sendFamilyMessage()">Send</button>';
+  h+='<div class="composer">'+
+    '<textarea id="family-composer" placeholder="Type your message here..." oninput="ACTIVE_THREAD.draft=this.value">'+esc(t.draft)+'</textarea>'+
+    sendBtn+
+    '</div>';
+  return h;
+}
+
+function sendFamilyMessage(){
+  var t=ACTIVE_THREAD;
+  var text=(document.getElementById('family-composer')||{}).value||t.draft;
+  text=(text||'').trim();
+  if(!text) return;
+  var notifyParents=[];
+  if(!t.parent1Name || !t.parent2Name){
+    // Only one parent on file — nothing to choose, notify whichever exists.
+    notifyParents=undefined;
+  } else {
+    if(t.notifyP1) notifyParents.push('parent1');
+    if(t.notifyP2) notifyParents.push('parent2');
+  }
+  t.sending=true; render();
+  api({action:'sendMessage', data:{conversationType:'family_teacher', familyId:t.familyId, teacherId:TEACHER_ID, teacherToken:TOKEN, messageText:text, notifyParents:notifyParents}}, function(e,r){
+    t.sending=false;
+    if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not send message.','e'); render(); return; }
+    t.draft='';
+    openFamilyThread(t.familyId, t.parent1Name, t.parent2Name);
+  });
+}
+
+function rStaffMessagesTab(){
+  if(STAFF_VIEW==='picker') return rStaffPicker();
+  if(STAFF_VIEW==='thread') return rStaffThread();
+  return rStaffThreadList();
+}
+
+function rStaffThreadList(){
+  var h='<button class="btn btn-p" style="margin-bottom:1rem" onclick="openStaffPicker()">+ New Conversation</button>';
+  h+='<div class="thread-list">';
+  // Admin is always pinned at the top — every teacher can reach admin,
+  // whether or not a conversation exists yet.
+  h+='<div class="thread-row" onclick="openStaffThread(\'admin\',\'admin\',\'Admin\')">'+
+    '<div class="thread-row-main"><div class="thread-row-name">Admin</div></div></div>';
+  if(STAFF_THREADS.loading){
+    h+='</div><div style="text-align:center;padding:1rem;color:var(--text3)"><span class="spin" style="font-size:18px">↻</span></div>';
+    return h;
+  }
+  h+=STAFF_THREADS.list.map(function(t){
+    return '<div class="thread-row" onclick="openStaffThread(\'staff\',\''+esc(t.otherTeacherId)+'\',\''+esc(t.otherTeacherName)+'\')">'+
+      '<div class="thread-row-main">'+
+      '<div class="thread-row-name">'+esc(t.otherTeacherName)+'</div>'+
+      '<div class="thread-row-preview">'+esc((t.lastMessageText||'').slice(0,60))+'</div>'+
+      '</div></div>';
+  }).join('');
+  h+='</div>';
+  return h;
+}
+
+function loadStaffThreads(){
+  STAFF_THREADS.loading=true; render();
+  api({action:'getTeacherStaffThreads', data:{teacherToken:TOKEN}}, function(e,r){
+    STAFF_THREADS.loading=false;
+    if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not load conversations.','e'); render(); return; }
+    STAFF_THREADS.list=r.threads||[];
+    render();
+  });
+}
+
+function openStaffPicker(){
+  STAFF_VIEW='picker';
+  STAFF_PICKER.query='';
+  render();
+  if(!STAFF_PICKER.all.length) loadStaffDirectory();
+}
+
+function loadStaffDirectory(){
+  STAFF_PICKER.loading=true; render();
+  api({action:'getStaffDirectory', data:{teacherToken:TOKEN}}, function(e,r){
+    STAFF_PICKER.loading=false;
+    if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not load staff.','e'); render(); return; }
+    STAFF_PICKER.all=r.staff||[];
+    render();
+  });
+}
+
+function rStaffPicker(){
+  var h='<button class="btn btn-s" style="margin-bottom:1rem" onclick="STAFF_VIEW=\'list\';render()">← Back</button>';
+  h+='<div class="field"><input type="text" placeholder="Search staff by name" value="'+esc(STAFF_PICKER.query)+'" oninput="STAFF_PICKER.query=this.value;render()"></div>';
+  if(STAFF_PICKER.loading){
+    return h+'<div style="text-align:center;padding:2rem;color:var(--text3)"><span class="spin" style="font-size:20px">↻</span></div>';
+  }
+  var q=STAFF_PICKER.query.trim().toLowerCase();
+  var results=STAFF_PICKER.all.filter(function(s){ return !q || s.teacherName.toLowerCase().indexOf(q)!==-1; });
+  if(!results.length) return h+'<div class="empty-state">No staff found.</div>';
+  h+='<div class="thread-list">'+results.map(function(s){
+    return '<div class="thread-row" onclick="openStaffThread(\'staff\',\''+esc(s.teacherId)+'\',\''+esc(s.teacherName)+'\')">'+
+      '<div class="thread-row-main"><div class="thread-row-name">'+esc(s.teacherName)+'</div></div></div>';
+  }).join('')+'</div>';
+  return h;
+}
+
+function openStaffThread(contactType, otherId, otherName){
+  ACTIVE_STAFF_THREAD = {contactType:contactType, otherId:otherId, otherName:otherName, messages:[], draft:'', sending:false, loading:true};
+  STAFF_VIEW='thread';
+  render();
+  var reqData = contactType==='admin'
+    ? {conversationType:'teacher_admin', teacherId:TEACHER_ID, teacherToken:TOKEN}
+    : {conversationType:'staff_staff', teacherId:TEACHER_ID, staffId2:otherId, teacherToken:TOKEN};
+  api({action:'getConversation', data:reqData}, function(e,r){
+    if(!ACTIVE_STAFF_THREAD || ACTIVE_STAFF_THREAD.otherId!==otherId) return; // navigated away before this resolved
+    ACTIVE_STAFF_THREAD.loading=false;
+    if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not load messages.','e'); render(); return; }
+    ACTIVE_STAFF_THREAD.messages=r.messages||[];
+    render();
+  });
+}
+
+function rStaffThread(){
+  var t=ACTIVE_STAFF_THREAD;
+  var h='<button class="btn btn-s" style="margin-bottom:1rem" onclick="STAFF_VIEW=\'list\';ACTIVE_STAFF_THREAD=null;loadStaffThreads()">← Back</button>';
+  h+='<div class="thread-hd">'+esc(t.otherName)+'</div>';
+  if(t.loading){
+    return h+'<div style="text-align:center;padding:2rem;color:var(--text3)"><span class="spin" style="font-size:20px">↻</span></div>';
+  }
+  if(!t.messages.length){
+    h+='<div class="empty-state">No messages yet — send a message to get started.</div>';
+  } else {
+    h+='<div class="msg-list">'+t.messages.map(rMessageBubble).join('')+'</div>';
+  }
+  var sendBtn=t.sending
+    ?'<button class="btn btn-p" disabled><span class="spin">↻</span></button>'
+    :'<button class="btn btn-p" onclick="sendStaffMessage()">Send</button>';
+  h+='<div class="composer">'+
+    '<textarea id="staff-composer" placeholder="Type your message here..." oninput="ACTIVE_STAFF_THREAD.draft=this.value">'+esc(t.draft)+'</textarea>'+
+    sendBtn+
+    '</div>';
+  return h;
+}
+
+function rMessageBubble(m){
+  var mine = m.senderId===TEACHER_ID;
+  return '<div class="bubble-row'+(mine?' mine':'')+'">'+
+    '<div class="bubble'+(mine?' mine':'')+'">'+
+    (!mine?'<div class="bubble-sender">'+esc(m.senderName||'')+'</div>':'')+
+    '<div class="bubble-text">'+esc(m.messageText||'').replace(/\n/g,'<br>')+'</div>'+
+    '<div class="bubble-time">'+esc(m.sentAt||'')+'</div>'+
+    '</div></div>';
+}
+
+function sendStaffMessage(){
+  var t=ACTIVE_STAFF_THREAD;
+  var text=(document.getElementById('staff-composer')||{}).value||t.draft;
+  text=(text||'').trim();
+  if(!text) return;
+  var reqData = t.contactType==='admin'
+    ? {conversationType:'teacher_admin', teacherId:TEACHER_ID, teacherToken:TOKEN, messageText:text}
+    : {conversationType:'staff_staff', teacherId:TEACHER_ID, staffId2:t.otherId, teacherToken:TOKEN, messageText:text};
+  t.sending=true; render();
+  api({action:'sendMessage', data:reqData}, function(e,r){
+    t.sending=false;
+    if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not send message.','e'); render(); return; }
+    t.draft='';
+    openStaffThread(t.contactType, t.otherId, t.otherName);
+  });
+}
+
+function doSignOut(){
+  _ktClearSession();
+  TOKEN=''; TEACHER_ID=''; TEACHER_NAME='';
+  LF={email:'', password:'', remember:true};
+  HOME_TAB='family';
+  STAFF_VIEW='list';
+  STAFF_THREADS={loading:false, list:[]};
+  STAFF_PICKER={loading:false, query:'', all:[]};
+  ACTIVE_STAFF_THREAD=null;
+  FAMILY_VIEW='list';
+  FAMILY_THREADS={loading:false, list:[]};
+  FAMILY_PICKER={loading:false, query:'', all:[]};
+  ACTIVE_THREAD=null;
+  PAGE='login'; render();
+}
+
+// ============================================================
+// INIT
+// ============================================================
+function boot(){
+  var resetTokenFromUrl = '';
+  var loginTokenFromUrl = '';
+  try {
+    var params = new URLSearchParams(window.location.search);
+    resetTokenFromUrl = params.get('resetToken') || '';
+    loginTokenFromUrl = params.get('token') || '';
+  } catch(e) { /* URLSearchParams unsupported — treat as no token */ }
+
+  if(loginTokenFromUrl){
+    // Magic link from a do-not-reply notification email — a fully valid
+    // teacher session token already, minted server-side the same way a
+    // normal login does (_mintTeacherMagicLink in Code.js). Mirrors the
+    // family portal's identical ?token= handling in boot().
+    try {
+      if (window.history && window.history.replaceState) {
+        window.history.replaceState(null, '', window.location.pathname);
+      }
+    } catch(e) { /* non-fatal */ }
+    TOKEN = loginTokenFromUrl;
+    _ktSaveSession(TOKEN, '', '');
+    // Falls through to the remembered-session block below, which re-reads
+    // what was just saved and validates it via teacherCheckSession — same
+    // reasoning as the family portal: an invalid/expired token drops back
+    // to login with a clear message instead of a populated-looking shell.
+  }
+
+  if(resetTokenFromUrl){
+    // Strip the token out of the address bar immediately — single-use,
+    // short-lived credential, never something to bookmark. Mirrors the
+    // family portal's identical boot()-time handling.
+    try {
+      if (window.history && window.history.replaceState) {
+        window.history.replaceState(null, '', window.location.pathname);
+      }
+    } catch(e) { /* non-fatal */ }
+
+    RESET_TOKEN = resetTokenFromUrl;
+    PAGE = 'setpw';
+    SPW.checking = true;
+    render();
+    api({action:'teacherValidateResetToken', data:{resetToken:resetTokenFromUrl}}, function(e2,r2){
+      SPW.checking = false;
+      if(e2||!r2||!r2.ok){
+        SPW.invalid = true;
+        SPW.email = (r2&&r2.email)||'';
+      } else {
+        SPW.email = r2.email||'';
+      }
+      render();
+    });
+    return;
+  }
+
+  var saved = _ktReadSession();
+  if(saved && saved.token){
+    TOKEN = saved.token;
+    api({action:'teacherCheckSession', data:{teacherToken:saved.token}}, function(e,r){
+      if(!e&&r&&r.ok){
+        TEACHER_ID = r.teacherId;
+        TEACHER_NAME = r.teacherName||'';
+        _ktSaveSession(TOKEN, TEACHER_ID, TEACHER_NAME);
+        PAGE = 'home';
+        render();
+        loadFamilyThreads();
+      } else {
+        _ktClearSession();
+        TOKEN=''; TEACHER_ID=''; TEACHER_NAME='';
+        PAGE = 'login';
+        render();
+      }
+    });
+    return;
+  }
+
+  PAGE = 'login';
+  render();
+}
+
+document.addEventListener('DOMContentLoaded', function(){
+  render();
+  boot();
+});
+</script>
+</body>
+</html>

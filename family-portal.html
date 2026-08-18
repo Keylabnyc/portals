@@ -131,6 +131,28 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
   body.printing-policy-pdf{background:#fff}
   #policy-pdf-print-block{display:block!important;max-width:680px;margin:0 auto;padding:0}
 }
+/* Messaging (v1) */
+.contact-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:.75rem}
+@media(max-width:480px){.contact-btns{grid-template-columns:1fr}}
+.contact-btn{background:rgba(255,255,255,.45);border:1px solid var(--border2);border-radius:var(--rl);padding:1rem;text-align:center;cursor:pointer;transition:background .12s;font-weight:600;color:var(--text2)}
+.contact-btn:hover{background:rgba(255,255,255,.65)}
+.response-note{font-size:12px;color:var(--text4);margin-bottom:1rem}
+.msg-list{display:flex;flex-direction:column;gap:8px;margin-bottom:1rem;max-height:50vh;overflow-y:auto}
+.bubble-row{display:flex}
+.bubble-row.mine{justify-content:flex-end}
+.bubble{max-width:80%;background:rgba(255,255,255,.55);border:1px solid var(--border);border-radius:var(--rl);padding:.6rem .8rem}
+.bubble.mine{background:#1a4fc4;border-color:#1a4fc4;color:#fff}
+.bubble-sender{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--acc);font-family:"DM Mono",monospace;margin-bottom:.2rem}
+.bubble-text{font-size:13px;line-height:1.5;color:inherit}
+.bubble.mine .bubble-text{color:#fff}
+.bubble-time{font-size:10px;color:var(--text5);margin-top:.3rem}
+.bubble.mine .bubble-time{color:rgba(255,255,255,.7)}
+.composer{display:flex;gap:8px;align-items:flex-end}
+.composer textarea{background:rgba(255,255,255,.45);border:1px solid var(--border2);color:var(--text);border-radius:var(--r);padding:9px 10px;font-family:"Open Sans",sans-serif;font-size:14px;width:100%;outline:none;resize:none;min-height:44px;max-height:120px}
+.composer textarea:focus{border-color:var(--acc);background:rgba(255,255,255,.65)}
+.composer .btn{width:auto;flex:0 0 auto}
+.teacher-pick-row{background:rgba(255,255,255,.45);border:1px solid var(--border);border-radius:var(--r);padding:.7rem .85rem;cursor:pointer;margin-bottom:6px;transition:background .12s}
+.teacher-pick-row:hover{background:rgba(255,255,255,.65)}
 </style>
 </head>
 <body>
@@ -251,6 +273,13 @@ var LF = (function(){
     return {email:e, step:'email', password:'', remember:true, needsSetup:false, checking:false};
   } catch(e){ return {email:'', step:'email', password:'', remember:true, needsSetup:false, checking:false}; }
 })();
+
+// Messaging (v1). MSG_VIEW: 'buttons' (Contact Admin / Contact Teacher) |
+// 'teacherPicker' (only shown when the family has more than one teacher) |
+// 'thread' (one open conversation).
+var MSG_VIEW = 'buttons';
+var MSG_TEACHERS = {loading:false, list:[]};
+var MSG_THREAD = null; // {contactType:'teacher'|'admin', teacherId, teacherName, messages, draft, sending, loading}
 
 // lookup
 var LK = {email:'', matches:[], done:false};
@@ -1335,6 +1364,7 @@ function rApp(){
     '<div class="tab'+(TAB==='home'?' on':'')+'" onclick="TAB=&apos;home&apos;;render()">Home</div>'+
     (avOpen?'<div class="tab'+(TAB==='scheduling'?' on':'')+'" onclick="gotoScheduling()">Availability</div>':'')+
     '<div class="tab'+(TAB==='enrollment'?' on':'')+'" onclick="gotoEnrollment()">Enrollment</div>'+
+    '<div class="tab'+(TAB==='messages'?' on':'')+'" onclick="gotoMessages()">Messages</div>'+
     '</div>'+
     '<a href="#" style="font-size:12px;color:var(--text4);white-space:nowrap" onclick="event.preventDefault();doSignOut()">Sign Out</a>'+
     '</div>';
@@ -1342,7 +1372,134 @@ function rApp(){
   if(TAB==='home')         content=rHome();
   else if(TAB==='scheduling') content=rScheduling();
   else if(TAB==='enrollment') content=rEnrollment();
+  else if(TAB==='messages')   content=rMessages();
   return tabs+content;
+}
+
+function gotoMessages(){
+  TAB='messages';
+  MSG_VIEW='buttons';
+  MSG_THREAD=null;
+  render();
+}
+
+// ============================================================
+// MESSAGES (v1)
+// ============================================================
+function rMessages(){
+  if(MSG_VIEW==='teacherPicker') return rTeacherPicker();
+  if(MSG_VIEW==='thread')        return rMessageThread();
+  return rContactButtons();
+}
+
+function rContactButtons(){
+  return '<div class="contact-btns">'+
+    '<div class="contact-btn" onclick="doContactAdmin()">Contact Admin</div>'+
+    '<div class="contact-btn" onclick="doContactTeacher()">Contact Teacher</div>'+
+    '</div>'+
+    '<p class="response-note">We typically respond within 24 hours. If your message is urgent, let us know and we’ll prioritize it.</p>';
+}
+
+function doContactAdmin(){
+  openMessageThread('admin', 'admin', 'Admin');
+}
+
+function doContactTeacher(){
+  if(MSG_TEACHERS.list.length===1){
+    var t=MSG_TEACHERS.list[0];
+    openMessageThread('teacher', t.teacherId, t.teacherName);
+    return;
+  }
+  if(MSG_TEACHERS.list.length>1){
+    MSG_VIEW='teacherPicker'; render();
+    return;
+  }
+  MSG_TEACHERS.loading=true; render();
+  fapi('getFamilyMessagingTeachers', {}, function(e,r){
+    MSG_TEACHERS.loading=false;
+    if(e||!r||!r.ok){ showMsg('Could not load your teachers.','e'); render(); return; }
+    MSG_TEACHERS.list=r.teachers||[];
+    if(MSG_TEACHERS.list.length===1){
+      var t=MSG_TEACHERS.list[0];
+      openMessageThread('teacher', t.teacherId, t.teacherName);
+    } else if(MSG_TEACHERS.list.length>1){
+      MSG_VIEW='teacherPicker'; render();
+    } else {
+      showMsg('No teacher is assigned yet — check back once a lesson is scheduled, or contact admin instead.','e');
+      render();
+    }
+  });
+}
+
+function rTeacherPicker(){
+  var h='<button class="btn btn-s" style="margin-bottom:1rem" onclick="MSG_VIEW=&apos;buttons&apos;;render()">← Back</button>';
+  h+=MSG_TEACHERS.list.map(function(t){
+    var kids=(t.studentNames||[]).join(', ');
+    return '<div class="teacher-pick-row" onclick="openMessageThread(\'teacher\',\''+esc(t.teacherId)+'\',\''+esc(t.teacherName)+'\')">'+
+      '<div style="font-weight:600;color:var(--text2)">'+esc(t.teacherName)+'</div>'+
+      (kids?'<div style="font-size:12px;color:var(--text4)">'+esc(kids)+'</div>':'')+
+      '</div>';
+  }).join('');
+  return h;
+}
+
+function openMessageThread(contactType, teacherId, teacherName){
+  MSG_THREAD = {contactType:contactType, teacherId:teacherId, teacherName:teacherName, messages:[], draft:'', sending:false, loading:true};
+  MSG_VIEW='thread';
+  render();
+  fapi('getConversation', {conversationType:'family_teacher', familyId:FAMILY_ID, teacherId:teacherId}, function(e,r){
+    if(!MSG_THREAD || MSG_THREAD.teacherId!==teacherId) return; // navigated away before this resolved
+    MSG_THREAD.loading=false;
+    if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not load conversation.','e'); render(); return; }
+    MSG_THREAD.messages=r.messages||[];
+    render();
+  });
+}
+
+function rMessageThread(){
+  var t=MSG_THREAD;
+  var h='<button class="btn btn-s" style="margin-bottom:1rem" onclick="MSG_VIEW=(MSG_TEACHERS.list.length>1&&t.contactType===&apos;teacher&apos;)?&apos;teacherPicker&apos;:&apos;buttons&apos;;render()">← Back</button>';
+  h+='<h2>'+esc(t.teacherName)+'</h2>';
+  if(t.loading){
+    return h+'<div style="text-align:center;padding:2rem;color:var(--text3)"><span class="spin" style="font-size:20px">↻</span></div>';
+  }
+  if(!t.messages.length){
+    h+='<p class="hint" style="margin-bottom:1rem">No messages yet — send a message to get started.</p>';
+  } else {
+    h+='<div class="msg-list">'+t.messages.map(rMsgBubble).join('')+'</div>';
+  }
+  var sendBtn=t.sending
+    ?'<button class="btn btn-p" disabled><span class="spin">↻</span></button>'
+    :'<button class="btn btn-p" onclick="sendThreadMessage()">Send</button>';
+  h+='<div class="composer">'+
+    '<textarea id="fam-composer" placeholder="Type your message here..." oninput="MSG_THREAD.draft=this.value">'+esc(t.draft)+'</textarea>'+
+    sendBtn+
+    '</div>';
+  return h;
+}
+
+function rMsgBubble(m){
+  var mine = m.senderId===FAMILY_ID;
+  return '<div class="bubble-row'+(mine?' mine':'')+'">'+
+    '<div class="bubble'+(mine?' mine':'')+'">'+
+    (!mine?'<div class="bubble-sender">'+esc(m.senderName||'')+'</div>':'')+
+    '<div class="bubble-text">'+esc(m.messageText||'').replace(/\n/g,'<br>')+'</div>'+
+    '<div class="bubble-time">'+esc(m.sentAt||'')+'</div>'+
+    '</div></div>';
+}
+
+function sendThreadMessage(){
+  var t=MSG_THREAD;
+  var text=(document.getElementById('fam-composer')||{}).value||t.draft;
+  text=(text||'').trim();
+  if(!text) return;
+  t.sending=true; render();
+  fapi('sendMessage', {conversationType:'family_teacher', familyId:FAMILY_ID, teacherId:t.teacherId, messageText:text}, function(e,r){
+    t.sending=false;
+    if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not send message.','e'); render(); return; }
+    t.draft='';
+    openMessageThread(t.contactType, t.teacherId, t.teacherName);
+  });
 }
 
 function gotoEnrollment(){

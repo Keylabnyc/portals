@@ -624,7 +624,7 @@ function sendFamilyMessage(){
     t.sending=false;
     if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not send message.','e'); render(); return; }
     t.draft='';
-    openFamilyThread(t.familyId, t.parent1Name, t.parent2Name);
+    refreshFamilyThread(); // not openFamilyThread() — that resets the whole thread (blank + full spinner) instead of refreshing in place; caused the "odd reload" after sending (18 Aug)
   });
 }
 
@@ -782,7 +782,7 @@ function sendStaffMessage(){
     t.sending=false;
     if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not send message.','e'); render(); return; }
     t.draft='';
-    openStaffThread(t.contactType, t.otherId, t.otherName);
+    refreshStaffThread(); // not openStaffThread() — same "odd reload" fix as sendFamilyMessage() above
   });
 }
 

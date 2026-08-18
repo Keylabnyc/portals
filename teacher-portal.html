@@ -90,10 +90,11 @@ var HOME_TAB = 'family'; // 'family' | 'staff'
 var MSG = {m:'', t:''};
 var busy = false;
 var RESET_TOKEN = '';
+var _pollTimer = null;
 
-// Staff Messages state. STAFF_VIEW: 'list' (Admin, always pinned, + any
-// staff_staff threads) | 'picker' (start a new staff_staff conversation) |
-// 'thread' (one open conversation — admin or another staff member).
+// Staff Messages state. STAFF_VIEW: 'list' (the whole team, always shown
+// directly — 1.19, 18 Aug) | 'thread' (one open conversation — admin or
+// another staff member).
 var STAFF_VIEW = 'list';
 var STAFF_THREADS = {loading:false, list:[]};
 var STAFF_PICKER = {loading:false, query:'', all:[]};
@@ -145,6 +146,28 @@ function esc(s){
 function showMsg(m, t){
   MSG={m:m, t:t||'s'}; render();
   setTimeout(function(){ MSG={m:'',t:''}; render(); }, 7000);
+}
+
+// Formats an epoch-ms timestamp as "Tue, 8/18/26 5:30 PM" — see BACKLOG.md
+// 1.18. Falls back to the raw value for anything that doesn't parse (e.g.
+// a message sent before this fix, still holding the old date-only string).
+function fmtMsgTime(ms){
+  var n=Number(ms);
+  if(!n) return String(ms||'');
+  var d=new Date(n);
+  if(isNaN(d.getTime())) return String(ms||'');
+  var days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  var h=d.getHours(), mins=d.getMinutes();
+  var ampm=h>=12?'PM':'AM';
+  var h12=h%12; if(h12===0) h12=12;
+  var mm=mins<10?'0'+mins:String(mins);
+  return days[d.getDay()]+', '+(d.getMonth()+1)+'/'+d.getDate()+'/'+String(d.getFullYear()).slice(-2)+' '+h12+':'+mm+' '+ampm;
+}
+
+function _maxSentAt(msgs){
+  var max=0;
+  (msgs||[]).forEach(function(m){ var n=Number(m.sentAt)||0; if(n>max) max=n; });
+  return max;
 }
 
 // "Remember me" persistent session — small localStorage wrapper, safe to
@@ -236,6 +259,7 @@ function doLogin(){
     if(LF.remember) _ktSaveSession(r.token, r.teacherId, r.teacherName);
     PAGE='home'; render();
     loadFamilyThreads();
+    _startMessagePolling();
   });
 }
 
@@ -353,6 +377,7 @@ function doCompleteReset(){
       _ktSaveSession(r.token, r.teacherId, r.teacherName);
       PAGE='home'; render();
       loadFamilyThreads();
+      _startMessagePolling();
     } else {
       PAGE='login'; render();
     }
@@ -395,7 +420,10 @@ function rHome(){
 function switchTab(tab){
   HOME_TAB=tab;
   render();
-  if(tab==='staff' && STAFF_VIEW==='list' && !STAFF_THREADS.list.length && !STAFF_THREADS.loading) loadStaffThreads();
+  if(tab==='staff' && STAFF_VIEW==='list'){
+    if(!STAFF_PICKER.all.length && !STAFF_PICKER.loading) loadStaffDirectory();
+    if(!STAFF_THREADS.list.length && !STAFF_THREADS.loading) loadStaffThreads();
+  }
   if(tab==='family' && FAMILY_VIEW==='list' && !FAMILY_THREADS.list.length && !FAMILY_THREADS.loading) loadFamilyThreads();
 }
 
@@ -549,27 +577,41 @@ function sendFamilyMessage(){
 }
 
 function rStaffMessagesTab(){
-  if(STAFF_VIEW==='picker') return rStaffPicker();
   if(STAFF_VIEW==='thread') return rStaffThread();
-  return rStaffThreadList();
+  return rStaffRoster();
 }
 
-function rStaffThreadList(){
-  var h='<button class="btn btn-p" style="margin-bottom:1rem" onclick="openStaffPicker()">+ New Conversation</button>';
-  h+='<div class="thread-list">';
-  // Admin is always pinned at the top — every teacher can reach admin,
-  // whether or not a conversation exists yet.
+// Shows the whole team directly (1.19, 18 Aug) — no "+ New Conversation"
+// picker for staff, unlike Family Messages. With ~7 people total, hiding
+// the roster behind a button was pure friction; a small team should look
+// like a Slack workspace list, always visible. Admin is always pinned
+// first regardless of activity; everyone else is merged from the staff
+// directory (so people with no conversation yet still show up) plus
+// existing thread previews where they exist, then sorted by most recent
+// activity (no-activity entries last, alphabetical among themselves).
+function rStaffRoster(){
+  if(STAFF_PICKER.loading || STAFF_THREADS.loading){
+    return '<div style="text-align:center;padding:2rem;color:var(--text3)"><span class="spin" style="font-size:20px">↻</span></div>';
+  }
+  var threadsById={};
+  STAFF_THREADS.list.forEach(function(t){ threadsById[t.otherTeacherId]=t; });
+  var rows=STAFF_PICKER.all.map(function(s){
+    var t=threadsById[s.teacherId];
+    return {teacherId:s.teacherId, teacherName:s.teacherName, lastMessageAt:t?t.lastMessageAt:0, lastMessageText:t?t.lastMessageText:''};
+  }).sort(function(a,b){
+    if(a.lastMessageAt && b.lastMessageAt) return Number(b.lastMessageAt)-Number(a.lastMessageAt);
+    if(a.lastMessageAt) return -1;
+    if(b.lastMessageAt) return 1;
+    return a.teacherName.localeCompare(b.teacherName);
+  });
+  var h='<div class="thread-list">';
   h+='<div class="thread-row" onclick="openStaffThread(\'admin\',\'admin\',\'Admin\')">'+
     '<div class="thread-row-main"><div class="thread-row-name">Admin</div></div></div>';
-  if(STAFF_THREADS.loading){
-    h+='</div><div style="text-align:center;padding:1rem;color:var(--text3)"><span class="spin" style="font-size:18px">↻</span></div>';
-    return h;
-  }
-  h+=STAFF_THREADS.list.map(function(t){
-    return '<div class="thread-row" onclick="openStaffThread(\'staff\',\''+esc(t.otherTeacherId)+'\',\''+esc(t.otherTeacherName)+'\')">'+
+  h+=rows.map(function(s){
+    return '<div class="thread-row" onclick="openStaffThread(\'staff\',\''+esc(s.teacherId)+'\',\''+esc(s.teacherName)+'\')">'+
       '<div class="thread-row-main">'+
-      '<div class="thread-row-name">'+esc(t.otherTeacherName)+'</div>'+
-      '<div class="thread-row-preview">'+esc((t.lastMessageText||'').slice(0,60))+'</div>'+
+      '<div class="thread-row-name">'+esc(s.teacherName)+'</div>'+
+      (s.lastMessageText?'<div class="thread-row-preview">'+esc(s.lastMessageText.slice(0,60))+'</div>':'')+
       '</div></div>';
   }).join('');
   h+='</div>';
@@ -586,13 +628,6 @@ function loadStaffThreads(){
   });
 }
 
-function openStaffPicker(){
-  STAFF_VIEW='picker';
-  STAFF_PICKER.query='';
-  render();
-  if(!STAFF_PICKER.all.length) loadStaffDirectory();
-}
-
 function loadStaffDirectory(){
   STAFF_PICKER.loading=true; render();
   api({action:'getStaffDirectory', data:{teacherToken:TOKEN}}, function(e,r){
@@ -601,22 +636,6 @@ function loadStaffDirectory(){
     STAFF_PICKER.all=r.staff||[];
     render();
   });
-}
-
-function rStaffPicker(){
-  var h='<button class="btn btn-s" style="margin-bottom:1rem" onclick="STAFF_VIEW=\'list\';render()">← Back</button>';
-  h+='<div class="field"><input type="text" placeholder="Search staff by name" value="'+esc(STAFF_PICKER.query)+'" oninput="STAFF_PICKER.query=this.value;render()"></div>';
-  if(STAFF_PICKER.loading){
-    return h+'<div style="text-align:center;padding:2rem;color:var(--text3)"><span class="spin" style="font-size:20px">↻</span></div>';
-  }
-  var q=STAFF_PICKER.query.trim().toLowerCase();
-  var results=STAFF_PICKER.all.filter(function(s){ return !q || s.teacherName.toLowerCase().indexOf(q)!==-1; });
-  if(!results.length) return h+'<div class="empty-state">No staff found.</div>';
-  h+='<div class="thread-list">'+results.map(function(s){
-    return '<div class="thread-row" onclick="openStaffThread(\'staff\',\''+esc(s.teacherId)+'\',\''+esc(s.teacherName)+'\')">'+
-      '<div class="thread-row-main"><div class="thread-row-name">'+esc(s.teacherName)+'</div></div></div>';
-  }).join('')+'</div>';
-  return h;
 }
 
 function openStaffThread(contactType, otherId, otherName){
@@ -663,7 +682,7 @@ function rMessageBubble(m){
     '<div class="bubble'+(mine?' mine':'')+'">'+
     (!mine?'<div class="bubble-sender">'+esc(m.senderName||'')+'</div>':'')+
     '<div class="bubble-text">'+esc(m.messageText||'').replace(/\n/g,'<br>')+'</div>'+
-    '<div class="bubble-time">'+esc(m.sentAt||'')+'</div>'+
+    '<div class="bubble-time">'+esc(fmtMsgTime(m.sentAt))+'</div>'+
     '</div></div>';
 }
 
@@ -684,8 +703,48 @@ function sendStaffMessage(){
   });
 }
 
+// Polls every 5s for new activity: the active thread's list (family or
+// staff, whichever tab is open) plus whichever conversation is currently
+// expanded, via the lock-free doGetMessagesSince() so this never trips the
+// shared save-lock or marks anything read on its own (see the matching
+// comment in Code.js). Paused while the tab isn't visible.
+function _startMessagePolling(){
+  if(_pollTimer) return;
+  _pollTimer=setInterval(function(){
+    if(document.hidden || !TOKEN) return;
+    if(HOME_TAB==='family'){
+      if(FAMILY_VIEW==='list') loadFamilyThreads();
+      if(FAMILY_VIEW==='thread' && ACTIVE_THREAD && !ACTIVE_THREAD.loading){
+        var ft=ACTIVE_THREAD;
+        api({action:'getMessagesSince', data:{conversationType:'family_teacher', familyId:ft.familyId, teacherId:TEACHER_ID, teacherToken:TOKEN, sinceSentAt:String(_maxSentAt(ft.messages)||0)}}, function(e,r){
+          if(!ACTIVE_THREAD||ACTIVE_THREAD.familyId!==ft.familyId) return;
+          if(e||!r||!r.ok||!r.messages||!r.messages.length) return;
+          ACTIVE_THREAD.messages=ACTIVE_THREAD.messages.concat(r.messages);
+          render();
+        });
+      }
+    } else {
+      if(STAFF_VIEW==='list'){ loadStaffThreads(); }
+      if(STAFF_VIEW==='thread' && ACTIVE_STAFF_THREAD && !ACTIVE_STAFF_THREAD.loading){
+        var st=ACTIVE_STAFF_THREAD;
+        var reqData=st.contactType==='admin'
+          ? {conversationType:'teacher_admin', teacherId:TEACHER_ID, teacherToken:TOKEN}
+          : {conversationType:'staff_staff', teacherId:TEACHER_ID, staffId2:st.otherId, teacherToken:TOKEN};
+        reqData.sinceSentAt=String(_maxSentAt(st.messages)||0);
+        api({action:'getMessagesSince', data:reqData}, function(e,r){
+          if(!ACTIVE_STAFF_THREAD||ACTIVE_STAFF_THREAD.otherId!==st.otherId) return;
+          if(e||!r||!r.ok||!r.messages||!r.messages.length) return;
+          ACTIVE_STAFF_THREAD.messages=ACTIVE_STAFF_THREAD.messages.concat(r.messages);
+          render();
+        });
+      }
+    }
+  }, 5000);
+}
+
 function doSignOut(){
   _ktClearSession();
+  if(_pollTimer){ clearInterval(_pollTimer); _pollTimer=null; }
   TOKEN=''; TEACHER_ID=''; TEACHER_NAME='';
   LF={email:'', password:'', remember:true};
   HOME_TAB='family';
@@ -768,6 +827,7 @@ function boot(){
         PAGE = 'home';
         render();
         loadFamilyThreads();
+        _startMessagePolling();
       } else {
         _ktClearSession();
         TOKEN=''; TEACHER_ID=''; TEACHER_NAME='';

@@ -281,6 +281,14 @@ var MSG_VIEW = 'buttons';
 var MSG_TEACHERS = {loading:false, list:[]};
 var MSG_THREAD = null; // {contactType:'teacher'|'admin', teacherId, teacherName, messages, draft, sending, loading}
 
+// Home-tab message preview widget (1.22, 18 Aug) — messages should be
+// visible directly on Home, not require finding the Messages tab first.
+// Separate state from MSG_THREAD above (that's still used by the full
+// Messages tab, unchanged) since this is a smaller, inline-expanding view.
+var HOME_CONVOS = {loading:false, list:[]};
+var HOME_EXPANDED = null; // {teacherId, teacherName, messages, draft, sending, loading, lastSentAt}
+var _pollTimer = null;
+
 // lookup
 var LK = {email:'', matches:[], done:false};
 
@@ -1338,6 +1346,8 @@ function _prefetchSchedulingData(){
 
 function loadFamily(){
   PAGE='home'; TAB='home'; students=[]; _familyLoading=true; _familyLoadError=''; render();
+  loadHomeConversations();
+  _startMessagePolling();
   fapi('getProposal', {}, function(e,r){
     _familyLoading=false;
     if(e||!r||!r.ok){
@@ -1384,6 +1394,168 @@ function gotoMessages(){
 }
 
 // ============================================================
+// HOME MESSAGE WIDGET (1.22, 18 Aug) — quick preview + inline reply,
+// directly on Home, no tab navigation required.
+// ============================================================
+function rHomeMessages(){
+  var h='<h2 style="margin-top:1.5rem">Messages</h2>';
+  if(HOME_CONVOS.loading && !HOME_CONVOS.list.length){
+    return h+'<div style="text-align:center;padding:1rem;color:var(--text3)"><span class="spin" style="font-size:18px">↻</span></div>';
+  }
+  if(!HOME_CONVOS.list.length){
+    // No conversations yet — reuse the Messages tab's Contact buttons, but
+    // routed through TAB switches first: doContactAdmin()/doContactTeacher()
+    // open a thread in MSG_THREAD, which only rMessages() (TAB==='messages')
+    // renders — clicking from here without switching tabs first would open
+    // a thread invisibly on a tab the family isn't looking at.
+    return h+'<div class="contact-btns">'+
+      '<div class="contact-btn" onclick="TAB=\'messages\';doContactAdmin()">Contact Admin</div>'+
+      '<div class="contact-btn" onclick="TAB=\'messages\';doContactTeacher()">Contact Teacher</div>'+
+      '</div>'+
+      '<p class="response-note">We typically respond within 24 hours. If your message is urgent, let us know and we’ll prioritize it.</p>';
+  }
+  h+='<div class="thread-list" style="margin-bottom:1rem">'+HOME_CONVOS.list.map(function(c){
+    var isOpen=HOME_EXPANDED && HOME_EXPANDED.teacherId===c.teacherId;
+    var row='<div class="teacher-pick-row" onclick="toggleHomeThread(\''+esc(c.teacherId)+'\',\''+esc(c.teacherName)+'\')">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px">'+
+      '<div><div style="font-weight:600;color:var(--text2)">'+esc(c.teacherName)+'</div>'+
+      '<div style="font-size:12px;color:var(--text4)">'+esc((c.lastMessageText||'').slice(0,70))+'</div></div>'+
+      (c.unread?'<div class="chip c-info">'+c.unread+'</div>':'')+
+      '</div></div>';
+    if(isOpen) row+=rHomeExpandedThread();
+    return row;
+  }).join('')+'</div>';
+  return h;
+}
+
+function loadHomeConversations(silent){
+  if(!silent){ HOME_CONVOS.loading=true; render(); }
+  fapi('getFamilyConversations', {}, function(e,r){
+    HOME_CONVOS.loading=false;
+    if(e||!r||!r.ok) return; // silent — this runs on a poll timer, don't spam errors
+    HOME_CONVOS.list=r.conversations||[];
+    render();
+  });
+}
+
+function toggleHomeThread(teacherId, teacherName){
+  if(HOME_EXPANDED && HOME_EXPANDED.teacherId===teacherId){ HOME_EXPANDED=null; render(); return; }
+  HOME_EXPANDED={teacherId:teacherId, teacherName:teacherName, messages:[], draft:'', sending:false, loading:true, lastSentAt:0};
+  render();
+  fapi('getConversation', {conversationType:'family_teacher', familyId:FAMILY_ID, teacherId:teacherId}, function(e,r){
+    if(!HOME_EXPANDED||HOME_EXPANDED.teacherId!==teacherId) return;
+    HOME_EXPANDED.loading=false;
+    if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not load conversation.','e'); render(); return; }
+    HOME_EXPANDED.messages=r.messages||[];
+    HOME_EXPANDED.lastSentAt=_maxSentAt(HOME_EXPANDED.messages);
+    render();
+  });
+}
+
+function _maxSentAt(msgs){
+  var max=0;
+  (msgs||[]).forEach(function(m){ var n=Number(m.sentAt)||0; if(n>max) max=n; });
+  return max;
+}
+
+// Formats an epoch-ms timestamp as "Tue, 8/18/26 5:30 PM" — see BACKLOG.md
+// 1.18. Falls back to the raw value for anything that doesn't parse (e.g.
+// a message sent before this fix, still holding the old date-only string).
+function fmtMsgTime(ms){
+  var n=Number(ms);
+  if(!n) return String(ms||'');
+  var d=new Date(n);
+  if(isNaN(d.getTime())) return String(ms||'');
+  var days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  var h=d.getHours(), mins=d.getMinutes();
+  var ampm=h>=12?'PM':'AM';
+  var h12=h%12; if(h12===0) h12=12;
+  var mm=mins<10?'0'+mins:String(mins);
+  return days[d.getDay()]+', '+(d.getMonth()+1)+'/'+d.getDate()+'/'+String(d.getFullYear()).slice(-2)+' '+h12+':'+mm+' '+ampm;
+}
+
+function rHomeExpandedThread(){
+  var t=HOME_EXPANDED;
+  var h='<div style="padding:.85rem 1rem;background:rgba(255,255,255,.3);border-top:1px solid var(--border)">';
+  if(t.loading){
+    h+='<div style="text-align:center;padding:1rem;color:var(--text3)"><span class="spin" style="font-size:18px">↻</span></div>';
+  } else if(!t.messages.length){
+    h+='<p class="hint">No messages yet — send a message to get started.</p>';
+  } else {
+    h+='<div class="msg-list">'+t.messages.map(rMsgBubble).join('')+'</div>';
+  }
+  var sendBtn=t.sending
+    ?'<button class="btn btn-p" disabled><span class="spin">↻</span></button>'
+    :'<button class="btn btn-p" onclick="event.stopPropagation();sendHomeMessage()">Send</button>';
+  h+='<div class="composer" onclick="event.stopPropagation()">'+
+    '<textarea id="home-composer" placeholder="Type your message here..." oninput="HOME_EXPANDED.draft=this.value">'+esc(t.draft)+'</textarea>'+
+    sendBtn+
+    '</div></div>';
+  return h;
+}
+
+function sendHomeMessage(){
+  var t=HOME_EXPANDED;
+  var text=(document.getElementById('home-composer')||{}).value||t.draft;
+  text=(text||'').trim();
+  if(!text) return;
+  t.sending=true; render();
+  fapi('sendMessage', {conversationType:'family_teacher', familyId:FAMILY_ID, teacherId:t.teacherId, messageText:text, senderParentSlot:MY_PARENT_SLOT}, function(e,r){
+    t.sending=false;
+    if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not send message.','e'); render(); return; }
+    t.draft='';
+    t.loading=true; render();
+    fapi('getConversation', {conversationType:'family_teacher', familyId:FAMILY_ID, teacherId:t.teacherId}, function(e2,r2){
+      if(!HOME_EXPANDED||HOME_EXPANDED.teacherId!==t.teacherId) return;
+      t.loading=false;
+      if(!e2&&r2&&r2.ok){ t.messages=r2.messages||[]; t.lastSentAt=_maxSentAt(t.messages); }
+      render();
+    });
+    loadHomeConversations(true);
+  });
+}
+
+// Polls every 5s for: (1) new conversation previews on Home, (2) new
+// messages in whichever thread is currently expanded inline — via the
+// lock-free doGetMessagesSince(), not a full getConversation() reload, so
+// this never marks anything read just because a poll tick happened. Paused
+// while the tab isn't visible, so a backgrounded/closed tab doesn't keep
+// burning script executions.
+function _startMessagePolling(){
+  if(_pollTimer) return;
+  _pollTimer=setInterval(function(){
+    if(document.hidden) return;
+    if(!TOKEN) return;
+    if(TAB==='home') loadHomeConversations(true);
+    if(HOME_EXPANDED && !HOME_EXPANDED.loading){
+      (function(teacherId){
+        fapi('getMessagesSince', {conversationType:'family_teacher', familyId:FAMILY_ID, teacherId:teacherId, sinceSentAt:String(HOME_EXPANDED.lastSentAt||0)}, function(e,r){
+          if(!HOME_EXPANDED||HOME_EXPANDED.teacherId!==teacherId) return;
+          if(e||!r||!r.ok||!r.messages||!r.messages.length) return;
+          HOME_EXPANDED.messages=HOME_EXPANDED.messages.concat(r.messages);
+          HOME_EXPANDED.lastSentAt=_maxSentAt(HOME_EXPANDED.messages);
+          render();
+        });
+      })(HOME_EXPANDED.teacherId);
+    }
+    if(MSG_THREAD && !MSG_THREAD.loading){
+      (function(th){
+        var reqData=th.contactType==='admin'
+          ?{conversationType:'family_teacher', familyId:FAMILY_ID, teacherId:'admin'}
+          :{conversationType:'family_teacher', familyId:FAMILY_ID, teacherId:th.teacherId};
+        reqData.sinceSentAt=String(_maxSentAt(th.messages)||0);
+        fapi('getMessagesSince', reqData, function(e,r){
+          if(!MSG_THREAD||MSG_THREAD.teacherId!==th.teacherId) return;
+          if(e||!r||!r.ok||!r.messages||!r.messages.length) return;
+          MSG_THREAD.messages=MSG_THREAD.messages.concat(r.messages);
+          render();
+        });
+      })(MSG_THREAD);
+    }
+  }, 5000);
+}
+
+// ============================================================
 // MESSAGES (v1)
 // ============================================================
 function rMessages(){
@@ -1393,6 +1565,9 @@ function rMessages(){
 }
 
 function rContactButtons(){
+  if(MSG_TEACHERS.loading){
+    return '<div style="text-align:center;padding:1.5rem;color:var(--text3)"><span class="spin" style="font-size:20px">↻</span></div>';
+  }
   return '<div class="contact-btns">'+
     '<div class="contact-btn" onclick="doContactAdmin()">Contact Admin</div>'+
     '<div class="contact-btn" onclick="doContactTeacher()">Contact Teacher</div>'+
@@ -1484,7 +1659,7 @@ function rMsgBubble(m){
     '<div class="bubble'+(mine?' mine':'')+'">'+
     (!mine?'<div class="bubble-sender">'+esc(m.senderName||'')+'</div>':'')+
     '<div class="bubble-text">'+esc(m.messageText||'').replace(/\n/g,'<br>')+'</div>'+
-    '<div class="bubble-time">'+esc(m.sentAt||'')+'</div>'+
+    '<div class="bubble-time">'+esc(fmtMsgTime(m.sentAt))+'</div>'+
     '</div></div>';
 }
 
@@ -1494,7 +1669,7 @@ function sendThreadMessage(){
   text=(text||'').trim();
   if(!text) return;
   t.sending=true; render();
-  fapi('sendMessage', {conversationType:'family_teacher', familyId:FAMILY_ID, teacherId:t.teacherId, messageText:text}, function(e,r){
+  fapi('sendMessage', {conversationType:'family_teacher', familyId:FAMILY_ID, teacherId:t.teacherId, messageText:text, senderParentSlot:MY_PARENT_SLOT}, function(e,r){
     t.sending=false;
     if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not send message.','e'); render(); return; }
     t.draft='';
@@ -1829,6 +2004,7 @@ function _rChildStatusSummary(s){
 function rHome(){
   var h='<h1>Hi there!</h1>'+
     '<p>Please use this page to submit your children\'s availability for the school year, or to check your child\'s enrollment status if you have already submitted your availability. We\'ll be in touch as soon as possible with an update.</p>';
+  h+=rHomeMessages();
   if(_familyLoading){
     return h+'<div style="text-align:center;padding:3rem"><span class="spin" style="font-size:20px">\u21bb</span></div>';
   }
@@ -1927,6 +2103,10 @@ function doSignOut(){
   students=[];
   PAGE='login';
   LF.step='email'; LF.password=''; LF.needsSetup=false;
+  if(_pollTimer){ clearInterval(_pollTimer); _pollTimer=null; }
+  HOME_CONVOS={loading:false, list:[]};
+  HOME_EXPANDED=null;
+  MSG_VIEW='buttons'; MSG_THREAD=null; MSG_TEACHERS={loading:false, list:[]};
   render();
 }
 
@@ -3961,6 +4141,8 @@ function boot(){
           _prefetchSchedulingData();
           PAGE='home'; TAB='home'; _familyLoading=false;
           render();
+          loadHomeConversations();
+          _startMessagePolling();
         } else {
           // Login's confirmed valid but this particular fetch hit a
           // hiccup — fall back to the normal single-call load path.

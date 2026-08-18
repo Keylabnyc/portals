@@ -274,20 +274,20 @@ var LF = (function(){
   } catch(e){ return {email:'', step:'email', password:'', remember:true, needsSetup:false, checking:false}; }
 })();
 
-// Messaging (v1). MSG_VIEW: 'buttons' (Contact Admin / Contact Teacher) |
-// 'teacherPicker' (only shown when the family has more than one teacher) |
-// 'thread' (one open conversation).
-var MSG_VIEW = 'buttons';
-var MSG_TEACHERS = {loading:false, list:[]};
-var MSG_THREAD = null; // {contactType:'teacher'|'admin', teacherId, teacherName, messages, draft, sending, loading}
-
-// Home-tab message preview widget (1.22, 18 Aug) — messages should be
-// visible directly on Home, not require finding the Messages tab first.
-// Separate state from MSG_THREAD above (that's still used by the full
-// Messages tab, unchanged) since this is a smaller, inline-expanding view.
+// Home-tab messaging (1.22, 18 Aug — the ONLY messaging surface in the
+// family portal now; the separate Messages tab was removed 18 Aug, since
+// families rarely use this and keeping two places to do the same thing was
+// pure friction against "as few clicks as possible"). HOME_CONVOS is every
+// existing conversation's preview; HOME_EXPANDED is whichever one is
+// currently open inline; HOME_TEACHER_PICKER is the inline "which teacher"
+// chooser, only shown when Contact Teacher is clicked and the family has
+// more than one.
 var HOME_CONVOS = {loading:false, list:[]};
 var HOME_EXPANDED = null; // {teacherId, teacherName, messages, draft, sending, loading, lastSentAt}
+var HOME_TEACHER_PICKER = {open:false, loading:false, list:[]};
 var _pollTimer = null;
+var _pendingOpenTeacherId = ''; // set by boot() from ?openTeacherId=, consumed once after login
+var _shouldScrollMsgList = false; // see render() — scroll-to-newest, set only when messages actually change
 
 // lookup
 var LK = {email:'', matches:[], done:false};
@@ -739,6 +739,16 @@ function render(){
   else if(PAGE==='reg-done') h+=rRegDone();
   else                       h+=rApp();
   el.innerHTML=h;
+  // Scroll to the newest message, not the oldest (1.27, 18 Aug) — set
+  // ONLY at the specific call sites where messages were just loaded/added
+  // (open, refresh, poll update, after send), never blanket-on-every-render,
+  // so it doesn't fight someone who's deliberately scrolled up to read
+  // earlier history while, say, just typing in the composer.
+  if(_shouldScrollMsgList){
+    _shouldScrollMsgList=false;
+    var ml=el.querySelector('.msg-list');
+    if(ml) ml.scrollTop=ml.scrollHeight;
+  }
 }
 
 // ============================================================
@@ -1374,7 +1384,6 @@ function rApp(){
     '<div class="tab'+(TAB==='home'?' on':'')+'" onclick="TAB=&apos;home&apos;;render()">Home</div>'+
     (avOpen?'<div class="tab'+(TAB==='scheduling'?' on':'')+'" onclick="gotoScheduling()">Availability</div>':'')+
     '<div class="tab'+(TAB==='enrollment'?' on':'')+'" onclick="gotoEnrollment()">Enrollment</div>'+
-    '<div class="tab'+(TAB==='messages'?' on':'')+'" onclick="gotoMessages()">Messages</div>'+
     '</div>'+
     '<a href="#" style="font-size:12px;color:var(--text4);white-space:nowrap" onclick="event.preventDefault();doSignOut()">Sign Out</a>'+
     '</div>';
@@ -1382,15 +1391,7 @@ function rApp(){
   if(TAB==='home')         content=rHome();
   else if(TAB==='scheduling') content=rScheduling();
   else if(TAB==='enrollment') content=rEnrollment();
-  else if(TAB==='messages')   content=rMessages();
   return tabs+content;
-}
-
-function gotoMessages(){
-  TAB='messages';
-  MSG_VIEW='buttons';
-  MSG_THREAD=null;
-  render();
 }
 
 // ============================================================
@@ -1399,32 +1400,78 @@ function gotoMessages(){
 // ============================================================
 function rHomeMessages(){
   var h='<h2 style="margin-top:1.5rem">Messages</h2>';
+  if(HOME_TEACHER_PICKER.open) return h+rHomeTeacherPicker();
   if(HOME_CONVOS.loading && !HOME_CONVOS.list.length){
     return h+'<div style="text-align:center;padding:1rem;color:var(--text3)"><span class="spin" style="font-size:18px">↻</span></div>';
   }
-  if(!HOME_CONVOS.list.length){
-    // No conversations yet — reuse the Messages tab's Contact buttons, but
-    // routed through TAB switches first: doContactAdmin()/doContactTeacher()
-    // open a thread in MSG_THREAD, which only rMessages() (TAB==='messages')
-    // renders — clicking from here without switching tabs first would open
-    // a thread invisibly on a tab the family isn't looking at.
-    return h+'<div class="contact-btns">'+
-      '<div class="contact-btn" onclick="TAB=\'messages\';doContactAdmin()">Contact Admin</div>'+
-      '<div class="contact-btn" onclick="TAB=\'messages\';doContactTeacher()">Contact Teacher</div>'+
-      '</div>'+
-      '<p class="response-note">We typically respond within 24 hours. If your message is urgent, let us know and we’ll prioritize it.</p>';
+  if(HOME_CONVOS.list.length){
+    h+='<div class="thread-list" style="margin-bottom:.75rem">'+HOME_CONVOS.list.map(function(c){
+      var isOpen=HOME_EXPANDED && HOME_EXPANDED.teacherId===c.teacherId;
+      var row='<div class="teacher-pick-row" onclick="toggleHomeThread(\''+esc(c.teacherId)+'\',\''+esc(c.teacherName)+'\')">'+
+        '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px">'+
+        '<div><div style="font-weight:600;color:var(--text2)">'+esc(c.teacherName)+'</div>'+
+        '<div style="font-size:12px;color:var(--text4)">'+esc((c.lastMessageText||'').slice(0,70))+'</div></div>'+
+        (c.unread?'<div class="chip c-info">'+c.unread+'</div>':'')+
+        '</div></div>';
+      if(isOpen) row+=rHomeExpandedThread();
+      return row;
+    }).join('')+'</div>';
   }
-  h+='<div class="thread-list" style="margin-bottom:1rem">'+HOME_CONVOS.list.map(function(c){
-    var isOpen=HOME_EXPANDED && HOME_EXPANDED.teacherId===c.teacherId;
-    var row='<div class="teacher-pick-row" onclick="toggleHomeThread(\''+esc(c.teacherId)+'\',\''+esc(c.teacherName)+'\')">'+
-      '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px">'+
-      '<div><div style="font-weight:600;color:var(--text2)">'+esc(c.teacherName)+'</div>'+
-      '<div style="font-size:12px;color:var(--text4)">'+esc((c.lastMessageText||'').slice(0,70))+'</div></div>'+
-      (c.unread?'<div class="chip c-info">'+c.unread+'</div>':'')+
-      '</div></div>';
-    if(isOpen) row+=rHomeExpandedThread();
-    return row;
-  }).join('')+'</div>';
+  // "Start a conversation" buttons — always available, not just when the
+  // list is empty (18 Aug: everything now lives on Home, there's no
+  // separate Messages tab to fall back on, so a family with one existing
+  // thread still needs a way to reach a second teacher or admin from here).
+  h+='<div class="contact-btns">'+
+    '<div class="contact-btn" onclick="doContactAdminHome()">Contact Admin</div>'+
+    '<div class="contact-btn" onclick="doContactTeacherHome()">Contact Teacher</div>'+
+    '</div>'+
+    '<p class="response-note">We typically respond within 24 hours. If your message is urgent, let us know and we’ll prioritize it.</p>';
+  return h;
+}
+
+function doContactAdminHome(){
+  toggleHomeThread('admin', 'Admin');
+}
+
+function doContactTeacherHome(){
+  if(HOME_TEACHER_PICKER.list.length===1){
+    var t=HOME_TEACHER_PICKER.list[0];
+    toggleHomeThread(t.teacherId, t.teacherName);
+    return;
+  }
+  if(HOME_TEACHER_PICKER.list.length>1){
+    HOME_TEACHER_PICKER.open=true; render();
+    return;
+  }
+  HOME_TEACHER_PICKER.loading=true; render();
+  fapi('getFamilyMessagingTeachers', {}, function(e,r){
+    HOME_TEACHER_PICKER.loading=false;
+    if(e||!r||!r.ok){ showMsg('Could not load your teachers.','e'); render(); return; }
+    HOME_TEACHER_PICKER.list=r.teachers||[];
+    if(HOME_TEACHER_PICKER.list.length===1){
+      var t=HOME_TEACHER_PICKER.list[0];
+      toggleHomeThread(t.teacherId, t.teacherName);
+    } else if(HOME_TEACHER_PICKER.list.length>1){
+      HOME_TEACHER_PICKER.open=true; render();
+    } else {
+      showMsg('No teacher is assigned yet — check back once a lesson is scheduled, or contact admin instead.','e');
+      render();
+    }
+  });
+}
+
+function rHomeTeacherPicker(){
+  var h='<button class="btn btn-s" style="margin-bottom:1rem" onclick="HOME_TEACHER_PICKER.open=false;render()">← Back</button>';
+  if(HOME_TEACHER_PICKER.loading){
+    return h+'<div style="text-align:center;padding:2rem;color:var(--text3)"><span class="spin" style="font-size:20px">↻</span></div>';
+  }
+  h+=HOME_TEACHER_PICKER.list.map(function(t){
+    var kids=(t.studentNames||[]).join(', ');
+    return '<div class="teacher-pick-row" onclick="HOME_TEACHER_PICKER.open=false;toggleHomeThread(\''+esc(t.teacherId)+'\',\''+esc(t.teacherName)+'\')">'+
+      '<div style="font-weight:600;color:var(--text2)">'+esc(t.teacherName)+'</div>'+
+      (kids?'<div style="font-size:12px;color:var(--text4)">'+esc(kids)+'</div>':'')+
+      '</div>';
+  }).join('');
   return h;
 }
 
@@ -1434,13 +1481,20 @@ function loadHomeConversations(silent){
     HOME_CONVOS.loading=false;
     if(e||!r||!r.ok) return; // silent — this runs on a poll timer, don't spam errors
     HOME_CONVOS.list=r.conversations||[];
+    if(_pendingOpenTeacherId){
+      var target=_pendingOpenTeacherId;
+      _pendingOpenTeacherId='';
+      var match=HOME_CONVOS.list.filter(function(c){ return c.teacherId===target; })[0];
+      toggleHomeThread(target, match?match.teacherName:(target==='admin'?'Admin':''));
+      return; // toggleHomeThread() already renders
+    }
     render();
   });
 }
 
 function toggleHomeThread(teacherId, teacherName){
   if(HOME_EXPANDED && HOME_EXPANDED.teacherId===teacherId){ HOME_EXPANDED=null; render(); return; }
-  HOME_EXPANDED={teacherId:teacherId, teacherName:teacherName, messages:[], draft:'', sending:false, loading:true, lastSentAt:0};
+  HOME_EXPANDED={teacherId:teacherId, teacherName:teacherName, messages:[], draft:'', sending:false, loading:true, refreshing:false, lastSentAt:0};
   render();
   fapi('getConversation', {conversationType:'family_teacher', familyId:FAMILY_ID, teacherId:teacherId}, function(e,r){
     if(!HOME_EXPANDED||HOME_EXPANDED.teacherId!==teacherId) return;
@@ -1448,7 +1502,25 @@ function toggleHomeThread(teacherId, teacherName){
     if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not load conversation.','e'); render(); return; }
     HOME_EXPANDED.messages=r.messages||[];
     HOME_EXPANDED.lastSentAt=_maxSentAt(HOME_EXPANDED.messages);
-    render();
+    _shouldScrollMsgList=true; render();
+  });
+}
+
+// Manual "Refresh" — same fetch as opening the thread, without the polling
+// wait. Uses the full getConversation() (marks read too), not the lock-free
+// poll endpoint, since this is a deliberate user action, not a background
+// tick — same reasoning as any other explicit reload.
+function refreshHomeThread(){
+  var t=HOME_EXPANDED;
+  if(!t||t.refreshing) return;
+  t.refreshing=true; render();
+  fapi('getConversation', {conversationType:'family_teacher', familyId:FAMILY_ID, teacherId:t.teacherId}, function(e,r){
+    if(!HOME_EXPANDED||HOME_EXPANDED.teacherId!==t.teacherId) return;
+    HOME_EXPANDED.refreshing=false;
+    if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not refresh.','e'); render(); return; }
+    HOME_EXPANDED.messages=r.messages||[];
+    HOME_EXPANDED.lastSentAt=_maxSentAt(HOME_EXPANDED.messages);
+    _shouldScrollMsgList=true; render();
   });
 }
 
@@ -1476,7 +1548,9 @@ function fmtMsgTime(ms){
 
 function rHomeExpandedThread(){
   var t=HOME_EXPANDED;
-  var h='<div style="padding:.85rem 1rem;background:rgba(255,255,255,.3);border-top:1px solid var(--border)">';
+  var h='<div style="padding:.85rem 1rem;background:rgba(255,255,255,.3);border-top:1px solid var(--border)" onclick="event.stopPropagation()">';
+  h+='<div style="text-align:right;margin-bottom:.4rem">'+
+    '<a href="#" style="font-size:11px;color:var(--text4)" onclick="event.preventDefault();event.stopPropagation();refreshHomeThread()">'+(t.refreshing?'<span class="spin">↻</span>':'↻ Refresh')+'</a></div>';
   if(t.loading){
     h+='<div style="text-align:center;padding:1rem;color:var(--text3)"><span class="spin" style="font-size:18px">↻</span></div>';
   } else if(!t.messages.length){
@@ -1509,7 +1583,7 @@ function sendHomeMessage(){
       if(!HOME_EXPANDED||HOME_EXPANDED.teacherId!==t.teacherId) return;
       t.loading=false;
       if(!e2&&r2&&r2.ok){ t.messages=r2.messages||[]; t.lastSentAt=_maxSentAt(t.messages); }
-      render();
+      _shouldScrollMsgList=true; render();
     });
     loadHomeConversations(true);
   });
@@ -1534,123 +1608,11 @@ function _startMessagePolling(){
           if(e||!r||!r.ok||!r.messages||!r.messages.length) return;
           HOME_EXPANDED.messages=HOME_EXPANDED.messages.concat(r.messages);
           HOME_EXPANDED.lastSentAt=_maxSentAt(HOME_EXPANDED.messages);
-          render();
+          _shouldScrollMsgList=true; render();
         });
       })(HOME_EXPANDED.teacherId);
     }
-    if(MSG_THREAD && !MSG_THREAD.loading){
-      (function(th){
-        var reqData=th.contactType==='admin'
-          ?{conversationType:'family_teacher', familyId:FAMILY_ID, teacherId:'admin'}
-          :{conversationType:'family_teacher', familyId:FAMILY_ID, teacherId:th.teacherId};
-        reqData.sinceSentAt=String(_maxSentAt(th.messages)||0);
-        fapi('getMessagesSince', reqData, function(e,r){
-          if(!MSG_THREAD||MSG_THREAD.teacherId!==th.teacherId) return;
-          if(e||!r||!r.ok||!r.messages||!r.messages.length) return;
-          MSG_THREAD.messages=MSG_THREAD.messages.concat(r.messages);
-          render();
-        });
-      })(MSG_THREAD);
-    }
   }, 5000);
-}
-
-// ============================================================
-// MESSAGES (v1)
-// ============================================================
-function rMessages(){
-  if(MSG_VIEW==='teacherPicker') return rTeacherPicker();
-  if(MSG_VIEW==='thread')        return rMessageThread();
-  return rContactButtons();
-}
-
-function rContactButtons(){
-  if(MSG_TEACHERS.loading){
-    return '<div style="text-align:center;padding:1.5rem;color:var(--text3)"><span class="spin" style="font-size:20px">↻</span></div>';
-  }
-  return '<div class="contact-btns">'+
-    '<div class="contact-btn" onclick="doContactAdmin()">Contact Admin</div>'+
-    '<div class="contact-btn" onclick="doContactTeacher()">Contact Teacher</div>'+
-    '</div>'+
-    '<p class="response-note">We typically respond within 24 hours. If your message is urgent, let us know and we’ll prioritize it.</p>';
-}
-
-function doContactAdmin(){
-  openMessageThread('admin', 'admin', 'Admin');
-}
-
-function doContactTeacher(){
-  if(MSG_TEACHERS.list.length===1){
-    var t=MSG_TEACHERS.list[0];
-    openMessageThread('teacher', t.teacherId, t.teacherName);
-    return;
-  }
-  if(MSG_TEACHERS.list.length>1){
-    MSG_VIEW='teacherPicker'; render();
-    return;
-  }
-  MSG_TEACHERS.loading=true; render();
-  fapi('getFamilyMessagingTeachers', {}, function(e,r){
-    MSG_TEACHERS.loading=false;
-    if(e||!r||!r.ok){ showMsg('Could not load your teachers.','e'); render(); return; }
-    MSG_TEACHERS.list=r.teachers||[];
-    if(MSG_TEACHERS.list.length===1){
-      var t=MSG_TEACHERS.list[0];
-      openMessageThread('teacher', t.teacherId, t.teacherName);
-    } else if(MSG_TEACHERS.list.length>1){
-      MSG_VIEW='teacherPicker'; render();
-    } else {
-      showMsg('No teacher is assigned yet — check back once a lesson is scheduled, or contact admin instead.','e');
-      render();
-    }
-  });
-}
-
-function rTeacherPicker(){
-  var h='<button class="btn btn-s" style="margin-bottom:1rem" onclick="MSG_VIEW=&apos;buttons&apos;;render()">← Back</button>';
-  h+=MSG_TEACHERS.list.map(function(t){
-    var kids=(t.studentNames||[]).join(', ');
-    return '<div class="teacher-pick-row" onclick="openMessageThread(\'teacher\',\''+esc(t.teacherId)+'\',\''+esc(t.teacherName)+'\')">'+
-      '<div style="font-weight:600;color:var(--text2)">'+esc(t.teacherName)+'</div>'+
-      (kids?'<div style="font-size:12px;color:var(--text4)">'+esc(kids)+'</div>':'')+
-      '</div>';
-  }).join('');
-  return h;
-}
-
-function openMessageThread(contactType, teacherId, teacherName){
-  MSG_THREAD = {contactType:contactType, teacherId:teacherId, teacherName:teacherName, messages:[], draft:'', sending:false, loading:true};
-  MSG_VIEW='thread';
-  render();
-  fapi('getConversation', {conversationType:'family_teacher', familyId:FAMILY_ID, teacherId:teacherId}, function(e,r){
-    if(!MSG_THREAD || MSG_THREAD.teacherId!==teacherId) return; // navigated away before this resolved
-    MSG_THREAD.loading=false;
-    if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not load conversation.','e'); render(); return; }
-    MSG_THREAD.messages=r.messages||[];
-    render();
-  });
-}
-
-function rMessageThread(){
-  var t=MSG_THREAD;
-  var h='<button class="btn btn-s" style="margin-bottom:1rem" onclick="MSG_VIEW=(MSG_TEACHERS.list.length>1&&t.contactType===&apos;teacher&apos;)?&apos;teacherPicker&apos;:&apos;buttons&apos;;render()">← Back</button>';
-  h+='<h2>'+esc(t.teacherName)+'</h2>';
-  if(t.loading){
-    return h+'<div style="text-align:center;padding:2rem;color:var(--text3)"><span class="spin" style="font-size:20px">↻</span></div>';
-  }
-  if(!t.messages.length){
-    h+='<p class="hint" style="margin-bottom:1rem">No messages yet — send a message to get started.</p>';
-  } else {
-    h+='<div class="msg-list">'+t.messages.map(rMsgBubble).join('')+'</div>';
-  }
-  var sendBtn=t.sending
-    ?'<button class="btn btn-p" disabled><span class="spin">↻</span></button>'
-    :'<button class="btn btn-p" onclick="sendThreadMessage()">Send</button>';
-  h+='<div class="composer">'+
-    '<textarea id="fam-composer" placeholder="Type your message here..." oninput="MSG_THREAD.draft=this.value">'+esc(t.draft)+'</textarea>'+
-    sendBtn+
-    '</div>';
-  return h;
 }
 
 function rMsgBubble(m){
@@ -1661,20 +1623,6 @@ function rMsgBubble(m){
     '<div class="bubble-text">'+esc(m.messageText||'').replace(/\n/g,'<br>')+'</div>'+
     '<div class="bubble-time">'+esc(fmtMsgTime(m.sentAt))+'</div>'+
     '</div></div>';
-}
-
-function sendThreadMessage(){
-  var t=MSG_THREAD;
-  var text=(document.getElementById('fam-composer')||{}).value||t.draft;
-  text=(text||'').trim();
-  if(!text) return;
-  t.sending=true; render();
-  fapi('sendMessage', {conversationType:'family_teacher', familyId:FAMILY_ID, teacherId:t.teacherId, messageText:text, senderParentSlot:MY_PARENT_SLOT}, function(e,r){
-    t.sending=false;
-    if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not send message.','e'); render(); return; }
-    t.draft='';
-    openMessageThread(t.contactType, t.teacherId, t.teacherName);
-  });
 }
 
 function gotoEnrollment(){
@@ -2106,7 +2054,7 @@ function doSignOut(){
   if(_pollTimer){ clearInterval(_pollTimer); _pollTimer=null; }
   HOME_CONVOS={loading:false, list:[]};
   HOME_EXPANDED=null;
-  MSG_VIEW='buttons'; MSG_THREAD=null; MSG_TEACHERS={loading:false, list:[]};
+  HOME_TEACHER_PICKER={open:false, loading:false, list:[]};
   render();
 }
 
@@ -4013,6 +3961,11 @@ function boot(){
     var params = new URLSearchParams(window.location.search);
     resetTokenFromUrl = params.get('resetToken') || '';
     loginTokenFromUrl = params.get('token') || '';
+    // Deep-links a notification email's magic link straight into the
+    // specific conversation, not just a signed-in Home screen (18 Aug,
+    // BACKLOG 1.21/1.22 \u2014 "takes them directly to the message"). Consumed
+    // once loadFamily() finishes, then cleared.
+    _pendingOpenTeacherId = params.get('openTeacherId') || '';
   } catch(e) { /* URLSearchParams unsupported \u2014 treat as no token */ }
 
   // Public settings (availability status, closures, instrument list) don't

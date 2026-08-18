@@ -70,7 +70,9 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 .thread-row-main{min-width:0}
 .thread-row-name{font-size:13px;font-weight:600;color:var(--text)}
 .thread-row-preview{font-size:12px;color:var(--text4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.unread-badge{background:#1a4fc4;color:#fff;font-size:11px;font-weight:700;border-radius:10px;padding:1px 7px;flex:0 0 auto}
+.unread-badge{background:#1a4fc4;color:#fff;font-size:11px;font-weight:700;border-radius:10px;padding:1px 7px;flex:0 0 auto;cursor:pointer}
+.read-toggle{flex:0 0 auto;font-size:14px;color:var(--text5);text-decoration:none;padding:0 4px}
+.read-toggle:hover{color:var(--acc);text-decoration:none}
 .recipient-row{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:.6rem;font-size:12px;color:var(--text3)}
 .recipient-row label{display:flex;align-items:center;gap:5px;cursor:pointer;text-transform:none;letter-spacing:0;font-family:"Open Sans",sans-serif}
 .recipient-row input{width:14px;height:14px;-webkit-appearance:checkbox;appearance:auto;margin:0}
@@ -91,6 +93,7 @@ var MSG = {m:'', t:''};
 var busy = false;
 var RESET_TOKEN = '';
 var _pollTimer = null;
+var _shouldScrollMsgList = false; // see render() — scroll-to-newest, set only when messages actually change
 
 // Staff Messages state. STAFF_VIEW: 'list' (the whole team, always shown
 // directly — 1.19, 18 Aug) | 'thread' (one open conversation — admin or
@@ -201,6 +204,15 @@ function render(){
   else if(PAGE==='setpw')    h+=rSetPassword();
   else                       h+=rHome();
   el.innerHTML=h;
+  // Scroll to the newest message, not the oldest (1.27, 18 Aug) — only at
+  // the specific call sites where messages actually changed, not on every
+  // render (typing in the composer re-renders too), so it doesn't fight
+  // someone scrolled up reading history.
+  if(_shouldScrollMsgList){
+    _shouldScrollMsgList=false;
+    var ml=el.querySelector('.msg-list');
+    if(ml) ml.scrollTop=ml.scrollHeight;
+  }
 }
 
 function loginHeader(){
@@ -451,17 +463,39 @@ function rFamilyThreadList(){
       '<div class="thread-row-name">'+esc(names)+'</div>'+
       '<div class="thread-row-preview">'+esc((t.lastMessageText||'').slice(0,60))+'</div>'+
       '</div>'+
-      (t.unread?'<div class="unread-badge">'+t.unread+'</div>':'')+
+      rReadToggle(t.unread, 'family_teacher', t.familyId, TEACHER_ID, '', 'family')+
       '</div>';
   }).join('')+'</div>';
   return h;
 }
 
-function loadFamilyThreads(){
-  FAMILY_THREADS.loading=true; render();
+// Small clickable read/unread control on a roster row (18 Aug) — teachers
+// wanted a Gmail-style manual toggle, not just automatic read-on-open.
+// stopPropagation so clicking it doesn't also open the thread underneath.
+// listKind ('family'|'staff') tells markThreadRead() which list to
+// silently refresh afterward, so the toggle's effect is visible right away.
+function rReadToggle(unread, conversationType, familyId, teacherId, staffId2, listKind){
+  var fn='markThreadRead('+(unread?'true':'false')+',\''+conversationType+'\',\''+esc(familyId)+'\',\''+esc(teacherId)+'\',\''+esc(staffId2)+'\',\''+listKind+'\')';
+  if(unread) return '<div class="unread-badge" onclick="event.stopPropagation();'+fn+'" title="Mark read">'+unread+'</div>';
+  return '<a href="#" class="read-toggle" onclick="event.preventDefault();event.stopPropagation();'+fn+'" title="Mark unread">○</a>';
+}
+
+function markThreadRead(read, conversationType, familyId, teacherId, staffId2, listKind){
+  var reqData={conversationType:conversationType, teacherToken:TOKEN, read:read};
+  if(familyId) reqData.familyId=familyId;
+  if(teacherId) reqData.teacherId=teacherId;
+  if(staffId2) reqData.staffId2=staffId2;
+  api({action:'setConversationReadState', data:reqData}, function(e,r){
+    if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not update.','e'); return; }
+    if(listKind==='family') loadFamilyThreads(true); else loadStaffThreads(true);
+  });
+}
+
+function loadFamilyThreads(silent){
+  if(!silent){ FAMILY_THREADS.loading=true; render(); }
   api({action:'getTeacherFamilyThreads', data:{teacherToken:TOKEN}}, function(e,r){
     FAMILY_THREADS.loading=false;
-    if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not load conversations.','e'); render(); return; }
+    if(e||!r||!r.ok){ if(!silent) showMsg((r&&r.error)||'Could not load conversations.','e'); render(); return; }
     FAMILY_THREADS.list=r.threads||[];
     render();
   });
@@ -510,7 +544,7 @@ function rFamilyPicker(){
 }
 
 function openFamilyThread(familyId, p1, p2){
-  ACTIVE_THREAD = {familyId:familyId, parent1Name:p1, parent2Name:p2, messages:[], draft:'', sending:false, loading:true, notifyP1:true, notifyP2:true};
+  ACTIVE_THREAD = {familyId:familyId, parent1Name:p1, parent2Name:p2, messages:[], draft:'', sending:false, loading:true, refreshing:false, notifyP1:true, notifyP2:true};
   FAMILY_VIEW='thread';
   render();
   api({action:'getConversation', data:{conversationType:'family_teacher', familyId:familyId, teacherId:TEACHER_ID, teacherToken:TOKEN}}, function(e,r){
@@ -518,7 +552,23 @@ function openFamilyThread(familyId, p1, p2){
     ACTIVE_THREAD.loading=false;
     if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not load conversation.','e'); render(); return; }
     ACTIVE_THREAD.messages=r.messages||[];
-    render();
+    _shouldScrollMsgList=true; render();
+  });
+}
+
+// Manual "Refresh" — same fetch as opening the thread, without waiting for
+// the next poll tick. Uses getConversation() (marks read too), a deliberate
+// user action rather than a background poll.
+function refreshFamilyThread(){
+  var t=ACTIVE_THREAD;
+  if(!t||t.refreshing) return;
+  t.refreshing=true; render();
+  api({action:'getConversation', data:{conversationType:'family_teacher', familyId:t.familyId, teacherId:TEACHER_ID, teacherToken:TOKEN}}, function(e,r){
+    if(!ACTIVE_THREAD||ACTIVE_THREAD.familyId!==t.familyId) return;
+    ACTIVE_THREAD.refreshing=false;
+    if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not refresh.','e'); render(); return; }
+    ACTIVE_THREAD.messages=r.messages||[];
+    _shouldScrollMsgList=true; render();
   });
 }
 
@@ -526,7 +576,9 @@ function rFamilyThread(){
   var t=ACTIVE_THREAD;
   var names=[t.parent1Name,t.parent2Name].filter(Boolean).join(' & ')||'Family';
   var h='<button class="btn btn-s" style="margin-bottom:1rem" onclick="FAMILY_VIEW=\'list\';ACTIVE_THREAD=null;loadFamilyThreads()">← Back</button>';
-  h+='<div class="thread-hd">'+esc(names)+'</div>';
+  h+='<div style="display:flex;justify-content:space-between;align-items:center">'+
+    '<div class="thread-hd" style="margin-bottom:0">'+esc(names)+'</div>'+
+    '<a href="#" style="font-size:11px;color:var(--text4)" onclick="event.preventDefault();refreshFamilyThread()">'+(t.refreshing?'<span class="spin">↻</span>':'↻ Refresh')+'</a></div>';
   if(t.loading){
     return h+'<div style="text-align:center;padding:2rem;color:var(--text3)"><span class="spin" style="font-size:20px">↻</span></div>';
   }
@@ -593,11 +645,16 @@ function rStaffRoster(){
   if(STAFF_PICKER.loading || STAFF_THREADS.loading){
     return '<div style="text-align:center;padding:2rem;color:var(--text3)"><span class="spin" style="font-size:20px">↻</span></div>';
   }
+  // Admin now comes from the same live thread data as everyone else
+  // (doGetTeacherStaffThreads covers teacher_admin too as of 18 Aug) —
+  // still pinned first regardless of activity, but with a real preview and
+  // unread badge instead of being a static row.
   var threadsById={};
   STAFF_THREADS.list.forEach(function(t){ threadsById[t.otherTeacherId]=t; });
+  var admin=threadsById['admin']||{otherTeacherId:'admin', otherTeacherName:'Admin', lastMessageAt:0, lastMessageText:'', unread:0};
   var rows=STAFF_PICKER.all.map(function(s){
     var t=threadsById[s.teacherId];
-    return {teacherId:s.teacherId, teacherName:s.teacherName, lastMessageAt:t?t.lastMessageAt:0, lastMessageText:t?t.lastMessageText:''};
+    return {teacherId:s.teacherId, teacherName:s.teacherName, lastMessageAt:t?t.lastMessageAt:0, lastMessageText:t?t.lastMessageText:'', unread:t?t.unread:0};
   }).sort(function(a,b){
     if(a.lastMessageAt && b.lastMessageAt) return Number(b.lastMessageAt)-Number(a.lastMessageAt);
     if(a.lastMessageAt) return -1;
@@ -606,23 +663,30 @@ function rStaffRoster(){
   });
   var h='<div class="thread-list">';
   h+='<div class="thread-row" onclick="openStaffThread(\'admin\',\'admin\',\'Admin\')">'+
-    '<div class="thread-row-main"><div class="thread-row-name">Admin</div></div></div>';
+    '<div class="thread-row-main">'+
+    '<div class="thread-row-name">Admin</div>'+
+    (admin.lastMessageText?'<div class="thread-row-preview">'+esc(admin.lastMessageText.slice(0,60))+'</div>':'')+
+    '</div>'+
+    rReadToggle(admin.unread, 'teacher_admin', '', TEACHER_ID, '', 'staff')+
+    '</div>';
   h+=rows.map(function(s){
     return '<div class="thread-row" onclick="openStaffThread(\'staff\',\''+esc(s.teacherId)+'\',\''+esc(s.teacherName)+'\')">'+
       '<div class="thread-row-main">'+
       '<div class="thread-row-name">'+esc(s.teacherName)+'</div>'+
       (s.lastMessageText?'<div class="thread-row-preview">'+esc(s.lastMessageText.slice(0,60))+'</div>':'')+
-      '</div></div>';
+      '</div>'+
+      rReadToggle(s.unread, 'staff_staff', '', TEACHER_ID, s.teacherId, 'staff')+
+      '</div>';
   }).join('');
   h+='</div>';
   return h;
 }
 
-function loadStaffThreads(){
-  STAFF_THREADS.loading=true; render();
+function loadStaffThreads(silent){
+  if(!silent){ STAFF_THREADS.loading=true; render(); }
   api({action:'getTeacherStaffThreads', data:{teacherToken:TOKEN}}, function(e,r){
     STAFF_THREADS.loading=false;
-    if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not load conversations.','e'); render(); return; }
+    if(e||!r||!r.ok){ if(!silent) showMsg((r&&r.error)||'Could not load conversations.','e'); render(); return; }
     STAFF_THREADS.list=r.threads||[];
     render();
   });
@@ -639,7 +703,7 @@ function loadStaffDirectory(){
 }
 
 function openStaffThread(contactType, otherId, otherName){
-  ACTIVE_STAFF_THREAD = {contactType:contactType, otherId:otherId, otherName:otherName, messages:[], draft:'', sending:false, loading:true};
+  ACTIVE_STAFF_THREAD = {contactType:contactType, otherId:otherId, otherName:otherName, messages:[], draft:'', sending:false, loading:true, refreshing:false};
   STAFF_VIEW='thread';
   render();
   var reqData = contactType==='admin'
@@ -650,14 +714,33 @@ function openStaffThread(contactType, otherId, otherName){
     ACTIVE_STAFF_THREAD.loading=false;
     if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not load messages.','e'); render(); return; }
     ACTIVE_STAFF_THREAD.messages=r.messages||[];
-    render();
+    _shouldScrollMsgList=true; render();
+  });
+}
+
+// Manual "Refresh" — same reasoning as refreshFamilyThread() above.
+function refreshStaffThread(){
+  var t=ACTIVE_STAFF_THREAD;
+  if(!t||t.refreshing) return;
+  t.refreshing=true; render();
+  var reqData = t.contactType==='admin'
+    ? {conversationType:'teacher_admin', teacherId:TEACHER_ID, teacherToken:TOKEN}
+    : {conversationType:'staff_staff', teacherId:TEACHER_ID, staffId2:t.otherId, teacherToken:TOKEN};
+  api({action:'getConversation', data:reqData}, function(e,r){
+    if(!ACTIVE_STAFF_THREAD||ACTIVE_STAFF_THREAD.otherId!==t.otherId) return;
+    ACTIVE_STAFF_THREAD.refreshing=false;
+    if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not refresh.','e'); render(); return; }
+    ACTIVE_STAFF_THREAD.messages=r.messages||[];
+    _shouldScrollMsgList=true; render();
   });
 }
 
 function rStaffThread(){
   var t=ACTIVE_STAFF_THREAD;
   var h='<button class="btn btn-s" style="margin-bottom:1rem" onclick="STAFF_VIEW=\'list\';ACTIVE_STAFF_THREAD=null;loadStaffThreads()">← Back</button>';
-  h+='<div class="thread-hd">'+esc(t.otherName)+'</div>';
+  h+='<div style="display:flex;justify-content:space-between;align-items:center">'+
+    '<div class="thread-hd" style="margin-bottom:0">'+esc(t.otherName)+'</div>'+
+    '<a href="#" style="font-size:11px;color:var(--text4)" onclick="event.preventDefault();refreshStaffThread()">'+(t.refreshing?'<span class="spin">↻</span>':'↻ Refresh')+'</a></div>';
   if(t.loading){
     return h+'<div style="text-align:center;padding:2rem;color:var(--text3)"><span class="spin" style="font-size:20px">↻</span></div>';
   }
@@ -713,18 +796,18 @@ function _startMessagePolling(){
   _pollTimer=setInterval(function(){
     if(document.hidden || !TOKEN) return;
     if(HOME_TAB==='family'){
-      if(FAMILY_VIEW==='list') loadFamilyThreads();
+      if(FAMILY_VIEW==='list') loadFamilyThreads(true);
       if(FAMILY_VIEW==='thread' && ACTIVE_THREAD && !ACTIVE_THREAD.loading){
         var ft=ACTIVE_THREAD;
         api({action:'getMessagesSince', data:{conversationType:'family_teacher', familyId:ft.familyId, teacherId:TEACHER_ID, teacherToken:TOKEN, sinceSentAt:String(_maxSentAt(ft.messages)||0)}}, function(e,r){
           if(!ACTIVE_THREAD||ACTIVE_THREAD.familyId!==ft.familyId) return;
           if(e||!r||!r.ok||!r.messages||!r.messages.length) return;
           ACTIVE_THREAD.messages=ACTIVE_THREAD.messages.concat(r.messages);
-          render();
+          _shouldScrollMsgList=true; render();
         });
       }
     } else {
-      if(STAFF_VIEW==='list'){ loadStaffThreads(); }
+      if(STAFF_VIEW==='list'){ loadStaffThreads(true); }
       if(STAFF_VIEW==='thread' && ACTIVE_STAFF_THREAD && !ACTIVE_STAFF_THREAD.loading){
         var st=ACTIVE_STAFF_THREAD;
         var reqData=st.contactType==='admin'
@@ -735,7 +818,7 @@ function _startMessagePolling(){
           if(!ACTIVE_STAFF_THREAD||ACTIVE_STAFF_THREAD.otherId!==st.otherId) return;
           if(e||!r||!r.ok||!r.messages||!r.messages.length) return;
           ACTIVE_STAFF_THREAD.messages=ACTIVE_STAFF_THREAD.messages.concat(r.messages);
-          render();
+          _shouldScrollMsgList=true; render();
         });
       }
     }

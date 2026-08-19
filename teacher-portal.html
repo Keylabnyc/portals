@@ -64,6 +64,24 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 .composer textarea{background:rgba(255,255,255,.45);border:1px solid var(--border2);color:var(--text);border-radius:var(--r);padding:9px 10px;font-family:"Open Sans",sans-serif;font-size:14px;width:100%;outline:none;resize:none;min-height:44px;max-height:120px}
 .composer textarea:focus{border-color:var(--acc);background:rgba(255,255,255,.65)}
 .composer .btn{width:auto;flex:0 0 auto}
+/* Formatting composer (BACKLOG 1.33). The contenteditable box deliberately
+   reuses the textarea's exact look so the toolbar is the only visible change. */
+.composer-wrap{display:flex;flex-direction:column;gap:6px}
+.cmp-tb{display:flex;flex-wrap:wrap;gap:4px}
+.cmp-tb-btn{background:rgba(255,255,255,.45);border:1px solid var(--border2);color:var(--text3);border-radius:6px;min-width:32px;height:30px;padding:0 8px;font-size:12px;line-height:1;cursor:pointer;font-family:"Open Sans",sans-serif}
+.cmp-tb-btn:hover{background:rgba(255,255,255,.75);color:var(--text)}
+.cmp-tb-btn:active{background:var(--acc);color:#fff;border-color:var(--acc)}
+.cmp-rich{background:rgba(255,255,255,.45);border:1px solid var(--border2);color:var(--text);border-radius:var(--r);padding:9px 10px;font-family:"Open Sans",sans-serif;font-size:14px;line-height:1.5;width:100%;outline:none;min-height:44px;max-height:160px;overflow-y:auto;text-align:left}
+.cmp-rich:focus{border-color:var(--acc);background:rgba(255,255,255,.65)}
+.cmp-rich:empty:before{content:attr(data-ph);color:var(--text5)}
+.cmp-rich ul,.cmp-rich ol{margin:.25rem 0;padding-left:1.3rem}
+.cmp-rich blockquote{margin:.25rem 0;padding-left:.75rem;border-left:2px solid var(--border2)}
+.bubble-text ul,.bubble-text ol{margin:.3rem 0;padding-left:1.25rem}
+.bubble-text li{margin:.15rem 0}
+.bubble-text blockquote{margin:.3rem 0;padding-left:.7rem;border-left:2px solid rgba(0,0,0,.15)}
+.bubble.mine .bubble-text blockquote{border-left-color:rgba(255,255,255,.4)}
+.bubble-text a{color:var(--acc);text-decoration:underline;word-break:break-word}
+.bubble.mine .bubble-text a{color:#fff}
 .thread-list{display:flex;flex-direction:column;gap:6px}
 .thread-row{display:flex;justify-content:space-between;align-items:center;gap:8px;background:rgba(255,255,255,.45);border:1px solid var(--border);border-radius:var(--r);padding:.7rem .85rem;cursor:pointer;transition:background .12s}
 .thread-row:hover{background:rgba(255,255,255,.65)}
@@ -203,7 +221,25 @@ function render(){
   else if(PAGE==='forgotpw') h+=rForgotPassword();
   else if(PAGE==='setpw')    h+=rSetPassword();
   else                       h+=rHome();
+  // render() replaces #app wholesale, so a message arriving mid-poll would
+  // otherwise yank the teacher's cursor out of a half-typed message — the
+  // teacher-side twin of the family bug fixed in 1.32. Caret goes to the end
+  // rather than its exact offset: a composer is written at the end, and exact
+  // offset restoration across a full innerHTML rebuild isn't reliable.
+  var _focusedComposer='';
+  var _ae=document.activeElement;
+  if(_ae && _ae.classList && _ae.classList.contains('cmp-rich')) _focusedComposer=_ae.id;
   el.innerHTML=h;
+  if(_focusedComposer){
+    var _ce=document.getElementById(_focusedComposer);
+    if(_ce){
+      _ce.focus();
+      try{
+        var _r=document.createRange(); _r.selectNodeContents(_ce); _r.collapse(false);
+        var _s=window.getSelection(); _s.removeAllRanges(); _s.addRange(_r);
+      }catch(e){}
+    }
+  }
   // Scroll to the newest message, not the oldest (1.27, 18 Aug) — only at
   // the specific call sites where messages actually changed, not on every
   // render (typing in the composer re-renders too), so it doesn't fight
@@ -518,20 +554,18 @@ function loadFamiliesDirectory(){
   });
 }
 
-function rFamilyPicker(){
-  var h='<button class="btn btn-s" style="margin-bottom:1rem" onclick="FAMILY_VIEW=\'list\';render()">← Back</button>';
-  h+='<div class="field"><input type="text" placeholder="Search by family or student name" value="'+esc(FAMILY_PICKER.query)+'" oninput="FAMILY_PICKER.query=this.value;render()"></div>';
+function rFamilyPickerResults(query){
   if(FAMILY_PICKER.loading){
-    return h+'<div style="text-align:center;padding:2rem;color:var(--text3)"><span class="spin" style="font-size:20px">↻</span></div>';
+    return '<div style="text-align:center;padding:2rem;color:var(--text3)"><span class="spin" style="font-size:20px">↻</span></div>';
   }
-  var q=FAMILY_PICKER.query.trim().toLowerCase();
+  var q=String(query||'').trim().toLowerCase();
   var results=FAMILY_PICKER.all.filter(function(f){
     if(!q) return true;
     var hay=[f.parent1Name,f.parent2Name].concat(f.studentNames||[]).join(' ').toLowerCase();
     return hay.indexOf(q)!==-1;
   });
-  if(!results.length) return h+'<div class="empty-state">No families found.</div>';
-  h+='<div class="thread-list">'+results.map(function(f){
+  if(!results.length) return '<div class="empty-state">No families found.</div>';
+  return '<div class="thread-list">'+results.map(function(f){
     var names=[f.parent1Name,f.parent2Name].filter(Boolean).join(' & ')||'Family';
     var kids=(f.studentNames||[]).join(', ');
     return '<div class="thread-row" onclick="openFamilyThread(\''+esc(f.familyId)+'\',\''+esc(f.parent1Name)+'\',\''+esc(f.parent2Name)+'\')">'+
@@ -540,6 +574,16 @@ function rFamilyPicker(){
       (kids?'<div class="thread-row-preview">'+esc(kids)+'</div>':'')+
       '</div></div>';
   }).join('')+'</div>';
+}
+function familyPickerInput(val){
+  FAMILY_PICKER.query=val;
+  var listEl=document.getElementById('family-picker-results');
+  if(listEl) listEl.innerHTML=rFamilyPickerResults(val);
+}
+function rFamilyPicker(){
+  var h='<button class="btn btn-s" style="margin-bottom:1rem" onclick="FAMILY_VIEW=\'list\';render()">← Back</button>';
+  h+='<div class="field"><input type="text" placeholder="Search by family or student name" value="'+esc(FAMILY_PICKER.query)+'" oninput="familyPickerInput(this.value)"></div>';
+  h+='<div id="family-picker-results">'+rFamilyPickerResults(FAMILY_PICKER.query)+'</div>';
   return h;
 }
 
@@ -599,17 +643,15 @@ function rFamilyThread(){
   var sendBtn=t.sending
     ?'<button class="btn btn-p" disabled><span class="spin">↻</span></button>'
     :'<button class="btn btn-p" onclick="sendFamilyMessage()">Send</button>';
-  h+='<div class="composer">'+
-    '<textarea id="family-composer" placeholder="Type your message here..." oninput="ACTIVE_THREAD.draft=this.value">'+esc(t.draft)+'</textarea>'+
-    sendBtn+
-    '</div>';
+  h+=rComposer('family-composer',t.draft,'ACTIVE_THREAD.draft=_composerInput(this)',sendBtn);
   return h;
 }
 
 function sendFamilyMessage(){
   var t=ACTIVE_THREAD;
-  var text=(document.getElementById('family-composer')||{}).value||t.draft;
-  text=(text||'').trim();
+  var _el=document.getElementById('family-composer');
+  var html=_el?_composerClean(_el):(t.draft||'');
+  var text=_composerPlain(html);
   if(!text) return;
   var notifyParents=[];
   if(!t.parent1Name || !t.parent2Name){
@@ -620,7 +662,7 @@ function sendFamilyMessage(){
     if(t.notifyP2) notifyParents.push('parent2');
   }
   t.sending=true; render();
-  api({action:'sendMessage', data:{conversationType:'family_teacher', familyId:t.familyId, teacherId:TEACHER_ID, teacherToken:TOKEN, messageText:text, notifyParents:notifyParents}}, function(e,r){
+  api({action:'sendMessage', data:{conversationType:'family_teacher', familyId:t.familyId, teacherId:TEACHER_ID, teacherToken:TOKEN, messageText:text, messageHtml:html, notifyParents:notifyParents}}, function(e,r){
     t.sending=false;
     if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not send message.','e'); render(); return; }
     t.draft='';
@@ -752,31 +794,231 @@ function rStaffThread(){
   var sendBtn=t.sending
     ?'<button class="btn btn-p" disabled><span class="spin">↻</span></button>'
     :'<button class="btn btn-p" onclick="sendStaffMessage()">Send</button>';
-  h+='<div class="composer">'+
-    '<textarea id="staff-composer" placeholder="Type your message here..." oninput="ACTIVE_STAFF_THREAD.draft=this.value">'+esc(t.draft)+'</textarea>'+
-    sendBtn+
-    '</div>';
+  h+=rComposer('staff-composer',t.draft,'ACTIVE_STAFF_THREAD.draft=_composerInput(this)',sendBtn);
   return h;
+}
+
+// ============================================================
+// FORMATTING COMPOSER (BACKLOG 1.33)
+// ============================================================
+// Button-driven only — no typed syntax, no keyboard shortcuts to learn
+// (settled with AC: teachers won't know them). Same execCommand approach
+// already proven in admin's Comms toolbar, minus its colour/font/image extras.
+//
+// IMPORTANT: nothing in this section is a security control. _composerClean()
+// below is a tidiness pass, because contenteditable emits browser-specific
+// soup (div line wrappers, span style attributes, &nbsp;) and pasted content
+// drags in whatever the source page had. The real boundary is _sanitizeMessageHtml_()
+// in Code.js, which re-checks everything server-side and assumes this file
+// could be bypassed entirely — because it can: anything can POST to sendMessage.
+
+// Tags kept, normalized to a single spelling each so the server sees a small,
+// predictable vocabulary. Everything else is unwrapped, keeping its text.
+var CMP_KEEP={B:'b',STRONG:'b',I:'i',EM:'i',U:'u',UL:'ul',OL:'ol',LI:'li',BLOCKQUOTE:'blockquote'};
+
+// Elements whose CONTENT has to go as well, not just their tag. Everything
+// else is unwrapped (tag dropped, words kept), which is right for a pasted
+// span but wrong for a script element — unwrapping that would drop the tag
+// and leave 'alert(1)' sitting in the message as visible text.
+var CMP_DROP={SCRIPT:1,STYLE:1,NOSCRIPT:1,TEMPLATE:1,IFRAME:1,OBJECT:1,EMBED:1,HEAD:1,TITLE:1};
+
+// Reads bold/italic/underline out of an inline style attribute. Pasted content
+// carries formatting this way rather than as tags — Docs and Word both put
+// bold on a <span style="font-weight:700"> — so without this, pasting loses
+// every bit of emphasis. Returns null when there is no style attribute at all.
+function _styleFlags(n){
+  var st=(n.getAttribute&&n.getAttribute('style'))||'';
+  if(!st) return null;
+  st=st.toLowerCase();
+  var f={};
+  var fw=/font-weight\s*:\s*([a-z0-9]+)/.exec(st);
+  if(fw){
+    f.boldSet=true;
+    f.bold=(fw[1]==='bold'||fw[1]==='bolder'||parseInt(fw[1],10)>=600);
+  }
+  if(/font-style\s*:\s*italic/.test(st)) f.italic=true;
+  if(/text-decoration[^;]*underline/.test(st)) f.underline=true;
+  return f;
+}
+
+function _composerClean(node){
+  var out='';
+  for(var i=0;i<node.childNodes.length;i++){
+    var n=node.childNodes[i];
+    if(n.nodeType===3){ out+=esc(n.nodeValue); continue; }
+    if(n.nodeType!==1) continue;
+    var tag=n.nodeName;
+    if(CMP_DROP[tag]) continue;
+    if(tag==='BR'){ out+='<br>'; continue; }
+    var inner=_composerClean(n);
+    if(tag==='A'){
+      var href=n.getAttribute('href')||'';
+      // Mirrors the server's rule so the toolbar can't silently produce a link
+      // the server will then drop. The server still re-checks it.
+      if(/^(https?:\/\/|mailto:)/i.test(href) && !/[\s"'<>\\]/.test(href)) out+='<a href="'+esc(href)+'">'+inner+'</a>';
+      else out+=inner;
+      continue;
+    }
+    var flags=_styleFlags(n);
+    var keep=CMP_KEEP[tag];
+    // An explicit font-weight:normal cancels a bold tag. Google Docs wraps its
+    // ENTIRE clipboard payload in <b style="font-weight:normal">, so honouring
+    // the tag over the style would make every message pasted from Docs bold.
+    if(keep==='b' && flags && flags.boldSet && !flags.bold) keep=null;
+    if(keep){ if(inner) out+='<'+keep+'>'+inner+'</'+keep+'>'; continue; }
+    // Formatting carried as an inline style instead of a tag gets promoted to
+    // the real tag, so pasted bold/italic survives.
+    if(inner && flags){
+      if(flags.underline) inner='<u>'+inner+'</u>';
+      if(flags.italic) inner='<i>'+inner+'</i>';
+      if(flags.bold) inner='<b>'+inner+'</b>';
+    }
+    // DIV/P are how contenteditable wraps each new line — become line breaks.
+    if(tag==='DIV'||tag==='P'){ out+=(out&&!/<br>$/.test(out)?'<br>':'')+inner; continue; }
+    out+=inner; // SPAN, FONT, and anything pasted in: unwrap, keep the words
+  }
+  return out;
+}
+
+// Only used to decide "is this message empty" before sending. The real
+// plain-text copy stored on the record is derived server-side from the
+// sanitized HTML, never from here — see the note on doSendMessage().
+function _composerPlain(html){
+  return String(html||'').replace(/<[^>]*>/g,' ').replace(/&nbsp;/gi,' ')
+    .replace(/&amp;/g,'&').replace(/\s+/g,' ').trim();
+}
+
+function _composerInput(el){
+  // Browsers leave a stray line-break wrapper behind when the box is emptied,
+  // which defeats the :empty placeholder rule. Clear it only when there is
+  // genuinely nothing left — the list check keeps an empty bullet the teacher
+  // just created from being wiped out from under them.
+  if(!el.textContent.trim() && !el.querySelector('ul,ol,a')) el.innerHTML='';
+  return _composerClean(el);
+}
+
+function _composerSync(id){
+  var el=document.getElementById(id); if(!el) return;
+  var v=_composerClean(el);
+  if(id==='family-composer' && ACTIVE_THREAD) ACTIVE_THREAD.draft=v;
+  if(id==='staff-composer' && ACTIVE_STAFF_THREAD) ACTIVE_STAFF_THREAD.draft=v;
+}
+
+function _composerCmd(id,cmd){
+  var el=document.getElementById(id); if(!el) return;
+  el.focus();
+  // styleWithCSS(false) makes the browser emit <b> rather than
+  // <span style="font-weight:bold">, which the allowlist would otherwise drop.
+  try{ document.execCommand('styleWithCSS',false,false); }catch(e){}
+  document.execCommand(cmd,false,null);
+  _composerSync(id);
+}
+
+// Paste keeps its formatting (AC's call, 19 Aug) — a teacher pasting a
+// bulleted practice list out of Docs keeps the bullets. What survives is
+// whatever _composerClean() allows, so pasted content lands in exactly the
+// same shape as content typed with the toolbar.
+//
+// The clipboard HTML is parsed with DOMParser, never by assigning innerHTML:
+// a DOMParser document is inert, so a pasted image with an onerror handler or
+// a pasted script element can't run while we walk it. The server sanitizer
+// still re-checks the result regardless.
+function _composerPaste(ev){
+  var cd=ev.clipboardData||window.clipboardData;
+  if(!cd) return;
+  var html='';
+  try{ html=cd.getData('text/html')||''; }catch(e){}
+  // No HTML flavour on the clipboard (plain-text copy, most mobile keyboards):
+  // let the browser's own plain-text paste happen untouched.
+  if(!html) return;
+  ev.preventDefault();
+  var clean='';
+  try{
+    var doc=new DOMParser().parseFromString(html,'text/html');
+    clean=_composerClean(doc.body);
+  }catch(e){
+    clean=esc(cd.getData('text/plain')||'');
+  }
+  if(clean) document.execCommand('insertHTML',false,clean);
+}
+
+function _composerLink(id){
+  var el=document.getElementById(id); if(!el) return;
+  el.focus();
+  var url=(window.prompt(CMP_COPY.linkPrompt)||'').trim(); // TODO(copy): AC
+  if(!url) return;
+  if(!/^(https?:\/\/|mailto:)/i.test(url) || /[\s"'<>\\]/.test(url)){
+    showMsg(CMP_COPY.linkRejected,'e'); // TODO(copy): AC
+    return;
+  }
+  try{ document.execCommand('styleWithCSS',false,false); }catch(e){}
+  var sel=window.getSelection();
+  if(!sel || sel.isCollapsed) document.execCommand('insertHTML',false,'<a href="'+esc(url)+'">'+esc(url)+'</a>');
+  else document.execCommand('createLink',false,url);
+  _composerSync(id);
+}
+
+// TODO(copy): every string here is a placeholder for AC's copy pass. Button
+// labels reuse the wording already live in admin's Comms toolbar so the two
+// tools read the same; the two link strings are new and unreviewed.
+var CMP_COPY={
+  placeholder:'Type your message here...',
+  linkPrompt:'Paste the link address (it must start with https://)',
+  linkRejected:'That link wasn’t added — links need to start with https:// and contain no spaces.',
+  bold:'Bold', bullet:'Bullet list', number:'Numbered list',
+  indent:'Indent', outdent:'Outdent', link:'Link'
+};
+
+function _tbBtn(id,cmd,label,title){
+  // onmousedown/preventDefault keeps the text selection alive when the button
+  // takes the click — without it, execCommand has nothing to act on.
+  return '<button type="button" class="cmp-tb-btn" title="'+esc(title)+'" onmousedown="event.preventDefault()"'+
+    ' onclick="_composerCmd(\''+id+'\',\''+cmd+'\')">'+label+'</button>';
+}
+
+function rComposer(id,draft,onInput,sendBtn){
+  return '<div class="composer-wrap">'+
+    '<div class="cmp-tb">'+
+      _tbBtn(id,'bold','<b>B</b>',CMP_COPY.bold)+
+      _tbBtn(id,'insertUnorderedList','• List',CMP_COPY.bullet)+
+      _tbBtn(id,'insertOrderedList','1. List',CMP_COPY.number)+
+      _tbBtn(id,'indent','⇥',CMP_COPY.indent)+
+      _tbBtn(id,'outdent','⇤',CMP_COPY.outdent)+
+      '<button type="button" class="cmp-tb-btn" title="'+esc(CMP_COPY.link)+'" onmousedown="event.preventDefault()"'+
+        ' onclick="_composerLink(\''+id+'\')">'+esc(CMP_COPY.link)+'</button>'+
+    '</div>'+
+    '<div class="composer">'+
+      '<div id="'+id+'" class="cmp-rich" contenteditable="true" data-ph="'+esc(CMP_COPY.placeholder)+'"'+
+        ' oninput="'+onInput+'" onpaste="_composerPaste(event)">'+(draft||'')+'</div>'+
+      sendBtn+
+    '</div></div>';
 }
 
 function rMessageBubble(m){
   var mine = m.senderId===TEACHER_ID;
+  // messageHtml is set only when the sender used the formatting toolbar, and
+  // has already been through _sanitizeMessageHtml_() server-side. Plain
+  // messages (and everything sent before 1.33) keep the escaped path.
+  var body = m.messageHtml
+    ? m.messageHtml
+    : esc(m.messageText||'').replace(/\n/g,'<br>');
   return '<div class="bubble-row'+(mine?' mine':'')+'">'+
     '<div class="bubble'+(mine?' mine':'')+'">'+
     (!mine?'<div class="bubble-sender">'+esc(m.senderName||'')+'</div>':'')+
-    '<div class="bubble-text">'+esc(m.messageText||'').replace(/\n/g,'<br>')+'</div>'+
+    '<div class="bubble-text">'+body+'</div>'+
     '<div class="bubble-time">'+esc(fmtMsgTime(m.sentAt))+'</div>'+
     '</div></div>';
 }
 
 function sendStaffMessage(){
   var t=ACTIVE_STAFF_THREAD;
-  var text=(document.getElementById('staff-composer')||{}).value||t.draft;
-  text=(text||'').trim();
+  var _el=document.getElementById('staff-composer');
+  var html=_el?_composerClean(_el):(t.draft||'');
+  var text=_composerPlain(html);
   if(!text) return;
   var reqData = t.contactType==='admin'
-    ? {conversationType:'teacher_admin', teacherId:TEACHER_ID, teacherToken:TOKEN, messageText:text}
-    : {conversationType:'staff_staff', teacherId:TEACHER_ID, staffId2:t.otherId, teacherToken:TOKEN, messageText:text};
+    ? {conversationType:'teacher_admin', teacherId:TEACHER_ID, teacherToken:TOKEN, messageText:text, messageHtml:html}
+    : {conversationType:'staff_staff', teacherId:TEACHER_ID, staffId2:t.otherId, teacherToken:TOKEN, messageText:text, messageHtml:html};
   t.sending=true; render();
   api({action:'sendMessage', data:reqData}, function(e,r){
     t.sending=false;

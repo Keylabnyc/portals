@@ -88,6 +88,9 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 .c-info{background:var(--bbg);color:var(--bt)}
 .c-warn{background:#FDECD6;color:#7C3A00}
 .c-danger{background:var(--rbg);color:var(--rt)}
+.unread-badge{background:#1a4fc4;color:#fff;font-size:11px;font-weight:700;border-radius:10px;padding:1px 7px;flex:0 0 auto;cursor:pointer}
+.read-toggle{flex:0 0 auto;font-size:14px;color:var(--text5);text-decoration:none;padding:0 4px}
+.read-toggle:hover{color:var(--acc);text-decoration:none}
 .divider{border:none;border-top:1px solid var(--border);margin:1.5rem 0}
 .add-btn{border:1px dashed var(--border2);border-radius:var(--r);padding:.75rem;text-align:center;cursor:pointer;color:var(--text4);font-size:13px;margin-bottom:1rem;background:transparent;width:100%;transition:all .12s;font-family:"Open Sans",sans-serif}
 .add-btn:hover{border-color:var(--acc);color:var(--acc)}
@@ -145,6 +148,14 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 .bubble-sender{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--acc);font-family:"DM Mono",monospace;margin-bottom:.2rem}
 .bubble-text{font-size:13px;line-height:1.5;color:inherit}
 .bubble.mine .bubble-text{color:#fff}
+/* Formatted teacher messages (BACKLOG 1.33). The family reply box stays plain
+   text — these styles are for receiving, not composing. */
+.bubble-text ul,.bubble-text ol{margin:.3rem 0;padding-left:1.25rem}
+.bubble-text li{margin:.15rem 0}
+.bubble-text blockquote{margin:.3rem 0;padding-left:.7rem;border-left:2px solid rgba(0,0,0,.15)}
+.bubble.mine .bubble-text blockquote{border-left-color:rgba(255,255,255,.4)}
+.bubble-text a{color:var(--acc);text-decoration:underline;word-break:break-word}
+.bubble.mine .bubble-text a{color:#fff}
 .bubble-time{font-size:10px;color:var(--text5);margin-top:.3rem}
 .bubble.mine .bubble-time{color:rgba(255,255,255,.7)}
 .composer{display:flex;gap:8px;align-items:flex-end}
@@ -723,6 +734,21 @@ function _renderChips(chips){
 function render(){
   var el=document.getElementById('app');
   if(!el) return;
+  // Preserve composer focus/cursor and message-list scroll position across
+  // any render that happens while a thread is expanded (1.27 already scrolls
+  // to newest on purpose at specific call sites via _shouldScrollMsgList
+  // below; this guards every OTHER render — chiefly the 5s conversation-
+  // preview poll, which used to tear down and recreate the whole subtree,
+  // resetting scroll to the top and stealing focus out of the reply box
+  // mid-keystroke — items 11 & 13, 18 Aug).
+  var _activeId=document.activeElement&&document.activeElement.id;
+  var _composerSel=null;
+  if(_activeId==='home-composer'){
+    var _c=document.getElementById('home-composer');
+    _composerSel={start:_c.selectionStart,end:_c.selectionEnd};
+  }
+  var _prevMsgList=el.querySelector('.msg-list');
+  var _prevScrollTop=_prevMsgList?_prevMsgList.scrollTop:null;
   var logoSrc=KEYLAB_LOGO_SRC;
   var h='<div style="text-align:center;margin-bottom:1.5rem">';
   h+='<img src="'+logoSrc+'" alt="Keylab" style="width:56px;height:56px;border-radius:0;margin-bottom:.6rem;display:block;margin-left:auto;margin-right:auto">';
@@ -748,6 +774,16 @@ function render(){
     _shouldScrollMsgList=false;
     var ml=el.querySelector('.msg-list');
     if(ml) ml.scrollTop=ml.scrollHeight;
+  } else if(_prevScrollTop!==null){
+    var ml2=el.querySelector('.msg-list');
+    if(ml2) ml2.scrollTop=_prevScrollTop;
+  }
+  if(_activeId==='home-composer'){
+    var newC=document.getElementById('home-composer');
+    if(newC){
+      newC.focus();
+      if(_composerSel) newC.setSelectionRange(_composerSel.start,_composerSel.end);
+    }
   }
 }
 
@@ -1379,9 +1415,15 @@ function rApp(){
   // v223, fixes a real dead end: rHome()'s zero-students branch returned
   // before ever reaching its own Sign Out link, so anyone whose account
   // resolved to no students had no way back to the login screen at all.
+  // Unread badge lives on the nav tab itself (not just inside Home's own
+  // message list), per AC's direction this session — visible the moment the
+  // app opens, before navigating to Home at all.
+  var homeUnread=(HOME_CONVOS.list||[]).reduce(function(sum,c){ return sum+(c.unread||0); },0);
   var tabs='<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:2rem">'+
     '<div class="tabs" style="margin-bottom:0">'+
-    '<div class="tab'+(TAB==='home'?' on':'')+'" onclick="TAB=&apos;home&apos;;render()">Home</div>'+
+    '<div class="tab'+(TAB==='home'?' on':'')+'" onclick="TAB=&apos;home&apos;;render()">Home'+
+    (homeUnread?'<span class="chip c-info" style="margin-left:5px;font-size:10px;padding:1px 6px;vertical-align:middle">'+homeUnread+'</span>':'')+
+    '</div>'+
     (avOpen?'<div class="tab'+(TAB==='scheduling'?' on':'')+'" onclick="gotoScheduling()">Availability</div>':'')+
     '<div class="tab'+(TAB==='enrollment'?' on':'')+'" onclick="gotoEnrollment()">Enrollment</div>'+
     '</div>'+
@@ -1405,14 +1447,26 @@ function rHomeMessages(){
     return h+'<div style="text-align:center;padding:1rem;color:var(--text3)"><span class="spin" style="font-size:18px">↻</span></div>';
   }
   if(HOME_CONVOS.list.length){
+    var anyUnread=HOME_CONVOS.list.some(function(c){ return c.unread; });
+    if(anyUnread){
+      h+='<div style="text-align:right;margin-bottom:.4rem">'+
+        '<a href="#" style="font-size:11px;color:var(--text4)" onclick="event.preventDefault();markAllHomeRead()">Mark all read</a></div>';
+    }
     h+='<div class="thread-list" style="margin-bottom:.75rem">'+HOME_CONVOS.list.map(function(c){
       var isOpen=HOME_EXPANDED && HOME_EXPANDED.teacherId===c.teacherId;
       var row='<div class="teacher-pick-row" onclick="toggleHomeThread(\''+esc(c.teacherId)+'\',\''+esc(c.teacherName)+'\')">'+
         '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px">'+
         '<div><div style="font-weight:600;color:var(--text2)">'+esc(c.teacherName)+'</div>'+
         '<div style="font-size:12px;color:var(--text4)">'+esc((c.lastMessageText||'').slice(0,70))+'</div></div>'+
-        (c.unread?'<div class="chip c-info">'+c.unread+'</div>':'')+
-        '</div></div>';
+        '<div style="display:flex;align-items:center;gap:6px">'+
+        // Needs-response: read, but nothing sent back since, and not
+        // dismissed — shown greyed-out to stay visually distinct from the
+        // bold unread count, with its own clear control for a message that
+        // just didn't need a reply (18 Aug, this session).
+        (c.needsResponse?'<span class="chip" style="background:var(--bg3);color:var(--text4)" title="Read — no reply sent yet">1</span>'+
+          '<a href="#" style="font-size:11px;color:var(--text4)" title="Clear — no response needed" onclick="event.preventDefault();event.stopPropagation();clearHomeThread(\''+esc(c.teacherId)+'\')">✕</a>':'')+
+        rHomeReadToggle(c.unread,c.teacherId)+
+        '</div></div></div>';
       if(isOpen) row+=rHomeExpandedThread();
       return row;
     }).join('')+'</div>';
@@ -1427,6 +1481,36 @@ function rHomeMessages(){
     '</div>'+
     '<p class="response-note">We typically respond within 24 hours. If your message is urgent, let us know and we’ll prioritize it.</p>';
   return h;
+}
+
+// Same Gmail-style manual toggle the teacher portal already has (rReadToggle
+// in EnrollmentTeacher.html) — click the count to mark read, click the ring
+// to mark unread again. stopPropagation so it doesn't also open the thread.
+function rHomeReadToggle(unread, teacherId){
+  var fn='markHomeThreadRead('+(unread?'true':'false')+',\''+esc(teacherId)+'\')';
+  if(unread) return '<div class="unread-badge" onclick="event.stopPropagation();'+fn+'" title="Mark read">'+unread+'</div>';
+  return '<a href="#" class="read-toggle" onclick="event.preventDefault();event.stopPropagation();'+fn+'" title="Mark unread">○</a>';
+}
+
+function markHomeThreadRead(read, teacherId){
+  fapi('setConversationReadState', {conversationType:'family_teacher', familyId:FAMILY_ID, teacherId:teacherId, read:read}, function(e,r){
+    if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not update.','e'); return; }
+    loadHomeConversations(true);
+  });
+}
+
+function markAllHomeRead(){
+  fapi('markAllRead', {}, function(e,r){
+    if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not update.','e'); return; }
+    loadHomeConversations(true);
+  });
+}
+
+function clearHomeThread(teacherId){
+  fapi('clearConversation', {teacherId:teacherId}, function(e,r){
+    if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not update.','e'); return; }
+    loadHomeConversations(true);
+  });
 }
 
 function doContactAdminHome(){
@@ -1480,15 +1564,24 @@ function loadHomeConversations(silent){
   fapi('getFamilyConversations', {}, function(e,r){
     HOME_CONVOS.loading=false;
     if(e||!r||!r.ok) return; // silent — this runs on a poll timer, don't spam errors
-    HOME_CONVOS.list=r.conversations||[];
+    var next=r.conversations||[];
     if(_pendingOpenTeacherId){
       var target=_pendingOpenTeacherId;
       _pendingOpenTeacherId='';
-      var match=HOME_CONVOS.list.filter(function(c){ return c.teacherId===target; })[0];
+      HOME_CONVOS.list=next;
+      var match=next.filter(function(c){ return c.teacherId===target; })[0];
       toggleHomeThread(target, match?match.teacherName:(target==='admin'?'Admin':''));
       return; // toggleHomeThread() already renders
     }
-    render();
+    // Skip the render entirely when nothing actually changed — this poll
+    // fires every 5s regardless of whether anything's new, and a full
+    // render() rebuilds the whole subtree even though render() itself now
+    // preserves scroll/focus across it (items 11 & 13). Not rendering at
+    // all when there's nothing to show is simpler and cheaper than relying
+    // on that preservation alone.
+    var changed=JSON.stringify(next)!==JSON.stringify(HOME_CONVOS.list);
+    HOME_CONVOS.list=next;
+    if(!silent||changed) render();
   });
 }
 
@@ -1617,10 +1710,17 @@ function _startMessagePolling(){
 
 function rMsgBubble(m){
   var mine = m.senderId===FAMILY_ID;
+  // messageHtml is set only when a teacher used the formatting toolbar
+  // (BACKLOG 1.33), and has already been through _sanitizeMessageHtml_()
+  // server-side — the family reply box stays plain text and never sets it.
+  // Plain messages, and everything sent before 1.33, keep the escaped path.
+  var body = m.messageHtml
+    ? m.messageHtml
+    : esc(m.messageText||'').replace(/\n/g,'<br>');
   return '<div class="bubble-row'+(mine?' mine':'')+'">'+
     '<div class="bubble'+(mine?' mine':'')+'">'+
     (!mine?'<div class="bubble-sender">'+esc(m.senderName||'')+'</div>':'')+
-    '<div class="bubble-text">'+esc(m.messageText||'').replace(/\n/g,'<br>')+'</div>'+
+    '<div class="bubble-text">'+body+'</div>'+
     '<div class="bubble-time">'+esc(fmtMsgTime(m.sentAt))+'</div>'+
     '</div></div>';
 }
@@ -1913,11 +2013,11 @@ function _rChildStatusSummary(s){
     var holdDur=_effDur(s.durationBase,s.durationExtra)||s.durationBase||'';
     var holdInstr=s.instrument||'';
     if(s.lessonLocation==='in-home'){
-      h+='<div style="font-size:12px;color:var(--text4)">'+esc(firstName)+' has a hold placed for '+esc(holdDur)+' minute in-home '+esc(holdInstr)+' lessons with our teacher '+esc(s.teacher)+' for '+esc(s.day)+'s at '+esc(s.time)+'. Holds are not guaranteed time slots and can change. We\'ll be in touch with an update soon!</div>';
+      h+='<div style="font-size:12px;color:var(--text4)">'+esc(firstName)+' has a hold placed for '+esc(holdDur)+' minute in-home '+esc(holdInstr)+' lessons with our teacher '+esc(s.teacher)+' for '+esc(s.day)+'s at '+esc(s.time)+'. Holds are not guaranteed and can change, but we are currently targeting this time slot for '+esc(firstName)+'’s '+esc(holdInstr)+' lessons.</div>';
     } else if(s.lessonLocation==='virtual'){
-      h+='<div style="font-size:12px;color:var(--text4)">'+esc(firstName)+' has a hold placed for '+esc(holdDur)+' minute virtual '+esc(holdInstr)+' lessons with our teacher '+esc(s.teacher)+' for '+esc(s.day)+'s at '+esc(s.time)+'. Holds are not guaranteed time slots and can change. We\'ll be in touch with an update soon!</div>';
+      h+='<div style="font-size:12px;color:var(--text4)">'+esc(firstName)+' has a hold placed for '+esc(holdDur)+' minute virtual '+esc(holdInstr)+' lessons with our teacher '+esc(s.teacher)+' for '+esc(s.day)+'s at '+esc(s.time)+'. Holds are not guaranteed and can change, but we are currently targeting this time slot for '+esc(firstName)+'’s '+esc(holdInstr)+' lessons.</div>';
     } else {
-      h+='<div style="font-size:12px;color:var(--text4)">'+esc(firstName)+' has a hold placed for '+esc(holdDur)+' minute '+esc(holdInstr)+' lessons with our teacher '+esc(s.teacher)+' for '+esc(s.day)+'s at '+esc(s.time)+' at Keylab. Holds are not guaranteed time slots and can change. We\'ll be in touch with an update soon!</div>';
+      h+='<div style="font-size:12px;color:var(--text4)">'+esc(firstName)+' has a hold placed for '+esc(holdDur)+' minute '+esc(holdInstr)+' lessons with our teacher '+esc(s.teacher)+' for '+esc(s.day)+'s at '+esc(s.time)+' at Keylab. Holds are not guaranteed and can change, but we are currently targeting this time slot for '+esc(firstName)+'’s '+esc(holdInstr)+' lessons.</div>';
     }
   } else if(hasProp&&!isAccepted){
     var propDur=_effDur(s.durationBase,s.durationExtra)||s.durationBase||'';

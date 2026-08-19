@@ -176,6 +176,15 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
    picker screen behind them. The row is the only clickable object in the
    block, which is the point: it was a button, a tile and a row competing. ── */
 .kl-clabel{font-family:"DM Mono",monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text4);margin-bottom:.4rem}
+/* Sub-header inside a card: spans the card's full width, edge to edge, rather
+   than sitting inside its padding like .kl-clabel does (AC, 19 Aug). The
+   negative margins have to match .card's padding — keep them in step. */
+.kl-subhd{font-family:"DM Mono",monospace;font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--acc);background:rgba(30,58,110,.07);border-top:1px solid var(--border);border-bottom:1px solid var(--border);margin:1rem -1.25rem .7rem;padding:.4rem 1.25rem}
+.kl-subhd:first-child{margin-top:-1.25rem;border-top:0}
+/* Directly under the card's own heading band, the default 1rem top margin
+   stacks on the h2's 1rem bottom margin and leaves a 2rem gulf between two
+   bands. */
+.card>h2:first-child+.kl-subhd{margin-top:0}
 .kl-crow{display:flex;align-items:center;gap:10px;padding:.55rem .6rem;border:1px solid var(--border);border-radius:var(--r);background:rgba(255,255,255,.32);margin-bottom:6px;cursor:pointer;transition:background .12s}
 .kl-crow:hover{background:rgba(255,255,255,.6)}
 /* Unread reads as more white and a navy edge rather than a different hue —
@@ -1591,9 +1600,9 @@ function rApp(){
 // duplicated in the support section and AC moved it here.
 function rHomeMsgGuide(){
   return '<div class="kl-guide"><ul>'+
-    '<li>Responses after 2pm may be delayed, but we will respond to your message as soon as possible.</li>'+
-    '<li>If your message is time sensitive, especially if you need to notify your teacher you are running late or are cancelling your lesson, contact your teacher directly to give them a heads up.</li>'+
-    '<li>To cancel a lesson, click here'+
+    '<li>We will respond to your message as soon as possible, and within 24 hours maximum.</li>'+
+    '<li>You can contact your teacher directly if you are running late or need lesson support</li>'+
+    '<li>Click here to cancel a lesson (your teacher will be notified automatically)'+
       '<div style="margin-top:.35rem"><a class="btn btn-d btn-sm" href="'+esc(publicCfg.schedulingBillingUrl||'')+'" target="_blank">Cancel a Lesson</a></div>'+
       '</li>'+
     '<li>Contact admin for billing and general administrative assistance.</li>'+
@@ -2366,12 +2375,19 @@ function _klEnrolled(){
 // AC asked for. Returns e.g. {1:['Mia'], 3:['Leo']}.
 function _klLessonDays(){
   var byDay={};
-  _klEnrolled().forEach(function(s){
+  var enrolled=_klEnrolled();
+  // Label per enrollment, not per child: a student taking two instruments has
+  // two lessons that a closure affects separately, and a family reading "Mia"
+  // twice against the same date can't tell which lesson is meant (AC, 19 Aug).
+  var multi=enrolled.length>1;
+  enrolled.forEach(function(s){
     var idx=KL_DAYIDX[String(s.day||'').trim().toLowerCase()];
     if(idx===undefined) return;
     var first=s.studentName?s.studentName.trim().split(' ')[0]:'';
+    if(!first) return;
+    var label=first+(multi&&s.instrument?' \u00b7 '+s.instrument:'');
     if(!byDay[idx]) byDay[idx]=[];
-    if(first&&byDay[idx].indexOf(first)===-1) byDay[idx].push(first);
+    if(byDay[idx].indexOf(label)===-1) byDay[idx].push(label);
   });
   return byDay;
 }
@@ -2401,24 +2417,35 @@ function _klScheduleEvents(){
     return {event:d.event||'', startDate:d.startDate, endDate:d.endDate||d.startDate, closed:!!d.closed, kind:'calendar'};
   });
 
-  // One entry per distinct start date, listing whoever begins that day, rather
-  // than a near-duplicate row per child on a family who all start together.
-  var byDate={};
-  _klEnrolled().forEach(function(s){
+  // One entry per ENROLLMENT, not one per date (AC, 19 Aug). A family with two
+  // children gets two rows even when both start the same day, and a single
+  // child with two enrollments — two instruments, say — gets one row each,
+  // because those are two different first lessons with two different teachers.
+  // The instrument is only added where the family has more than one enrollment,
+  // since otherwise it's noise.
+  var enrolled=_klEnrolled();
+  var multi=enrolled.length>1;
+  enrolled.forEach(function(s){
     if(!s.startDate) return;
     var d=_klFloorDate(s.startDate);
-    if(!d||d<today) return;
-    var key=s.startDate;
+    if(!d||d<today) return;   // lessons have already begun for this enrollment
     var first=s.studentName?s.studentName.trim().split(' ')[0]:'';
-    if(!byDate[key]) byDate[key]=[];
-    if(first&&byDate[key].indexOf(first)===-1) byDate[key].push(first);
-  });
-  Object.keys(byDate).forEach(function(k){
-    var names=byDate[k];
-    out.push({
-      event: names.length===1 ? names[0]+'’s first lesson' : 'First lesson for '+names.join(' & '),
-      startDate:k, endDate:k, closed:false, kind:'start'
-    });
+    // The date shown is the first ACTUAL lesson, not the raw start date. Admin
+    // typically sets every student's startDate to the first day of the school
+    // year, which is one weekday — so a Wednesday student would otherwise be
+    // told their first lesson is that Monday, while the Next lesson section
+    // directly above said Wednesday. Same calculation as that section, so the
+    // two halves of this card can't contradict each other.
+    var actual=_nextLessonDate(s.day, s.startDate);
+    var ymd=actual
+      ? actual.getFullYear()+'-'+_p2(actual.getMonth()+1)+'-'+_p2(actual.getDate())
+      : s.startDate;
+    // Possessive on the child, not on the instrument: "Mia's first piano
+    // lesson", never "Mia · Piano's first lesson".
+    var label=multi&&s.instrument
+      ? first+'’s first '+String(s.instrument).toLowerCase()+' lesson'
+      : first+'’s first lesson';
+    out.push({ event:label, startDate:ymd, endDate:ymd, closed:false, kind:'start' });
   });
 
   return out.filter(function(e){
@@ -2479,7 +2506,7 @@ function rHomeSchedule(){
     return a.d - b.d;
   });
   if(lessons.length){
-    h+='<div class="kl-clabel">Next lesson</div>';
+    h+='<div class="kl-subhd">Next lesson</div>';
     lessons.forEach(function(L){
       var s=L.s;
       var first=s.studentName?s.studentName.trim().split(' ')[0]:'';
@@ -2500,16 +2527,16 @@ function rHomeSchedule(){
     // Expanded REPLACES the summary rather than appending under it — otherwise
     // the same three dates appear twice, one set directly beneath the other.
     if(_klAllDatesOpen){
-      h+='<div class="kl-clabel" style="margin-top:1rem">All dates on your lesson days</div>';
+      h+='<div class="kl-subhd">All dates on your lesson days</div>';
       h+=rHomeDayFilteredDates();
     } else {
-      h+='<div class="kl-clabel" style="margin-top:1rem">Important upcoming dates</div>';
+      h+='<div class="kl-subhd">Upcoming dates</div>';
       events.slice(0,3).forEach(function(e){
         h+=_klDateRow(e, _fmtDateRange(e.startDate,e.endDate), '');
       });
     }
     h+='<div style="margin-top:.5rem"><a href="#" style="font-size:12px;color:var(--bt)" onclick="event.preventDefault();toggleAllDates()">'+
-      (_klAllDatesOpen?'Show the next three instead':'See all dates on your lesson days')+'</a></div>';
+      (_klAllDatesOpen?'Hide dates':'See all dates')+'</a></div>';
   }
 
   // Hidden entirely until the URL is set in admin Settings, so this can never

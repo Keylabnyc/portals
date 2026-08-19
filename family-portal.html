@@ -144,9 +144,6 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 
 .response-note{font-size:12px;color:var(--text4);margin-bottom:1rem}
 /* ── One-page family home (BACKLOG 1.36) ── */
-.kl-hd{display:flex;align-items:center;gap:10px;margin-bottom:1.25rem}
-.kl-hd img{width:34px;height:34px;border-radius:6px;flex:0 0 auto}
-.kl-hd-t{font-size:16px;font-weight:600;color:var(--text);line-height:1.3}
 .kl-row{display:flex;justify-content:space-between;gap:10px;align-items:baseline;padding:.4rem 0}
 .kl-row+.kl-row{border-top:1px dashed var(--border)}
 .kl-who{font-size:13px;font-weight:600;color:var(--text)}
@@ -665,6 +662,54 @@ function api(payload, cb){
 function fapi(action, data, cb){
   api({action:action, data:Object.assign({familyToken:TOKEN}, data)}, cb);
 }
+
+// ── Un-acknowledged sends (BACKLOG 1.46) ────────────────────────────────
+// A message appears in the thread the moment Send is clicked and posts in the
+// background (1.43). That leaves one way to lose a message the family watched
+// "send": closing the tab or navigating away in the moment before the fetch
+// leaves the browser, which aborts it. So every send is held here until the
+// server acknowledges it, and anything still outstanding when the page goes
+// away is re-posted with sendBeacon — which exists precisely because a normal
+// request doesn't survive unload.
+//
+// Re-posting is only safe because each send carries a clientMsgId the server
+// dedupes on, so a message that did land can't be written twice.
+var _unackedSends = [];
+
+function _klNewClientMsgId(){
+  return 'cmsg-'+Date.now()+'-'+Math.random().toString(36).slice(2,10);
+}
+
+// Same as fapi(), but the payload is retained until the server answers —
+// either way. A failed send is removed too: the caller has already taken
+// responsibility for it (sendHomeMessage puts the text back in the composer),
+// and re-posting from unload behind their back would be worse than not.
+function fapiTracked(action, data, cb){
+  var payload={action:action, data:Object.assign({familyToken:TOKEN}, data)};
+  _unackedSends.push(payload);
+  api(payload, function(e,r){
+    var i=_unackedSends.indexOf(payload);
+    if(i!==-1) _unackedSends.splice(i,1);
+    cb(e,r);
+  });
+  return payload;
+}
+
+// pagehide rather than beforeunload/unload: it's the one that fires reliably
+// on mobile, including when the browser is backgrounded and the page is
+// frozen, which is the realistic version of "backed out of the page" on a
+// phone. Firing while the original fetch is actually still alive is fine and
+// expected — that's what the server-side dedupe is for.
+window.addEventListener('pagehide', function(){
+  if(!_unackedSends.length) return;
+  if(!navigator.sendBeacon) return;
+  _unackedSends.forEach(function(p){
+    try{
+      var body=JSON.stringify({action:p.action, data:Object.assign({}, p.data, {isResend:true})});
+      navigator.sendBeacon(GAS_URL, new Blob([body], {type:'text/plain;charset=utf-8'}));
+    }catch(e){ /* nothing useful to do from a page that's already going */ }
+  });
+});
 
 // ============================================================
 // HELPERS
@@ -1659,9 +1704,10 @@ function rHomeThreadView(){
   } else {
     h+='<div class="msg-list">'+t.messages.map(rMsgBubble).join('')+'</div>';
   }
-  var sendBtn=t.sending
-    ?'<button class="btn btn-p" disabled><span class="spin">↻</span></button>'
-    :'<button class="btn btn-p" onclick="sendHomeMessage()">Send</button>';
+  // No sending/disabled state: the message is already in the history by the
+  // time the request goes out, so a spinner would be reporting on work the
+  // family has no reason to care about (1.43).
+  var sendBtn='<button class="btn btn-p" onclick="sendHomeMessage()">Send</button>';
   h+='<div class="composer">'+
     '<textarea id="home-composer" placeholder="Type your message here..." oninput="HOME_EXPANDED.draft=this.value">'+esc(t.draft)+'</textarea>'+
     sendBtn+
@@ -1746,7 +1792,7 @@ function loadHomeConversations(silent){
 
 function toggleHomeThread(teacherId, teacherName){
   if(HOME_EXPANDED && HOME_EXPANDED.teacherId===teacherId){ HOME_EXPANDED=null; render(); return; }
-  HOME_EXPANDED={teacherId:teacherId, teacherName:teacherName, messages:[], draft:'', sending:false, loading:true, refreshing:false, lastSentAt:0};
+  HOME_EXPANDED={teacherId:teacherId, teacherName:teacherName, messages:[], draft:'', loading:true, refreshing:false, lastSentAt:0, _sendInFlight:false};
   // The thread replaces the contact list in a block that may be halfway down
   // a long page, so opening it has to move the page too — otherwise a family
   // clicks a contact and nothing appears to happen (1.40).
@@ -1802,24 +1848,62 @@ function fmtMsgTime(ms){
   return days[d.getDay()]+', '+(d.getMonth()+1)+'/'+d.getDate()+'/'+String(d.getFullYear()).slice(-2)+' '+h12+':'+mm+' '+ampm;
 }
 
+// Optimistic send (BACKLOG 1.43). Click Send, the message is in the history —
+// that's the whole interaction. It used to disable the button, wait for the
+// round trip, then blank the entire thread to a spinner and re-fetch the whole
+// conversation, which is what made messages appear seconds later and shove the
+// page around as they landed.
+//
+// The send still happens; it just stops being something the family has to
+// watch. The one case that isn't silent is failure: a message that never sent
+// must not sit in the history looking sent, so it's taken back out and the
+// text is returned to the composer with the existing error toast.
 function sendHomeMessage(){
   var t=HOME_EXPANDED;
   var text=(document.getElementById('home-composer')||{}).value||t.draft;
   text=(text||'').trim();
   if(!text) return;
-  t.sending=true; render();
-  fapi('sendMessage', {conversationType:'family_teacher', familyId:FAMILY_ID, teacherId:t.teacherId, messageText:text, senderParentSlot:MY_PARENT_SLOT}, function(e,r){
-    t.sending=false;
-    if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not send message.','e'); render(); return; }
-    t.draft='';
-    t.loading=true; render();
-    fapi('getConversation', {conversationType:'family_teacher', familyId:FAMILY_ID, teacherId:t.teacherId}, function(e2,r2){
-      if(!HOME_EXPANDED||HOME_EXPANDED.teacherId!==t.teacherId) return;
-      t.loading=false;
-      if(!e2&&r2&&r2.ok){ t.messages=r2.messages||[]; t.lastSentAt=_maxSentAt(t.messages); }
-      _shouldScrollMsgList=true; render();
-    });
-    loadHomeConversations(true);
+
+  var clientMsgId=_klNewClientMsgId();
+  var pending={
+    messageId:'', senderId:FAMILY_ID, senderName:'',
+    messageText:text, sentAt:Date.now(), _pending:true
+  };
+  t.messages=t.messages.concat([pending]);
+  t.draft='';
+  // Blocks the 5s poll from touching this thread until the server has
+  // confirmed. Without it a tick landing mid-flight would fetch the very
+  // message sitting here unconfirmed and append it a second time.
+  t._sendInFlight=true;
+  _shouldScrollMsgList=true;
+  render();
+
+  fapiTracked('sendMessage', {conversationType:'family_teacher', familyId:FAMILY_ID, teacherId:t.teacherId, messageText:text, senderParentSlot:MY_PARENT_SLOT, clientMsgId:clientMsgId}, function(e,r){
+    // The send itself is unaffected by the thread being closed — the request
+    // is already on its way and the server writes it regardless. Only the
+    // local reconciliation is skipped, since there's no longer a thread on
+    // screen holding the optimistic copy.
+    if(!HOME_EXPANDED||HOME_EXPANDED!==t) return;
+    t._sendInFlight=false;
+    if(e||!r||!r.ok){
+      t.messages=t.messages.filter(function(m){ return m!==pending; });
+      t.draft=text;
+      showMsg((r&&r.error)||'Could not send message.','e');
+      render();
+      return;
+    }
+    // Reconcile in place, from the server's own copy of the row. Deliberately
+    // no render() on success: the message is already on screen exactly as it
+    // will stay, and re-rendering it is the flicker this item exists to remove.
+    pending._pending=false;
+    if(r.message){
+      pending.messageId=r.message.messageId||'';
+      pending.sentAt=r.message.sentAt||pending.sentAt;
+      pending.senderName=r.message.senderName||pending.senderName;
+    }
+    // Keeps the poll's "anything newer than this" from re-delivering our own
+    // message under its real timestamp.
+    t.lastSentAt=_maxSentAt(t.messages);
   });
 }
 
@@ -1835,12 +1919,23 @@ function _startMessagePolling(){
     if(document.hidden) return;
     if(!TOKEN) return;
     if(TAB==='home') loadHomeConversations(true);
-    if(HOME_EXPANDED && !HOME_EXPANDED.loading){
+    // _sendInFlight: see sendHomeMessage(). A tick between the optimistic
+    // append and the server's confirmation would otherwise deliver the same
+    // message back and show it twice.
+    if(HOME_EXPANDED && !HOME_EXPANDED.loading && !HOME_EXPANDED._sendInFlight){
       (function(teacherId){
         fapi('getMessagesSince', {conversationType:'family_teacher', familyId:FAMILY_ID, teacherId:teacherId, sinceSentAt:String(HOME_EXPANDED.lastSentAt||0)}, function(e,r){
           if(!HOME_EXPANDED||HOME_EXPANDED.teacherId!==teacherId) return;
           if(e||!r||!r.ok||!r.messages||!r.messages.length) return;
-          HOME_EXPANDED.messages=HOME_EXPANDED.messages.concat(r.messages);
+          // Second guard, independent of _sendInFlight: drop anything already
+          // in the thread by id. Duplicated messages are the failure mode this
+          // whole path has to avoid, and one cheap filter covers every route
+          // to it, including a retry or a reconnect.
+          var have={};
+          HOME_EXPANDED.messages.forEach(function(m){ if(m.messageId) have[m.messageId]=true; });
+          var fresh=r.messages.filter(function(m){ return !m.messageId || !have[m.messageId]; });
+          if(!fresh.length) return;
+          HOME_EXPANDED.messages=HOME_EXPANDED.messages.concat(fresh);
           HOME_EXPANDED.lastSentAt=_maxSentAt(HOME_EXPANDED.messages);
           _shouldScrollMsgList=true; render();
         });
@@ -2237,17 +2332,12 @@ function _klEnrolled(){
   return students.filter(function(s){ return s.phase==='Enrolled'||s.phase==='Enrollment Change'; });
 }
 
-function _familyLastName(){
-  var n=String((familyParents&&familyParents.parent1Name)||'').trim();
-  if(!n) return '';
-  var parts=n.split(/\s+/);
-  return parts[parts.length-1];
-}
-
 function rHomeOnePage(){
-  var last=_familyLastName();
-  var h='<div class="kl-hd"><img src="'+KEYLAB_LOGO_SRC+'" alt="Keylab">'+
-    '<div class="kl-hd-t">'+(last?'The '+esc(last)+' Family Portal':'Family Portal')+'</div></div>';
+  // No page header here. render() already draws the Keylab logo and "Keylab
+  // Family Portal" above everything, so the block that used to sit here was a
+  // second logo and a second portal title, one under the other (AC, 19 Aug:
+  // "we don't need the 2nd keylab family portal or logo, omit entirely").
+  var h='';
 
   // ── Next lesson ──
   // Soonest first, not student order — the block is called "Next Lesson", so
@@ -4345,7 +4435,19 @@ function boot(){
     if(!e&&r&&r.ok){
       publicCfg.availabilityOpen=r.availabilityOpen;
       if(r.schedulingBillingUrl) publicCfg.schedulingBillingUrl=r.schedulingBillingUrl;
-      if(r.closures) EST_CLOSURES=r.closures;
+      // Everything doGetPublicConfig() returns has to land on publicCfg, not
+      // just the two fields this handler started life with. Three of them
+      // weren't being copied at all: `closures` went only into EST_CLOSURES
+      // (the pricing estimator's own copy), and `upcomingDates` and
+      // `schoolYearStart` went nowhere — so on the live page the one-page
+      // Home's closure-skipping never skipped anything, Important Upcoming
+      // Dates was permanently empty, and the school-year floor was inert.
+      // None of it showed up in testing because the render harness stubs
+      // publicCfg directly. scripts/check.js now guards this handler against
+      // the server growing a field the client silently drops.
+      if(r.closures){ EST_CLOSURES=r.closures; publicCfg.closures=r.closures; }
+      if(r.upcomingDates) publicCfg.upcomingDates=r.upcomingDates;
+      if(r.schoolYearStart) publicCfg.schoolYearStart=r.schoolYearStart;
       if(r.instruments){
         var _fInstr=r.instruments.split(',').map(function(x){return x.trim();}).filter(Boolean);
         if(_fInstr.length) INSTRUMENTS=_fInstr;

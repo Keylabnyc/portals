@@ -152,10 +152,6 @@ function api(payload, cb){
   .then(function(r){ cb(null, r); })
   .catch(function(e){ cb(e); });
 }
-function tapi(action, data, cb){
-  api({action:action, data:Object.assign({teacherToken:TOKEN}, data)}, cb);
-}
-
 // ============================================================
 // HELPERS
 // ============================================================

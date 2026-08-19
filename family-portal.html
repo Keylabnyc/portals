@@ -140,6 +140,34 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 .contact-btn{background:rgba(255,255,255,.45);border:1px solid var(--border2);border-radius:var(--rl);padding:1rem;text-align:center;cursor:pointer;transition:background .12s;font-weight:600;color:var(--text2)}
 .contact-btn:hover{background:rgba(255,255,255,.65)}
 .response-note{font-size:12px;color:var(--text4);margin-bottom:1rem}
+/* ── One-page family home (BACKLOG 1.36) ── */
+.kl-hd{display:flex;align-items:center;gap:10px;margin-bottom:1.25rem}
+.kl-hd img{width:34px;height:34px;border-radius:6px;flex:0 0 auto}
+.kl-hd-t{font-size:16px;font-weight:600;color:var(--text);line-height:1.3}
+.kl-row{display:flex;justify-content:space-between;gap:10px;align-items:baseline;padding:.4rem 0}
+.kl-row+.kl-row{border-top:1px dashed var(--border)}
+.kl-who{font-size:13px;font-weight:600;color:var(--text)}
+.kl-sub{font-size:12px;color:var(--text4)}
+.kl-when{font-size:12px;color:var(--text);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.kl-amt{font-size:20px;font-weight:600;color:var(--text);font-variant-numeric:tabular-nums}
+.kl-date{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:.4rem 0}
+.kl-date+.kl-date{border-top:1px dashed var(--border)}
+.kl-tag{font-family:"DM Mono",monospace;font-size:10px;padding:1px 6px;border-radius:3px;border:1px solid;white-space:nowrap;flex:0 0 auto}
+.kl-tag.cl{background:var(--rbg);color:var(--rt);border-color:var(--red)}
+.kl-tag.op{background:var(--gbg);color:var(--gt);border-color:var(--green)}
+.kl-acc{border-top:1px solid var(--border)}
+.kl-acc:first-of-type{border-top:0}
+.kl-acc summary{list-style:none;cursor:pointer;font-size:13px;font-weight:600;color:var(--text);padding:.55rem 0;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.kl-acc summary::-webkit-details-marker{display:none}
+.kl-acc summary::after{content:"+";color:var(--acc);font-family:"DM Mono",monospace;font-size:15px;font-weight:400;flex:0 0 auto}
+.kl-acc[open] summary::after{content:"\2212"}
+.kl-acc p{font-size:12px;color:var(--text3);margin:0 0 .5rem;line-height:1.55}
+.kl-guide{background:rgba(255,255,255,.5);border:1px solid var(--border2);border-left:3px solid var(--acc);border-radius:var(--r);padding:.6rem .7rem;margin-bottom:.75rem}
+.kl-guide ul{margin:0;padding-left:1rem}
+.kl-guide li{font-size:12px;color:var(--text3);line-height:1.5;margin-bottom:.35rem}
+.kl-guide li:last-child{margin-bottom:0}
+.contact-btns-slim{display:flex;gap:8px;margin-bottom:.7rem}
+.contact-btns-slim .btn{flex:1;width:auto}
 .msg-list{display:flex;flex-direction:column;gap:8px;margin-bottom:1rem;max-height:50vh;overflow-y:auto}
 .bubble-row{display:flex}
 .bubble-row.mine{justify-content:flex-end}
@@ -344,8 +372,6 @@ var SC = {
   waitlist:null // null = unanswered, true/false = family's choice, only relevant when the selected instrument currently has no teacher
 };
 
-// instrument edit state — keyed by studentId: {editing:bool, val:'', other:'', busy:false}
-var _instrEdit = {};
 // sibling nudge: studentId of next unsubmitted sibling after a successful submit, or ''
 var _siblingNudgeId = '';
 // Set when a fresh (uncached) getProposal load genuinely fails, on either
@@ -678,7 +704,6 @@ function _ageFromDob(raw){
 function _famParentsFromResp(r){
   return {p1:r.parent1Name||'', p1Email:r.parent1Email||'', p2:r.parent2Name||'', p2Email:r.parent2Email||'', p2HasPassword:!!r.parent2HasPassword};
 }
-function fmtPrice(p){ var n=parseFloat(p); return isNaN(n)?'--':'$'+n.toFixed(0); }
 
 function showMsg(m, t){
   MSG={m:m, t:t||'s'}; render();
@@ -1234,13 +1259,6 @@ function toggleScDur(d){
   if(SC.durations.length<=1) SC.durationNote='';
   render();
 }
-function toggleDur(i,d){
-  var p=RF.students[i].durations||[];
-  var idx=p.indexOf(d);
-  if(idx>-1) p.splice(idx,1); else p.push(d);
-  RF.students[i].durations=p;
-  render();
-}
 
 function syncRF(){
   var map=[['r-pn','parent1Name'],['r-em','parent1Email'],['r-ph','parent1Phone'],
@@ -1419,6 +1437,25 @@ function rApp(){
   // message list), per AC's direction this session — visible the moment the
   // app opens, before navigating to Home at all.
   var homeUnread=(HOME_CONVOS.list||[]).reduce(function(sum,c){ return sum+(c.unread||0); },0);
+
+  // A settled, enrolled family gets no tab bar at all (BACKLOG 1.36, step 2).
+  // Availability was previously shown to EVERYONE whenever availability season
+  // was open, because avOpen is one global switch — so families who finished
+  // enrolling months ago still saw a tab asking for availability they'd already
+  // given. Enrollment likewise offered a page whose useful parts (policies,
+  // tuition, self-release) now live on Home. Families still mid-enrollment keep
+  // both tabs, because they genuinely need them.
+  var onePage=!_familyLoading && !_familyLoadError && _familyUsesOnePage();
+  if(onePage){
+    // TAB can still be pointing at a tab that no longer exists — e.g. a family
+    // who was mid-enrollment last visit, or a stale deep link. Send them Home
+    // rather than rendering a page they can no longer navigate away from.
+    if(TAB!=='home') TAB='home';
+    return '<div style="display:flex;justify-content:flex-end;margin-bottom:1rem">'+
+      '<a href="#" style="font-size:12px;color:var(--text4);white-space:nowrap" onclick="event.preventDefault();doSignOut()">Sign Out</a>'+
+      '</div>'+rHome();
+  }
+
   var tabs='<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:2rem">'+
     '<div class="tabs" style="margin-bottom:0">'+
     '<div class="tab'+(TAB==='home'?' on':'')+'" onclick="TAB=&apos;home&apos;;render()">Home'+
@@ -1440,9 +1477,36 @@ function rApp(){
 // HOME MESSAGE WIDGET (1.22, 18 Aug) — quick preview + inline reply,
 // directly on Home, no tab navigation required.
 // ============================================================
+// AC's guidance list (19 Aug, his wording verbatim). Sits between the contact
+// buttons and the conversations — read at the moment someone is deciding who
+// to write to, which is the point: every misrouted message costs admin a
+// forward. This is the ONLY place the routing advice appears; it was briefly
+// duplicated in the support section and AC moved it here.
+function rHomeMsgGuide(){
+  return '<div class="kl-guide"><ul>'+
+    '<li>Responses after 2pm may be delayed, but we will respond to your message as soon as possible.</li>'+
+    '<li>If your message is time sensitive, especially if you need to notify your teacher you are running late or are cancelling your lesson, contact your teacher directly to give them a heads up.</li>'+
+    '<li>To cancel a lesson, click here'+
+      '<div style="margin-top:.35rem"><a class="btn btn-d btn-sm" href="'+esc(publicCfg.schedulingBillingUrl||'')+'" target="_blank">Cancel a Lesson</a></div>'+
+      '</li>'+
+    '<li>Contact admin for billing and general administrative assistance.</li>'+
+    '</ul></div>';
+}
+
+// Contact buttons, slim and blue like every other action button in the portal
+// (AC, 19 Aug — they were oversized tiles) and at the TOP of the block, above
+// the guidance and the conversations.
+function rHomeContactBtns(){
+  return '<div class="contact-btns-slim">'+
+    '<button class="btn btn-p btn-sm" onclick="doContactTeacherHome()">Contact Teacher</button>'+
+    '<button class="btn btn-p btn-sm" onclick="doContactAdminHome()">Contact Admin</button>'+
+    '</div>';
+}
+
 function rHomeMessages(){
-  var h='<h2 style="margin-top:1.5rem">Messages</h2>';
+  var h='<h2>Messages</h2>';
   if(HOME_TEACHER_PICKER.open) return h+rHomeTeacherPicker();
+  h+=rHomeContactBtns()+rHomeMsgGuide();
   if(HOME_CONVOS.loading && !HOME_CONVOS.list.length){
     return h+'<div style="text-align:center;padding:1rem;color:var(--text3)"><span class="spin" style="font-size:18px">↻</span></div>';
   }
@@ -1471,15 +1535,10 @@ function rHomeMessages(){
       return row;
     }).join('')+'</div>';
   }
-  // "Start a conversation" buttons — always available, not just when the
-  // list is empty (18 Aug: everything now lives on Home, there's no
-  // separate Messages tab to fall back on, so a family with one existing
-  // thread still needs a way to reach a second teacher or admin from here).
-  h+='<div class="contact-btns">'+
-    '<div class="contact-btn" onclick="doContactAdminHome()">Contact Admin</div>'+
-    '<div class="contact-btn" onclick="doContactTeacherHome()">Contact Teacher</div>'+
-    '</div>'+
-    '<p class="response-note">We typically respond within 24 hours. If your message is urgent, let us know and we’ll prioritize it.</p>';
+  // The contact buttons and the guidance list moved to the top of this block
+  // (see rHomeContactBtns/rHomeMsgGuide above) — they used to sit down here
+  // below the conversations, along with a separate 24-hour response note that
+  // AC's guidance list now supersedes.
   return h;
 }
 
@@ -1785,59 +1844,7 @@ function loadSchedTeachers(){
 // ============================================================
 // INSTRUMENT EDIT (home tab student cards)
 // ============================================================
-function _rInstrEdit(s){
-  var ie=_instrEdit[s.studentId]||{editing:false,val:'',other:'',busy:false};
-  if(!ie.editing){
-    var instrDisplay=s.instrument?esc(s.instrument):'<span style="color:var(--text4)">No instrument selected</span>';
-    var linkLbl=s.instrument?'Change':'Add';
-    return '<div style="font-size:12px;color:var(--text3);margin-top:2px;margin-bottom:.1rem">'+
-      instrDisplay+
-      ' <a href="#" style="color:var(--acc);font-size:11px" onclick="event.preventDefault();'+
-      '_instrEdit[&apos;'+esc(s.studentId)+'&apos;]={editing:true,val:&apos;'+esc(s.instrument||'')+'&apos;,other:&apos;&apos;,busy:false};render()">'+
-      linkLbl+'</a></div>';
-  }
-  // Editing mode
-  var instOpts=INSTRUMENTS.map(function(x){
-    return '<option value="'+esc(x)+'"'+(ie.val===x?' selected':'')+'>'+esc(x)+'</option>';
-  }).join('');
-  var h='<div style="margin-top:.4rem;margin-bottom:.3rem">';
-  h+='<select style="margin-bottom:.35rem" onchange="_instrEdit[&apos;'+esc(s.studentId)+'&apos;].val=this.value;render()">'+
-    '<option value="">Select instrument...</option>'+instOpts+'</select>';
-  if(ie.val==='Other'){
-    h+='<input type="text" placeholder="e.g. Cello, Recorder, Harmonica..." style="margin-bottom:.35rem" value="'+esc(ie.other)+'" oninput="_instrEdit[&apos;'+esc(s.studentId)+'&apos;].other=this.value">';
-  }
-  h+='<div style="display:flex;gap:6px">';
-  if(ie.busy){
-    h+='<button class="btn btn-p btn-sm" disabled><span class="spin">\u21bb</span> Saving...</button>';
-  } else {
-    h+='<button class="btn btn-p btn-sm" onclick="_saveInstrument(&apos;'+esc(s.studentId)+'&apos;)">Save</button>';
-  }
-  h+='<button class="btn btn-d btn-sm" onclick="_instrEdit[&apos;'+esc(s.studentId)+'&apos;]={editing:false,val:&apos;&apos;,other:&apos;&apos;,busy:false};render()">Cancel</button>';
-  h+='</div></div>';
-  return h;
-}
 
-function _saveInstrument(id){
-  var ie=_instrEdit[id];
-  if(!ie||!ie.val){showMsg('Please select an instrument.','e');return;}
-  var finalVal=ie.val==='Other'?(ie.other.trim()||'Other'):ie.val;
-  if(ie.val==='Other'&&!ie.other.trim()){showMsg('Please describe the instrument.','e');return;}
-  ie.busy=true; render();
-  fapi('saveFamilyStudentInstrument',{studentId:id,instrument:finalVal},function(e,r){
-    if(e||!r||!r.ok){
-      showMsg((r&&r.error)||'Could not save instrument. Please try again.','e');
-      if(_instrEdit[id]) _instrEdit[id].busy=false;
-      render(); return;
-    }
-    // Patch local students array
-    for(var i=0;i<students.length;i++){
-      if(students[i].studentId===id){ students[i].instrument=finalVal; break; }
-    }
-    _instrEdit[id]={editing:false,val:'',other:'',busy:false};
-    showMsg('Instrument updated.','s');
-    render();
-  });
-}
 
 // ============================================================
 // HOME TAB
@@ -2049,7 +2056,208 @@ function _rChildStatusSummary(s){
   return h;
 }
 
+// ============================================================
+// ONE-PAGE FAMILY HOME (BACKLOG 1.36) — enrolled families only
+// ============================================================
+// Everything a settled family needs on one screen: next lesson, messages,
+// tuition, upcoming dates, support. Deliberately scoped to families who are
+// simply enrolled — anyone with a proposal to review, availability to submit,
+// or an enrollment change in flight still gets the original Home below, which
+// carries the action buttons for those states. Step 2 of this rebuild folds
+// those cases in; until then this branch must not swallow them, or a family
+// mid-enrollment-change loses their "Review New Proposal" button entirely.
+var KL_ACTIONABLE_PHASES={'Leads':1,'Pending':1,'Holding':1,'Trial Booked':1,'Proposal':1,'Confirmed to Enroll':1,'Enrollment Change':1};
+
+function _familyUsesOnePage(){
+  if(!students.length) return false;
+  var anyEnrolled=false;
+  for(var i=0;i<students.length;i++){
+    var ph=students[i].phase||'';
+    if(ph==='Enrolled') anyEnrolled=true;
+    if(KL_ACTIONABLE_PHASES[ph]) return false;
+  }
+  return anyEnrolled;
+}
+
+function _p2(n){ return (n<10?'0':'')+n; }
+function _parseYMD(s){ var p=String(s).split('-'); return new Date(Number(p[0]),Number(p[1])-1,Number(p[2])); }
+
+var KL_DAYIDX={sunday:0,monday:1,tuesday:2,wednesday:3,thursday:4,friday:5,saturday:6};
+
+// Next real occurrence of a weekly lesson, skipping studio closures — so a
+// family whose Tuesday falls on Thanksgiving sees the following Tuesday, not a
+// date their child won't have a lesson on. Returns null when there's nothing
+// dependable to show (no day on file, or nothing open in the look-ahead).
+function _nextLessonDate(dayName){
+  var idx=KL_DAYIDX[String(dayName||'').trim().toLowerCase()];
+  if(idx===undefined) return null;
+  var closures=publicCfg.closures||{};
+  var start=new Date(); start.setHours(0,0,0,0);
+  for(var i=0;i<120;i++){
+    var c=new Date(start.getTime()+i*86400000);
+    if(c.getDay()!==idx) continue;
+    if(closures[c.getFullYear()+'-'+_p2(c.getMonth()+1)+'-'+_p2(c.getDate())]) continue;
+    return c;
+  }
+  return null;
+}
+
+function _fmtLessonDate(d){
+  return d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+}
+
+function _fmtDateRange(a,b){
+  var d1=_parseYMD(a);
+  if(a===b) return d1.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+  var o={month:'short',day:'numeric'};
+  return d1.toLocaleDateString('en-US',o)+' – '+_parseYMD(b).toLocaleDateString('en-US',o);
+}
+
+// Family's combined monthly tuition. Returns null if ANY enrolled student is
+// missing a price — a wrong figure in front of a parent generates exactly the
+// billing question this page exists to prevent, so the block hides the number
+// and shows only the billing button rather than guessing.
+function _familyMonthlyTotal(){
+  var total=0, seen=false;
+  for(var i=0;i<students.length;i++){
+    var s=students[i];
+    if(s.phase!=='Enrolled'&&s.phase!=='Enrollment Change') continue;
+    var p=parseFloat(s.monthlyPrice);
+    if(!isFinite(p)||p<=0) return null;
+    total+=p; seen=true;
+  }
+  return seen?total:null;
+}
+
+// The family's enrolled students, in record order. Used in enough places on
+// this page that the phase test is worth stating once.
+function _klEnrolled(){
+  return students.filter(function(s){ return s.phase==='Enrolled'||s.phase==='Enrollment Change'; });
+}
+
+function _familyLastName(){
+  var n=String((familyParents&&familyParents.parent1Name)||'').trim();
+  if(!n) return '';
+  var parts=n.split(/\s+/);
+  return parts[parts.length-1];
+}
+
+function rHomeOnePage(){
+  var last=_familyLastName();
+  var h='<div class="kl-hd"><img src="'+KEYLAB_LOGO_SRC+'" alt="Keylab">'+
+    '<div class="kl-hd-t">'+(last?'The '+esc(last)+' Family Portal':'Family Portal')+'</div></div>';
+
+  // ── Next lesson ──
+  // Soonest first, not student order — the block is called "Next Lesson", so
+  // the child who has one tomorrow belongs above the one who has one next week.
+  var lessons=[];
+  students.forEach(function(s){
+    if(s.phase!=='Enrolled'&&s.phase!=='Enrollment Change') return;
+    if(!s.day) return;
+    lessons.push({ s:s, d:_nextLessonDate(s.day) });
+  });
+  lessons.sort(function(a,b){
+    if(!a.d && !b.d) return 0;
+    if(!a.d) return 1;   // rows we couldn't date sink to the bottom
+    if(!b.d) return -1;
+    return a.d - b.d;
+  });
+  var rows='';
+  lessons.forEach(function(L){
+    var s=L.s;
+    var first=s.studentName?s.studentName.trim().split(' ')[0]:'';
+    // Room is never shown to families (standing rule 6) — teacher, day, time only.
+    var when=L.d
+      ? esc(_fmtLessonDate(L.d))+(s.time?'<br>'+esc(s.time):'')
+      : esc(s.day+(s.time?' · '+s.time:''));
+    rows+='<div class="kl-row"><div>'+
+      '<div class="kl-who">'+esc(first)+'</div>'+
+      '<div class="kl-sub">'+esc([s.instrument,s.teacher].filter(Boolean).join(' · '))+'</div>'+
+      '</div><div class="kl-when">'+when+'</div></div>';
+  });
+  if(rows) h+='<div class="card"><h2>Next Lesson</h2>'+rows+'</div>';
+
+  // ── Messages ──
+  h+='<div class="card">'+rHomeMessages()+'</div>';
+
+  // ── Monthly tuition ──
+  var total=_familyMonthlyTotal();
+  h+='<div class="card"><h2>Monthly Tuition</h2>';
+  if(total!==null){
+    h+='<div class="kl-amt">$'+esc(String(Math.round(total)))+'</div>'+
+      '<div class="kl-sub"'+(_klEnrolled().length>1?'':' style="margin-bottom:.6rem"')+'>Processed on the 1st of each month</div>';
+    // Per-child breakdown when there's more than one — a family paying one
+    // combined figure still needs to see what each child costs, which is the
+    // useful half of the Enrollment tab's tuition detail.
+    var kids=_klEnrolled();
+    if(kids.length>1){
+      h+='<div style="margin:.5rem 0 .6rem">';
+      kids.forEach(function(s){
+        var first=s.studentName?s.studentName.trim().split(' ')[0]:'';
+        h+='<div class="kl-row" style="padding:.25rem 0">'+
+          '<div class="kl-sub">'+esc(first)+(s.instrument?' · '+esc(s.instrument):'')+'</div>'+
+          '<div class="kl-when">$'+esc(String(Math.round(parseFloat(s.monthlyPrice)||0)))+'</div></div>';
+      });
+      h+='</div>';
+    }
+  }
+  h+='<a class="btn btn-p btn-sm" href="'+esc(publicCfg.schedulingBillingUrl||'')+'" target="_blank">Billing &amp; invoices</a></div>';
+
+  // ── Important upcoming dates ──
+  // Always the next three events however far out (AC, 19 Aug: no time window),
+  // and the block hides entirely rather than showing an empty state.
+  var dates=publicCfg.upcomingDates||[];
+  if(dates.length){
+    h+='<div class="card"><h2>Important Upcoming Dates</h2>';
+    dates.forEach(function(d){
+      h+='<div class="kl-date"><div>'+
+        '<div class="kl-who">'+esc(d.event||'')+'</div>'+
+        '<div class="kl-sub">'+esc(_fmtDateRange(d.startDate,d.endDate))+'</div></div>'+
+        '<span class="kl-tag '+(d.closed?'cl':'op')+'">'+(d.closed?'Closed':'Keylab is open')+'</span>'+
+        '</div>';
+    });
+    h+='</div>';
+  }
+
+  // ── Self-release ──
+  // Ported from the old Home, where it lived inside each child's dashboard
+  // card. Real functionality (ages 10–17 only), so it has to survive the
+  // rebuild — dropping it would quietly remove a family's ability to authorize
+  // their child to arrive and leave unaccompanied. Sits down here with the
+  // other occasional actions rather than up among the everyday information:
+  // most families do this once, if ever.
+  var srRows='';
+  _klEnrolled().forEach(function(s){ srRows+=_rHomeSelfRelease(s); });
+  if(srRows) h+='<div class="card"><h2>Self-Release</h2>'+srRows+'</div>';
+
+  // ── Keylab Support ──
+  // All copy below already existed in the portal; AC approved reusing it
+  // rather than writing new text. Note "reschedule" is deliberately absent —
+  // families cannot reschedule (AC, 19 Aug).
+  var sb=esc(publicCfg.schedulingBillingUrl||'');
+  h+='<div class="card"><h2>Keylab Support</h2>'+
+    '<p style="font-size:12px;margin-bottom:.5rem">See Keylab’s full studio policies for helpful info on managing your child’s enrollment</p>'+
+    '<details class="kl-acc"><summary>Check your schedule or cancel a lesson</summary>'+
+      '<p>View upcoming lessons or cancel a lesson. See cancellation policies for details.</p>'+
+      '<a class="btn btn-p btn-sm" href="'+sb+'" target="_blank">Scheduling &amp; Billing</a></details>'+
+    '<details class="kl-acc"><summary>Review / update billing</summary>'+
+      '<p>View all payments, download invoices, and update your payment details.</p>'+
+      '<a class="btn btn-p btn-sm" href="'+sb+'" target="_blank">Scheduling &amp; Billing</a></details>'+
+    // Policies render inline rather than sending the family to the Enrollment
+    // tab, which is the point of the rebuild — and a prerequisite for that tab
+    // going away in step 2. rPolicyText() varies in exactly one place on
+    // whether lessons are in-home; a family with a mix gets the in-home
+    // variant, since that copy is additive rather than contradictory.
+    '<details class="kl-acc"><summary>Read the studio policies</summary>'+
+      rPolicyText(_klEnrolled().some(function(s){ return s.lessonLocation==='in-home'; }))+
+      '</details>'+
+    '</div>';
+
+  return h;
+}
+
 function rHome(){
+  if(!_familyLoading && !_familyLoadError && _familyUsesOnePage()) return rHomeOnePage();
   var h='<h1>Hi there!</h1>'+
     '<p>Please use this page to submit your children\'s availability for the school year, or to check your child\'s enrollment status if you have already submitted your availability. We\'ll be in touch as soon as possible with an update.</p>';
   h+=rHomeMessages();
@@ -2772,26 +2980,6 @@ function rSchedViewMode(){
 }
 
 // Save a single slot's edits locally (no server call) — reads current DOM select values
-function saveSlotLocal(i){
-  var dayEl=document.getElementById('slot-day-'+i);
-  var startEl=document.getElementById('slot-start-'+i);
-  var endEl=document.getElementById('slot-end-'+i);
-  var day=dayEl?dayEl.value:'';
-  var start=startEl?startEl.value:'';
-  var end=endEl?endEl.value:'';
-  SC.slots[i].day=day;
-  SC.slots[i].start=start;
-  SC.slots[i].end=end;
-  if(day&&(!start||!end||!SC.slots[i].pref)){
-    SC.slotSaveAttempted[i]=true;
-    render();
-    return;
-  }
-  SC.slotSaveAttempted[i]=false;
-  SC.slotEditing[i]=false;
-  SC.pendingChanges=true;
-  render();
-}
 
 // Single source of truth for "is the scheduling form valid enough to submit"
 // -- used by rSchedForm()'s full render AND by _schRefreshSubmit() (the
@@ -3702,35 +3890,6 @@ function rEnrollment(){
 
 
 var _srBusy={};
-function rSelfReleaseSection(){
-  // Show a card for each enrolled student age 10+
-  var eligible=students.filter(function(s){
-    var age=parseInt(s.age,10);
-    var enrolled=s.phase==='Enrolled'||s.phase==='Enrollment Change'||s.phase==='Confirmed to Enroll';
-    return enrolled&&!isNaN(age)&&age>=10;
-  });
-  if(!eligible.length) return '';
-  var h='';
-  eligible.forEach(function(s){
-    var granted=!!s.selfReleaseGrantedAt;
-    h+='<div class="card"><h2>Unaccompanied Arrival &amp; Departure Permission</h2>';
-    if(granted){
-      h+='<div class="msg ms">\u2713 Permission granted on '+esc(_fmtFamilyTs(s.selfReleaseGrantedAt))+' at '+esc(_fmtFamilyTime(s.selfReleaseGrantedAt))+'</div>';
-      h+='<p style="font-size:12px;color:var(--text3)">'+esc(s.studentName)+' has permission to arrive at and depart from lessons unaccompanied.</p>';
-    } else {
-      h+='<p>If you would like '+esc(s.studentName)+' to be able to arrive at and depart from lessons without a parent or guardian present, please read and submit the permission below.</p>';
-      h+='<div class="agree-box">'+
-        '<input type="checkbox" id="sr-chk-'+esc(s.studentId)+'" onchange="document.getElementById(&apos;sr-btn-'+esc(s.studentId)+'&apos;).disabled=!this.checked">'+
-        '<label class="agree-lbl" for="sr-chk-'+esc(s.studentId)+'">I authorize my child to arrive at and depart from Keylab without adult accompaniment. I accept full responsibility for their transportation to and from Keylab; for their safety prior to and following their scheduled lesson; and for their conduct at all times before, during, and after their lesson.</label>'+
-      '</div>';
-      h+=_srBusy[s.studentId]
-        ?'<button class="btn btn-p btn-full" disabled><span class="spin">\u21bb</span> Submitting...</button>'
-        :'<button id="sr-btn-'+esc(s.studentId)+'" class="btn btn-p btn-full" disabled onclick="doGrantSelfRelease(&apos;'+esc(s.studentId)+'&apos;)">Submit Permission</button>';
-    }
-    h+='</div>';
-  });
-  return h;
-}
 
 function doGrantSelfRelease(studentId){
   _srBusy[studentId]=true; render();

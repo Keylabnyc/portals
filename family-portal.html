@@ -23,11 +23,17 @@ body{background:var(--bg);color:var(--text);font-family:"Open Sans",sans-serif;f
 .wrap{max-width:680px;margin:0 auto;padding:2rem 1.25rem 4rem}
 .brand{font-family:"DM Mono",monospace;font-size:11px;letter-spacing:.12em;color:var(--acc);margin-bottom:2rem;opacity:.8;font-weight:500}
 h1{font-size:20px;font-weight:400;margin-bottom:.4rem;color:var(--text)}
-h2{font-size:10px;font-weight:600;color:var(--acc);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.75rem;font-family:"DM Mono",monospace}
+h2{font-size:12px;font-weight:600;color:var(--acc);text-transform:uppercase;letter-spacing:.09em;margin-bottom:.75rem;font-family:"DM Mono",monospace}
+/* A card's own heading becomes a band across the top of it, not a line of
+   small type floating inside the padding (BACKLOG 1.41). The negative margin
+   has to match .card's padding below; keep them in step. Scoped to a card's
+   FIRST child so a mid-card h2 is left alone. */
+.card>h2:first-child{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:-1.25rem -1.25rem 1rem;padding:.5rem .85rem;background:rgba(30,58,110,.13);border-bottom:1px solid var(--border2);border-radius:var(--rl) var(--rl) 0 0}
+.card>h2:first-child .ct{background:var(--acc);color:#fff;border-radius:9px;padding:1px 7px;font-size:10px;font-weight:400;letter-spacing:.02em;font-family:"DM Mono",monospace}
 p{color:var(--text3);margin-bottom:.75rem;line-height:1.65;font-size:13px}
 a{color:var(--bt);text-decoration:none}
 a:hover{text-decoration:underline}
-.card{background:rgba(255,255,255,.45);border:1px solid var(--border);border-radius:var(--rl);padding:1.25rem;margin-bottom:1rem}
+.card{background:rgba(255,255,255,.45);border:1px solid var(--border2);border-radius:var(--rl);padding:1.25rem;margin-bottom:1rem;box-shadow:0 1px 3px rgba(0,0,0,.16)}
 .card-stu{background:rgba(255,255,255,.55);border:1px solid var(--border);border-radius:var(--rl);padding:1.1rem;margin-bottom:.75rem;position:relative}
 .msg{padding:10px 14px;border-radius:var(--r);font-size:13px;margin-bottom:1rem;border:1px solid;line-height:1.5}
 .ms{background:var(--gbg);color:var(--gt);border-color:var(--green)}
@@ -42,7 +48,7 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 .hint{font-size:11px;color:var(--text4);margin-top:3px;line-height:1.5}
 .req{color:var(--rt);margin-left:2px}
 .btn{padding:6px 14px;border-radius:var(--r);font-size:12px;cursor:pointer;border:1px solid transparent;font-family:"Open Sans",sans-serif;transition:background .1s,opacity .1s;display:inline-flex;align-items:center;gap:5px;font-weight:600;line-height:1;letter-spacing:.01em;white-space:nowrap}
-.btn-p{background:#1a4fc4;color:#fff;border-color:#1a4fc4}.btn-p:hover{background:#1440a8;border-color:#1440a8}
+.btn-p{background:var(--acc);color:#fff;border-color:var(--acc)}.btn-p:hover{background:#162C53;border-color:#162C53}
 .btn-s{background:rgba(0,0,0,.12);color:var(--text2);border-color:var(--border2)}.btn-s:hover{background:rgba(0,0,0,.2);color:var(--text)}
 .btn-d{background:rgba(0,0,0,.06);color:var(--rt);border-color:var(--red)}.btn-d:hover{background:rgba(150,32,32,.12)}
 .btn-g{background:var(--gbg);color:var(--gt);border-color:var(--green)}
@@ -88,7 +94,7 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 .c-info{background:var(--bbg);color:var(--bt)}
 .c-warn{background:#FDECD6;color:#7C3A00}
 .c-danger{background:var(--rbg);color:var(--rt)}
-.unread-badge{background:#1a4fc4;color:#fff;font-size:11px;font-weight:700;border-radius:10px;padding:1px 7px;flex:0 0 auto;cursor:pointer}
+.unread-badge{background:var(--acc);color:#fff;font-size:11px;font-weight:700;border-radius:10px;padding:1px 7px;flex:0 0 auto;cursor:pointer}
 .read-toggle{flex:0 0 auto;font-size:14px;color:var(--text5);text-decoration:none;padding:0 4px}
 .read-toggle:hover{color:var(--acc);text-decoration:none}
 .divider{border:none;border-top:1px solid var(--border);margin:1.5rem 0}
@@ -103,7 +109,7 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 .agree-box input[type=checkbox]{position:absolute;opacity:0;width:0;height:0;pointer-events:none}
 .agree-lbl{font-size:12px;color:var(--text2);text-transform:none;letter-spacing:0;cursor:pointer;line-height:1.6;padding-left:26px;position:relative;display:block}
 .agree-lbl::before{content:"";position:absolute;left:0;top:1px;width:18px;height:18px;border:2px solid var(--border2);border-radius:3px;background:#fff;box-sizing:border-box;transition:background .15s,border-color .15s}
-.agree-box input[type=checkbox]:checked+label.agree-lbl::before,.agree-box input[type=checkbox]:checked~label.agree-lbl::before{background:#1a4fc4;border-color:#1a4fc4;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 10'%3E%3Cpath d='M1 5l3.5 3.5L11 1' stroke='%23fff' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:center;background-size:11px 9px}
+.agree-box input[type=checkbox]:checked+label.agree-lbl::before,.agree-box input[type=checkbox]:checked~label.agree-lbl::before{background:#1E3A6E;border-color:#1E3A6E;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 10'%3E%3Cpath d='M1 5l3.5 3.5L11 1' stroke='%23fff' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:center;background-size:11px 9px}
 .est-block{margin-top:.6rem;background:rgba(255,255,255,.3);border:1px solid var(--border);border-radius:var(--r);padding:.65rem .85rem}
 .est-hd{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text4);font-family:"DM Mono",monospace;margin-bottom:.4rem}
 .est-row{display:flex;justify-content:space-between;align-items:baseline;padding:3px 0;border-bottom:.5px solid var(--border)}
@@ -135,10 +141,7 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
   #policy-pdf-print-block{display:block!important;max-width:680px;margin:0 auto;padding:0}
 }
 /* Messaging (v1) */
-.contact-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:.75rem}
-@media(max-width:480px){.contact-btns{grid-template-columns:1fr}}
-.contact-btn{background:rgba(255,255,255,.45);border:1px solid var(--border2);border-radius:var(--rl);padding:1rem;text-align:center;cursor:pointer;transition:background .12s;font-weight:600;color:var(--text2)}
-.contact-btn:hover{background:rgba(255,255,255,.65)}
+
 .response-note{font-size:12px;color:var(--text4);margin-bottom:1rem}
 /* ── One-page family home (BACKLOG 1.36) ── */
 .kl-hd{display:flex;align-items:center;gap:10px;margin-bottom:1.25rem}
@@ -166,13 +169,41 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 .kl-guide ul{margin:0;padding-left:1rem}
 .kl-guide li{font-size:12px;color:var(--text3);line-height:1.5;margin-bottom:.35rem}
 .kl-guide li:last-child{margin-bottom:0}
-.contact-btns-slim{display:flex;gap:8px;margin-bottom:.7rem}
-.contact-btns-slim .btn{flex:1;width:auto}
+/* ── Contact list (BACKLOG 1.39) — one row per person the family can write
+   to, replacing the generic Contact Teacher / Contact Admin buttons and the
+   picker screen behind them. The row is the only clickable object in the
+   block, which is the point: it was a button, a tile and a row competing. ── */
+.kl-clabel{font-family:"DM Mono",monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text4);margin-bottom:.4rem}
+.kl-crow{display:flex;align-items:center;gap:10px;padding:.55rem .6rem;border:1px solid var(--border);border-radius:var(--r);background:rgba(255,255,255,.32);margin-bottom:6px;cursor:pointer;transition:background .12s}
+.kl-crow:hover{background:rgba(255,255,255,.6)}
+/* Unread reads as more white and a navy edge rather than a different hue —
+   the palette has one accent and the badge is already using it. */
+.kl-crow.un{background:rgba(255,255,255,.62);border-color:var(--acc);border-left-width:3px}
+.kl-cav{width:29px;height:29px;border-radius:50%;flex:0 0 auto;background:rgba(30,58,110,.16);color:var(--acc);border:1px solid rgba(30,58,110,.3);display:flex;align-items:center;justify-content:center;font-family:"DM Mono",monospace;font-size:11px;font-weight:500}
+.kl-cav.adm{background:var(--acc);color:#fff;border-color:var(--acc)}
+.kl-cmain{min-width:0;flex:1}
+.kl-ctop{display:flex;align-items:baseline;justify-content:space-between;gap:6px}
+.kl-cname{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kl-cname.b{font-weight:700}
+.kl-ctime{font-size:10px;color:var(--text4);font-family:"DM Mono",monospace;white-space:nowrap;flex:0 0 auto}
+.kl-cprev{font-size:11.5px;color:var(--text4);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.kl-cprev.b{color:var(--text);font-weight:600}
+.kl-cprev.q{color:var(--text5);font-style:italic}
+.kl-cchev{color:var(--text5);font-size:14px;flex:0 0 auto}
+/* ── Open thread (BACKLOG 1.40) — takes the block over rather than expanding
+   inside the list, so it always opens on the newest message with nothing
+   above it to scroll past. ── */
+.kl-tbar{display:flex;align-items:center;justify-content:space-between;gap:8px;padding-bottom:.5rem;border-bottom:1px solid var(--border);margin-bottom:.6rem}
+.kl-back{font-size:12px;font-weight:600;color:var(--acc);cursor:pointer;display:inline-flex;align-items:center;gap:4px}
+.kl-back:hover{text-decoration:underline}
+.kl-thead{display:flex;align-items:center;gap:9px;margin-bottom:.7rem}
+.kl-tname{font-size:14px;font-weight:700;color:var(--text);line-height:1.2}
+.kl-tsub{font-size:11px;color:var(--text4)}
 .msg-list{display:flex;flex-direction:column;gap:8px;margin-bottom:1rem;max-height:50vh;overflow-y:auto}
 .bubble-row{display:flex}
 .bubble-row.mine{justify-content:flex-end}
 .bubble{max-width:80%;background:rgba(255,255,255,.55);border:1px solid var(--border);border-radius:var(--rl);padding:.6rem .8rem}
-.bubble.mine{background:#1a4fc4;border-color:#1a4fc4;color:#fff}
+.bubble.mine{background:var(--acc);border-color:var(--acc);color:#fff}
 .bubble-sender{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--acc);font-family:"DM Mono",monospace;margin-bottom:.2rem}
 .bubble-text{font-size:13px;line-height:1.5;color:inherit}
 .bubble.mine .bubble-text{color:#fff}
@@ -316,17 +347,18 @@ var LF = (function(){
 // Home-tab messaging (1.22, 18 Aug — the ONLY messaging surface in the
 // family portal now; the separate Messages tab was removed 18 Aug, since
 // families rarely use this and keeping two places to do the same thing was
-// pure friction against "as few clicks as possible"). HOME_CONVOS is every
-// existing conversation's preview; HOME_EXPANDED is whichever one is
-// currently open inline; HOME_TEACHER_PICKER is the inline "which teacher"
-// chooser, only shown when Contact Teacher is clicked and the family has
-// more than one.
+// pure friction against "as few clicks as possible"). HOME_CONVOS is one
+// entry per contact the family can write to — every teacher plus admin,
+// whether or not a thread exists yet (1.38/1.39) — and HOME_EXPANDED is
+// whichever conversation is open, which takes the whole block over rather
+// than expanding under a row (1.40). The "which teacher" picker that used to
+// sit behind a Contact Teacher button is gone: the contacts are the list.
 var HOME_CONVOS = {loading:false, list:[]};
 var HOME_EXPANDED = null; // {teacherId, teacherName, messages, draft, sending, loading, lastSentAt}
-var HOME_TEACHER_PICKER = {open:false, loading:false, list:[]};
 var _pollTimer = null;
 var _pendingOpenTeacherId = ''; // set by boot() from ?openTeacherId=, consumed once after login
 var _shouldScrollMsgList = false; // see render() — scroll-to-newest, set only when messages actually change
+var _shouldScrollToThread = false; // see render() — brings a newly-opened thread into view (1.40)
 
 // lookup
 var LK = {email:'', matches:[], done:false};
@@ -795,6 +827,11 @@ function render(){
   // (open, refresh, poll update, after send), never blanket-on-every-render,
   // so it doesn't fight someone who's deliberately scrolled up to read
   // earlier history while, say, just typing in the composer.
+  if(_shouldScrollToThread){
+    _shouldScrollToThread=false;
+    var top=document.getElementById('kl-thread-top');
+    if(top&&top.scrollIntoView) top.scrollIntoView({block:'start'});
+  }
   if(_shouldScrollMsgList){
     _shouldScrollMsgList=false;
     var ml=el.querySelector('.msg-list');
@@ -1502,67 +1539,142 @@ function rHomeMsgGuide(){
     '</ul></div>';
 }
 
-// Contact buttons, slim and blue like every other action button in the portal
-// (AC, 19 Aug — they were oversized tiles) and at the TOP of the block, above
-// the guidance and the conversations.
-function rHomeContactBtns(){
-  return '<div class="contact-btns-slim">'+
-    '<button class="btn btn-p btn-sm" onclick="doContactTeacherHome()">Contact Teacher</button>'+
-    '<button class="btn btn-p btn-sm" onclick="doContactAdminHome()">Contact Admin</button>'+
+// Initials for a contact's avatar. Two letters where we have two names, one
+// otherwise — never empty, since a blank circle reads as a broken image.
+function _klInitials(name){
+  var parts=String(name||'').trim().split(/\s+/).filter(Boolean);
+  if(!parts.length) return '?';
+  if(parts.length===1) return parts[0].charAt(0).toUpperCase();
+  return (parts[0].charAt(0)+parts[parts.length-1].charAt(0)).toUpperCase();
+}
+
+// "Mia's piano teacher" — AC's wording, built from the child names and
+// instruments doGetFamilyConversations() already returns (1.38). Admin gets
+// no subline: "Keylab Admin" needs no explaining. Where one teacher covers
+// two children the names join, which AC hasn't ruled on — flagged rather
+// than assumed settled.
+function _klContactSub(c){
+  if(c.teacherId==='admin') return '';
+  var names=(c.studentNames||[]).map(function(n){ return String(n).trim().split(' ')[0]; }).filter(Boolean);
+  if(!names.length) return '';
+  var who=names.length===1?names[0]:names.slice(0,-1).join(', ')+' & '+names[names.length-1];
+  var inst=(c.instruments||[])[0];
+  return who+'’s '+(inst?String(inst).toLowerCase()+' ':'')+'teacher';
+}
+
+// One row per person. The whole row opens the conversation — there is no
+// second control competing with it. The right-hand end shows exactly one
+// thing: an unread count, or the greyed "read but not answered" marker with
+// its own clear control, or a chevron.
+function rHomeContactRow(c){
+  var sub=_klContactSub(c);
+  var prev = c.hasMessages ? esc((c.lastMessageText||'').slice(0,70)) : '<span class="kl-cprev q">No messages yet</span>';
+  var right;
+  if(c.unread){
+    right='<div class="unread-badge" title="Mark read" onclick="event.stopPropagation();markHomeThreadRead(true,\''+esc(c.teacherId)+'\')">'+c.unread+'</div>';
+  } else if(c.needsResponse){
+    right='<span class="chip" style="background:var(--bg3);color:var(--text4)" title="Read — no reply sent yet">1</span>'+
+      '<a href="#" style="font-size:11px;color:var(--text4);margin-left:5px" title="Clear — no response needed" onclick="event.preventDefault();event.stopPropagation();clearHomeThread(\''+esc(c.teacherId)+'\')">✕</a>';
+  } else {
+    right='<span class="kl-cchev">›</span>';
+  }
+  return '<div class="kl-crow'+(c.unread?' un':'')+'" onclick="toggleHomeThread(\''+esc(c.teacherId)+'\',\''+esc(c.teacherName)+'\')">'+
+    '<div class="kl-cav'+(c.teacherId==='admin'?' adm':'')+'">'+esc(c.teacherId==='admin'?'K':_klInitials(c.teacherName))+'</div>'+
+    '<div class="kl-cmain">'+
+      '<div class="kl-ctop"><span class="kl-cname'+(c.unread?' b':'')+'">'+esc(c.teacherName)+'</span>'+
+      (c.hasMessages?'<span class="kl-ctime">'+esc(_klShortTime(c.lastMessageAt))+'</span>':'')+'</div>'+
+      (sub?'<div class="kl-cprev">'+esc(sub)+'</div>':'')+
+      '<div class="kl-cprev'+(c.unread?' b':'')+'">'+prev+'</div>'+
+    '</div>'+
+    '<div style="display:flex;align-items:center;flex:0 0 auto">'+right+'</div>'+
     '</div>';
 }
 
+// Compact stamp for a list row: clock time for today, otherwise the date.
+// The full day/date/time stays on the message bubbles inside the thread.
+function _klShortTime(ms){
+  var n=Number(ms);
+  if(!n) return '';
+  var d=new Date(n);
+  if(isNaN(d.getTime())) return '';
+  var now=new Date();
+  if(d.getFullYear()===now.getFullYear()&&d.getMonth()===now.getMonth()&&d.getDate()===now.getDate()){
+    var h=d.getHours(), mins=d.getMinutes(), ampm=h>=12?'PM':'AM', h12=h%12; if(h12===0) h12=12;
+    return h12+':'+(mins<10?'0':'')+mins+' '+ampm;
+  }
+  var months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return months[d.getMonth()]+' '+d.getDate();
+}
+
 function rHomeMessages(){
-  var h='<h2>Messages</h2>';
-  if(HOME_TEACHER_PICKER.open) return h+rHomeTeacherPicker();
-  h+=rHomeContactBtns()+rHomeMsgGuide();
+  // An open conversation takes the whole block over (BACKLOG 1.40) — it does
+  // not expand underneath its row. That is what makes "opens on the newest
+  // message" true for a thread of any age: there is nothing above it to
+  // scroll past, so a family four years in lands where a family four days in
+  // lands.
+  if(HOME_EXPANDED) return rHomeThreadView();
+
+  var unreadTotal=(HOME_CONVOS.list||[]).reduce(function(n,c){ return n+(c.unread||0); },0);
+  var h='<h2>Messages'+(unreadTotal?'<span class="ct">'+unreadTotal+' new</span>':'')+'</h2>';
+  h+=rHomeMsgGuide();
+
   if(HOME_CONVOS.loading && !HOME_CONVOS.list.length){
     return h+'<div style="text-align:center;padding:1rem;color:var(--text3)"><span class="spin" style="font-size:18px">↻</span></div>';
   }
-  // Only real threads are listed for now. The endpoint also returns contacts
-  // with no history (hasMessages:false) — that's what the named contact list
-  // in 1.39 is built on, and it lands with the layout pass.
-  var threads=HOME_CONVOS.list.filter(function(c){ return c.hasMessages; });
-  if(threads.length){
-    var anyUnread=threads.some(function(c){ return c.unread; });
-    if(anyUnread){
-      h+='<div style="text-align:right;margin-bottom:.4rem">'+
-        '<a href="#" style="font-size:11px;color:var(--text4)" onclick="event.preventDefault();markAllHomeRead()">Mark all read</a></div>';
-    }
-    h+='<div class="thread-list" style="margin-bottom:.75rem">'+threads.map(function(c){
-      var isOpen=HOME_EXPANDED && HOME_EXPANDED.teacherId===c.teacherId;
-      var row='<div class="teacher-pick-row" onclick="toggleHomeThread(\''+esc(c.teacherId)+'\',\''+esc(c.teacherName)+'\')">'+
-        '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px">'+
-        '<div><div style="font-weight:600;color:var(--text2)">'+esc(c.teacherName)+'</div>'+
-        '<div style="font-size:12px;color:var(--text4)">'+esc((c.lastMessageText||'').slice(0,70))+'</div></div>'+
-        '<div style="display:flex;align-items:center;gap:6px">'+
-        // Needs-response: read, but nothing sent back since, and not
-        // dismissed — shown greyed-out to stay visually distinct from the
-        // bold unread count, with its own clear control for a message that
-        // just didn't need a reply (18 Aug, this session).
-        (c.needsResponse?'<span class="chip" style="background:var(--bg3);color:var(--text4)" title="Read — no reply sent yet">1</span>'+
-          '<a href="#" style="font-size:11px;color:var(--text4)" title="Clear — no response needed" onclick="event.preventDefault();event.stopPropagation();clearHomeThread(\''+esc(c.teacherId)+'\')">✕</a>':'')+
-        rHomeReadToggle(c.unread,c.teacherId)+
-        '</div></div></div>';
-      if(isOpen) row+=rHomeExpandedThread();
-      return row;
-    }).join('')+'</div>';
+  if(!HOME_CONVOS.list.length) return h;
+
+  if(unreadTotal){
+    h+='<div style="text-align:right;margin-bottom:.4rem">'+
+      '<a href="#" style="font-size:11px;color:var(--text4)" onclick="event.preventDefault();markAllHomeRead()">Mark all read</a></div>';
   }
-  // The contact buttons and the guidance list moved to the top of this block
-  // (see rHomeContactBtns/rHomeMsgGuide above) — they used to sit down here
-  // below the conversations, along with a separate 24-hour response note that
-  // AC's guidance list now supersedes.
+  h+='<div class="kl-clabel">Your contacts</div>';
+  h+=HOME_CONVOS.list.map(rHomeContactRow).join('');
   return h;
 }
 
-// Same Gmail-style manual toggle the teacher portal already has (rReadToggle
-// in EnrollmentTeacher.html) — click the count to mark read, click the ring
-// to mark unread again. stopPropagation so it doesn't also open the thread.
-function rHomeReadToggle(unread, teacherId){
-  var fn='markHomeThreadRead('+(unread?'true':'false')+',\''+esc(teacherId)+'\')';
-  if(unread) return '<div class="unread-badge" onclick="event.stopPropagation();'+fn+'" title="Mark read">'+unread+'</div>';
-  return '<a href="#" class="read-toggle" onclick="event.preventDefault();event.stopPropagation();'+fn+'" title="Mark unread">○</a>';
+// The thread, in place of the list. "Back" is AC's wording (19 Aug).
+function rHomeThreadView(){
+  var t=HOME_EXPANDED;
+  var c=(HOME_CONVOS.list||[]).filter(function(x){ return x.teacherId===t.teacherId; })[0]||{};
+  var sub=_klContactSub(c);
+  var h='<h2>Messages</h2>';
+  h+='<div class="kl-tbar" id="kl-thread-top">'+
+    '<span class="kl-back" onclick="closeHomeThread()">← Back</span>'+
+    '<span>'+
+      // Mark-unread lives here rather than on the list row: the row already
+      // has one job, and this is only ever wanted while looking at a message
+      // you've just read.
+      '<a href="#" class="read-toggle" title="Mark unread" onclick="event.preventDefault();markHomeThreadRead(false,\''+esc(t.teacherId)+'\')">○</a>'+
+      '<a href="#" style="font-size:11px;color:var(--text4);margin-left:6px" onclick="event.preventDefault();refreshHomeThread()">'+(t.refreshing?'<span class="spin">↻</span>':'↻ Refresh')+'</a>'+
+    '</span></div>';
+  h+='<div class="kl-thead">'+
+    '<div class="kl-cav'+(t.teacherId==='admin'?' adm':'')+'">'+esc(t.teacherId==='admin'?'K':_klInitials(t.teacherName))+'</div>'+
+    '<div><div class="kl-tname">'+esc(t.teacherName)+'</div>'+
+    (sub?'<div class="kl-tsub">'+esc(sub)+'</div>':'')+'</div></div>';
+
+  if(t.loading){
+    h+='<div style="text-align:center;padding:1.5rem;color:var(--text3)"><span class="spin" style="font-size:18px">↻</span></div>';
+  } else if(!t.messages.length){
+    h+='<p class="hint">No messages yet — send a message to get started.</p>';
+  } else {
+    h+='<div class="msg-list">'+t.messages.map(rMsgBubble).join('')+'</div>';
+  }
+  var sendBtn=t.sending
+    ?'<button class="btn btn-p" disabled><span class="spin">↻</span></button>'
+    :'<button class="btn btn-p" onclick="sendHomeMessage()">Send</button>';
+  h+='<div class="composer">'+
+    '<textarea id="home-composer" placeholder="Type your message here..." oninput="HOME_EXPANDED.draft=this.value">'+esc(t.draft)+'</textarea>'+
+    sendBtn+
+    '</div>';
+  return h;
 }
+
+function closeHomeThread(){
+  HOME_EXPANDED=null;
+  loadHomeConversations(true);
+  render();
+}
+
 
 function markHomeThreadRead(read, teacherId){
   fapi('setConversationReadState', {conversationType:'family_teacher', familyId:FAMILY_ID, teacherId:teacherId, read:read}, function(e,r){
@@ -1585,51 +1697,7 @@ function clearHomeThread(teacherId){
   });
 }
 
-function doContactAdminHome(){
-  toggleHomeThread('admin', 'Admin');
-}
 
-// The family's teachers, straight out of the conversation list Home has
-// already loaded (BACKLOG 1.38). getFamilyConversations() returns one entry
-// per contact — every teacher plus admin — whether or not a message has ever
-// been exchanged, so there is nothing left to go and fetch.
-function _homeTeacherContacts(){
-  return (HOME_CONVOS.list||[]).filter(function(c){ return c.teacherId!=='admin'; });
-}
-
-// Was: fetch the teacher roster, wait, then fetch the conversation, wait —
-// two sequential Apps Script calls at roughly 1–3 seconds each before
-// anything appeared (BACKLOG 1.38). Both lists are already in memory, so this
-// now opens on the click, with only the message fetch left to wait on.
-function doContactTeacherHome(){
-  var list=_homeTeacherContacts();
-  if(list.length===1){
-    toggleHomeThread(list[0].teacherId, list[0].teacherName);
-    return;
-  }
-  if(list.length>1){
-    HOME_TEACHER_PICKER.list=list;
-    HOME_TEACHER_PICKER.open=true; render();
-    return;
-  }
-  showMsg('No teacher is assigned yet — check back once a lesson is scheduled, or contact admin instead.','e');
-  render();
-}
-
-function rHomeTeacherPicker(){
-  var h='<button class="btn btn-s" style="margin-bottom:1rem" onclick="HOME_TEACHER_PICKER.open=false;render()">← Back</button>';
-  if(HOME_TEACHER_PICKER.loading){
-    return h+'<div style="text-align:center;padding:2rem;color:var(--text3)"><span class="spin" style="font-size:20px">↻</span></div>';
-  }
-  h+=HOME_TEACHER_PICKER.list.map(function(t){
-    var kids=(t.studentNames||[]).join(', ');
-    return '<div class="teacher-pick-row" onclick="HOME_TEACHER_PICKER.open=false;toggleHomeThread(\''+esc(t.teacherId)+'\',\''+esc(t.teacherName)+'\')">'+
-      '<div style="font-weight:600;color:var(--text2)">'+esc(t.teacherName)+'</div>'+
-      (kids?'<div style="font-size:12px;color:var(--text4)">'+esc(kids)+'</div>':'')+
-      '</div>';
-  }).join('');
-  return h;
-}
 
 // One gate for the whole messaging feature on the family side: exactly the
 // families on the one-page Home, i.e. every student in phase Enrolled
@@ -1679,6 +1747,10 @@ function loadHomeConversations(silent){
 function toggleHomeThread(teacherId, teacherName){
   if(HOME_EXPANDED && HOME_EXPANDED.teacherId===teacherId){ HOME_EXPANDED=null; render(); return; }
   HOME_EXPANDED={teacherId:teacherId, teacherName:teacherName, messages:[], draft:'', sending:false, loading:true, refreshing:false, lastSentAt:0};
+  // The thread replaces the contact list in a block that may be halfway down
+  // a long page, so opening it has to move the page too — otherwise a family
+  // clicks a contact and nothing appears to happen (1.40).
+  _shouldScrollToThread=true;
   render();
   fapi('getConversation', {conversationType:'family_teacher', familyId:FAMILY_ID, teacherId:teacherId}, function(e,r){
     if(!HOME_EXPANDED||HOME_EXPANDED.teacherId!==teacherId) return;
@@ -1728,28 +1800,6 @@ function fmtMsgTime(ms){
   var h12=h%12; if(h12===0) h12=12;
   var mm=mins<10?'0'+mins:String(mins);
   return days[d.getDay()]+', '+(d.getMonth()+1)+'/'+d.getDate()+'/'+String(d.getFullYear()).slice(-2)+' '+h12+':'+mm+' '+ampm;
-}
-
-function rHomeExpandedThread(){
-  var t=HOME_EXPANDED;
-  var h='<div style="padding:.85rem 1rem;background:rgba(255,255,255,.3);border-top:1px solid var(--border)" onclick="event.stopPropagation()">';
-  h+='<div style="text-align:right;margin-bottom:.4rem">'+
-    '<a href="#" style="font-size:11px;color:var(--text4)" onclick="event.preventDefault();event.stopPropagation();refreshHomeThread()">'+(t.refreshing?'<span class="spin">↻</span>':'↻ Refresh')+'</a></div>';
-  if(t.loading){
-    h+='<div style="text-align:center;padding:1rem;color:var(--text3)"><span class="spin" style="font-size:18px">↻</span></div>';
-  } else if(!t.messages.length){
-    h+='<p class="hint">No messages yet — send a message to get started.</p>';
-  } else {
-    h+='<div class="msg-list">'+t.messages.map(rMsgBubble).join('')+'</div>';
-  }
-  var sendBtn=t.sending
-    ?'<button class="btn btn-p" disabled><span class="spin">↻</span></button>'
-    :'<button class="btn btn-p" onclick="event.stopPropagation();sendHomeMessage()">Send</button>';
-  h+='<div class="composer" onclick="event.stopPropagation()">'+
-    '<textarea id="home-composer" placeholder="Type your message here..." oninput="HOME_EXPANDED.draft=this.value">'+esc(t.draft)+'</textarea>'+
-    sendBtn+
-    '</div></div>';
-  return h;
 }
 
 function sendHomeMessage(){
@@ -2420,7 +2470,6 @@ function doSignOut(){
   if(_pollTimer){ clearInterval(_pollTimer); _pollTimer=null; }
   HOME_CONVOS={loading:false, list:[]};
   HOME_EXPANDED=null;
-  HOME_TEACHER_PICKER={open:false, loading:false, list:[]};
   render();
 }
 

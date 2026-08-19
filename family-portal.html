@@ -24,12 +24,17 @@ body{background:var(--bg);color:var(--text);font-family:"Open Sans",sans-serif;f
 .brand{font-family:"DM Mono",monospace;font-size:11px;letter-spacing:.12em;color:var(--acc);margin-bottom:2rem;opacity:.8;font-weight:500}
 h1{font-size:20px;font-weight:400;margin-bottom:.4rem;color:var(--text)}
 h2{font-size:12px;font-weight:600;color:var(--acc);text-transform:uppercase;letter-spacing:.09em;margin-bottom:.75rem;font-family:"DM Mono",monospace}
-/* A card's own heading becomes a band across the top of it, not a line of
+/* Unread is the one thing on this page that should interrupt: the count badge
+   and the header pill both use --red rather than the navy everything else is
+   drawn in (AC, 19 Aug). Note this gives red a second meaning here — elsewhere
+   in the portal it marks destructive or closed (Cancel a Lesson, the "Closed"
+   calendar tag) — which was raised with AC and is his call.
+   A card's own heading becomes a band across the top of it, not a line of
    small type floating inside the padding (BACKLOG 1.41). The negative margin
    has to match .card's padding below; keep them in step. Scoped to a card's
    FIRST child so a mid-card h2 is left alone. */
 .card>h2:first-child{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:-1.25rem -1.25rem 1rem;padding:.5rem .85rem;background:rgba(30,58,110,.13);border-bottom:1px solid var(--border2);border-radius:var(--rl) var(--rl) 0 0}
-.card>h2:first-child .ct{background:var(--acc);color:#fff;border-radius:9px;padding:1px 7px;font-size:10px;font-weight:400;letter-spacing:.02em;font-family:"DM Mono",monospace}
+.card>h2:first-child .ct{background:var(--red);color:#fff;border-radius:9px;padding:1px 7px;font-size:10px;font-weight:400;letter-spacing:.02em;font-family:"DM Mono",monospace}
 p{color:var(--text3);margin-bottom:.75rem;line-height:1.65;font-size:13px}
 a{color:var(--bt);text-decoration:none}
 a:hover{text-decoration:underline}
@@ -94,7 +99,7 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 .c-info{background:var(--bbg);color:var(--bt)}
 .c-warn{background:#FDECD6;color:#7C3A00}
 .c-danger{background:var(--rbg);color:var(--rt)}
-.unread-badge{background:var(--acc);color:#fff;font-size:11px;font-weight:700;border-radius:10px;padding:1px 7px;flex:0 0 auto;cursor:pointer}
+.unread-badge{background:var(--red);color:#fff;font-size:11px;font-weight:700;border-radius:10px;padding:1px 7px;flex:0 0 auto;cursor:pointer}
 .read-toggle{flex:0 0 auto;font-size:14px;color:var(--text5);text-decoration:none;padding:0 4px}
 .read-toggle:hover{color:var(--acc);text-decoration:none}
 .divider{border:none;border-top:1px solid var(--border);margin:1.5rem 0}
@@ -779,7 +784,8 @@ function _ageFromDob(raw){
 // used at all three call sites (loadFamily, gotoEnrollment's two branches)
 // so parent2's email/password-status fields stay in sync everywhere.
 function _famParentsFromResp(r){
-  return {p1:r.parent1Name||'', p1Email:r.parent1Email||'', p2:r.parent2Name||'', p2Email:r.parent2Email||'', p2HasPassword:!!r.parent2HasPassword};
+  return {p1:r.parent1Name||'', p1Email:r.parent1Email||'', p2:r.parent2Name||'', p2Email:r.parent2Email||'', p2HasPassword:!!r.parent2HasPassword,
+          p1Phone:r.parent1Phone||'', p2Phone:r.parent2Phone||''};
 }
 
 function showMsg(m, t){
@@ -843,11 +849,19 @@ function render(){
   // preview poll, which used to tear down and recreate the whole subtree,
   // resetting scroll to the top and stealing focus out of the reply box
   // mid-keystroke — items 11 & 13, 18 Aug).
+  // Focus and caret survive a re-render for ANY text field with an id, not
+  // just the message composer it was originally written for (1.56 adds edit
+  // forms, and the 5s poll can re-render while a parent is mid-word).
   var _activeId=document.activeElement&&document.activeElement.id;
   var _composerSel=null;
-  if(_activeId==='home-composer'){
-    var _c=document.getElementById('home-composer');
-    _composerSel={start:_c.selectionStart,end:_c.selectionEnd};
+  if(_activeId){
+    var _c=document.getElementById(_activeId);
+    var _tag=_c&&_c.tagName;
+    if(_c&&(_tag==='TEXTAREA'||(_tag==='INPUT'&&/^(text|tel|email|date|search|url|number)$/i.test(_c.type||'text')))){
+      try{ _composerSel={start:_c.selectionStart,end:_c.selectionEnd}; }catch(e){ _composerSel=null; }
+    } else {
+      _activeId=null;
+    }
   }
   var _prevMsgList=el.querySelector('.msg-list');
   var _prevScrollTop=_prevMsgList?_prevMsgList.scrollTop:null;
@@ -885,11 +899,13 @@ function render(){
     var ml2=el.querySelector('.msg-list');
     if(ml2) ml2.scrollTop=_prevScrollTop;
   }
-  if(_activeId==='home-composer'){
-    var newC=document.getElementById('home-composer');
+  if(_activeId){
+    var newC=document.getElementById(_activeId);
     if(newC){
       newC.focus();
-      if(_composerSel) newC.setSelectionRange(_composerSel.start,_composerSel.end);
+      // Not every input type supports a selection range (date, number); the
+      // focus is the part that matters and setSelectionRange throws on those.
+      if(_composerSel){ try{ newC.setSelectionRange(_composerSel.start,_composerSel.end); }catch(e){} }
     }
   }
 }
@@ -1463,7 +1479,7 @@ function rRegDone(){
 function _applyProposalResp(r){
   students=r.proposals||[];
   familyParents=_famParentsFromResp(r);
-  familyAddress={street:r.street||'',apt:r.apt||''};
+  familyAddress={street:r.street||'',apt:r.apt||'',city:r.city||'',state:r.state||'',zip:r.zip||''};
   _lastFamilyLoadAt=Date.now();
   _onFamilyDataReady();
 }
@@ -2089,9 +2105,32 @@ function _rHomeActionButtons(mainLabel){
   h+='</div>';
   return h;
 }
+// Ported from EnrollmentAdmin.html's studentAge() (BACKLOG 1.55). `age` is
+// only ever a snapshot, written once from date of birth and never recomputed,
+// so a child who joined at 9 still reads as 9 years later — and the family
+// portal was gating self-release on exactly that stale number, refusing a
+// child who had since turned 10. `birthdate` is the source of truth where it
+// exists; the stored age remains the fallback for older records without one.
+// Deliberately the same logic as admin's, so the two can't disagree about the
+// same child.
+function _klStudentAge(s){
+  if(s&&s.birthdate){
+    var bd=new Date(s.birthdate);
+    if(!isNaN(bd.getTime())){
+      var now=new Date();
+      var a=now.getFullYear()-bd.getFullYear();
+      var mo=now.getMonth()-bd.getMonth();
+      if(mo<0||(mo===0&&now.getDate()<bd.getDate())) a--;
+      if(a>=0&&a<120) return String(a);
+    }
+  }
+  return (s&&s.age)||'';
+}
+
 function _rHomeSelfRelease(s){
   // Collapsible section rendered INSIDE the dashboard card (no outer card wrapper)
-  var age=parseInt(s.age,10);
+  // Age is derived, never read straight off the row — see _klStudentAge().
+  var age=parseInt(_klStudentAge(s),10);
   if(isNaN(age)||age<10) return '';
   var granted=!!s.selfReleaseGrantedAt;
   var open=!!_srOpen[s.studentId];
@@ -2310,21 +2349,6 @@ function _fmtDateRange(a,b){
   return d1.toLocaleDateString('en-US',o)+' – '+_parseYMD(b).toLocaleDateString('en-US',o);
 }
 
-// Family's combined monthly tuition. Returns null if ANY enrolled student is
-// missing a price — a wrong figure in front of a parent generates exactly the
-// billing question this page exists to prevent, so the block hides the number
-// and shows only the billing button rather than guessing.
-function _familyMonthlyTotal(){
-  var total=0, seen=false;
-  for(var i=0;i<students.length;i++){
-    var s=students[i];
-    if(s.phase!=='Enrolled'&&s.phase!=='Enrollment Change') continue;
-    var p=parseFloat(s.monthlyPrice);
-    if(!isFinite(p)||p<=0) return null;
-    total+=p; seen=true;
-  }
-  return seen?total:null;
-}
 
 // The family's enrolled students, in record order. Used in enough places on
 // this page that the phase test is worth stating once.
@@ -2332,16 +2356,116 @@ function _klEnrolled(){
   return students.filter(function(s){ return s.phase==='Enrolled'||s.phase==='Enrollment Change'; });
 }
 
-function rHomeOnePage(){
-  // No page header here. render() already draws the Keylab logo and "Keylab
-  // Family Portal" above everything, so the block that used to sit here was a
-  // second logo and a second portal title, one under the other (AC, 19 Aug:
-  // "we don't need the 2nd keylab family portal or logo, omit entirely").
-  var h='';
+// ── Schedule block (BACKLOG 1.50 + 1.47) ────────────────────────────────
+// Copy in this block was written by Claude under AC's 19 Aug delegation
+// ("You can write the copy"), not by AC. Flagged so a later session doesn't
+// mistake it for his voice; it's his to change.
 
-  // ── Next lesson ──
-  // Soonest first, not student order — the block is called "Next Lesson", so
-  // the child who has one tomorrow belongs above the one who has one next week.
+// The weekdays this family actually has lessons on, and which child each
+// belongs to. Used to answer "which closures cost us a lesson" — the filter
+// AC asked for. Returns e.g. {1:['Mia'], 3:['Leo']}.
+function _klLessonDays(){
+  var byDay={};
+  _klEnrolled().forEach(function(s){
+    var idx=KL_DAYIDX[String(s.day||'').trim().toLowerCase()];
+    if(idx===undefined) return;
+    var first=s.studentName?s.studentName.trim().split(' ')[0]:'';
+    if(!byDay[idx]) byDay[idx]=[];
+    if(first&&byDay[idx].indexOf(first)===-1) byDay[idx].push(first);
+  });
+  return byDay;
+}
+
+// Every date inside an event's range, inclusive. A multi-day event like Winter
+// Recess spans several weekdays, so asking "does this fall on a Monday" means
+// checking every day in it, not just the day it starts (1.47).
+function _klEventDates(ev){
+  var out=[];
+  var d=_parseYMD(ev.startDate), end=_parseYMD(ev.endDate||ev.startDate);
+  if(isNaN(d.getTime())||isNaN(end.getTime())) return out;
+  var guard=0;
+  while(d<=end && guard++<400){
+    out.push(new Date(d.getTime()));
+    d.setDate(d.getDate()+1);
+  }
+  return out;
+}
+
+// Calendar events plus each child's first lesson, in date order. The start
+// date is an ordinary entry competing for the three summary slots and dropping
+// off once passed (AC, 19 Aug) — the same today-filter as everything else, so
+// the two can't drift apart.
+function _klScheduleEvents(){
+  var today=new Date(); today.setHours(0,0,0,0);
+  var out=(publicCfg.upcomingDates||[]).map(function(d){
+    return {event:d.event||'', startDate:d.startDate, endDate:d.endDate||d.startDate, closed:!!d.closed, kind:'calendar'};
+  });
+
+  // One entry per distinct start date, listing whoever begins that day, rather
+  // than a near-duplicate row per child on a family who all start together.
+  var byDate={};
+  _klEnrolled().forEach(function(s){
+    if(!s.startDate) return;
+    var d=_klFloorDate(s.startDate);
+    if(!d||d<today) return;
+    var key=s.startDate;
+    var first=s.studentName?s.studentName.trim().split(' ')[0]:'';
+    if(!byDate[key]) byDate[key]=[];
+    if(first&&byDate[key].indexOf(first)===-1) byDate[key].push(first);
+  });
+  Object.keys(byDate).forEach(function(k){
+    var names=byDate[k];
+    out.push({
+      event: names.length===1 ? names[0]+'’s first lesson' : 'First lesson for '+names.join(' & '),
+      startDate:k, endDate:k, closed:false, kind:'start'
+    });
+  });
+
+  return out.filter(function(e){
+    var end=_parseYMD(e.endDate||e.startDate);
+    return !isNaN(end.getTime()) && end>=today;
+  }).sort(function(a,b){
+    return String(a.startDate).localeCompare(String(b.startDate));
+  });
+}
+
+function _klDateRow(e, whenText, whoText){
+  var tag = e.kind==='start'
+    ? '<span class="kl-tag op">First lesson</span>'
+    : '<span class="kl-tag '+(e.closed?'cl':'op')+'">'+(e.closed?'Closed':'Keylab is open')+'</span>';
+  return '<div class="kl-date"><div>'+
+    '<div class="kl-who">'+esc(e.event)+'</div>'+
+    '<div class="kl-sub">'+esc(whenText)+(whoText?' · '+esc(whoText):'')+'</div></div>'+
+    tag+'</div>';
+}
+
+// Every event that lands on a day this family has a lesson, with the specific
+// date that lands — not the range's start, which for Winter Recess would name
+// a day that may not be their lesson day at all.
+function rHomeDayFilteredDates(){
+  var byDay=_klLessonDays();
+  if(!Object.keys(byDay).length) return '<p class="hint">We don’t have a lesson day on file yet.</p>';
+  var hits=[];
+  _klScheduleEvents().forEach(function(e){
+    if(e.kind==='start'){ hits.push({e:e, when:_fmtDateRange(e.startDate,e.endDate), who:''}); return; }
+    _klEventDates(e).forEach(function(d){
+      var who=byDay[d.getDay()];
+      if(!who) return;
+      hits.push({e:e, when:_fmtLessonDate(d), who:who.join(' & '), sort:d.getTime()});
+    });
+  });
+  if(!hits.length) return '<p class="hint">No closures fall on your lesson days.</p>';
+  return hits.map(function(hit){ return _klDateRow(hit.e, hit.when, hit.who); }).join('');
+}
+
+function toggleAllDates(){ _klAllDatesOpen=!_klAllDatesOpen; render(); }
+var _klAllDatesOpen=false;
+
+function rHomeSchedule(){
+  var h='<div class="card"><h2>Schedule</h2>';
+
+  // ── Next lesson, soonest first — the child who has one tomorrow belongs
+  // above the one who has one next week.
   var lessons=[];
   students.forEach(function(s){
     if(s.phase!=='Enrolled'&&s.phase!=='Enrollment Change') return;
@@ -2354,62 +2478,271 @@ function rHomeOnePage(){
     if(!b.d) return -1;
     return a.d - b.d;
   });
-  var rows='';
-  lessons.forEach(function(L){
-    var s=L.s;
-    var first=s.studentName?s.studentName.trim().split(' ')[0]:'';
-    // Room is never shown to families (standing rule 6) — teacher, day, time only.
-    var when=L.d
-      ? esc(_fmtLessonDate(L.d))+(s.time?'<br>'+esc(s.time):'')
-      : esc(s.day+(s.time?' · '+s.time:''));
-    rows+='<div class="kl-row"><div>'+
-      '<div class="kl-who">'+esc(first)+'</div>'+
-      '<div class="kl-sub">'+esc([s.instrument,s.teacher].filter(Boolean).join(' · '))+'</div>'+
-      '</div><div class="kl-when">'+when+'</div></div>';
+  if(lessons.length){
+    h+='<div class="kl-clabel">Next lesson</div>';
+    lessons.forEach(function(L){
+      var s=L.s;
+      var first=s.studentName?s.studentName.trim().split(' ')[0]:'';
+      // Room is never shown to families (standing rule 6) — teacher, day, time only.
+      var when=L.d
+        ? esc(_fmtLessonDate(L.d))+(s.time?'<br>'+esc(s.time):'')
+        : esc(s.day+(s.time?' · '+s.time:''));
+      h+='<div class="kl-row"><div>'+
+        '<div class="kl-who">'+esc(first)+'</div>'+
+        '<div class="kl-sub">'+esc([s.instrument,s.teacher].filter(Boolean).join(' · '))+'</div>'+
+        '</div><div class="kl-when">'+when+'</div></div>';
+    });
+  }
+
+  // ── Important dates: always the next three, however far out.
+  var events=_klScheduleEvents();
+  if(events.length){
+    // Expanded REPLACES the summary rather than appending under it — otherwise
+    // the same three dates appear twice, one set directly beneath the other.
+    if(_klAllDatesOpen){
+      h+='<div class="kl-clabel" style="margin-top:1rem">All dates on your lesson days</div>';
+      h+=rHomeDayFilteredDates();
+    } else {
+      h+='<div class="kl-clabel" style="margin-top:1rem">Important upcoming dates</div>';
+      events.slice(0,3).forEach(function(e){
+        h+=_klDateRow(e, _fmtDateRange(e.startDate,e.endDate), '');
+      });
+    }
+    h+='<div style="margin-top:.5rem"><a href="#" style="font-size:12px;color:var(--bt)" onclick="event.preventDefault();toggleAllDates()">'+
+      (_klAllDatesOpen?'Show the next three instead':'See all dates on your lesson days')+'</a></div>';
+  }
+
+  // Hidden entirely until the URL is set in admin Settings, so this can never
+  // ship as a dead control (agreed with AC, 19 Aug).
+  if(publicCfg.keylabCalendarUrl){
+    h+='<div style="margin-top:.6rem"><a class="btn btn-s btn-sm" href="'+esc(publicCfg.keylabCalendarUrl)+'" target="_blank">View the full Keylab calendar</a></div>';
+  }
+  return h+'</div>';
+}
+
+// ── Parent-made edits (BACKLOG 1.56) ────────────────────────────────────
+// A parent can correct their child's name, date of birth and school, and the
+// household's address and phones. Instrument is deliberately read-only once a
+// student is enrolled — admin's to change (AC, 19 Aug).
+//
+// Values are mirrored into state on every keystroke rather than read out of
+// the DOM at save time: the 5s message poll can re-render this page at any
+// moment, and a form that lived only in the DOM would lose what someone had
+// typed. render() restores focus and caret on top of that.
+//
+// Copy in this block was written by Claude under AC's 19 Aug delegation, not
+// by AC.
+var EDIT={stu:{id:'', vals:null, busy:false, err:''}, con:{vals:null, busy:false, err:''}};
+
+function startEditStudent(studentId){
+  var s=students.filter(function(x){ return x.studentId===studentId; })[0];
+  if(!s) return;
+  EDIT.stu={id:studentId, busy:false, err:'', vals:{
+    studentName:s.studentName||'', birthdate:s.birthdate||'', school:s.school||''
+  }};
+  render();
+}
+function cancelEditStudent(){ EDIT.stu={id:'', vals:null, busy:false, err:''}; render(); }
+
+function saveEditStudent(){
+  var e=EDIT.stu;
+  if(e.busy) return;
+  if(!(e.vals.studentName||'').trim()){ e.err='Enter your child’s name.'; render(); return; }
+  e.busy=true; e.err=''; render();
+  fapi('familySaveStudentDetails', {
+    studentId:e.id, studentName:e.vals.studentName, birthdate:e.vals.birthdate,
+    school:e.vals.school, senderParentSlot:MY_PARENT_SLOT
+  }, function(err,r){
+    e.busy=false;
+    if(err||!r||!r.ok){ e.err=(r&&r.error)||'Could not save. Please try again.'; render(); return; }
+    // Patch the local record so the page reflects the change without a full
+    // reload — same reasoning as the optimistic message send.
+    var s=students.filter(function(x){ return x.studentId===e.id; })[0];
+    if(s){
+      s.studentName=e.vals.studentName.trim();
+      s.birthdate=e.vals.birthdate;
+      s.school=e.vals.school;
+    }
+    var first=(e.vals.studentName||'').trim().split(' ')[0];
+    EDIT.stu={id:'', vals:null, busy:false, err:''};
+    showMsg(first+'’s details have been updated.','s');
   });
-  if(rows) h+='<div class="card"><h2>Next Lesson</h2>'+rows+'</div>';
+}
+
+function startEditContact(){
+  EDIT.con={busy:false, err:'', vals:{
+    street:familyAddress.street||'', apt:familyAddress.apt||'', city:familyAddress.city||'',
+    state:familyAddress.state||'', zip:familyAddress.zip||'',
+    parent1Phone:familyParents.p1Phone||'', parent2Phone:familyParents.p2Phone||''
+  }};
+  render();
+}
+function cancelEditContact(){ EDIT.con={vals:null, busy:false, err:''}; render(); }
+
+function saveEditContact(){
+  var e=EDIT.con;
+  if(e.busy) return;
+  if(!(e.vals.zip||'').trim()){ e.err='Enter a ZIP code.'; render(); return; }
+  e.busy=true; e.err=''; render();
+  fapi('familySaveContact', Object.assign({senderParentSlot:MY_PARENT_SLOT}, e.vals), function(err,r){
+    e.busy=false;
+    if(err||!r||!r.ok){ e.err=(r&&r.error)||'Could not save. Please try again.'; render(); return; }
+    familyAddress.street=e.vals.street; familyAddress.apt=e.vals.apt;
+    familyAddress.city=e.vals.city; familyAddress.state=e.vals.state; familyAddress.zip=e.vals.zip;
+    familyParents.p1Phone=e.vals.parent1Phone; familyParents.p2Phone=e.vals.parent2Phone;
+    EDIT.con={vals:null, busy:false, err:''};
+    showMsg('Your contact details have been updated.','s');
+  });
+}
+
+function _editField(label, id, val, onin, type){
+  return '<div class="field"><label>'+esc(label)+'</label>'+
+    '<input id="'+esc(id)+'" type="'+(type||'text')+'" value="'+esc(val||'')+'" oninput="'+onin+'"></div>';
+}
+function _editRow(label, val){
+  return '<div class="kl-row" style="padding:.3rem 0"><div class="kl-sub">'+esc(label)+'</div>'+
+    '<div class="kl-when">'+esc(val||'—')+'</div></div>';
+}
+
+function rHomeChildDetails(){
+  var kids=_klEnrolled();
+  if(!kids.length) return '';
+  return kids.map(function(s){
+    var editing=EDIT.stu.id===s.studentId;
+    var first=s.studentName?s.studentName.trim().split(' ')[0]:'';
+    var h=kids.length>1?'<div class="kl-clabel" style="margin-top:.6rem">'+esc(first)+'</div>':'';
+    if(!editing){
+      h+=_editRow('Child’s name', s.studentName);
+      h+=_editRow('Date of birth', s.birthdate?_fmtFamilyDate(s.birthdate):'');
+      h+=_editRow('School', s.school);
+      h+=_editRow('Instrument', s.instrument);
+      h+='<p class="hint">To change your child’s instrument, message admin.</p>';
+      h+='<button class="btn btn-s btn-sm" style="margin-top:.5rem" onclick="startEditStudent(\''+esc(s.studentId)+'\')">Edit</button>';
+      return h;
+    }
+    if(EDIT.stu.err) h+='<div class="msg me">'+esc(EDIT.stu.err)+'</div>';
+    h+=_editField('Child’s name','ed-stu-name',EDIT.stu.vals.studentName,'EDIT.stu.vals.studentName=this.value');
+    h+=_editField('Date of birth','ed-stu-dob',EDIT.stu.vals.birthdate,'EDIT.stu.vals.birthdate=this.value','date');
+    h+=_editField('School','ed-stu-school',EDIT.stu.vals.school,'EDIT.stu.vals.school=this.value');
+    h+=_editRow('Instrument', s.instrument);
+    h+='<p class="hint">To change your child’s instrument, message admin.</p>';
+    h+='<div style="display:flex;gap:8px;margin-top:.6rem">'+
+      (EDIT.stu.busy
+        ?'<button class="btn btn-p btn-sm" disabled><span class="spin">↻</span></button>'
+        :'<button class="btn btn-p btn-sm" onclick="saveEditStudent()">Save changes</button>')+
+      '<button class="btn btn-s btn-sm" onclick="cancelEditStudent()">Cancel</button></div>';
+    return h;
+  }).join('');
+}
+
+function rHomeContactDetails(){
+  var e=EDIT.con;
+  var h='';
+  if(!e.vals){
+    var addr=[familyAddress.street,familyAddress.apt,familyAddress.city,familyAddress.state,familyAddress.zip].filter(Boolean).join(', ');
+    h+=_editRow('Address', addr);
+    h+=_editRow((familyParents.p1?familyParents.p1.split(' ')[0]+'’s phone':'Phone'), familyParents.p1Phone);
+    if(familyParents.p2) h+=_editRow(familyParents.p2.split(' ')[0]+'’s phone', familyParents.p2Phone);
+    h+=_editRow('Email', familyParents.p1Email);
+    h+='<p class="hint">To change the email you sign in with, message admin.</p>';
+    h+='<button class="btn btn-s btn-sm" style="margin-top:.5rem" onclick="startEditContact()">Edit</button>';
+    return h;
+  }
+  if(e.err) h+='<div class="msg me">'+esc(e.err)+'</div>';
+  h+=_editField('Street address','ed-con-street',e.vals.street,'EDIT.con.vals.street=this.value');
+  h+=_editField('Apt / unit','ed-con-apt',e.vals.apt,'EDIT.con.vals.apt=this.value');
+  h+=_editField('City','ed-con-city',e.vals.city,'EDIT.con.vals.city=this.value');
+  h+=_editField('State','ed-con-state',e.vals.state,'EDIT.con.vals.state=this.value');
+  h+=_editField('ZIP','ed-con-zip',e.vals.zip,'EDIT.con.vals.zip=this.value');
+  h+=_editField((familyParents.p1?familyParents.p1.split(' ')[0]+'’s phone':'Phone'),'ed-con-p1',e.vals.parent1Phone,'EDIT.con.vals.parent1Phone=this.value','tel');
+  if(familyParents.p2) h+=_editField(familyParents.p2.split(' ')[0]+'’s phone','ed-con-p2',e.vals.parent2Phone,'EDIT.con.vals.parent2Phone=this.value','tel');
+  h+='<div style="display:flex;gap:8px;margin-top:.6rem">'+
+    (e.busy
+      ?'<button class="btn btn-p btn-sm" disabled><span class="spin">↻</span></button>'
+      :'<button class="btn btn-p btn-sm" onclick="saveEditContact()">Save changes</button>')+
+    '<button class="btn btn-s btn-sm" onclick="cancelEditContact()">Cancel</button></div>';
+  return h;
+}
+
+// What the family actually agreed to, per child (BACKLOG 1.54). This is the
+// half of the old Enrollment tab that was lost in the 1.36 rebuild: the
+// acceptance stamp (who accepted, and when) and the proposal details they
+// accepted. Both are facts already on the record that simply stopped being
+// rendered once enrolled families lost that tab.
+//
+// The price box is reused from the Enrollment tab rather than rewritten, with
+// the first-payment note suppressed — that note is guidance for someone about
+// to pay, and this is a record of something already agreed.
+function rHomeEnrollmentRecord(){
+  var kids=_klEnrolled();
+  if(!kids.length) return '';
+  return kids.map(function(s){
+    var first=s.studentName?s.studentName.trim().split(' ')[0]:'';
+    var h=kids.length>1?'<div class="kl-clabel" style="margin-top:.6rem">'+esc(first)+'</div>':'';
+    if(s.tcAcceptedAt||s.tcAcceptedName){
+      h+='<div class="msg ms">\u2713 Proposal and policies accepted'+
+        (s.tcAcceptedName?' by '+esc(s.tcAcceptedName):'')+
+        (s.tcAcceptedAt?' on '+esc(_fmtFamilyTs(s.tcAcceptedAt))+' at '+esc(_fmtFamilyTime(s.tcAcceptedAt)):'')+'.</div>';
+    }
+    var locMap={studio:'at Keylab','in-home':'In-home',virtual:'Virtual'};
+    var rows=[
+      ['Instrument', s.instrument],
+      ['Teacher', s.teacher],
+      ['Lesson', [s.day, s.time].filter(Boolean).join(', ')],
+      ['Length', _effDur(s.durationBase,s.durationExtra)?_effDur(s.durationBase,s.durationExtra)+' minutes':''],
+      ['Location', locMap[s.lessonLocation]||s.lessonLocation],
+      ['Start date', s.startDate?_fmtFamilyDate(s.startDate):'']
+    ].filter(function(r){ return r[1]; });
+    rows.forEach(function(r){
+      h+='<div class="kl-row" style="padding:.3rem 0"><div class="kl-sub">'+esc(r[0])+'</div>'+
+        '<div class="kl-when">'+esc(r[1])+'</div></div>';
+    });
+    h+=_fmtPriceBox(s,false);
+    return h;
+  }).join('');
+}
+
+// The immutable record of what each child's family accepted — per student,
+// because tcPolicySnapshot is per student and a family with two children has
+// two of them (BACKLOG 1.54). Falls back to the current policy text for a
+// student with no snapshot, which is rPolicyCollapsible()'s own behaviour.
+function rHomePolicyRecords(){
+  var kids=_klEnrolled();
+  if(!kids.length) return rPolicyText(false);
+  return kids.map(function(s){
+    var first=s.studentName?s.studentName.trim().split(' ')[0]:'';
+    var head=kids.length>1?'<div class="kl-clabel" style="margin-top:.6rem">'+esc(first)+'</div>':'';
+    return head+rPolicyCollapsible(false, s.lessonLocation==='in-home', s.studentId);
+  }).join('');
+}
+
+// Opens the admin conversation from Keylab Support — the same thread the Admin
+// row in Messages opens, not a separate form (BACKLOG 1.53). toggleHomeThread
+// already scrolls the thread into view, which matters here because Support sits
+// well below the Messages block.
+function openAdminThreadFromSupport(){
+  toggleHomeThread('admin','Admin');
+}
+
+function rHomeOnePage(){
+  // No page header here. render() already draws the Keylab logo and "Keylab
+  // Family Portal" above everything, so the block that used to sit here was a
+  // second logo and a second portal title, one under the other (AC, 19 Aug:
+  // "we don't need the 2nd keylab family portal or logo, omit entirely").
+  var h='';
+
+  // ── Schedule: next lessons + important dates, one block, first on the page ──
+  // Merged on AC's call (BACKLOG 1.50): they answer the same question — when
+  // are the lessons, and when aren't there any — and used to sit apart with
+  // Messages between them.
+  h+=rHomeSchedule();
 
   // ── Messages ──
   h+='<div class="card">'+rHomeMessages()+'</div>';
 
-  // ── Monthly tuition ──
-  var total=_familyMonthlyTotal();
-  h+='<div class="card"><h2>Monthly Tuition</h2>';
-  if(total!==null){
-    h+='<div class="kl-amt">$'+esc(String(Math.round(total)))+'</div>'+
-      '<div class="kl-sub"'+(_klEnrolled().length>1?'':' style="margin-bottom:.6rem"')+'>Processed on the 1st of each month</div>';
-    // Per-child breakdown when there's more than one — a family paying one
-    // combined figure still needs to see what each child costs, which is the
-    // useful half of the Enrollment tab's tuition detail.
-    var kids=_klEnrolled();
-    if(kids.length>1){
-      h+='<div style="margin:.5rem 0 .6rem">';
-      kids.forEach(function(s){
-        var first=s.studentName?s.studentName.trim().split(' ')[0]:'';
-        h+='<div class="kl-row" style="padding:.25rem 0">'+
-          '<div class="kl-sub">'+esc(first)+(s.instrument?' · '+esc(s.instrument):'')+'</div>'+
-          '<div class="kl-when">$'+esc(String(Math.round(parseFloat(s.monthlyPrice)||0)))+'</div></div>';
-      });
-      h+='</div>';
-    }
-  }
-  h+='<a class="btn btn-p btn-sm" href="'+esc(publicCfg.schedulingBillingUrl||'')+'" target="_blank">Billing &amp; invoices</a></div>';
-
-  // ── Important upcoming dates ──
-  // Always the next three events however far out (AC, 19 Aug: no time window),
-  // and the block hides entirely rather than showing an empty state.
-  var dates=publicCfg.upcomingDates||[];
-  if(dates.length){
-    h+='<div class="card"><h2>Important Upcoming Dates</h2>';
-    dates.forEach(function(d){
-      h+='<div class="kl-date"><div>'+
-        '<div class="kl-who">'+esc(d.event||'')+'</div>'+
-        '<div class="kl-sub">'+esc(_fmtDateRange(d.startDate,d.endDate))+'</div></div>'+
-        '<span class="kl-tag '+(d.closed?'cl':'op')+'">'+(d.closed?'Closed':'Keylab is open')+'</span>'+
-        '</div>';
-    });
-    h+='</div>';
-  }
+  // Monthly Tuition was removed entirely here (BACKLOG 1.51, AC's call). The
+  // Billing & invoices button it carried is not lost — Keylab Support's
+  // "Billing info & payment history" goes to the same place.
 
   // ── Self-release ──
   // Ported from the old Home, where it lived inside each child's dashboard
@@ -2432,17 +2765,32 @@ function rHomeOnePage(){
     '<details class="kl-acc"><summary>Check your schedule or cancel a lesson</summary>'+
       '<p>View upcoming lessons or cancel a lesson. See cancellation policies for details.</p>'+
       '<a class="btn btn-p btn-sm" href="'+sb+'" target="_blank">Scheduling &amp; Billing</a></details>'+
-    '<details class="kl-acc"><summary>Review / update billing</summary>'+
+    '<details class="kl-acc"><summary>Billing info &amp; payment history</summary>'+
       '<p>View all payments, download invoices, and update your payment details.</p>'+
       '<a class="btn btn-p btn-sm" href="'+sb+'" target="_blank">Scheduling &amp; Billing</a></details>'+
     // Policies render inline rather than sending the family to the Enrollment
-    // tab, which is the point of the rebuild — and a prerequisite for that tab
-    // going away in step 2. rPolicyText() varies in exactly one place on
-    // whether lessons are in-home; a family with a mix gets the in-home
-    // variant, since that copy is additive rather than contradictory.
+    // tab, which is the point of the rebuild. Since 1.54 this is the per-student
+    // rPolicyCollapsible(), NOT the generic rPolicyText(): it shows the exact
+    // policy text the family accepted (tcPolicySnapshot), headed with the date
+    // they accepted it, with the PDF download — the immutable record that was
+    // already built and that this page had been bypassing.
+    '<details class="kl-acc"><summary>Your child\u2019s details</summary>'+
+      rHomeChildDetails()+'</details>'+
+    '<details class="kl-acc"><summary>Your contact details</summary>'+
+      rHomeContactDetails()+'</details>'+
+    '<details class="kl-acc"><summary>Your enrollment details</summary>'+
+      '<p>What you accepted, and when.</p>'+
+      rHomeEnrollmentRecord()+'</details>'+
     '<details class="kl-acc"><summary>Read the studio policies</summary>'+
-      rPolicyText(_klEnrolled().some(function(s){ return s.lessonLocation==='in-home'; }))+
+      rHomePolicyRecords()+
       '</details>'+
+    // Contact Admin, opening the same conversation as the Admin row in the
+    // Messages block above (BACKLOG 1.53). Deliberately a second entry point
+    // to messaging: Support is where someone goes when they don't know who to
+    // ask, and the answer to most of those is admin.
+    '<details class="kl-acc"><summary>Contact admin</summary>'+
+      '<p>Questions about billing, scheduling or anything else administrative.</p>'+
+      '<button class="btn btn-p btn-sm" onclick="openAdminThreadFromSupport()">Message admin</button></details>'+
     '</div>';
 
   return h;
@@ -4448,6 +4796,7 @@ function boot(){
       if(r.closures){ EST_CLOSURES=r.closures; publicCfg.closures=r.closures; }
       if(r.upcomingDates) publicCfg.upcomingDates=r.upcomingDates;
       if(r.schoolYearStart) publicCfg.schoolYearStart=r.schoolYearStart;
+      if(r.keylabCalendarUrl) publicCfg.keylabCalendarUrl=r.keylabCalendarUrl;
       if(r.instruments){
         var _fInstr=r.instruments.split(',').map(function(x){return x.trim();}).filter(Boolean);
         if(_fInstr.length) INSTRUMENTS=_fInstr;

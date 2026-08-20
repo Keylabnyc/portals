@@ -425,6 +425,19 @@ var _familyLoadError = '';
 // self-release expand state: keyed by studentId; true = expanded
 var _srOpen = {};
 
+// Keylab Support accordion open state (BACKLOG 1.57). Plain <details> has no
+// open state of its own once render() rebuilds the page's whole innerHTML —
+// every render (a save, the 5s poll, clicking Edit) snapped every section
+// shut. Keyed by a fixed string per item, re-emitted as the `open` attribute
+// on each render; ontoggle keeps it in sync with clicks without forcing a
+// render itself, same approach as _srOpen above.
+var _supportAccOpen = {};
+function _klAcc(key, summaryHtml, bodyHtml){
+  var open=!!_supportAccOpen[key];
+  return '<details class="kl-acc"'+(open?' open':'')+' ontoggle="_supportAccOpen[&apos;'+key+'&apos;]=this.open">'+
+    '<summary>'+summaryHtml+'</summary>'+bodyHtml+'</details>';
+}
+
 // Full SC reset for a specific student, then navigate to scheduling tab.
 // Always use this instead of inline SC mutations on home-tab CTAs.
 function _gotoSchedulingForStudent(id) {
@@ -1697,7 +1710,7 @@ function rHomeMessages(){
     h+='<div style="text-align:right;margin-bottom:.4rem">'+
       '<a href="#" style="font-size:11px;color:var(--text4)" onclick="event.preventDefault();markAllHomeRead()">Mark all read</a></div>';
   }
-  h+='<div class="kl-clabel">Your contacts</div>';
+  h+='<div class="kl-subhd">Your contacts</div>';
   h+=HOME_CONVOS.list.map(rHomeContactRow).join('');
   return h;
 }
@@ -2377,16 +2390,33 @@ function _klEnrolled(){
 function _klLessonDays(){
   var byDay={};
   var enrolled=_klEnrolled();
-  // Label per enrollment, not per child: a student taking two instruments has
-  // two lessons that a closure affects separately, and a family reading "Mia"
-  // twice against the same date can't tell which lesson is meant (AC, 19 Aug).
-  var multi=enrolled.length>1;
+  // Label carries only what distinguishes the enrollment it's attached to
+  // (BACKLOG 1.60, settled 19 Aug): nothing at all with a single enrollment
+  // in the whole family (a date needs no label when there's only one lesson
+  // it could mean); the instrument alone for a single child with more than
+  // one enrollment (the name adds nothing when it's the same child every
+  // time); the child's name, plus the instrument too for any child with more
+  // than one enrollment, once the family has more than one child. Branches
+  // on enrollment/child COUNTS, not on whether one particular day happens to
+  // have only one lesson on it \u2014 the label is a family-level fact.
+  var byChildCount={};
+  enrolled.forEach(function(s){ byChildCount[s.studentName||'']=(byChildCount[s.studentName||'']||0)+1; });
+  var multiChild=Object.keys(byChildCount).length>1;
+  var multiEnrollment=enrolled.length>1;
   enrolled.forEach(function(s){
     var idx=KL_DAYIDX[String(s.day||'').trim().toLowerCase()];
     if(idx===undefined) return;
     var first=s.studentName?s.studentName.trim().split(' ')[0]:'';
     if(!first) return;
-    var label=first+(multi&&s.instrument?' \u00b7 '+s.instrument:'');
+    var label='';
+    if(multiEnrollment){
+      if(multiChild){
+        var childHasMulti=byChildCount[s.studentName||'']>1;
+        label=first+(childHasMulti&&s.instrument?' \u00b7 '+s.instrument:'');
+      } else {
+        label=s.instrument||first;
+      }
+    }
     if(!byDay[idx]) byDay[idx]=[];
     if(byDay[idx].indexOf(label)===-1) byDay[idx].push(label);
   });
@@ -2491,6 +2521,7 @@ var _klAllDatesOpen=false;
 
 function rHomeSchedule(){
   var h='<div class="card"><h2>Schedule</h2>';
+  var sb=esc(publicCfg.schedulingBillingUrl||'');
 
   // ── Next lesson, soonest first — the child who has one tomorrow belongs
   // above the one who has one next week.
@@ -2531,19 +2562,24 @@ function rHomeSchedule(){
       h+='<div class="kl-subhd">All dates on your lesson days</div>';
       h+=rHomeDayFilteredDates();
     } else {
-      h+='<div class="kl-subhd">Upcoming dates</div>';
+      h+='<div class="kl-subhd">Your important upcoming dates</div>';
       events.slice(0,3).forEach(function(e){
         h+=_klDateRow(e, _fmtDateRange(e.startDate,e.endDate), '');
       });
     }
     h+='<div style="margin-top:.5rem"><a href="#" style="font-size:12px;color:var(--bt)" onclick="event.preventDefault();toggleAllDates()">'+
-      (_klAllDatesOpen?'Hide dates':'See all dates')+'</a></div>';
+      (_klAllDatesOpen?'Hide dates':'See all upcoming important dates')+'</a></div>';
   }
+
+  // "See your full schedule" (BACKLOG 1.62) — same destination as Support's
+  // "Check your schedule or cancel a lesson"; deliberate per AC, since it's
+  // the natural place to look from here too.
+  h+='<div style="margin-top:.6rem"><a class="btn btn-s btn-sm" href="'+sb+'" target="_blank">See your full schedule</a></div>';
 
   // Hidden entirely until the URL is set in admin Settings, so this can never
   // ship as a dead control (agreed with AC, 19 Aug).
   if(publicCfg.keylabCalendarUrl){
-    h+='<div style="margin-top:.6rem"><a class="btn btn-s btn-sm" href="'+esc(publicCfg.keylabCalendarUrl)+'" target="_blank">View the full Keylab calendar</a></div>';
+    h+='<div style="margin-top:.6rem"><a class="btn btn-s btn-sm" href="'+esc(publicCfg.keylabCalendarUrl)+'" target="_blank">Keylab school year calendar</a></div>';
   }
   return h+'</div>';
 }
@@ -2561,6 +2597,17 @@ function rHomeSchedule(){
 // Copy in this block was written by Claude under AC's 19 Aug delegation, not
 // by AC.
 var EDIT={stu:{id:'', vals:null, busy:false, err:''}, con:{vals:null, busy:false, err:''}};
+
+// Inline "Saved!" flash (BACKLOG 1.58) — showMsg()'s green banner renders at
+// the very top of the page, well above the Support section a family is
+// actually looking at, so it was invisible in practice. This renders inside
+// the section that saved instead, keyed by student id or 'con'. Cleared on a
+// timeout the same way MSG is. AC's copy: "Saved!"
+var _klSavedFlash={};
+function _klFlashSaved(key){
+  _klSavedFlash[key]=true;
+  setTimeout(function(){ delete _klSavedFlash[key]; render(); }, 4000);
+}
 
 function startEditStudent(studentId){
   var s=students.filter(function(x){ return x.studentId===studentId; })[0];
@@ -2592,7 +2639,9 @@ function saveEditStudent(){
       s.school=e.vals.school;
     }
     var first=(e.vals.studentName||'').trim().split(' ')[0];
+    var savedId=e.id;
     EDIT.stu={id:'', vals:null, busy:false, err:''};
+    _klFlashSaved('stu-'+savedId);
     showMsg(first+'’s details have been updated.','s');
   });
 }
@@ -2619,6 +2668,7 @@ function saveEditContact(){
     familyAddress.city=e.vals.city; familyAddress.state=e.vals.state; familyAddress.zip=e.vals.zip;
     familyParents.p1Phone=e.vals.parent1Phone; familyParents.p2Phone=e.vals.parent2Phone;
     EDIT.con={vals:null, busy:false, err:''};
+    _klFlashSaved('con');
     showMsg('Your contact details have been updated.','s');
   });
 }
@@ -2640,6 +2690,7 @@ function rHomeChildDetails(){
     var first=s.studentName?s.studentName.trim().split(' ')[0]:'';
     var h=kids.length>1?'<div class="kl-clabel" style="margin-top:.6rem">'+esc(first)+'</div>':'';
     if(!editing){
+      if(_klSavedFlash['stu-'+s.studentId]) h+='<div class="msg ms">Saved!</div>';
       h+=_editRow('Child’s name', s.studentName);
       h+=_editRow('Date of birth', s.birthdate?_fmtFamilyDate(s.birthdate):'');
       h+=_editRow('School', s.school);
@@ -2667,6 +2718,7 @@ function rHomeContactDetails(){
   var e=EDIT.con;
   var h='';
   if(!e.vals){
+    if(_klSavedFlash['con']) h+='<div class="msg ms">Saved!</div>';
     var addr=[familyAddress.street,familyAddress.apt,familyAddress.city,familyAddress.state,familyAddress.zip].filter(Boolean).join(', ');
     h+=_editRow('Address', addr);
     h+=_editRow((familyParents.p1?familyParents.p1.split(' ')[0]+'’s phone':'Phone'), familyParents.p1Phone);
@@ -2740,6 +2792,14 @@ function rHomePolicyRecords(){
   return kids.map(function(s){
     var first=s.studentName?s.studentName.trim().split(' ')[0]:'';
     var head=kids.length>1?'<div class="kl-clabel" style="margin-top:.6rem">'+esc(first)+'</div>':'';
+    // Same acceptance banner rHomeEnrollmentRecord() shows — BACKLOG 1.59,
+    // same element rendered twice since it belongs beside the policy text
+    // it refers to. No new data, just duplicated here.
+    if(s.tcAcceptedAt||s.tcAcceptedName){
+      head+='<div class="msg ms">\u2713 Proposal and policies accepted'+
+        (s.tcAcceptedName?' by '+esc(s.tcAcceptedName):'')+
+        (s.tcAcceptedAt?' on '+esc(_fmtFamilyTs(s.tcAcceptedAt))+' at '+esc(_fmtFamilyTime(s.tcAcceptedAt)):'')+'.</div>';
+    }
     return head+rPolicyCollapsible(false, s.lessonLocation==='in-home', s.studentId);
   }).join('');
 }
@@ -2859,39 +2919,37 @@ function rHomeOnePage(){
   // families cannot reschedule (AC, 19 Aug).
   var sb=esc(publicCfg.schedulingBillingUrl||'');
   h+='<div class="card"><h2>Keylab Support</h2>'+
-    '<p style="font-size:12px;margin-bottom:.5rem">See Keylab’s full studio policies for helpful info on managing your child’s enrollment</p>'+
-    '<details class="kl-acc"><summary>Book A Trial Lesson For Another Child</summary>'+
-      '<p>If you want to enroll another child, you can book a trial lesson directly here. The trial lesson will hold the time slot as the intended spot for the school year. You’ll have two days after the trial to decide if you want to enroll or not.</p>'+
-      '<a class="btn btn-p btn-sm" href="https://keylab.opus1.io/w/kids-trial-lesson" target="_blank">Book a Trial Lesson</a></details>'+
-    '<details class="kl-acc"><summary>Check your schedule or cancel a lesson</summary>'+
+    '<p style="font-size:12px;margin-bottom:.5rem">See Keylab\u2019s full studio policies for helpful info on managing your child\u2019s enrollment</p>'+
+    _klAcc('trial','Book A Trial Lesson For Another Child',
+      '<p>If you want to enroll another child, you can book a trial lesson directly here. The trial lesson will hold the time slot as the intended spot for the school year. You\u2019ll have two days after the trial to decide if you want to enroll or not.</p>'+
+      '<a class="btn btn-p btn-sm" href="https://keylab.opus1.io/w/kids-trial-lesson" target="_blank">Book a Trial Lesson</a>')+
+    _klAcc('schedule','Check your schedule or cancel a lesson',
       '<p>View upcoming lessons or cancel a lesson. See cancellation policies for details.</p>'+
-      '<a class="btn btn-p btn-sm" href="'+sb+'" target="_blank">Scheduling &amp; Billing</a></details>'+
-    '<details class="kl-acc"><summary>Billing info &amp; payment history</summary>'+
+      '<a class="btn btn-p btn-sm" href="'+sb+'" target="_blank">Scheduling &amp; Billing</a>')+
+    _klAcc('billing','Billing info &amp; payment history',
       '<p>View all payments, download invoices, and update your payment details.</p>'+
-      '<a class="btn btn-p btn-sm" href="'+sb+'" target="_blank">Scheduling &amp; Billing</a></details>'+
+      '<a class="btn btn-p btn-sm" href="'+sb+'" target="_blank">Scheduling &amp; Billing</a>')+
     // Policies render inline rather than sending the family to the Enrollment
     // tab, which is the point of the rebuild. Since 1.54 this is the per-student
     // rPolicyCollapsible(), NOT the generic rPolicyText(): it shows the exact
     // policy text the family accepted (tcPolicySnapshot), headed with the date
-    // they accepted it, with the PDF download — the immutable record that was
+    // they accepted it, with the PDF download \u2014 the immutable record that was
     // already built and that this page had been bypassing.
-    '<details class="kl-acc"><summary>Your child\u2019s details</summary>'+
-      rHomeChildDetails()+'</details>'+
-    '<details class="kl-acc"><summary>Your contact details</summary>'+
-      rHomeContactDetails()+'</details>'+
-    '<details class="kl-acc"><summary>Your enrollment details</summary>'+
-      '<p>What you accepted, and when.</p>'+
-      rHomeEnrollmentRecord()+'</details>'+
-    '<details class="kl-acc"><summary>Read the studio policies</summary>'+
-      rHomePolicyRecords()+
-      '</details>'+
+    _klAcc('childDetails','Your child\u2019s details', rHomeChildDetails())+
+    _klAcc('contactDetails','Your contact details', rHomeContactDetails())+
+    _klAcc('enrollment','Your enrollment details',
+      '<p>What you accepted, and when.</p>'+rHomeEnrollmentRecord())+
+    // Acceptance banner (BACKLOG 1.59) also shows here, not just under "Your
+    // enrollment details" \u2014 same element, rendered twice, since it belongs
+    // beside the policy text it refers to. Built into rHomePolicyRecords().
+    _klAcc('policies','Read the studio policies', rHomePolicyRecords())+
     // Contact Admin, opening the same conversation as the Admin row in the
     // Messages block above (BACKLOG 1.53). Deliberately a second entry point
     // to messaging: Support is where someone goes when they don't know who to
     // ask, and the answer to most of those is admin.
-    '<details class="kl-acc"><summary>Contact admin</summary>'+
+    _klAcc('contactAdmin','Contact admin',
       '<p>Questions about billing, scheduling or anything else administrative.</p>'+
-      '<button class="btn btn-p btn-sm" onclick="openAdminThreadFromSupport()">Message admin</button></details>'+
+      '<button class="btn btn-p btn-sm" onclick="openAdminThreadFromSupport()">Message admin</button>')+
     '</div>';
 
   return h;

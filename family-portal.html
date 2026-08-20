@@ -2562,24 +2562,24 @@ function rHomeSchedule(){
       h+='<div class="kl-subhd">All dates on your lesson days</div>';
       h+=rHomeDayFilteredDates();
     } else {
-      h+='<div class="kl-subhd">Your important upcoming dates</div>';
+      h+='<div class="kl-subhd">Upcoming dates</div>';
       events.slice(0,3).forEach(function(e){
         h+=_klDateRow(e, _fmtDateRange(e.startDate,e.endDate), '');
       });
     }
-    h+='<div style="margin-top:.5rem"><a href="#" style="font-size:12px;color:var(--bt)" onclick="event.preventDefault();toggleAllDates()">'+
-      (_klAllDatesOpen?'Hide dates':'See all upcoming important dates')+'</a></div>';
+    h+='<div style="margin-top:.5rem"><button class="btn btn-s btn-sm" onclick="toggleAllDates()">'+
+      (_klAllDatesOpen?'Hide dates':'All Holidays &amp; Studio Closure Dates')+'</button></div>';
   }
 
-  // "See your full schedule" (BACKLOG 1.62) — same destination as Support's
-  // "Check your schedule or cancel a lesson"; deliberate per AC, since it's
-  // the natural place to look from here too.
-  h+='<div style="margin-top:.6rem"><a class="btn btn-s btn-sm" href="'+sb+'" target="_blank">See your full schedule</a></div>';
+  // "See your child's full lesson schedule" (BACKLOG 1.62) — same destination
+  // as Support's "Check your schedule or cancel a lesson"; deliberate per AC,
+  // since it's the natural place to look from here too.
+  h+='<div style="margin-top:.6rem"><a class="btn btn-s btn-sm" href="'+sb+'" target="_blank">See your child’s full lesson schedule</a></div>';
 
   // Hidden entirely until the URL is set in admin Settings, so this can never
   // ship as a dead control (agreed with AC, 19 Aug).
   if(publicCfg.keylabCalendarUrl){
-    h+='<div style="margin-top:.6rem"><a class="btn btn-s btn-sm" href="'+esc(publicCfg.keylabCalendarUrl)+'" target="_blank">Keylab school year calendar</a></div>';
+    h+='<div style="margin-top:.6rem"><a class="btn btn-s btn-sm" href="'+esc(publicCfg.keylabCalendarUrl)+'" target="_blank">Keylab Google Calendar</a></div>';
   }
   return h+'</div>';
 }

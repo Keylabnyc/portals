@@ -2285,23 +2285,24 @@ function _rChildStatusSummary(s){
 // ONE-PAGE FAMILY HOME (BACKLOG 1.36) — enrolled families only
 // ============================================================
 // Everything a settled family needs on one screen: next lesson, messages,
-// tuition, upcoming dates, support. Deliberately scoped to families who are
-// simply enrolled — anyone with a proposal to review, availability to submit,
-// or an enrollment change in flight still gets the original Home below, which
-// carries the action buttons for those states. Step 2 of this rebuild folds
-// those cases in; until then this branch must not swallow them, or a family
-// mid-enrollment-change loses their "Review New Proposal" button entirely.
+// tuition, upcoming dates, support. Any student with a proposal to review,
+// availability to submit, or an enrollment change in flight gets their own
+// action card at the top of this same page (_rHomeChildActionCard) rather
+// than being scoped out — Step 2 of this rebuild (BACKLOG 1.63), so a family
+// with one enrolled child and a newly-added sibling in the pipeline (e.g. via
+// the Support "Book a Trial Lesson" flow) keeps the enrolled child's Home
+// instead of losing it back to the tabbed page. A family with NO enrolled
+// student yet still falls through to the original tabbed Home below, which
+// is the only place a solo mid-enrollment-change family gets their "Review
+// New Proposal" button.
 var KL_ACTIONABLE_PHASES={'Leads':1,'Pending':1,'Holding':1,'Trial Booked':1,'Proposal':1,'Confirmed to Enroll':1,'Enrollment Change':1};
 
 function _familyUsesOnePage(){
   if(!students.length) return false;
-  var anyEnrolled=false;
   for(var i=0;i<students.length;i++){
-    var ph=students[i].phase||'';
-    if(ph==='Enrolled') anyEnrolled=true;
-    if(KL_ACTIONABLE_PHASES[ph]) return false;
+    if(students[i].phase==='Enrolled') return true;
   }
-  return anyEnrolled;
+  return false;
 }
 
 function _p2(n){ return (n<10?'0':'')+n; }
@@ -2751,12 +2752,82 @@ function openAdminThreadFromSupport(){
   toggleHomeThread('admin','Admin');
 }
 
+// Per-child card for a student who isn't Enrolled yet — same content and
+// CTAs as the equivalent branch in the old tabbed rHome() below, kept as a
+// separate copy rather than a shared helper because the tabbed page also
+// interleaves self-release handling (_srShownFor) into the same loop, which
+// doesn't apply here (BACKLOG 1.63 Step 2).
+function _rHomeChildActionCard(s){
+  var avOpen=isTruthy(publicCfg.availabilityOpen);
+  var ph=s.phase||'';
+  var avSubmitted=isTruthy(s.availabilitySubmitted);
+  var avLocked=isTruthy(s.availabilityLocked);
+  var hasProp=ph==='Proposal'||ph==='Confirmed to Enroll'||ph==='Enrolled'||ph==='Enrollment Change';
+  var hasTrial=ph==='Trial Booked';
+  var isWithdrawn=ph==='Withdrawn';
+  var isEnrolled=(ph==='Enrolled');
+  var isAccepted=!!s.tcAcceptedAt;
+  var showDashboard=(isEnrolled||ph==='Enrollment Change'||(hasProp&&isAccepted));
+  var firstName=s.studentName?(s.studentName.trim().split(' ')[0]):'';
+  var h='';
+  if(showDashboard){
+    h+='<div class="card">';
+    h+=_rChildStatusSummary(s);
+    if(ph==='Enrollment Change'){
+      h+=_rHomeActionButtons('Review New Proposal');
+    } else if(s.tcAcceptedAt||s.tcAcceptedName){
+      var _needsInvoice=isTruthy(s.needsManualInvoice);
+      var _isReturningTenure=!_isNewFamily(s.enrollmentType);
+      h+='<div style="margin-bottom:.75rem;background:var(--bbg);border:1px solid var(--blue);border-radius:var(--rl);padding:1rem">'+
+        '<div style="font-size:15px;font-weight:700;color:var(--bt);margin-bottom:.4rem">'+(_isReturningTenure?'Welcome Back! What Happens Next':'What Happens Next')+'</div>'+
+        (_needsInvoice
+          ?('<p style="font-size:14px;color:var(--bt);margin:0">Only one more step to finish '+esc(firstName)+'&rsquo;s enrollment \u2014 click below to pay the invoice. You\u2019ll sign in with the login info from your proposal acceptance confirmation email.</p>'+
+            '<div style="margin-top:.75rem"><a href="'+publicCfg.schedulingBillingUrl+'" target="_blank" class="btn btn-p btn-sm">Pay Invoice</a></div>')
+          :('<p style="font-size:14px;color:var(--bt);margin:0">I\u2019ll schedule '+esc(firstName)+'&rsquo;s lessons for the school year and process their enrollment on the admin side using the payment method on file. Your card will be charged for the first payment once enrollment is processed, and automatic flat rate monthly payments will be processed on the 1st of each month from the 2nd month of '+esc(firstName)+'&rsquo;s enrollment. Check your email for confirmation and details and let us know if you need any help!</p>'))+
+        '</div>';
+      h+=_rHomeActionButtons('Review Proposal and Policies');
+    } else {
+      h+=_rHomeActionButtons('Review Proposal and Policies');
+    }
+    h+='</div>';
+  } else {
+    h+='<div class="card-stu">';
+    h+=_rChildStatusSummary(s);
+    var ctas=[];
+    if((ph==='Proposal'||ph==='Confirmed to Enroll')&&!isAccepted){
+      ctas.push('<button class="btn btn-p btn-sm" onclick="gotoEnrollment()">Review and Accept Proposal</button>');
+    }
+    if(!avLocked&&avOpen&&!avSubmitted&&(ph==='Leads'||ph==='Pending')&&!hasProp&&!hasTrial&&!isWithdrawn&&!isEnrolled){
+      ctas.push('<button class="btn btn-p btn-sm" onclick="_gotoSchedulingForStudent(&apos;'+esc(s.studentId)+'&apos;)">Submit availability</button>');
+    }
+    if(!avLocked&&avOpen&&!avSubmitted&&ph==='Holding'){
+      ctas.push('<button class="btn btn-p btn-sm" onclick="_gotoSchedulingForStudent(&apos;'+esc(s.studentId)+'&apos;)">Submit availability</button>');
+    }
+    if(!avLocked&&avSubmitted&&(ph==='Leads'||ph==='Pending'||ph==='Holding')){
+      ctas.push('<button class="btn btn-p btn-sm" onclick="_gotoSchedulingForStudent(&apos;'+esc(s.studentId)+'&apos;)">Review / Update Availability</button>');
+    }
+    if(ctas.length) h+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:.5rem">'+ctas.join('')+'</div>';
+    h+='</div>';
+  }
+  return h;
+}
+
 function rHomeOnePage(){
   // No page header here. render() already draws the Keylab logo and "Keylab
   // Family Portal" above everything, so the block that used to sit here was a
   // second logo and a second portal title, one under the other (AC, 19 Aug:
   // "we don't need the 2nd keylab family portal or logo, omit entirely").
   var h='';
+
+  // ── Action needed: any student not yet Enrolled, e.g. a sibling added
+  // mid-year via Support's "Book a Trial Lesson" — top of the page (AC, 20
+  // Aug), since their enrollment is the most important thing the family
+  // needs to act on. Same per-child card content as the old tabbed Home
+  // (_rChildStatusSummary + the same CTAs), just relocated here so it isn't
+  // duplicated (BACKLOG 1.63 Step 2). ──
+  students.forEach(function(s){
+    if((s.phase||'')!=='Enrolled' && KL_ACTIONABLE_PHASES[s.phase||'']) h+=_rHomeChildActionCard(s);
+  });
 
   // ── Schedule: next lessons + important dates, one block, first on the page ──
   // Merged on AC's call (BACKLOG 1.50): they answer the same question — when
@@ -2789,6 +2860,9 @@ function rHomeOnePage(){
   var sb=esc(publicCfg.schedulingBillingUrl||'');
   h+='<div class="card"><h2>Keylab Support</h2>'+
     '<p style="font-size:12px;margin-bottom:.5rem">See Keylab’s full studio policies for helpful info on managing your child’s enrollment</p>'+
+    '<details class="kl-acc"><summary>Book A Trial Lesson For Another Child</summary>'+
+      '<p>If you want to enroll another child, you can book a trial lesson directly here. The trial lesson will hold the time slot as the intended spot for the school year. You’ll have two days after the trial to decide if you want to enroll or not.</p>'+
+      '<a class="btn btn-p btn-sm" href="https://keylab.opus1.io/w/kids-trial-lesson" target="_blank">Book a Trial Lesson</a></details>'+
     '<details class="kl-acc"><summary>Check your schedule or cancel a lesson</summary>'+
       '<p>View upcoming lessons or cancel a lesson. See cancellation policies for details.</p>'+
       '<a class="btn btn-p btn-sm" href="'+sb+'" target="_blank">Scheduling &amp; Billing</a></details>'+

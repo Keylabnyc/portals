@@ -813,6 +813,37 @@ function _formatPhone(raw){
   if(digits.length!==10) return null;
   return '('+digits.substring(0,3)+') '+digits.substring(3,6)+'-'+digits.substring(6);
 }
+// Live input masks (AC, 21 Aug) -- number/date fields should never accept
+// free text, not just get corrected after the fact on blur. Each one
+// strips anything that isn't a digit, writes the reformatted value straight
+// back onto the element so the family sees it grouped as they type, and
+// returns that same string for the caller's oninput to store in state --
+// the displayed input and the stored value can never drift apart this way.
+// Validation (a real calendar date, a real 10-digit phone) still happens
+// separately at blur/submit time, same as before; these only constrain
+// what can be typed.
+function _maskDigits(el, maxLen){
+  var v=el.value.replace(/\D/g,'').slice(0,maxLen);
+  el.value=v;
+  return v;
+}
+function _maskPhone(el){
+  var d=el.value.replace(/\D/g,'').slice(0,10);
+  var v=d;
+  if(d.length>6) v='('+d.slice(0,3)+') '+d.slice(3,6)+'-'+d.slice(6);
+  else if(d.length>3) v='('+d.slice(0,3)+') '+d.slice(3);
+  else if(d.length>0) v='('+d;
+  el.value=v;
+  return v;
+}
+function _maskDob(el){
+  var d=el.value.replace(/\D/g,'').slice(0,8);
+  var v=d;
+  if(d.length>4) v=d.slice(0,2)+'/'+d.slice(2,4)+'/'+d.slice(4);
+  else if(d.length>2) v=d.slice(0,2)+'/'+d.slice(2);
+  el.value=v;
+  return v;
+}
 // Parses a birth-date string (digits in MM/DD/YYYY order, any punctuation
 // stripped) into a real Date, or null if it doesn't resolve to a valid,
 // non-future calendar date. Mirrors _formatPhone()'s normalize-at-
@@ -1327,7 +1358,7 @@ function rRegisterInfo(){
   h+=field('Your first and last name','r-pn','text','name','e.g. Jane Smith',RF.parent1Name,'RF.parent1Name=this.value',true);
   h+=field('Email address','r-em','email','email','e.g. jane@email.com',RF.parent1Email,'RF.parent1Email=this.value',true);
   h+='<div class="field"><label>Phone number<span class="req">*</span></label>'+
-    '<input id="r-ph" type="tel" autocomplete="tel" placeholder="e.g. (718) 555-1234" value="'+esc(RF.parent1Phone)+'" oninput="RF.parent1Phone=this.value"></div>';
+    '<input id="r-ph" type="tel" inputmode="tel" autocomplete="tel" placeholder="e.g. (718) 555-1234" value="'+esc(RF.parent1Phone)+'" oninput="RF.parent1Phone=_maskPhone(this)"></div>';
   h+='</div>';
 
   // Second parent — always optional, collapsed by default until the family
@@ -1337,7 +1368,7 @@ function rRegisterInfo(){
     h+=field('2nd parent first and last name','r-p2n','text','name','e.g. Jordan Smith',RF.parent2Name,'RF.parent2Name=this.value',false);
     h+=field('2nd parent Email address','r-p2e','email','email','e.g. jordan@email.com',RF.parent2Email,'RF.parent2Email=this.value',false);
     h+='<div class="field"><label>2nd parent Phone Number</label>'+
-      '<input id="r-p2p" type="tel" autocomplete="tel" placeholder="e.g. (718) 555-1234" value="'+esc(RF.parent2Phone)+'" oninput="RF.parent2Phone=this.value"></div>';
+      '<input id="r-p2p" type="tel" inputmode="tel" autocomplete="tel" placeholder="e.g. (718) 555-1234" value="'+esc(RF.parent2Phone)+'" oninput="RF.parent2Phone=_maskPhone(this)"></div>';
     h+='</div>';
   } else {
     h+='<p style="font-size:13px;margin:.25rem 0 .75rem 0"><a href="#" onclick="event.preventDefault();RF.showParent2=true;render()">+ Add a second parent</a></p>';
@@ -1354,7 +1385,7 @@ function rRegisterInfo(){
   h+='<div class="field"><label>State<span class="req">*</span></label>'+
     '<input id="r-s2" type="text" autocomplete="address-level1" placeholder="e.g. NY" maxlength="2" value="'+esc(RF.state||'NY')+'" oninput="RF.state=this.value"></div>';
   h+='<div class="field"><label>Zip code<span class="req">*</span></label>'+
-    '<input id="r-zi" type="text" autocomplete="postal-code" inputmode="numeric" placeholder="e.g. 11231" maxlength="5" value="'+esc(RF.zip)+'" oninput="RF.zip=this.value"></div>';
+    '<input id="r-zi" type="text" autocomplete="postal-code" inputmode="numeric" placeholder="e.g. 11231" maxlength="5" value="'+esc(RF.zip)+'" oninput="RF.zip=_maskDigits(this,5)"></div>';
   h+='</div></div>';
 
   // Student cards
@@ -1363,8 +1394,7 @@ function rRegisterInfo(){
     h+='<button class="add-btn" onclick="RF.students.push(newStuDraft());render()">+ Add another child</button>';
   }
 
-  // SMS + continue to Step 2
-  h+='<div class="note">By submitting this form, you agree to receive text messages from Keylab. We will only send scheduling confirmations and lesson reminders, and occasional updates if there are actions taken on your account by yourself or by Keylab admin. We will not share your information with anyone. You can reply STOP or change your settings in the scheduling &amp; billing portal to unsubscribe.</div>';
+  // Continue to Step 2
   h+=busy
     ?'<button class="btn btn-p btn-full" disabled><span class="spin">\u21bb</span> Continuing...</button>'
     :'<button class="btn btn-p btn-full" onclick="doGoToAvailabilityStep()">Set Your Child\'s Availability</button>';
@@ -1418,7 +1448,7 @@ function rStuBlock(st, i){
     '<input type="text" placeholder="e.g. Emma Smith" value="'+esc(st.name)+'" oninput="RF.students['+i+'].name=this.value"></div>';
   var _dobAge=_ageFromDob(st.dob);
   h+='<div class="field"><label>Date of birth<span class="req">*</span></label>'+
-    '<input type="text" inputmode="numeric" placeholder="MM/DD/YYYY" value="'+esc(st.dob)+'" oninput="RF.students['+i+'].dob=this.value" onblur="RF.students['+i+'].dob=_formatDob(this.value)||this.value;render()">';
+    '<input type="text" inputmode="numeric" placeholder="MM/DD/YYYY" value="'+esc(st.dob)+'" oninput="RF.students['+i+'].dob=_maskDob(this)" onblur="RF.students['+i+'].dob=_formatDob(this.value)||this.value;render()">';
   if(_dobAge!==null){
     h+='<div class="hint">Age: '+_dobAge+'</div>';
   }
@@ -2839,9 +2869,9 @@ function rHomeContactDetails(){
   h+=_editField('Apt / unit','ed-con-apt',e.vals.apt,'EDIT.con.vals.apt=this.value');
   h+=_editField('City','ed-con-city',e.vals.city,'EDIT.con.vals.city=this.value');
   h+=_editField('State','ed-con-state',e.vals.state,'EDIT.con.vals.state=this.value');
-  h+=_editField('ZIP','ed-con-zip',e.vals.zip,'EDIT.con.vals.zip=this.value');
-  h+=_editField((familyParents.p1?familyParents.p1.split(' ')[0]+'’s phone':'Phone'),'ed-con-p1',e.vals.parent1Phone,'EDIT.con.vals.parent1Phone=this.value','tel');
-  if(familyParents.p2) h+=_editField(familyParents.p2.split(' ')[0]+'’s phone','ed-con-p2',e.vals.parent2Phone,'EDIT.con.vals.parent2Phone=this.value','tel');
+  h+=_editField('ZIP','ed-con-zip',e.vals.zip,'EDIT.con.vals.zip=_maskDigits(this,5)');
+  h+=_editField((familyParents.p1?familyParents.p1.split(' ')[0]+'’s phone':'Phone'),'ed-con-p1',e.vals.parent1Phone,'EDIT.con.vals.parent1Phone=_maskPhone(this)','tel');
+  if(familyParents.p2) h+=_editField(familyParents.p2.split(' ')[0]+'’s phone','ed-con-p2',e.vals.parent2Phone,'EDIT.con.vals.parent2Phone=_maskPhone(this)','tel');
   h+='<div style="display:flex;gap:8px;margin-top:.6rem">'+
     (e.busy
       ?'<button class="btn btn-p btn-sm" disabled><span class="spin">↻</span></button>'
@@ -3912,7 +3942,7 @@ function rSchedForm(forReg){
     h+='<div class="g2"><div class="field"><label>Apt</label><input type="text" placeholder="Apt 2B" value="'+esc(SC.apt)+'" oninput="SC.apt=this.value"></div>';
     h+='<div class="field"><label>City</label><input type="text" placeholder="Brooklyn" value="'+esc(SC.city)+'" oninput="SC.city=this.value"></div></div>';
     h+='<div class="g2"><div class="field"><label>State</label><input type="text" placeholder="NY" maxlength="2" value="'+esc(SC.state||'NY')+'" oninput="SC.state=this.value"></div>';
-    h+='<div class="field"><label>Zip</label><input type="text" inputmode="numeric" placeholder="11231" maxlength="5" value="'+esc(SC.zip)+'" oninput="SC.zip=this.value"></div></div>';
+    h+='<div class="field"><label>Zip</label><input type="text" inputmode="numeric" placeholder="11231" maxlength="5" value="'+esc(SC.zip)+'" oninput="SC.zip=_maskDigits(this,5)"></div></div>';
   }
   h+='</div>';
 

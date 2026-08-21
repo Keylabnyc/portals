@@ -1274,7 +1274,7 @@ function rLookup(){
   if(!LK.matches.length){
     return '<h1>Create Your Account</h1>'+
       '<p>We don\'t have that email on file. Click here to create your account and submit your children\'s availability for lessons. We\'ll be in touch within 2 business days with an update.</p>'+
-      '<button class="btn btn-p" style="margin-bottom:.75rem" onclick="PAGE=&apos;register&apos;;render()">Create Account</button>'+
+      '<button class="btn btn-p" style="margin-bottom:.75rem" onclick="RF.parent1Email=LK.email;PAGE=&apos;register&apos;;render()">Create Account</button>'+
       '<br><button class="btn btn-p btn-sm" style="margin-top:.4rem" onclick="LK={email:&apos;&apos;,matches:[],done:false};render()">Try a different email</button>';
   }
   var cards=LK.matches.map(function(m,i){

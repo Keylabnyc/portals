@@ -387,7 +387,13 @@ var RF = {
   // — revealed only via the "+ Add a second parent" link.
   showParent2:false, parent2Name:'', parent2Email:'', parent2Phone:'',
   students:[newStuDraft()],
-  step:'info' // 'info' (Step 1) or 'availability' (Step 2)
+  step:'info', // 'info' (Step 1) or 'availability' (Step 2)
+  // Step 2, one child at a time (BACKLOG 1.64) — availIndex is which child
+  // of RF.students is currently on screen; availData collects each
+  // completed child's instrument/availability answers (SC snapshot) as the
+  // family moves child to child, before any of it is submitted.
+  availIndex:0,
+  availData:[]
 };
 
 // scheduling
@@ -438,10 +444,12 @@ function _klAcc(key, summaryHtml, bodyHtml){
     '<summary>'+summaryHtml+'</summary>'+bodyHtml+'</details>';
 }
 
-// Full SC reset for a specific student, then navigate to scheduling tab.
-// Always use this instead of inline SC mutations on home-tab CTAs.
-function _gotoSchedulingForStudent(id) {
-  SC.studentId = id;
+// Blanks every per-child field on SC (instrument, availability, notes,
+// etc.) without touching studentId, page/tab state, or anything family-wide.
+// Shared by _gotoSchedulingForStudent() below and the registration Step 2
+// per-child loop (BACKLOG 1.64, doContinueToNextChildAvailability()) — one
+// place to keep this field list in sync instead of drifting across copies.
+function _scResetBlank() {
   SC.loaded = false; SC.submitted = false; SC.isFirstSubmission = true; SC.loadError = '';
   SC.editMode = false; SC.slotEditing = {}; SC.slotDeleted = {}; SC.slotNotes = {}; SC.slotSaveAttempted = {}; SC.lessonDetailsEditing = false;
   SC.submittedAt = '';
@@ -454,7 +462,44 @@ function _gotoSchedulingForStudent(id) {
   SC.waitlist = null;
   SC.splitLesson = false;
   SC.splitChild = {name:'', age:'', instrument:'', instrumentOther:'', notes:''};
+}
+
+// Full SC reset for a specific student, then navigate to scheduling tab.
+// Always use this instead of inline SC mutations on home-tab CTAs.
+function _gotoSchedulingForStudent(id) {
+  SC.studentId = id;
+  _scResetBlank();
   gotoScheduling();
+}
+
+// Snapshot/restore one child's Step 2 answers (BACKLOG 1.64) — same field
+// set loadSchedSubmission() fills in from a saved AVAILABILITY_REQUESTS row,
+// so a registration-time snapshot round-trips through the exact shape a
+// real submission already uses. Used while a family registering 2+ children
+// moves between them, before any of it reaches the server.
+function _scSnapshot() {
+  return {
+    instrument: SC.instrument, instrumentNote: SC.instrumentNote,
+    durations: SC.durations.slice(), locations: SC.locations.slice(),
+    durationNote: SC.durationNote, locationNote: SC.locationNote,
+    street: SC.street, apt: SC.apt, city: SC.city, state: SC.state, zip: SC.zip,
+    notes: SC.notes, teacherPref: SC.teacherPref,
+    slots: SC.slots.filter(function(s,i){ return !SC.slotDeleted[i]; }).map(function(s){ return Object.assign({}, s); }),
+    waitlist: SC.waitlist,
+    splitLesson: SC.splitLesson, splitChild: Object.assign({}, SC.splitChild)
+  };
+}
+function _scRestore(snap) {
+  _scResetBlank();
+  if(!snap) return;
+  SC.instrument = snap.instrument||''; SC.instrumentNote = snap.instrumentNote||'';
+  SC.durations = (snap.durations||[]).slice(); SC.locations = (snap.locations||[]).slice();
+  SC.durationNote = snap.durationNote||''; SC.locationNote = snap.locationNote||'';
+  SC.street = snap.street||''; SC.apt = snap.apt||''; SC.city = snap.city||''; SC.state = snap.state||'NY'; SC.zip = snap.zip||'';
+  SC.notes = snap.notes||''; SC.teacherPref = snap.teacherPref||'';
+  SC.slots = (snap.slots&&snap.slots.length) ? snap.slots.map(function(s){ return Object.assign({}, s); }) : [blankSlot(), blankSlot(), blankSlot()];
+  SC.waitlist = snap.waitlist!==undefined ? snap.waitlist : null;
+  SC.splitLesson = !!snap.splitLesson; SC.splitChild = Object.assign({name:'',age:'',instrument:'',instrumentOther:'',notes:''}, snap.splitChild||{});
 }
 
 // Instrument-to-teacher matching — mirrors the admin-side
@@ -1311,10 +1356,23 @@ function rRegisterInfo(){
 }
 
 function rRegisterAvailability(){
-  var h='<div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:.5rem">Step 2 of 2 \u00b7 Set Your Child\'s Availability</div>';
-  h+='<h1>Your Availability</h1>';
+  // One child at a time (BACKLOG 1.64) \u2014 RF.availIndex is which child of
+  // RF.students the form on screen is currently for. Falls back to index 0
+  // defensively; it should always be in range since doGoToAvailabilityStep()
+  // and doContinueToNextChildAvailability() are the only places that set it.
+  var multi=RF.students.length>1;
+  var cur=RF.students[RF.availIndex]||RF.students[0];
+  var curName=(cur.name||'').trim()||'This child';
+  var stepLbl=multi
+    ?('Child '+(RF.availIndex+1)+' of '+RF.students.length+' \u00b7 Set '+esc(curName)+'\u2019s Availability')
+    :'Set Your Child\'s Availability';
+  var h='<div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:.5rem">Step 2 of 2 \u00b7 '+stepLbl+'</div>';
+  h+='<h1>'+(multi?esc(curName)+'\u2019s Availability':'Your Availability')+'</h1>';
   h+='<p>Tell us when your family is available for lessons this school year. The more you share, the better we can find a time that works well for everyone.</p>';
-  h+='<p style="font-size:13px;color:var(--text3)"><a href="#" onclick="event.preventDefault();RF.step=&apos;info&apos;;render()">\u2190 Back to your info</a></p>';
+  if(multi&&RF.availIndex===0){
+    h+='<p style="font-size:13px;color:var(--text3)">You\u2019ll do this once for each child before finishing.</p>';
+  }
+  h+='<p style="font-size:13px;color:var(--text3)"><a href="#" onclick="event.preventDefault();RF.step=&apos;info&apos;;RF.availIndex=0;RF.availData=[];render()">\u2190 Back to your info</a></p>';
   h+=_rNewFamilyAvailIntro();
   h+=rSchedForm(true);
   return h;
@@ -1429,9 +1487,26 @@ function doGoToAvailabilityStep(){
   }
   // Move to Step 2 — instrument is asked there (not here), since it's what
   // drives the teacher-availability/waitlist logic that only Step 2 needs.
-  SC.waitlist=null;
+  // One child at a time (BACKLOG 1.64) — always start the loop over from
+  // child 1, in case the family went back and changed the Step 1 list.
+  RF.availIndex=0; RF.availData=[];
+  _scResetBlank();
   if(!SC.teachers.length) loadSchedTeachers();
   RF.step='availability';
+  render();
+}
+
+// Registering 2+ children (BACKLOG 1.64): validates the child currently on
+// screen, stashes their answers, and moves the form to the next blank
+// child. Nothing is sent to the server until the last child's "Complete
+// Registration" click — see doCompleteRegistration().
+function doContinueToNextChildAvailability(){
+  SC.submitError='';
+  var _err=_validateSchedForm();
+  if(_err){SC.submitError=_err;render();return;}
+  RF.availData[RF.availIndex]=_scSnapshot();
+  RF.availIndex++;
+  _scResetBlank();
   render();
 }
 
@@ -1439,12 +1514,13 @@ function doCompleteRegistration(){
   SC.submitError='';
   var _err=_validateSchedForm();
   if(_err){SC.submitError=_err;render();return;}
+  // Capture the last child's answers too, so RF.availData has one entry per
+  // child by the time registration actually happens (BACKLOG 1.64).
+  RF.availData[RF.availIndex]=_scSnapshot();
   SC.busy=true; render();
-  var s0=RF.students[0];
-  var extraNote=RF.students.length>1
-    ?('\n\nAdditional children: '+RF.students.slice(1).map(function(x){
-        return x.name+' (age '+_ageFromDob(x.dob)+')';
-      }).join(', ')):'';
+  // One real student record per child — Step 1 already lets a family list
+  // up to 5, and Step 2 (looped, one child at a time) has now collected a
+  // full instrument + availability answer for every one of them.
   var payload={
     parent1Name:RF.parent1Name.trim(), parent1Email:RF.parent1Email.trim(),
     parent1Phone:RF.parent1Phone.trim(),
@@ -1452,11 +1528,14 @@ function doCompleteRegistration(){
     parent2Phone:RF.parent2Phone.trim(),
     street:RF.street.trim(), apt:RF.apt.trim(), city:RF.city.trim(),
     state:RF.state.trim()||'NY', zip:RF.zip.trim(),
-    studentName:s0.name.trim(),
-    instrument:SC.instrument,
-    age:_ageFromDob(s0.dob), birthdate:s0.dob, school:s0.school, grade:s0.grade,
-    skillLevel:s0.skill, howHeard:s0.howHeard,
-    notes:(s0.notes||'')+extraNote
+    students:RF.students.map(function(s,i){
+      return {
+        studentName:s.name.trim(),
+        instrument:(RF.availData[i]&&RF.availData[i].instrument)||'',
+        age:_ageFromDob(s.dob), birthdate:s.dob, school:s.school, grade:s.grade,
+        skillLevel:s.skill, howHeard:s.howHeard, notes:s.notes||''
+      };
+    })
   };
   api({action:'familyRegister', data:payload}, function(e,r){
     if(e||!r||!r.ok){
@@ -1464,25 +1543,35 @@ function doCompleteRegistration(){
       SC.submitError=(r&&r.error)||'Something went wrong. Please try again or email us at info@keylab.nyc.';
       render(); return;
     }
-    if(!r.token||!r.familyId||!r.studentId){
+    if(!r.token||!r.familyId||!r.studentIds||!r.studentIds.length){
       SC.busy=false;
       SC.submitError='Something went wrong creating your account. Please try again or email us at info@keylab.nyc.';
       render(); return;
     }
     TOKEN=r.token; FAMILY_ID=r.familyId; MY_PARENT_SLOT=r.parent||'parent1';
     _klSaveSession(r.token, r.familyId, MY_PARENT_SLOT);
-    SC.studentId=r.studentId;
-    // Account now exists — immediately save the Step 2 availability answers
-    // under it, via the exact same save path the returning-family screen
-    // uses. If this one call somehow fails, the account still exists and
-    // loadFamily() below lands the family on Home, where the normal
-    // "Submit availability" button lets them finish that one step
-    // separately — nothing about their Step 1/Step 2 answers is lost.
-    _saveSlotsAndDetails(function(ok){
+    // Account (and every child's student record) now exists — save each
+    // child's already-collected Step 2 answers in turn, via the exact same
+    // save path the returning-family screen uses. Sequential, not parallel,
+    // so there's no lock contention between them. If any one save somehow
+    // fails, the rest still go, and loadFamily() below lands the family on
+    // Home, where the normal "Submit availability" card lets them finish
+    // that specific child separately — nothing about their Step 1/Step 2
+    // answers is ever lost.
+    _saveNextRegisteredChild(r.studentIds, 0, function(){
       SC.busy=false;
       loadFamily();
-    },true);
+    });
   });
+}
+
+function _saveNextRegisteredChild(studentIds, idx, done){
+  if(idx>=studentIds.length){ done(); return; }
+  _scRestore(RF.availData[idx]||{});
+  SC.studentId=studentIds[idx];
+  _saveSlotsAndDetails(function(ok){
+    _saveNextRegisteredChild(studentIds, idx+1, done);
+  }, idx===0);
 }
 
 function rRegDone(){
@@ -3914,8 +4003,18 @@ function rSchedForm(forReg){
   var inHomeAddrMissing=SC.locations.indexOf('in-home')>-1&&!SC.street.trim();
   var waitlistMissing=_noTeacherForInstrument&&SC.waitlist===null;
   var missingRequired=instMissing||durMissing||locMissing||durNoteMissing||locNoteMissing||inHomeAddrMissing||waitlistMissing||!hasCompleteSlot||missingEndTime||missingStartTime;
-  var submitLbl=forReg?'Complete Registration':(isEdit?'Save Changes':'Submit Availability');
-  var submitFn=forReg?'doCompleteRegistration()':'doSubmitSched()';
+  // Registering 2+ children (BACKLOG 1.64): every child but the last gets a
+  // "Continue" button that moves to the next child's blank form instead of
+  // submitting; only the last child's button actually completes
+  // registration. Single-child registration and the returning-family
+  // Scheduling tab are both unchanged.
+  var isLastRegChild=!forReg||RF.students.length<=1||RF.availIndex>=RF.students.length-1;
+  var submitLbl=forReg
+    ?(isLastRegChild?'Complete Registration':'Continue to '+esc((RF.students[RF.availIndex+1].name||'').trim().split(' ')[0]||'the Next Child')+'’s Availability')
+    :(isEdit?'Save Changes':'Submit Availability');
+  var submitFn=forReg
+    ?(isLastRegChild?'doCompleteRegistration()':'doContinueToNextChildAvailability()')
+    :'doSubmitSched()';
   h+='<div style="margin-top:1rem">';
   if(SC.submitError){
     h+='<div class="aw" style="margin-top:0;margin-bottom:.75rem;font-size:13px;padding:.65rem .85rem">'+esc(SC.submitError)+'</div>';

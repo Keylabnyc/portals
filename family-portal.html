@@ -351,8 +351,8 @@ var MY_PARENT_SLOT = '';
 var LF = (function(){
   try{
     var e=sessionStorage.getItem('kl_email')||'';
-    return {email:e, step:'email', password:'', remember:true, needsSetup:false, checking:false};
-  } catch(e){ return {email:'', step:'email', password:'', remember:true, needsSetup:false, checking:false}; }
+    return {email:e, step:'email', password:'', remember:true, needsSetup:false, checking:false, emailNotFound:false};
+  } catch(e){ return {email:'', step:'email', password:'', remember:true, needsSetup:false, checking:false, emailNotFound:false}; }
 })();
 
 // Home-tab messaging (1.22, 18 Aug — the ONLY messaging surface in the
@@ -1003,7 +1003,17 @@ function rLogin(){
     var contBtn=LF.checking
       ?'<button class="btn btn-p" disabled><span class="spin">\u21bb</span> Checking...</button>'
       :'<button class="btn btn-p" onclick="doCheckEmail()">Continue</button>';
-    return '<h1>Welcome to Keylab</h1>'+
+    // Persistent, not the usual 7s toast \u2014 AC's copy, 21 Aug, gives the
+    // family two real next steps to read, not just "try again."
+    var notFoundBanner=LF.emailNotFound
+      ?('<div class="msg me">Sorry, we don\u2019t have that address in our records. Book a trial lesson or register your family to submit your availability and we\u2019ll follow up with you soon!'+
+        '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:.6rem">'+
+        '<a class="btn btn-p btn-sm" href="https://keylab.opus1.io/w/kids-trial-lesson" target="_blank">Book A Trial Lesson</a>'+
+        '<button class="btn btn-p btn-sm" onclick="PAGE=&apos;lookup&apos;;LK={email:&apos;&apos;,matches:[],done:false};render()">Submit A Lesson Request</button>'+
+        '</div></div>')
+      :'';
+    return notFoundBanner+
+      '<h1>Welcome to Keylab</h1>'+
       '<div class="login-cards">'+
       '<div class="card">'+
       '<h2>Sign In</h2>'+
@@ -1058,11 +1068,18 @@ function doBackToEmailStep(){
 function doCheckEmail(){
   var email=(document.getElementById('le')||{}).value||LF.email;
   LF.email=email.trim().toLowerCase();
+  LF.emailNotFound=false;
   if(!LF.email||LF.email.indexOf('@')===-1){showMsg('Please enter a valid email address.','e');return;}
   LF.checking=true; render();
   api({action:'familyCheckEmail', data:{email:LF.email}}, function(e,r){
     LF.checking=false;
     if(e||!r||!r.ok){
+      // A genuine "no account with this email" gets a persistent banner with
+      // next-step buttons (BACKLOG, AC's copy 21 Aug) rather than the usual
+      // 7-second toast, since the family needs time to read two real options,
+      // not just "try again." Any other failure (network hiccup, etc.) falls
+      // back to the ordinary toast.
+      if(r&&r.notFound){ LF.emailNotFound=true; render(); return; }
       showMsg(r&&r.error?r.error:'We couldn\'t find an account with that email address. Please check your email or contact us at info@keylab.nyc.','e');
       render(); return;
     }

@@ -2667,6 +2667,16 @@ function _klStudentAge(s){
 // block. Now it's a constant so the same text can be shown before granting,
 // after granting, and sent to the family by email. AC's approved copy,
 // unchanged from what shipped inline.
+// The proposal-acceptance acknowledgment, in ONE place (BACKLOG 1.109) —
+// same reasoning as SELF_RELEASE_TEXT. It was inline in the checkbox label
+// only, so the wording a family agreed to vanished the moment they agreed:
+// the accepted state shows who accepted and when, but never WHAT. Two
+// variants, chosen by whether the family owes a manual invoice. AC's copy,
+// unchanged from what shipped inline.
+var TC_ACK_INVOICE='I acknowledge that I have read and accept Keylab\u2019s enrollment policies, and agree to submit payment for the first month of lessons which will also schedule automatic flat-rate monthly payments for the duration of the enrollment. I acknowledge that if payment is not submitted within two business days from when this proposal was accepted, that the time slot may be given to another family';
+var TC_ACK_ONFILE='I acknowledge that I have read and accept Keylab\u2019s enrollment policies, and I am authorizing Keylab to schedule my child\u2019s lessons for the school year, bill the payment method on file for the first payment, and schedule recurring automatic flat-monthly payments based on the proposal details.';
+function _tcAckText(needsInvoice){ return needsInvoice?TC_ACK_INVOICE:TC_ACK_ONFILE; }
+
 var SELF_RELEASE_TEXT='I authorize my child to arrive at and depart from Keylab without adult accompaniment. I accept full responsibility for their transportation to and from Keylab; for their safety prior to and following their scheduled lesson; and for their conduct at all times before, during, and after their lesson.';
 
 // What this child has on file, shown on Home without the family clicking
@@ -2796,7 +2806,14 @@ function _rHomeSelfRelease(s){
 // show an explicit Withdrawn message -- previously only Enrollment did, a
 // deliberate AC-approved divergence from an earlier session, now
 // superseded by AC's explicit "same details on all three pages" instruction.
-function _rChildStatusSummary(s){
+// opts.inDetailBlock (BACKLOG 1.109) — set when this renders INSIDE a block
+// that already lists the lesson details, tuition and acceptance line as its
+// own rows. Without it the Enrollment tab showed a family the same day/time/
+// teacher, the same start date, the same price boxes and the same "proposal
+// and policies accepted" line twice, a few hundred pixels apart. Only the
+// header (name, instrument, status) is wanted in that context.
+function _rChildStatusSummary(s, opts){
+  var _inDetail = !!(opts && opts.inDetailBlock);
   var avOpen=isTruthy(publicCfg.availabilityOpen);
   var locMap={studio:'at Keylab','in-home':'In-home',virtual:'Virtual'};
   var lbl=phaseLabel(s.phase, s.availabilitySubmitted, avOpen, s.tcAcceptedAt, s.needsManualInvoice);
@@ -2823,14 +2840,14 @@ function _rChildStatusSummary(s){
     if(s.time) details.push(s.time);
     if(s.teacher) details.push(s.teacher);
     if(s.lessonLocation) details.push(locMap[s.lessonLocation]||s.lessonLocation);
-    if(details.length) h+='<div style="font-size:13px;color:var(--text3);margin-bottom:.3rem">'+esc(details.join(' \u00b7 '))+'</div>';
-    if(s.startDate) h+='<div style="font-size:12px;color:var(--text3);margin-bottom:.3rem">Starts '+esc(_fmtFamilyDate(s.startDate))+'</div>';
-    if(s.monthlyPrice) h+=_fmtPriceBox(s,false);
+    if(details.length&&!_inDetail) h+='<div style="font-size:13px;color:var(--text3);margin-bottom:.3rem">'+esc(details.join(' \u00b7 '))+'</div>';
+    if(s.startDate&&!_inDetail) h+='<div style="font-size:12px;color:var(--text3);margin-bottom:.3rem">Starts '+esc(_fmtFamilyDate(s.startDate))+'</div>';
+    if(s.monthlyPrice&&!_inDetail) h+=_fmtPriceBox(s,false);
     if(ph==='Enrollment Change'){
       h+='<div class="msg mi" style="margin-top:.5rem">'+esc(firstName)+'\u2019s current enrollment will remain active until you accept the new proposal. Once accepted, we\u2019ll process the new enrollment and get '+esc(firstName)+'\u2019s new lesson schedule on the books, and the current enrollment will be archived.</div>';
     } else if(isEnrolled){
       h+='<div class="msg ms">\u2713 '+esc(firstName)+' is enrolled! See below for details on how to manage their enrollment.</div>';
-    } else if(s.tcAcceptedAt||s.tcAcceptedName){
+    } else if((s.tcAcceptedAt||s.tcAcceptedName)&&!_inDetail){
       h+='<div class="msg ms">\u2713 Proposal and policies accepted'+(s.tcAcceptedName?' by '+esc(s.tcAcceptedName):'')+
         (s.tcAcceptedAt?' on '+esc(_fmtFamilyTs(s.tcAcceptedAt))+' at '+esc(_fmtFamilyTime(s.tcAcceptedAt)):'')+'.</div>';
     }
@@ -2873,7 +2890,7 @@ function _rChildStatusSummary(s){
       propSentence+=propStart?', to begin on '+esc(propStart)+'.':'.';
       h+='<div style="font-size:13px;color:var(--text3);margin-bottom:.35rem">'+propSentence+'</div>';
     }
-    if(s.monthlyPrice) h+=_fmtPriceBox(s,false);
+    if(s.monthlyPrice&&!_inDetail) h+=_fmtPriceBox(s,false);
   } else if(isWithdrawn){
     h+='<div style="font-size:12px;color:var(--text4)">'+esc(firstName)+' is not currently enrolled. Please contact us at <a href="mailto:info@keylab.nyc">info@keylab.nyc</a> if you have questions.</div>';
   } else if(avLocked){
@@ -5134,10 +5151,27 @@ function rEnrollment(scopeStudentId){
     var displayPrice=parseFloat(s.monthlyPrice)||0;
     var displayPriceStr=displayPrice>0?'$'+displayPrice.toFixed(0):'--';
 
-    // ── Compact status summary — same content/wording as Home and Availability ──
-    h+='<div class="card"'+(_rosterForPage.length>1?' style="margin-top:2.5rem"':'')+'>';
-    h+=_rChildStatusSummary(s);
-    h+='</div>';
+    // ── One block per child (BACKLOG 1.109) ──
+    // AC: "Everything should be included in one block per child so the parent
+    // doesn't get confused." For a proposal/accepted/enrolled student the
+    // summary and the detail used to be two separate cards repeating the same
+    // day/time/teacher, start date, price boxes and acceptance line. They are
+    // now one card, with the summary rendering in inDetailBlock mode so it
+    // contributes only the header. Other phases keep their own card, since
+    // there is no detail block for them to merge into.
+    // The summary is rendered into a string, not straight into the page, so
+    // it can be injected INSIDE the detail card below rather than sitting in
+    // a card of its own. Deliberately not done by skipping the summary card's
+    // opening/closing tags: those would have to be skipped in one branch and
+    // closed in another, and the suite's tag-balance check counts file-wide
+    // totals, so it cannot see a runtime imbalance across branches.
+    var _mergeIntoDetail = (ph==='Proposal'||ph==='Confirmed to Enroll'||ph==='Enrolled') && hasPrice;
+    var _summaryHtml = _rChildStatusSummary(s, {inDetailBlock:_mergeIntoDetail});
+    if(!_mergeIntoDetail){
+      h+='<div class="card"'+(_rosterForPage.length>1?' style="margin-top:2.5rem"':'')+'>';
+      h+=_summaryHtml;
+      h+='</div>';
+    }
 
     if(ph==='Enrollment Change'){
       // ── Enrollment Change: two-section layout ──
@@ -5212,7 +5246,10 @@ function rEnrollment(scopeStudentId){
       }
 
       var _exp=!!_enrExpanded[sid];
-      h+='<div class="card">';
+      h+='<div class="card"'+(_mergeIntoDetail&&_rosterForPage.length>1?' style="margin-top:2.5rem"':'')+'>';
+      // One block per child (BACKLOG 1.109): the header goes inside this card
+      // instead of a second one above it.
+      if(_mergeIntoDetail) h+=_summaryHtml;
       if(statusChip) h+=statusChip;
       var rows=[
         ['Instrument',s.instrument],
@@ -5239,6 +5276,14 @@ function rEnrollment(scopeStudentId){
           h+='<div class="msg ms" style="margin-top:1rem">';
           h+='\u2713 Proposal and policies accepted'+(s.tcAcceptedName?' by '+esc(s.tcAcceptedName):'')+
             (s.tcAcceptedAt?' on '+esc(_fmtFamilyTs(s.tcAcceptedAt))+' at '+esc(_fmtFamilyTime(s.tcAcceptedAt)):'')+'.</div>';
+          // What they actually ticked (BACKLOG 1.109) — the accepted state
+          // used to show who and when but never WHAT. Prefers the stored
+          // snapshot; falls back to the live wording only for acceptances
+          // made before the field existed.
+          var _ackShown=s.tcAcknowledgment||_tcAckText(isTruthy(s.needsManualInvoice));
+          h+='<div style="font-size:12px;color:var(--text3);margin-top:.5rem;font-weight:600">What you agreed to</div>'+
+            '<div style="font-size:12px;color:var(--text2);padding:.5rem .7rem;border-left:3px solid var(--acc);background:rgba(0,0,0,.03);margin-top:.25rem">'+
+            esc(_ackShown)+'</div>';
         }
         // 2. What Happens Next — elevated card, only pre-enrollment; disappears once admin marks Enrolled.
         if(isAccepted&&!isFullyEnrolled){
@@ -5301,9 +5346,7 @@ function rEnrollment(scopeStudentId){
         h+=rPolicyText(isInHome);
         h+='<div class="agree-box" id="tc-agree-box-'+esc(sid)+'" style="'+(tc.checked?'border-color:var(--green);background:rgba(255,255,255,.5)':'')+'">';
         h+='<input type="checkbox" id="tc-chk-'+esc(sid)+'"'+(tc.checked?' checked':'')+' onchange="_tcState(&apos;'+esc(sid)+'&apos;).checked=this.checked;tcRefresh(&apos;'+esc(sid)+'&apos;)">';
-        h+=_needsInvoice3
-          ?('<label class="agree-lbl" for="tc-chk-'+esc(sid)+'">'+'I acknowledge that I have read and accept Keylab\u2019s enrollment policies, and agree to submit payment for the first month of lessons which will also schedule automatic flat-rate monthly payments for the duration of the enrollment. I acknowledge that if payment is not submitted within two business days from when this proposal was accepted, that the time slot may be given to another family</label></div>')
-          :('<label class="agree-lbl" for="tc-chk-'+esc(sid)+'">'+'I acknowledge that I have read and accept Keylab\u2019s enrollment policies, and I am authorizing Keylab to schedule my child\u2019s lessons for the school year, bill the payment method on file for the first payment, and schedule recurring automatic flat-monthly payments based on the proposal details.</label></div>');
+        h+='<label class="agree-lbl" for="tc-chk-'+esc(sid)+'">'+esc(_tcAckText(_needsInvoice3))+'</label></div>';
         var canSubmit=tc.checked&&tc.name.trim().length>0;
         var _pOpts='';
         if(familyParents.p1) _pOpts+='<option value="'+esc(familyParents.p1)+'"'+(tc.name===familyParents.p1?' selected':'')+'>'+esc(familyParents.p1)+'</option>';
@@ -5650,7 +5693,12 @@ function doSubmitTC(studentId){
   var policyEl=document.createElement('div');
   policyEl.innerHTML=rPolicyText(false);
   var policySnapshot=policyEl.innerHTML||'';
-  fapi('submitTandC', {studentId:studentId, acceptedName:name, policySnapshot:policySnapshot}, function(e,r){
+  // The acknowledgment actually shown to this family goes with the
+  // acceptance, so it can be snapshotted (BACKLOG 1.109). Which variant was
+  // displayed depends on needsManualInvoice, so it's read off the student.
+  var _ackStu=students.filter(function(x){return x.studentId===studentId;})[0]||{};
+  var _ackText=_tcAckText(isTruthy(_ackStu.needsManualInvoice));
+  fapi('submitTandC', {studentId:studentId, acceptedName:name, policySnapshot:policySnapshot, acknowledgment:_ackText}, function(e,r){
     tc.busy=false;
     if(e||!r||!r.ok){showMsg((r&&r.error)||'Something went wrong. Please try again.','e');render();return;}
     if(r.alreadyAccepted){
@@ -5672,6 +5720,7 @@ function doSubmitTC(studentId){
         students[i].tcAcceptedAt=ts;
         students[i].tcAcceptedName=name;
         students[i].tcPolicySnapshot=policySnapshot;
+        students[i].tcAcknowledgment=_ackText;
         // Phase advances server-side; patch locally for immediate UI update
         if(students[i].phase==='Proposal'||students[i].phase==='Enrollment Change'){
           students[i].phase='Confirmed to Enroll';

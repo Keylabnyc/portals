@@ -2661,6 +2661,83 @@ function _klStudentAge(s){
   return (s&&s.age)||'';
 }
 
+// The self-release authorization wording, in ONE place (BACKLOG 1.107). It
+// used to be inline in the checkbox label only, which is why it vanished the
+// moment permission was granted -- the granted branch replaced the whole
+// block. Now it's a constant so the same text can be shown before granting,
+// after granting, and sent to the family by email. AC's approved copy,
+// unchanged from what shipped inline.
+var SELF_RELEASE_TEXT='I authorize my child to arrive at and depart from Keylab without adult accompaniment. I accept full responsibility for their transportation to and from Keylab; for their safety prior to and following their scheduled lesson; and for their conduct at all times before, during, and after their lesson.';
+
+// What this child has on file, shown on Home without the family clicking
+// anything (BACKLOG 1.104). AC: "they can see the dates, amounts, and status
+// clearly on home page without having to click anywhere."
+//
+// Reads s.availability from the payload rather than SC, which only ever holds
+// one child at a time — that limitation is exactly why this used to require
+// clicking Review, one child at a time.
+//
+// Renders for BOTH Home variants: a mixed family (one enrolled, one still
+// enrolling) gets the one-page Home, a family with nobody enrolled gets the
+// tabbed one, and both need this.
+function _rHomeChildDetail(s){
+  var a=s.availability;
+  var enrolled=(s.phase||'')==='Enrolled';
+  if(!a && !enrolled) return '';
+
+  function row(lbl,val){
+    if(!val) return '';
+    return '<div style="display:flex;gap:.6rem;font-size:12px;margin-top:3px">'+
+      '<span style="color:var(--text4);min-width:104px;flex-shrink:0">'+esc(lbl)+'</span>'+
+      '<span style="color:var(--text2)">'+esc(val)+'</span></div>';
+  }
+  var h='<div style="margin-top:.6rem;padding-top:.6rem;border-top:.5px solid var(--border)">';
+
+  if(enrolled){
+    h+='<div style="font-size:12px;font-weight:600;color:var(--text3);margin-bottom:.2rem">Enrollment</div>';
+    h+=row('Status','Enrolled');
+    if(s.enrolledAt) h+=row('Processed', _fmtFamilyTs(s.enrolledAt));
+    if(s.day||s.time) h+=row('Lesson',[s.day,s.time,s.teacher].filter(Boolean).join(' \u00b7 '));
+    // Build rule carried from the 1.36 spec: never show a wrong number to a
+    // parent — if the price is missing, show nothing rather than "$0".
+    var _mp=parseFloat(s.monthlyPrice);
+    if(_mp>0) h+=row('Monthly tuition','$'+Math.round(_mp)+'/mo');
+    if(s.startDate) h+=row('Start date', _fmtFamilyDate(s.startDate));
+  }
+
+  if(a){
+    h+='<div style="font-size:12px;font-weight:600;color:var(--text3);margin:'+(enrolled?'.6rem 0 .2rem':'0 0 .2rem')+'">You submitted</div>';
+    h+=row('Instrument',a.instrument);
+    h+=row('Instrument notes',a.instrumentNote);
+    h+=row('Lesson length',_klDurLabel(a.duration));
+    h+=row('Duration notes',a.durationNote);
+    h+=row('Location',_klLocLabel(a.location));
+    h+=row('Location notes',a.locationNote);
+    h+=row('Address',[a.street,a.apt,a.city,a.state,a.zip].filter(Boolean).join(' '));
+    h+=row('Teacher preference',a.teacherPref);
+    var slotStr=(a.slots||[]).map(function(x){
+      return x.day+(x.start?' '+x.start:'')+(x.end?'\u2013'+x.end:'')+(x.pref?' ('+x.pref+')':'');
+    }).join(' \u00b7 ');
+    h+=row('Availability',slotStr);
+    h+=row('Notes',a.notes);
+  }
+  h+='</div>';
+  return h;
+}
+
+// Shared label helpers, mirroring the server's (BACKLOG 1.78/1.100 wording).
+function _klDurLabel(raw){
+  var p=String(raw||'').split(',').map(function(v){return v.trim();}).filter(Boolean);
+  if(!p.length) return '';
+  return (p.length>1?p.slice(0,-1).join(', ')+' or '+p[p.length-1]:p[0])+' minutes';
+}
+var KL_LOC_LABELS={studio:'At Keylab','in-home':'In-home',virtual:'Virtual'};
+function _klLocLabel(raw){
+  return String(raw||'').split(',').map(function(v){
+    var k=v.trim(); return k?(KL_LOC_LABELS[k]||k):'';
+  }).filter(Boolean).join(', ');
+}
+
 function _rHomeSelfRelease(s){
   // Collapsible section rendered INSIDE the dashboard card (no outer card wrapper)
   // Age is derived, never read straight off the row — see _klStudentAge().
@@ -2679,18 +2756,25 @@ function _rHomeSelfRelease(s){
     h+='<span style="font-size:16px;color:var(--text4)">'+(open?'\u2039':'\u203a')+'</span>';
     h+='</div>';
   } else {
-    h+='<button class="btn btn-p btn-sm" onclick="_srOpen[&apos;'+esc(s.studentId)+'&apos;]=!_srOpen[&apos;'+esc(s.studentId)+'&apos;];render()">Authorize self-release</button>';
+    var _srFirst=(s.studentName||'').trim().split(' ')[0];
+    h+='<button class="btn btn-p btn-sm" onclick="_srOpen[&apos;'+esc(s.studentId)+'&apos;]=!_srOpen[&apos;'+esc(s.studentId)+'&apos;];render()">Authorize self-release'+(_srFirst?' for '+esc(_srFirst):'')+'</button>';
     h+='<p style="font-size:12px;color:var(--text3);margin-top:.3rem">Optional. For children ages 10 to 17 who can arrive and leave by themselves.</p>';
   }
   if(open){
     h+='<div style="padding:.5rem 0 .25rem">';
     if(granted){
       h+='<div class="msg ms">\u2713 Permission granted on '+esc(_fmtFamilyTs(s.selfReleaseGrantedAt))+' at '+esc(_fmtFamilyTime(s.selfReleaseGrantedAt))+' \u2014 '+esc(s.studentName)+' may arrive and depart unaccompanied.</div>';
+      // What they actually agreed to, not the current live wording where a
+      // snapshot exists (BACKLOG 1.107). Falls back to the live text only for
+      // grants made before the snapshot field existed.
+      h+='<div style="font-size:12px;color:var(--text3);margin-top:.5rem;font-weight:600">What you agreed to</div>'+
+        '<div style="font-size:12px;color:var(--text2);padding:.5rem .7rem;border-left:3px solid var(--acc);background:rgba(0,0,0,.03);margin-top:.25rem">'+
+        esc(s.selfReleaseText||SELF_RELEASE_TEXT)+'</div>';
     } else {
       h+='<p style="font-size:13px;color:var(--text2);margin-bottom:.75rem">If you would like '+esc(s.studentName)+' to be able to arrive at and depart from lessons without a parent or guardian present, check the box below and submit. This is optional.</p>';
       h+='<div class="agree-box">'+
         '<input type="checkbox" id="sr-hm-chk-'+esc(s.studentId)+'" onchange="document.getElementById(&apos;sr-hm-btn-'+esc(s.studentId)+'&apos;).disabled=!this.checked">'+
-        '<label class="agree-lbl" for="sr-hm-chk-'+esc(s.studentId)+'">I authorize my child to arrive at and depart from Keylab without adult accompaniment. I accept full responsibility for their transportation to and from Keylab; for their safety prior to and following their scheduled lesson; and for their conduct at all times before, during, and after their lesson.</label>'+
+        '<label class="agree-lbl" for="sr-hm-chk-'+esc(s.studentId)+'">'+esc(SELF_RELEASE_TEXT)+'</label>'+
       '</div>';
       h+=_srBusy[s.studentId]
         ?'<button class="btn btn-p btn-full" disabled><span class="spin">\u21bb</span> Submitting...</button>'
@@ -3401,6 +3485,7 @@ function _rHomeChildActionCard(s){
       ctas.push('<button class="btn btn-p btn-sm" onclick="_gotoSchedulingForStudent(&apos;'+esc(s.studentId)+'&apos;)">Review / Update Availability</button>');
     }
     if(ctas.length) h+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:.5rem">'+ctas.join('')+'</div>';
+    h+=_rHomeChildDetail(s);
     h+='</div>';
   }
   return h;
@@ -3591,6 +3676,7 @@ function rHome(){
         ctas.push('<button class="btn btn-p btn-sm" onclick="_gotoSchedulingForStudent(&apos;'+esc(s.studentId)+'&apos;)">Review / Update Availability</button>');
       }
       if(ctas.length) h+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:.5rem">'+ctas.join('')+'</div>';
+      h+=_rHomeChildDetail(s);
       h+='</div>';
     }
   });
@@ -5273,7 +5359,9 @@ var _srBusy={};
 
 function doGrantSelfRelease(studentId){
   _srBusy[studentId]=true; render();
-  fapi('saveSelfRelease',{studentId:studentId},function(e,r){
+  // The exact wording that was on screen goes with the grant, so the server
+  // can snapshot it and email it back (BACKLOG 1.107).
+  fapi('saveSelfRelease',{studentId:studentId,agreedText:SELF_RELEASE_TEXT},function(e,r){
     _srBusy[studentId]=false;
     if(e||!r||!r.ok){showMsg((r&&r.error)||'Something went wrong. Please try again.','e');render();return;}
     var clicked=students.filter(function(x){return x.studentId===studentId;})[0];
@@ -5283,7 +5371,12 @@ function doGrantSelfRelease(studentId){
       // backend's sync -- self-release is a fact about the child, not just
       // the one enrollment whose button was clicked.
       students.forEach(function(s){
-        if(s.studentName===clicked.studentName&&!s.selfReleaseGrantedAt) s.selfReleaseGrantedAt=grantedAt;
+        if(s.studentName===clicked.studentName&&!s.selfReleaseGrantedAt){
+          s.selfReleaseGrantedAt=grantedAt;
+          // Patched locally too, so the "what you agreed to" block renders
+          // immediately rather than only after the next full load.
+          s.selfReleaseText=r.agreedText||SELF_RELEASE_TEXT;
+        }
       });
     }
     showMsg('Permission submitted. Thank you!','s');

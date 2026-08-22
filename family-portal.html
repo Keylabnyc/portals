@@ -5320,7 +5320,7 @@ function rEnrollment(scopeStudentId){
           h+=_rHomeSelfRelease(s);
           _srShownFor[s.studentName]=true;
         }
-        h+='</div>';
+        // (card closed once after the branch chain below — BACKLOG 1.109)
 
         if(_exp&&isFullyEnrolled){
           h+='<div class="card">';
@@ -5339,7 +5339,10 @@ function rEnrollment(scopeStudentId){
         }
       } else if(hasPrice&&!isAccepted&&!isFullyEnrolled){
         var _needsInvoice3=isTruthy(s.needsManualInvoice);
-        h+='<div class="card"><h2>Lesson Policies</h2>';
+        // Folded into this child's block rather than a card of its own
+        // (BACKLOG 1.109) — the accept form belongs with the proposal it is
+        // accepting, not beside it.
+        h+='<h2 style="margin-top:1.25rem">Lesson Policies</h2>';
         h+=_needsInvoice3
           ?'<p>Please take a look at our policies below and let us know if you have any questions. Once you\'ve accepted, the next step is to log into your scheduling and billing account and pay the first month invoice to confirm '+esc(firstName)+'&rsquo;s spot.</p>'
           :'<p>Please take a look at our policies below and let us know if you have any questions. Once you\'ve accepted, I\'ll get '+esc(firstName)+'&rsquo;s lessons scheduled for the school year and process their enrollment using the payment method on file.</p>';
@@ -5360,7 +5363,7 @@ function rEnrollment(scopeStudentId){
           ?'<button class="btn btn-p btn-full" disabled><span class="spin">\u21bb</span> Submitting...</button>'
           :'<div id="tc-err-'+esc(sid)+'" style="display:none;color:var(--rt);font-size:13px;margin-bottom:.5rem"></div>'+
            '<button id="tc-submit-btn-'+esc(sid)+'" class="btn btn-p btn-full" onclick="doSubmitTC(&apos;'+esc(sid)+'&apos;)" '+(canSubmit?'':'disabled style="opacity:0.4"')+'>Accept Proposal</button>';
-        h+='</div>';
+        // (card closed once after the branch chain below)
       } else {
         // Phase but no pricing yet -- a genuine (if rare) in-between state:
         // the student has reached Proposal or later but no valid price has
@@ -5368,11 +5371,15 @@ function rEnrollment(scopeStudentId){
         // Previously this showed nothing but a bare policies section, with
         // no way for the family to tell "this is expected, check back soon"
         // apart from "something is broken."
-        h+='<div class="card"><p style="color:var(--text3)">We\u2019re still finalizing '+esc(firstName||'your child\u2019s')+' proposal details. Check back soon, or contact us at <a href="mailto:info@keylab.nyc">info@keylab.nyc</a> if you have questions.</p></div>';
-        h+='<div class="card"><h2>Lesson Policies</h2>';
+        h+='<p style="color:var(--text3)">We\u2019re still finalizing '+esc(firstName||'your child\u2019s')+' proposal details. Check back soon, or contact us at <a href="mailto:info@keylab.nyc">info@keylab.nyc</a> if you have questions.</p>';
+        h+='<h2 style="margin-top:1.25rem">Lesson Policies</h2>';
         h+=rPolicyCollapsible(false, isInHome, sid);
-        h+='</div>';
+        // (card closed once after the branch chain below)
       }
+      // Exactly one closing tag for the card opened above, on every branch.
+      // Previously only the accepted branch closed it, so an un-accepted
+      // proposal left a card open and the policies card nested inside it.
+      h+='</div>';
 
     } else {
       // ── Non-proposal students: action button only ──

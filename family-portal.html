@@ -2005,6 +2005,17 @@ function loadFamily(){
       _familyLoadError=_lfMsg;
       render(); return;
     }
+    // The family's account no longer exists (deleted while this tab was
+    // open, or a magic link for a removed family). Showing the ordinary
+    // "we're still getting your information set up" screen here strands them
+    // on a page that can never resolve -- BACKLOG 1.101. Drop to login.
+    if(r.familyMissing){
+      _klClearSession();
+      TOKEN=''; FAMILY_ID=''; MY_PARENT_SLOT='';
+      PAGE='login'; _familyLoading=false; students=[];
+      render();
+      return;
+    }
     _applyProposalResp(r);
     _prefetchSchedulingData();
     render();

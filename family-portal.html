@@ -858,6 +858,14 @@ function _effDur(base,extra){
 // a consistent '(123) 456-7890' format, or null if it doesn't reduce to a
 // real 10-digit number (e.g. '123kdgh349'). Mirrors the server-side
 // _normalizePhone() backstop in enrollment_code.gs.
+// BACKLOG 1.92 — parent1Email was only checked for non-blank, so anything at
+// all passed; parent2Email checked for an '@' and nothing more. One shared
+// check for both. Deliberately permissive about the domain: AC was explicit
+// that this must not restrict to .com, so anything with a dotted domain and
+// no whitespace passes (.nyc, .co.uk, .academy all fine).
+function _isValidEmail(v){
+  return /^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/.test(String(v||'').trim());
+}
 function _formatPhone(raw){
   var digits=String(raw||'').replace(/\D/g,'');
   if(digits.length===11&&digits.charAt(0)==='1') digits=digits.substring(1);
@@ -1722,6 +1730,16 @@ function rStuBlock(st, i){
 function toggleScLoc(v){
   var idx=SC.locations.indexOf(v);
   if(idx>-1) SC.locations.splice(idx,1); else SC.locations.push(v);
+  // BACKLOG 1.94 — a registering family typed their address on Screen 1
+  // minutes ago; asking for it again the moment they pick in-home is pure
+  // re-typing. Seeded only when in-home is actually selected (so a
+  // studio-only child doesn't silently carry a home address into their
+  // availability record) and only when blank, so it never overwrites an
+  // address the family deliberately changed for this child. Still a plain
+  // editable field.
+  if(v==='in-home'&&SC.locations.indexOf('in-home')>-1&&!SC.street.trim()&&RF.street.trim()){
+    SC.street=RF.street; SC.apt=RF.apt; SC.city=RF.city; SC.state=RF.state||'NY'; SC.zip=RF.zip;
+  }
   if(SC.locations.length<=1){SC.locationNote='';SC.locNoteTouched=false;}
   render();
 }
@@ -1747,6 +1765,7 @@ function doGoToChildrenStep(){
   // before a family scrolled up far enough to see it.
   if(!RF.parent1Name.trim()){RF.submitError='Please enter your first and last name.';render();return;}
   if(!RF.parent1Email.trim()){RF.submitError='Please enter your email address.';render();return;}
+  if(!_isValidEmail(RF.parent1Email)){RF.submitError='Please enter a valid email address.';render();return;}
   if(!RF.parent1Phone.trim()){RF.submitError='Please enter your phone number.';render();return;}
   var _p1Fmt=_formatPhone(RF.parent1Phone);
   if(!_p1Fmt){RF.submitError='Please enter a valid phone number.';render();return;}
@@ -1761,7 +1780,7 @@ function doGoToChildrenStep(){
     var _p2n=RF.parent2Name.trim(), _p2e=RF.parent2Email.trim(), _p2p=RF.parent2Phone.trim();
     if(_p2n||_p2e||_p2p){
       if(!_p2n){RF.submitError='Please enter the 2nd parent’s name.';render();return;}
-      if(!_p2e||_p2e.indexOf('@')===-1){RF.submitError='Please enter a valid email address for the 2nd parent.';render();return;}
+      if(!_isValidEmail(_p2e)){RF.submitError='Please enter a valid email address for the 2nd parent.';render();return;}
       if(_p2p){
         var _p2Fmt=_formatPhone(_p2p);
         if(!_p2Fmt){RF.submitError='Please enter a valid phone number for the 2nd parent.';render();return;}
@@ -1896,6 +1915,13 @@ function _saveNextRegisteredChild(studentIds, idx, done){
     render();
     fapi('sendRegistrationSummary', {studentIds:studentIds}, function(){
       SC.busyMsg='';
+      // BACKLOG 1.95 — the loop above leaves SC.studentId pointing at
+      // whichever child was saved LAST. gotoScheduling() only offers its
+      // "select a child" picker when SC.studentId is empty, so the family
+      // landed straight on that one child and the sibling was invisible from
+      // the Availability tab. Clear it for a multi-child registration so the
+      // picker (already built, already correct) actually gets to run.
+      if(studentIds.length>1){ _scResetBlank(); SC.studentId=''; }
       done();
     });
     return;

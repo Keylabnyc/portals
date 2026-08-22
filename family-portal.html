@@ -2755,18 +2755,23 @@ function _rHomeSelfRelease(s){
   if(isNaN(age)||age<10) return '';
   var granted=!!s.selfReleaseGrantedAt;
   var open=!!_srOpen[s.studentId];
+  var _srFirst=(s.studentName||'').trim().split(' ')[0];
   var h='';
   h+='<div style="margin-top:.4rem">';
   if(granted){
+    // Names the child, same reasoning as the un-granted button below (AC,
+    // 22 Aug: "for multi families, they'll need to see which child was
+    // granted self release on the closed card"). Two enrolled children with
+    // permission granted used to both collapse to the identical row
+    // "Self-release · Granted", with nothing to tell them apart.
     h+='<div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer" onclick="_srOpen[&apos;'+esc(s.studentId)+'&apos;]=!_srOpen[&apos;'+esc(s.studentId)+'&apos;];render()">';
     h+='<div style="display:flex;align-items:center;gap:8px">';
-    h+='<span style="font-size:13px;font-weight:600;color:var(--text)">Self-release</span>';
+    h+='<span style="font-size:13px;font-weight:600;color:var(--text)">Self-release'+(_srFirst?' — '+esc(_srFirst):'')+'</span>';
     h+='<span class="chip c-good" style="font-size:10px;padding:2px 7px">Granted</span>';
     h+='</div>';
     h+='<span style="font-size:16px;color:var(--text4)">'+(open?'\u2039':'\u203a')+'</span>';
     h+='</div>';
   } else {
-    var _srFirst=(s.studentName||'').trim().split(' ')[0];
     h+='<button class="btn btn-p btn-sm" onclick="_srOpen[&apos;'+esc(s.studentId)+'&apos;]=!_srOpen[&apos;'+esc(s.studentId)+'&apos;];render()">Authorize self-release'+(_srFirst?' for '+esc(_srFirst):'')+'</button>';
     h+='<p style="font-size:12px;color:var(--text3);margin-top:.3rem">Optional. For children ages 10 to 17 who can arrive and leave by themselves.</p>';
   }
@@ -3467,10 +3472,21 @@ function _rHomeChildActionCard(s){
   var h='';
   if(showDashboard){
     h+='<div class="card">';
-    h+=_rChildStatusSummary(s);
+    // inDetailBlock (BACKLOG 1.104 follow-up) — suppresses the day/time/
+    // teacher line and price box the summary would otherwise draw here,
+    // since _rHomeChildDetail() below shows the same facts, labeled, as
+    // part of the same card. Without this an enrolled child's Home card
+    // said "Thursday · 5:30 PM · Zak Walker-Kahne" twice in one card.
+    h+=_rChildStatusSummary(s, {inDetailBlock:true});
     if(ph==='Enrollment Change'){
       h+=_rHomeActionButtons('Review New Proposal', s.studentId);
-    } else if(s.tcAcceptedAt||s.tcAcceptedName){
+    } else if((s.tcAcceptedAt||s.tcAcceptedName)&&!isEnrolled){
+      // The !isEnrolled guard is the actual fix (BACKLOG 1.104
+      // follow-up) -- an enrolled child always has tcAcceptedAt set, from
+      // when they accepted, so without this the branch below (which the
+      // caller used to never reach at all, since enrolled students were
+      // excluded outright) was still unreachable: this condition matched
+      // first and swallowed every enrolled student too.
       var _needsInvoice=isTruthy(s.needsManualInvoice);
       var _isReturningTenure=_familyIsReturning();
       h+='<div style="margin-bottom:.75rem;background:var(--bbg);border:1px solid var(--blue);border-radius:var(--rl);padding:1rem">'+
@@ -3481,9 +3497,24 @@ function _rHomeChildActionCard(s){
           :('<p style="font-size:14px;color:var(--bt);margin:0">I\u2019ll schedule '+esc(firstName)+'&rsquo;s lessons for the school year and process their enrollment on the admin side using the payment method on file. Your card will be charged for the first payment once enrollment is processed, and automatic flat rate monthly payments will be processed on the 1st of each month from the 2nd month of '+esc(firstName)+'&rsquo;s enrollment. Check your email for confirmation and details and let us know if you need any help!</p>'))+
         '</div>';
       h+=_rHomeActionButtons('Review Proposal and Policies', s.studentId);
-    } else {
+    } else if(!isEnrolled){
       h+=_rHomeActionButtons('Review Proposal and Policies', s.studentId);
+    } else {
+      // BACKLOG 1.104 follow-up (22 Aug) — found by rendering the exact
+      // scenario AC was testing. This whole branch used to be unreachable
+      // for isEnrolled, because the caller excluded 'Enrolled' outright.
+      // The moment enrolled students started reaching this function, an
+      // already-enrolled child (who always has tcAcceptedAt set, from when
+      // they accepted) fell into the branch above and showed "What Happens
+      // Next" invoice/payment messaging plus a "Review Proposal and
+      // Policies" button pointing at a proposal that's done and gone. The
+      // billing link is still useful once enrolled, so only that survives.
+      h+='<div style="margin-top:.6rem"><a class="btn btn-p btn-sm" href="'+publicCfg.schedulingBillingUrl+'" target="_blank">Scheduling / Billing Portal</a>'+
+        '<p style="font-size:12px;color:var(--text3);margin-top:.3rem">Check your schedule, cancel a lesson, review and update billing &amp; payment details.</p></div>';
     }
+    // Status/processed date/amount for an enrolled child (BACKLOG 1.104) —
+    // this branch never had it; only the other one did.
+    h+=_rHomeChildDetail(s);
     h+='</div>';
   } else {
     h+='<div class="card-stu">';
@@ -3521,8 +3552,17 @@ function rHomeOnePage(){
   // needs to act on. Same per-child card content as the old tabbed Home
   // (_rChildStatusSummary + the same CTAs), just relocated here so it isn't
   // duplicated (BACKLOG 1.63 Step 2). ──
+  // BACKLOG 1.104 follow-up (22 Aug) — AC caught this live: an enrolled
+  // sibling in a mixed family never got a card here at all, because this
+  // loop excluded 'Enrolled' outright. _rHomeChildActionCard() already had a
+  // correct branch for isEnrolled (the showDashboard path); it just never
+  // ran, since nothing called the function for an enrolled student. Now
+  // every student renders a card here — the actionable-phase ones for what
+  // to do next, the enrolled ones for status/processed date/amount, per
+  // AC's original ask: "dates, amounts, and status clearly on home page
+  // without having to click anywhere."
   students.forEach(function(s){
-    if((s.phase||'')!=='Enrolled' && KL_ACTIONABLE_PHASES[s.phase||'']) h+=_rHomeChildActionCard(s);
+    if(s.phase==='Enrolled' || KL_ACTIONABLE_PHASES[s.phase||'']) h+=_rHomeChildActionCard(s);
   });
 
   // ── Schedule: next lessons + important dates, one block, first on the page ──

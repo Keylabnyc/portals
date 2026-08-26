@@ -3495,7 +3495,13 @@ var _homeEnrOpen = {};
 function _rHomeEnrDetailsToggle(s){
   var open=!!_homeEnrOpen[s.studentId];
   var first=s.studentName?s.studentName.trim().split(' ')[0]:'';
-  var body=open?(_klEnrollmentFactsHtml(s)+_klPolicySnapshotHtml(s, s.lessonLocation==='in-home')):'';
+  // Body content is always in the markup, same as _klAcc() -- <details>
+  // hides it natively via the browser until opened. Building it only when
+  // `open` (as this first read) meant the very first click had nothing to
+  // reveal: ontoggle sets _homeEnrOpen but doesn't itself trigger a
+  // render(), so the content that should have appeared was never in the
+  // DOM to begin with. Found live, 26 Aug -- AC: "the link doesn't expand."
+  var body=_klEnrollmentFactsHtml(s)+_klPolicySnapshotHtml(s, s.lessonLocation==='in-home');
   return '<details class="kl-acc" style="margin-top:.6rem"'+(open?' open':'')+
     ' ontoggle="_homeEnrOpen[&apos;'+esc(s.studentId)+'&apos;]=this.open">'+
     // Styled as a link (var(--acc) + underline, the same convention every

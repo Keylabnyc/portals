@@ -2690,10 +2690,16 @@ var SELF_RELEASE_TEXT='I authorize my child to arrive at and depart from Keylab 
 // Renders for BOTH Home variants: a mixed family (one enrolled, one still
 // enrolling) gets the one-page Home, a family with nobody enrolled gets the
 // tabbed one, and both need this.
+// The "Enrollment" facts (status/processed date/lesson/tuition/start
+// date) that used to render here for a phase==='Enrolled' student were
+// removed 26 Aug (AC: "remove the enrollment details below the line...
+// free up space... make the cards smaller") -- they're the same rows
+// _rHomeEnrDetailsToggle()'s one-click details already shows (BACKLOG
+// 1.111), so this was pure duplication once that shipped. This function
+// now only ever renders the "You submitted" availability section.
 function _rHomeChildDetail(s){
   var a=s.availability;
-  var enrolled=(s.phase||'')==='Enrolled';
-  if(!a && !enrolled) return '';
+  if(!a) return '';
 
   function row(lbl,val){
     if(!val) return '';
@@ -2703,34 +2709,20 @@ function _rHomeChildDetail(s){
   }
   var h='<div style="margin-top:.6rem;padding-top:.6rem;border-top:.5px solid var(--border)">';
 
-  if(enrolled){
-    h+='<div style="font-size:12px;font-weight:600;color:var(--text3);margin-bottom:.2rem">Enrollment</div>';
-    h+=row('Status','Enrolled');
-    if(s.enrolledAt) h+=row('Processed', _fmtFamilyTs(s.enrolledAt));
-    if(s.day||s.time) h+=row('Lesson',[s.day,s.time,s.teacher].filter(Boolean).join(' \u00b7 '));
-    // Build rule carried from the 1.36 spec: never show a wrong number to a
-    // parent — if the price is missing, show nothing rather than "$0".
-    var _mp=parseFloat(s.monthlyPrice);
-    if(_mp>0) h+=row('Monthly tuition','$'+Math.round(_mp)+'/mo');
-    if(s.startDate) h+=row('Start date', _fmtFamilyDate(s.startDate));
-  }
-
-  if(a){
-    h+='<div style="font-size:12px;font-weight:600;color:var(--text3);margin:'+(enrolled?'.6rem 0 .2rem':'0 0 .2rem')+'">You submitted</div>';
-    h+=row('Instrument',a.instrument);
-    h+=row('Instrument notes',a.instrumentNote);
-    h+=row('Lesson length',_klDurLabel(a.duration));
-    h+=row('Duration notes',a.durationNote);
-    h+=row('Location',_klLocLabel(a.location));
-    h+=row('Location notes',a.locationNote);
-    h+=row('Address',[a.street,a.apt,a.city,a.state,a.zip].filter(Boolean).join(' '));
-    h+=row('Teacher preference',a.teacherPref);
-    var slotStr=(a.slots||[]).map(function(x){
-      return x.day+(x.start?' '+x.start:'')+(x.end?'\u2013'+x.end:'')+(x.pref?' ('+x.pref+')':'');
-    }).join(' \u00b7 ');
-    h+=row('Availability',slotStr);
-    h+=row('Notes',a.notes);
-  }
+  h+='<div style="font-size:12px;font-weight:600;color:var(--text3);margin:0 0 .2rem">You submitted</div>';
+  h+=row('Instrument',a.instrument);
+  h+=row('Instrument notes',a.instrumentNote);
+  h+=row('Lesson length',_klDurLabel(a.duration));
+  h+=row('Duration notes',a.durationNote);
+  h+=row('Location',_klLocLabel(a.location));
+  h+=row('Location notes',a.locationNote);
+  h+=row('Address',[a.street,a.apt,a.city,a.state,a.zip].filter(Boolean).join(' '));
+  h+=row('Teacher preference',a.teacherPref);
+  var slotStr=(a.slots||[]).map(function(x){
+    return x.day+(x.start?' '+x.start:'')+(x.end?'\u2013'+x.end:'')+(x.pref?' ('+x.pref+')':'');
+  }).join(' \u00b7 ');
+  h+=row('Availability',slotStr);
+  h+=row('Notes',a.notes);
   h+='</div>';
   return h;
 }
@@ -3560,14 +3552,19 @@ function _rHomeChildActionCard(s){
       // already-enrolled child (who always has tcAcceptedAt set, from when
       // they accepted) fell into the branch above and showed "What Happens
       // Next" invoice/payment messaging plus a "Review Proposal and
-      // Policies" button pointing at a proposal that's done and gone. The
-      // billing link is still useful once enrolled, so only that survives.
-      h+='<div style="margin-top:.6rem"><a class="btn btn-p btn-sm" href="'+publicCfg.schedulingBillingUrl+'" target="_blank">Scheduling / Billing Portal</a>'+
-        '<p style="font-size:12px;color:var(--text3);margin-top:.3rem">Check your schedule, cancel a lesson, review and update billing &amp; payment details.</p></div>';
+      // Policies" button pointing at a proposal that's done and gone.
+      // The Scheduling/Billing button + description that used to sit here
+      // was removed 26 Aug (AC: "remove the button and text description
+      // from the student cards") -- the same link is still reachable from
+      // Keylab Support ("Check your schedule or cancel a lesson" /
+      // "Billing info & payment history"), so nothing is lost, only
+      // decluttered off the card itself.
       h+=_rHomeEnrDetailsToggle(s);
     }
-    // Status/processed date/amount for an enrolled child (BACKLOG 1.104) —
-    // this branch never had it; only the other one did.
+    // "You submitted" availability, if any -- still relevant for
+    // Enrollment Change / accepted-not-enrolled. For an Enrolled student
+    // this now renders nothing (the "Enrollment" facts it used to add here
+    // were removed 26 Aug -- see _rHomeChildDetail()'s own comment).
     h+=_rHomeChildDetail(s);
     h+='</div>';
   } else {

@@ -2997,6 +2997,16 @@ function _klEnrolled(){
   return students.filter(function(s){ return s.phase==='Enrolled'||s.phase==='Enrollment Change'; });
 }
 
+// The subset of _klEnrolled() that still needs Support's "Your enrollment
+// details" / "Read the studio policies" — a fully Enrolled child now gets
+// the same record inline on their own Home card (BACKLOG, 26 Aug), so
+// showing it again in Support would be the exact duplication AC flagged.
+// Enrollment Change students have no card-level equivalent yet, so they
+// keep the Support path unchanged.
+function _klEnrollmentChangeOnly(){
+  return _klEnrolled().filter(function(s){ return s.phase==='Enrollment Change'; });
+}
+
 // ── Schedule block (BACKLOG 1.50 + 1.47) ────────────────────────────────
 // Copy in this block was written by Claude under AC's 19 Aug delegation
 // ("You can write the copy"), not by AC. Flagged so a later session doesn't
@@ -3393,32 +3403,46 @@ function rHomeContactDetails(){
 // The price box is reused from the Enrollment tab rather than rewritten, with
 // the first-payment note suppressed — that note is guidance for someone about
 // to pay, and this is a record of something already agreed.
+// Per-student enrollment facts (acceptance banner, day/time/teacher/price) \u2014
+// what a family agreed to, in one reusable block. Shared by Support's
+// per-child list below (now Enrollment Change students only) and each
+// Enrolled child's own "View enrollment details and policies" toggle on
+// Home (BACKLOG, 26 Aug \u2014 AC: Support's copy was three clicks deep and
+// didn't say which child it was about).
+function _klEnrollmentFactsHtml(s){
+  var h='';
+  if(s.tcAcceptedAt||s.tcAcceptedName){
+    h+='<div class="msg ms">\u2713 Proposal and policies accepted'+
+      (s.tcAcceptedName?' by '+esc(s.tcAcceptedName):'')+
+      (s.tcAcceptedAt?' on '+esc(_fmtFamilyTs(s.tcAcceptedAt))+' at '+esc(_fmtFamilyTime(s.tcAcceptedAt)):'')+'.</div>';
+  }
+  var locMap={studio:'at Keylab','in-home':'In-home',virtual:'Virtual'};
+  var rows=[
+    ['Instrument', s.instrument],
+    ['Teacher', s.teacher],
+    ['Lesson', [s.day, s.time].filter(Boolean).join(', ')],
+    ['Length', _effDur(s.durationBase,s.durationExtra)?_effDur(s.durationBase,s.durationExtra)+' minutes':''],
+    ['Location', locMap[s.lessonLocation]||s.lessonLocation],
+    ['Start date', s.startDate?_fmtFamilyDate(s.startDate):'']
+  ].filter(function(r){ return r[1]; });
+  rows.forEach(function(r){
+    h+='<div class="kl-row" style="padding:.3rem 0"><div class="kl-sub">'+esc(r[0])+'</div>'+
+      '<div class="kl-when">'+esc(r[1])+'</div></div>';
+  });
+  // _fmtPriceBox always shows the prorated-first-month box alongside the
+  // standing monthly price when s.isProrated is set \u2014 never one number
+  // alone for a family who paid a prorated first month (AC, 26 Aug).
+  h+=_fmtPriceBox(s,false);
+  return h;
+}
+
 function rHomeEnrollmentRecord(){
-  var kids=_klEnrolled();
+  var kids=_klEnrollmentChangeOnly();
   if(!kids.length) return '';
   return kids.map(function(s){
     var first=s.studentName?s.studentName.trim().split(' ')[0]:'';
     var h=kids.length>1?'<div class="kl-clabel" style="margin-top:.6rem">'+esc(first)+'</div>':'';
-    if(s.tcAcceptedAt||s.tcAcceptedName){
-      h+='<div class="msg ms">\u2713 Proposal and policies accepted'+
-        (s.tcAcceptedName?' by '+esc(s.tcAcceptedName):'')+
-        (s.tcAcceptedAt?' on '+esc(_fmtFamilyTs(s.tcAcceptedAt))+' at '+esc(_fmtFamilyTime(s.tcAcceptedAt)):'')+'.</div>';
-    }
-    var locMap={studio:'at Keylab','in-home':'In-home',virtual:'Virtual'};
-    var rows=[
-      ['Instrument', s.instrument],
-      ['Teacher', s.teacher],
-      ['Lesson', [s.day, s.time].filter(Boolean).join(', ')],
-      ['Length', _effDur(s.durationBase,s.durationExtra)?_effDur(s.durationBase,s.durationExtra)+' minutes':''],
-      ['Location', locMap[s.lessonLocation]||s.lessonLocation],
-      ['Start date', s.startDate?_fmtFamilyDate(s.startDate):'']
-    ].filter(function(r){ return r[1]; });
-    rows.forEach(function(r){
-      h+='<div class="kl-row" style="padding:.3rem 0"><div class="kl-sub">'+esc(r[0])+'</div>'+
-        '<div class="kl-when">'+esc(r[1])+'</div></div>';
-    });
-    h+=_fmtPriceBox(s,false);
-    return h;
+    return h+_klEnrollmentFactsHtml(s);
   }).join('');
 }
 
@@ -3427,7 +3451,7 @@ function rHomeEnrollmentRecord(){
 // two of them (BACKLOG 1.54). Falls back to the current policy text for a
 // student with no snapshot, which is rPolicyCollapsible()'s own behaviour.
 function rHomePolicyRecords(){
-  var kids=_klEnrolled();
+  var kids=_klEnrollmentChangeOnly();
   if(!kids.length) return rPolicyText(false);
   return kids.map(function(s){
     var first=s.studentName?s.studentName.trim().split(' ')[0]:'';
@@ -3457,6 +3481,21 @@ function openAdminThreadFromSupport(){
 // separate copy rather than a shared helper because the tabbed page also
 // interleaves self-release handling (_srShownFor) into the same loop, which
 // doesn't apply here (BACKLOG 1.63 Step 2).
+// Per-child "View enrollment details and policies" toggle on the Enrolled
+// Home card (raised by AC, 26 Aug — Support's copy of this record was three
+// clicks deep, under a generic accordion, and never said which child it was
+// about). Uses the details/ontoggle pattern (BACKLOG 1.57), not
+// togglePolicy()'s render()-based one, because this card lives on Home and
+// has to survive the 5s message poll without snapping shut.
+var _homeEnrOpen = {};
+function _rHomeEnrDetailsToggle(s){
+  var open=!!_homeEnrOpen[s.studentId];
+  var body=open?(_klEnrollmentFactsHtml(s)+_klPolicySnapshotHtml(s, s.lessonLocation==='in-home')):'';
+  return '<details class="kl-acc" style="margin-top:.6rem"'+(open?' open':'')+
+    ' ontoggle="_homeEnrOpen[&apos;'+esc(s.studentId)+'&apos;]=this.open">'+
+    '<summary>View enrollment details and policies</summary>'+body+'</details>';
+}
+
 function _rHomeChildActionCard(s){
   var avOpen=isTruthy(publicCfg.availabilityOpen);
   var ph=s.phase||'';
@@ -3511,6 +3550,7 @@ function _rHomeChildActionCard(s){
       // billing link is still useful once enrolled, so only that survives.
       h+='<div style="margin-top:.6rem"><a class="btn btn-p btn-sm" href="'+publicCfg.schedulingBillingUrl+'" target="_blank">Scheduling / Billing Portal</a>'+
         '<p style="font-size:12px;color:var(--text3);margin-top:.3rem">Check your schedule, cancel a lesson, review and update billing &amp; payment details.</p></div>';
+      h+=_rHomeEnrDetailsToggle(s);
     }
     // Status/processed date/amount for an enrolled child (BACKLOG 1.104) —
     // this branch never had it; only the other one did.
@@ -3613,8 +3653,12 @@ function rHomeOnePage(){
     // already built and that this page had been bypassing.
     _klAcc('childDetails','Your child\u2019s details', rHomeChildDetails())+
     _klAcc('contactDetails','Your contact details', rHomeContactDetails())+
-    _klAcc('enrollment','Your enrollment details',
-      '<p>What you accepted, and when.</p>'+rHomeEnrollmentRecord())+
+    // Enrolled students no longer feed this \u2014 they get the same record
+    // inline on their own Home card (BACKLOG, 26 Aug). Skipped outright
+    // rather than left as an empty accordion item when nobody in the
+    // family is in Enrollment Change (the common case: one settled child).
+    (_klEnrollmentChangeOnly().length?_klAcc('enrollment','Your enrollment details',
+      '<p>What you accepted, and when.</p>'+rHomeEnrollmentRecord()):'')+
     // Acceptance banner (BACKLOG 1.59) also shows here, not just under "Your
     // enrollment details" \u2014 same element, rendered twice, since it belongs
     // beside the policy text it refers to. Built into rHomePolicyRecords().
@@ -5482,22 +5526,25 @@ function togglePolicy(stuId){
   else{_policyOpen=!_policyOpen;}
   render();
 }
+// The immutable per-student record (BACKLOG 1.54) — the exact policy text a
+// student's family accepted, if any, else the current generic text. Shared
+// by rPolicyCollapsible() below and each Enrolled child's Home toggle.
+function _klPolicySnapshotHtml(stu, isInHome){
+  var snapshot=stu&&stu.tcPolicySnapshot?stu.tcPolicySnapshot:'';
+  if(!snapshot) return rPolicyText(isInHome);
+  return '<div class="tc-box"><p class="tc-ver" style="margin-bottom:.5rem">Policies as accepted on '+esc(_fmtFamilyTs(stu.tcAcceptedAt||''))+'</p>'+
+    '<button class="btn btn-s btn-sm" style="margin-bottom:.6rem" onclick="_downloadPolicyPdf(&apos;'+esc(stu.studentId)+'&apos;)">Download PDF</button>'+
+    '<div style="font-size:11px;color:var(--text3);line-height:1.6">'+snapshot+'</div></div>';
+}
+
 function rPolicyCollapsible(forceOpen, isInHome, stuId){
   var open=forceOpen||(stuId?_tcPolicyOpen[stuId]:_policyOpen);
   var toggleArg=stuId?'&apos;'+stuId+'&apos;':'';
   var h='<button class="btn btn-p btn-sm" onclick="togglePolicy('+toggleArg+')" style="margin-bottom:.75rem">'+
     (open?'Hide policies':'Click to view policies')+'</button>';
   if(open){
-    // If this student has an accepted policy snapshot, show it (immutable legal record)
     var stu=stuId?students.filter(function(s){return s.studentId===stuId;})[0]:null;
-    var snapshot=stu&&stu.tcPolicySnapshot?stu.tcPolicySnapshot:'';
-    if(snapshot){
-      h+='<div class="tc-box"><p class="tc-ver" style="margin-bottom:.5rem">Policies as accepted on '+esc(_fmtFamilyTs(stu.tcAcceptedAt||''))+'</p>'+
-        '<button class="btn btn-s btn-sm" style="margin-bottom:.6rem" onclick="_downloadPolicyPdf(&apos;'+esc(stuId)+'&apos;)">Download PDF</button>'+
-        '<div style="font-size:11px;color:var(--text3);line-height:1.6">'+snapshot+'</div></div>';
-    } else {
-      h+=rPolicyText(isInHome);
-    }
+    h+=_klPolicySnapshotHtml(stu, isInHome);
   }
   return h;
 }

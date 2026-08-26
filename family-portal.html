@@ -3401,22 +3401,31 @@ function rHomeContactDetails(){
 // Enrolled child's own "View enrollment details and policies" toggle on
 // Home (BACKLOG, 26 Aug \u2014 AC: Support's copy was three clicks deep and
 // didn't say which child it was about).
+// The acceptance record's acknowledgment, mirrored as the same checked,
+// disabled checkbox the family actually saw and ticked at accept time
+// (.agree-box/.agree-lbl, the exact styling doSubmitTC()'s live checkbox
+// uses when tc.checked is true) rather than a paraphrased text block. AC,
+// 26 Aug: "mirror the exact state, with the checked box" -- and confirmed
+// this is worth the small extra markup, not overkill, since it matches
+// what most consent/proposal tools already do and the CSS already exists
+// for the live checkbox this is a frozen copy of. Shared by
+// _klEnrollmentFactsHtml() (the Home toggle) and rEnrollment() (the
+// Enrollment tab) so the two can't drift into showing this two ways.
+function _klAckCheckboxHtml(s){
+  var _ackShown=s.tcAcknowledgment||_tcAckText(isTruthy(s.needsManualInvoice));
+  var _ackId='tc-ack-view-'+esc(s.studentId);
+  return '<div class="agree-box" style="margin-top:.5rem;border-color:var(--green);background:rgba(255,255,255,.5)">'+
+    '<input type="checkbox" id="'+_ackId+'" checked disabled>'+
+    '<label class="agree-lbl" for="'+_ackId+'">'+esc(_ackShown)+'</label></div>';
+}
+
 function _klEnrollmentFactsHtml(s){
   var h='';
   if(s.tcAcceptedAt||s.tcAcceptedName){
     h+='<div class="msg ms">\u2713 Proposal and policies accepted'+
       (s.tcAcceptedName?' by '+esc(s.tcAcceptedName):'')+
       (s.tcAcceptedAt?' on '+esc(_fmtFamilyTs(s.tcAcceptedAt))+' at '+esc(_fmtFamilyTime(s.tcAcceptedAt)):'')+'.</div>';
-    // "What you agreed to" (BACKLOG 1.109) -- the acknowledgment itself,
-    // not just who/when. Was only ever wired into rEnrollment(); added here
-    // 26 Aug so it also reaches the Home toggle (AC: "this text also needs
-    // to appear for enrolled students"). Same snapshot-preferred, fallback
-    // logic as rEnrollment()'s copy -- never re-derive from the live
-    // wording when a snapshot exists.
-    var _ackShown=s.tcAcknowledgment||_tcAckText(isTruthy(s.needsManualInvoice));
-    h+='<div style="font-size:12px;color:var(--text3);margin-top:.5rem;font-weight:600">What you agreed to</div>'+
-      '<div style="font-size:12px;color:var(--text2);padding:.5rem .7rem;border-left:3px solid var(--acc);background:rgba(0,0,0,.03);margin-top:.25rem">'+
-      esc(_ackShown)+'</div>';
+    h+=_klAckCheckboxHtml(s);
   }
   var locMap={studio:'at Keylab','in-home':'In-home',virtual:'Virtual'};
   var rows=[
@@ -5393,13 +5402,11 @@ function rEnrollment(scopeStudentId){
           h+='\u2713 Proposal and policies accepted'+(s.tcAcceptedName?' by '+esc(s.tcAcceptedName):'')+
             (s.tcAcceptedAt?' on '+esc(_fmtFamilyTs(s.tcAcceptedAt))+' at '+esc(_fmtFamilyTime(s.tcAcceptedAt)):'')+'.</div>';
           // What they actually ticked (BACKLOG 1.109) — the accepted state
-          // used to show who and when but never WHAT. Prefers the stored
-          // snapshot; falls back to the live wording only for acceptances
-          // made before the field existed.
-          var _ackShown=s.tcAcknowledgment||_tcAckText(isTruthy(s.needsManualInvoice));
-          h+='<div style="font-size:12px;color:var(--text3);margin-top:.5rem;font-weight:600">What you agreed to</div>'+
-            '<div style="font-size:12px;color:var(--text2);padding:.5rem .7rem;border-left:3px solid var(--acc);background:rgba(0,0,0,.03);margin-top:.25rem">'+
-            esc(_ackShown)+'</div>';
+          // used to show who and when but never WHAT. Mirrored as the same
+          // checked, disabled checkbox the family actually saw (AC, 26 Aug),
+          // via the shared _klAckCheckboxHtml() so this and the Home
+          // toggle can't drift into showing it two different ways.
+          h+=_klAckCheckboxHtml(s);
         }
         // 2. What Happens Next — elevated card, only pre-enrollment; disappears once admin marks Enrolled.
         if(isAccepted&&!isFullyEnrolled){

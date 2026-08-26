@@ -3418,6 +3418,10 @@ function _klEnrollmentFactsHtml(s){
   }
   var locMap={studio:'at Keylab','in-home':'In-home',virtual:'Virtual'};
   var rows=[
+    // Repeated here even though the card above already names the child --
+    // a busy parent scanning past two cards shouldn't lose track of whose
+    // details are open (AC, 26 Aug).
+    ['Student', s.studentName],
     ['Instrument', s.instrument],
     ['Teacher', s.teacher],
     ['Lesson', [s.day, s.time].filter(Boolean).join(', ')],
@@ -3481,19 +3485,23 @@ function openAdminThreadFromSupport(){
 // separate copy rather than a shared helper because the tabbed page also
 // interleaves self-release handling (_srShownFor) into the same loop, which
 // doesn't apply here (BACKLOG 1.63 Step 2).
-// Per-child "View enrollment details and policies" toggle on the Enrolled
-// Home card (raised by AC, 26 Aug — Support's copy of this record was three
-// clicks deep, under a generic accordion, and never said which child it was
-// about). Uses the details/ontoggle pattern (BACKLOG 1.57), not
-// togglePolicy()'s render()-based one, because this card lives on Home and
-// has to survive the 5s message poll without snapping shut.
+// Per-child "Review [name]'s enrollment details and studio policies" toggle
+// on the Enrolled Home card (raised by AC, 26 Aug — Support's copy of this
+// record was three clicks deep, under a generic accordion, and never said
+// which child it was about). Uses the details/ontoggle pattern (BACKLOG
+// 1.57), not togglePolicy()'s render()-based one, because this card lives
+// on Home and has to survive the 5s message poll without snapping shut.
 var _homeEnrOpen = {};
 function _rHomeEnrDetailsToggle(s){
   var open=!!_homeEnrOpen[s.studentId];
+  var first=s.studentName?s.studentName.trim().split(' ')[0]:'';
   var body=open?(_klEnrollmentFactsHtml(s)+_klPolicySnapshotHtml(s, s.lessonLocation==='in-home')):'';
   return '<details class="kl-acc" style="margin-top:.6rem"'+(open?' open':'')+
     ' ontoggle="_homeEnrOpen[&apos;'+esc(s.studentId)+'&apos;]=this.open">'+
-    '<summary>View enrollment details and policies</summary>'+body+'</details>';
+    // Styled as a link (var(--acc) + underline, the same convention every
+    // other in-text link in this file uses) rather than the plain dark
+    // accordion label -- AC, 26 Aug: make it read as clickable.
+    '<summary style="color:var(--acc);text-decoration:underline">Review '+esc(first)+'\u2019s enrollment details and studio policies</summary>'+body+'</details>';
 }
 
 function _rHomeChildActionCard(s){

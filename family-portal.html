@@ -3407,6 +3407,16 @@ function _klEnrollmentFactsHtml(s){
     h+='<div class="msg ms">\u2713 Proposal and policies accepted'+
       (s.tcAcceptedName?' by '+esc(s.tcAcceptedName):'')+
       (s.tcAcceptedAt?' on '+esc(_fmtFamilyTs(s.tcAcceptedAt))+' at '+esc(_fmtFamilyTime(s.tcAcceptedAt)):'')+'.</div>';
+    // "What you agreed to" (BACKLOG 1.109) -- the acknowledgment itself,
+    // not just who/when. Was only ever wired into rEnrollment(); added here
+    // 26 Aug so it also reaches the Home toggle (AC: "this text also needs
+    // to appear for enrolled students"). Same snapshot-preferred, fallback
+    // logic as rEnrollment()'s copy -- never re-derive from the live
+    // wording when a snapshot exists.
+    var _ackShown=s.tcAcknowledgment||_tcAckText(isTruthy(s.needsManualInvoice));
+    h+='<div style="font-size:12px;color:var(--text3);margin-top:.5rem;font-weight:600">What you agreed to</div>'+
+      '<div style="font-size:12px;color:var(--text2);padding:.5rem .7rem;border-left:3px solid var(--acc);background:rgba(0,0,0,.03);margin-top:.25rem">'+
+      esc(_ackShown)+'</div>';
   }
   var locMap={studio:'at Keylab','in-home':'In-home',virtual:'Virtual'};
   var rows=[
@@ -3541,7 +3551,18 @@ function _rHomeChildActionCard(s){
             '<div style="margin-top:.75rem"><a href="'+publicCfg.schedulingBillingUrl+'" target="_blank" class="btn btn-p btn-sm">Pay Invoice</a></div>')
           :('<p style="font-size:14px;color:var(--bt);margin:0">I\u2019ll schedule '+esc(firstName)+'&rsquo;s lessons for the school year and process their enrollment on the admin side using the payment method on file. Your card will be charged for the first payment once enrollment is processed, and automatic flat rate monthly payments will be processed on the 1st of each month from the 2nd month of '+esc(firstName)+'&rsquo;s enrollment. Check your email for confirmation and details and let us know if you need any help!</p>'))+
         '</div>';
-      h+=_rHomeActionButtons('Review Proposal and Policies', s.studentId);
+      // Was _rHomeActionButtons('Review Proposal and Policies', ...), which
+      // navigated to a whole separate Enrollment-tab page (gotoEnrollment)
+      // just to show a read-only record of an already-accepted proposal --
+      // the same content the Enrolled toggle shows. AC, 26 Aug: "review
+      // policies should behave exactly like the enrolled student and
+      // doesn't require a separate enrollment tab." The actual accept
+      // action (checkbox + submit) still lives on that page for a proposal
+      // that HASN'T been accepted yet -- untouched below, in the
+      // pre-acceptance non-dashboard branch that still calls
+      // gotoEnrollment(). This state has already been accepted; there is
+      // nothing left to do here but review, which the toggle covers.
+      h+=_rHomeEnrDetailsToggle(s);
     } else if(!isEnrolled){
       h+=_rHomeActionButtons('Review Proposal and Policies', s.studentId);
     } else {

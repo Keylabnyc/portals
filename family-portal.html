@@ -3238,7 +3238,12 @@ function rHomeSchedule(){
 //
 // Copy in this block was written by Claude under AC's 19 Aug delegation, not
 // by AC.
-var EDIT={stu:{id:'', vals:null, busy:false, err:''}, con:{vals:null, busy:false, err:''}};
+// EDIT.stu (editing a child's own name/DOB/school) was removed 26 Aug along
+// with "Your child's details" -- AC's call, not necessary. The server-side
+// familySaveStudentDetails action is untouched (unused but wired, same
+// class as doSubmitHolds() elsewhere in this project — not a regression to
+// leave it, just worth knowing if it's ever reused).
+var EDIT={con:{vals:null, busy:false, err:''}};
 
 // Inline "Saved!" flash (BACKLOG 1.58) — showMsg()'s green banner renders at
 // the very top of the page, well above the Support section a family is
@@ -3249,43 +3254,6 @@ var _klSavedFlash={};
 function _klFlashSaved(key){
   _klSavedFlash[key]=true;
   setTimeout(function(){ delete _klSavedFlash[key]; render(); }, 4000);
-}
-
-function startEditStudent(studentId){
-  var s=students.filter(function(x){ return x.studentId===studentId; })[0];
-  if(!s) return;
-  EDIT.stu={id:studentId, busy:false, err:'', vals:{
-    studentName:s.studentName||'', birthdate:s.birthdate||'', school:s.school||''
-  }};
-  render();
-}
-function cancelEditStudent(){ EDIT.stu={id:'', vals:null, busy:false, err:''}; render(); }
-
-function saveEditStudent(){
-  var e=EDIT.stu;
-  if(e.busy) return;
-  if(!(e.vals.studentName||'').trim()){ e.err='Enter your child’s name.'; render(); return; }
-  e.busy=true; e.err=''; render();
-  fapi('familySaveStudentDetails', {
-    studentId:e.id, studentName:e.vals.studentName, birthdate:e.vals.birthdate,
-    school:e.vals.school, senderParentSlot:MY_PARENT_SLOT
-  }, function(err,r){
-    e.busy=false;
-    if(err||!r||!r.ok){ e.err=(r&&r.error)||'Could not save. Please try again.'; render(); return; }
-    // Patch the local record so the page reflects the change without a full
-    // reload — same reasoning as the optimistic message send.
-    var s=students.filter(function(x){ return x.studentId===e.id; })[0];
-    if(s){
-      s.studentName=e.vals.studentName.trim();
-      s.birthdate=e.vals.birthdate;
-      s.school=e.vals.school;
-    }
-    var first=(e.vals.studentName||'').trim().split(' ')[0];
-    var savedId=e.id;
-    EDIT.stu={id:'', vals:null, busy:false, err:''};
-    _klFlashSaved('stu-'+savedId);
-    showMsg(first+'’s details have been updated.','s');
-  });
 }
 
 function startEditContact(){
@@ -3322,38 +3290,6 @@ function _editField(label, id, val, onin, type){
 function _editRow(label, val){
   return '<div class="kl-row" style="padding:.3rem 0"><div class="kl-sub">'+esc(label)+'</div>'+
     '<div class="kl-when">'+esc(val||'—')+'</div></div>';
-}
-
-function rHomeChildDetails(){
-  var kids=_klEnrolled();
-  if(!kids.length) return '';
-  return kids.map(function(s){
-    var editing=EDIT.stu.id===s.studentId;
-    var first=s.studentName?s.studentName.trim().split(' ')[0]:'';
-    var h=kids.length>1?'<div class="kl-clabel" style="margin-top:.6rem">'+esc(first)+'</div>':'';
-    if(!editing){
-      if(_klSavedFlash['stu-'+s.studentId]) h+='<div class="msg ms">Saved!</div>';
-      h+=_editRow('Child’s name', s.studentName);
-      h+=_editRow('Date of birth', s.birthdate?_fmtFamilyDate(s.birthdate):'');
-      h+=_editRow('School', s.school);
-      h+=_editRow('Instrument', s.instrument);
-      h+='<p class="hint">To change your child’s instrument, message admin.</p>';
-      h+='<button class="btn btn-s btn-sm" style="margin-top:.5rem" onclick="startEditStudent(\''+esc(s.studentId)+'\')">Edit</button>';
-      return h;
-    }
-    if(EDIT.stu.err) h+='<div class="msg me">'+esc(EDIT.stu.err)+'</div>';
-    h+=_editField('Child’s name','ed-stu-name',EDIT.stu.vals.studentName,'EDIT.stu.vals.studentName=this.value');
-    h+=_editField('Date of birth','ed-stu-dob',EDIT.stu.vals.birthdate,'EDIT.stu.vals.birthdate=this.value','date');
-    h+=_editField('School','ed-stu-school',EDIT.stu.vals.school,'EDIT.stu.vals.school=this.value');
-    h+=_editRow('Instrument', s.instrument);
-    h+='<p class="hint">To change your child’s instrument, message admin.</p>';
-    h+='<div style="display:flex;gap:8px;margin-top:.6rem">'+
-      (EDIT.stu.busy
-        ?'<button class="btn btn-p btn-sm" disabled><span class="spin">↻</span></button>'
-        :'<button class="btn btn-p btn-sm" onclick="saveEditStudent()">Save changes</button>')+
-      '<button class="btn btn-s btn-sm" onclick="cancelEditStudent()">Cancel</button></div>';
-    return h;
-  }).join('');
 }
 
 function rHomeContactDetails(){
@@ -3461,35 +3397,14 @@ function rHomeEnrollmentRecord(){
   }).join('');
 }
 
-// The immutable record of what each child's family accepted — per student,
-// because tcPolicySnapshot is per student and a family with two children has
-// two of them (BACKLOG 1.54). Falls back to the current policy text for a
-// student with no snapshot, which is rPolicyCollapsible()'s own behaviour.
-function rHomePolicyRecords(){
-  var kids=_klEnrollmentChangeOnly();
-  if(!kids.length) return rPolicyText(false);
-  return kids.map(function(s){
-    var first=s.studentName?s.studentName.trim().split(' ')[0]:'';
-    var head=kids.length>1?'<div class="kl-clabel" style="margin-top:.6rem">'+esc(first)+'</div>':'';
-    // Same acceptance banner rHomeEnrollmentRecord() shows — BACKLOG 1.59,
-    // same element rendered twice since it belongs beside the policy text
-    // it refers to. No new data, just duplicated here.
-    if(s.tcAcceptedAt||s.tcAcceptedName){
-      head+='<div class="msg ms">\u2713 Proposal and policies accepted'+
-        (s.tcAcceptedName?' by '+esc(s.tcAcceptedName):'')+
-        (s.tcAcceptedAt?' on '+esc(_fmtFamilyTs(s.tcAcceptedAt))+' at '+esc(_fmtFamilyTime(s.tcAcceptedAt)):'')+'.</div>';
-    }
-    return head+rPolicyCollapsible(false, s.lessonLocation==='in-home', s.studentId);
-  }).join('');
-}
-
-// Opens the admin conversation from Keylab Support — the same thread the Admin
-// row in Messages opens, not a separate form (BACKLOG 1.53). toggleHomeThread
-// already scrolls the thread into view, which matters here because Support sits
-// well below the Messages block.
-function openAdminThreadFromSupport(){
-  toggleHomeThread('admin','Admin');
-}
+// rHomePolicyRecords() and openAdminThreadFromSupport() were removed 26 Aug
+// along with "Read the studio policies" and "Contact admin" (AC's call).
+// Known gap left open deliberately: an Enrollment Change student had no
+// other place on this page to read their accepted policy record --
+// Enrolled and accepted-Confirmed-to-Enroll students get it from
+// _rHomeEnrDetailsToggle(), which Enrollment Change doesn't call into.
+// Flagged in BACKLOG.md; narrow enough (a settled family whose enrollment
+// is being changed) that it wasn't raised back to AC before removing.
 
 // Per-child card for a student who isn't Enrolled yet — same content and
 // CTAs as the equivalent branch in the old tabbed rHome() below, kept as a
@@ -3690,31 +3605,19 @@ function rHomeOnePage(){
     _klAcc('billing','Billing info &amp; payment history',
       '<p>View all payments, download invoices, and update your payment details.</p>'+
       '<a class="btn btn-p btn-sm" href="'+sb+'" target="_blank">Scheduling &amp; Billing</a>')+
-    // Policies render inline rather than sending the family to the Enrollment
-    // tab, which is the point of the rebuild. Since 1.54 this is the per-student
-    // rPolicyCollapsible(), NOT the generic rPolicyText(): it shows the exact
-    // policy text the family accepted (tcPolicySnapshot), headed with the date
-    // they accepted it, with the PDF download \u2014 the immutable record that was
-    // already built and that this page had been bypassing.
-    _klAcc('childDetails','Your child\u2019s details', rHomeChildDetails())+
-    _klAcc('contactDetails','Your contact details', rHomeContactDetails())+
+    // "Your child's details" (editable name/DOB/school, BACKLOG 1.56),
+    // "Read the studio policies" and "Contact admin" all removed 26 Aug
+    // (AC's call \u2014 "not necessary"; admin is already reachable from the
+    // Messages block's contact list above, so nothing there was lost).
+    // "Your contact details" relabeled to "Update your contact info" per
+    // AC's exact wording, same session.
+    _klAcc('contactDetails','Update your contact info', rHomeContactDetails())+
     // Enrolled students no longer feed this \u2014 they get the same record
     // inline on their own Home card (BACKLOG, 26 Aug). Skipped outright
     // rather than left as an empty accordion item when nobody in the
     // family is in Enrollment Change (the common case: one settled child).
     (_klEnrollmentChangeOnly().length?_klAcc('enrollment','Your enrollment details',
       '<p>What you accepted, and when.</p>'+rHomeEnrollmentRecord()):'')+
-    // Acceptance banner (BACKLOG 1.59) also shows here, not just under "Your
-    // enrollment details" \u2014 same element, rendered twice, since it belongs
-    // beside the policy text it refers to. Built into rHomePolicyRecords().
-    _klAcc('policies','Read the studio policies', rHomePolicyRecords())+
-    // Contact Admin, opening the same conversation as the Admin row in the
-    // Messages block above (BACKLOG 1.53). Deliberately a second entry point
-    // to messaging: Support is where someone goes when they don't know who to
-    // ask, and the answer to most of those is admin.
-    _klAcc('contactAdmin','Contact admin',
-      '<p>Questions about billing, scheduling or anything else administrative.</p>'+
-      '<button class="btn btn-p btn-sm" onclick="openAdminThreadFromSupport()">Message admin</button>')+
     '</div>';
 
   return h;

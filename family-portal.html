@@ -3502,23 +3502,27 @@ function openAdminThreadFromSupport(){
 // which child it was about). Uses the details/ontoggle pattern (BACKLOG
 // 1.57), not togglePolicy()'s render()-based one, because this card lives
 // on Home and has to survive the 5s message poll without snapping shut.
+// Switched from the <details>/<summary> link pattern to plain description
+// text + an explicit Show/Hide Details button (AC, 26 Aug: "turn this text
+// from a link into description text. Include a button saying 'Show
+// Details' and 'Hide Details' when expanded"). This is a render()-based
+// toggle, same shape as togglePolicy()/rPolicyCollapsible() elsewhere in
+// this file -- safe here (unlike the earlier <details> bug) because every
+// state change goes through an explicit render() call, so the body is
+// only ever built when it's actually needed, never silently absent from a
+// DOM that was never told to update.
 var _homeEnrOpen = {};
 function _rHomeEnrDetailsToggle(s){
   var open=!!_homeEnrOpen[s.studentId];
   var first=s.studentName?s.studentName.trim().split(' ')[0]:'';
-  // Body content is always in the markup, same as _klAcc() -- <details>
-  // hides it natively via the browser until opened. Building it only when
-  // `open` (as this first read) meant the very first click had nothing to
-  // reveal: ontoggle sets _homeEnrOpen but doesn't itself trigger a
-  // render(), so the content that should have appeared was never in the
-  // DOM to begin with. Found live, 26 Aug -- AC: "the link doesn't expand."
-  var body=_klEnrollmentFactsHtml(s)+_klPolicySnapshotHtml(s, s.lessonLocation==='in-home');
-  return '<details class="kl-acc" style="margin-top:.6rem"'+(open?' open':'')+
-    ' ontoggle="_homeEnrOpen[&apos;'+esc(s.studentId)+'&apos;]=this.open">'+
-    // Styled as a link (var(--acc) + underline, the same convention every
-    // other in-text link in this file uses) rather than the plain dark
-    // accordion label -- AC, 26 Aug: make it read as clickable.
-    '<summary style="color:var(--acc);text-decoration:underline">Review '+esc(first)+'\u2019s enrollment details and studio policies</summary>'+body+'</details>';
+  var h='<div style="margin-top:.6rem">';
+  h+='<p style="font-size:12px;color:var(--text3);margin-bottom:.4rem">Review '+esc(first)+'\u2019s enrollment details and studio policies.</p>';
+  h+='<button class="btn btn-p btn-sm" onclick="_homeEnrOpen[&apos;'+esc(s.studentId)+'&apos;]=!_homeEnrOpen[&apos;'+esc(s.studentId)+'&apos;];render()">'+(open?'Hide Details':'Show Details')+'</button>';
+  if(open){
+    h+=_klEnrollmentFactsHtml(s)+_klPolicySnapshotHtml(s, s.lessonLocation==='in-home');
+  }
+  h+='</div>';
+  return h;
 }
 
 function _rHomeChildActionCard(s){

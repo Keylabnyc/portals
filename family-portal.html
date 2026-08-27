@@ -2989,16 +2989,6 @@ function _klEnrolled(){
   return students.filter(function(s){ return s.phase==='Enrolled'||s.phase==='Enrollment Change'; });
 }
 
-// The subset of _klEnrolled() that still needs Support's "Your enrollment
-// details" / "Read the studio policies" — a fully Enrolled child now gets
-// the same record inline on their own Home card (BACKLOG, 26 Aug), so
-// showing it again in Support would be the exact duplication AC flagged.
-// Enrollment Change students have no card-level equivalent yet, so they
-// keep the Support path unchanged.
-function _klEnrollmentChangeOnly(){
-  return _klEnrolled().filter(function(s){ return s.phase==='Enrollment Change'; });
-}
-
 // ── Schedule block (BACKLOG 1.50 + 1.47) ────────────────────────────────
 // Copy in this block was written by Claude under AC's 19 Aug delegation
 // ("You can write the copy"), not by AC. Flagged so a later session doesn't
@@ -3387,24 +3377,13 @@ function _klEnrollmentFactsHtml(s){
   return h;
 }
 
-function rHomeEnrollmentRecord(){
-  var kids=_klEnrollmentChangeOnly();
-  if(!kids.length) return '';
-  return kids.map(function(s){
-    var first=s.studentName?s.studentName.trim().split(' ')[0]:'';
-    var h=kids.length>1?'<div class="kl-clabel" style="margin-top:.6rem">'+esc(first)+'</div>':'';
-    return h+_klEnrollmentFactsHtml(s);
-  }).join('');
-}
-
-// rHomePolicyRecords() and openAdminThreadFromSupport() were removed 26 Aug
-// along with "Read the studio policies" and "Contact admin" (AC's call).
-// Known gap left open deliberately: an Enrollment Change student had no
-// other place on this page to read their accepted policy record --
-// Enrolled and accepted-Confirmed-to-Enroll students get it from
-// _rHomeEnrDetailsToggle(), which Enrollment Change doesn't call into.
-// Flagged in BACKLOG.md; narrow enough (a settled family whose enrollment
-// is being changed) that it wasn't raised back to AC before removing.
+// rHomeEnrollmentRecord(), rHomePolicyRecords() and
+// openAdminThreadFromSupport() were all removed 26 Aug, along with "Your
+// enrollment details", "Read the studio policies" and "Contact admin"
+// (AC's call). All three phases that can reach the dashboard branch below
+// (Enrolled, accepted Confirmed-to-Enroll, Enrollment Change) now get
+// their record from _rHomeEnrDetailsToggle() on their own Home card
+// instead — nothing left in Keylab Support to duplicate or drift from it.
 
 // Per-child card for a student who isn't Enrolled yet — same content and
 // CTAs as the equivalent branch in the old tabbed rHome() below, kept as a
@@ -3426,15 +3405,53 @@ function rHomeEnrollmentRecord(){
 // state change goes through an explicit render() call, so the body is
 // only ever built when it's actually needed, never silently absent from a
 // DOM that was never told to update.
+// Enrollment Change's counterpart to _klEnrollmentFactsHtml(). While a
+// change proposal is pending, doGetProposal() (Code.js) overlays s.day/
+// s.time/s.teacher/s.monthlyPrice/etc. with the PENDING, not-yet-accepted
+// new terms \u2014 showing those as "what you agreed to" would tell a family
+// they'd agreed to something they haven't. s.currentEnrollment is a
+// separate, un-overlaid snapshot the server already builds for exactly
+// this reason ("snapshot the current active enrollment BEFORE overlaying
+// new proposal data" \u2014 Code.js). No acceptance banner/acknowledgment here:
+// tcAcceptedAt/tcAcceptedName are blanked server-side while a change is
+// pending, so the original acceptance's date/name genuinely isn't in the
+// payload to show \u2014 only the still-current tcPolicySnapshot is.
+function _klCurrentEnrollmentFactsHtml(s){
+  var ce=s.currentEnrollment||{};
+  var locMap={studio:'at Keylab','in-home':'In-home',virtual:'Virtual'};
+  var rows=[
+    ['Student', s.studentName],
+    ['Instrument', s.instrument],
+    ['Teacher', ce.teacher],
+    ['Lesson', [ce.day, ce.time].filter(Boolean).join(', ')],
+    ['Length', _effDur(ce.durationBase,ce.durationExtra)?_effDur(ce.durationBase,ce.durationExtra)+' minutes':''],
+    ['Location', locMap[ce.lessonLocation]||ce.lessonLocation],
+    ['Start date', ce.startDate?_fmtFamilyDate(ce.startDate):'']
+  ].filter(function(r){ return r[1]; });
+  var h='';
+  rows.forEach(function(r){
+    h+='<div class="kl-row" style="padding:.3rem 0"><div class="kl-sub">'+esc(r[0])+'</div>'+
+      '<div class="kl-when">'+esc(r[1])+'</div></div>';
+  });
+  h+=_fmtPriceBox({monthlyPrice:ce.monthlyPrice, lessonLocation:ce.lessonLocation}, false);
+  return h;
+}
+
 var _homeEnrOpen = {};
 function _rHomeEnrDetailsToggle(s){
   var open=!!_homeEnrOpen[s.studentId];
   var first=s.studentName?s.studentName.trim().split(' ')[0]:'';
+  // Enrollment Change reuses this same toggle rather than a second one
+  // (AC, 26 Aug: fixing the gap this left after "Read the studio policies"
+  // was removed from Support) -- same button, same one-click behavior,
+  // just sourcing facts from the un-overlaid currentEnrollment snapshot.
+  var isChange=!!s.currentEnrollment;
   var h='<div style="margin-top:.6rem">';
   h+='<p style="font-size:12px;color:var(--text3);margin-bottom:.4rem">Review '+esc(first)+'\u2019s enrollment details and studio policies.</p>';
   h+='<button class="btn btn-p btn-sm" onclick="_homeEnrOpen[&apos;'+esc(s.studentId)+'&apos;]=!_homeEnrOpen[&apos;'+esc(s.studentId)+'&apos;];render()">'+(open?'Hide Details':'Show Details')+'</button>';
   if(open){
-    h+=_klEnrollmentFactsHtml(s)+_klPolicySnapshotHtml(s, s.lessonLocation==='in-home');
+    h+=isChange?_klCurrentEnrollmentFactsHtml(s):_klEnrollmentFactsHtml(s);
+    h+=_klPolicySnapshotHtml(s, (isChange?s.currentEnrollment.lessonLocation:s.lessonLocation)==='in-home');
   }
   h+='</div>';
   return h;
@@ -3463,6 +3480,10 @@ function _rHomeChildActionCard(s){
     h+=_rChildStatusSummary(s, {inDetailBlock:true});
     if(ph==='Enrollment Change'){
       h+=_rHomeActionButtons('Review New Proposal', s.studentId);
+      // Closes the gap left when "Read the studio policies" was removed
+      // from Keylab Support 26 Aug — this was the only remaining phase
+      // with no page location to read what they'd already agreed to.
+      h+=_rHomeEnrDetailsToggle(s);
     } else if((s.tcAcceptedAt||s.tcAcceptedName)&&!isEnrolled){
       // The !isEnrolled guard is the actual fix (BACKLOG 1.104
       // follow-up) -- an enrolled child always has tcAcceptedAt set, from
@@ -3612,12 +3633,16 @@ function rHomeOnePage(){
     // "Your contact details" relabeled to "Update your contact info" per
     // AC's exact wording, same session.
     _klAcc('contactDetails','Update your contact info', rHomeContactDetails())+
-    // Enrolled students no longer feed this \u2014 they get the same record
-    // inline on their own Home card (BACKLOG, 26 Aug). Skipped outright
-    // rather than left as an empty accordion item when nobody in the
-    // family is in Enrollment Change (the common case: one settled child).
-    (_klEnrollmentChangeOnly().length?_klAcc('enrollment','Your enrollment details',
-      '<p>What you accepted, and when.</p>'+rHomeEnrollmentRecord()):'')+
+    // "Your enrollment details" removed 26 Aug -- Enrollment Change
+    // students now get the same record (and, unlike this old item, the
+    // accepted policy text too) from _rHomeEnrDetailsToggle() on their own
+    // Home card, same as Enrolled and accepted-Confirmed-to-Enroll
+    // students. This item was also quietly showing the wrong data by this
+    // point: doGetProposal() overlays a pending change's not-yet-accepted
+    // terms onto s.day/s.teacher/etc., so "What you accepted, and when"
+    // was describing terms nobody had accepted yet. currentEnrollment (the
+    // un-overlaid snapshot) fixes that on the card; removing the
+    // duplicate here means there's nothing left to drift.
     '</div>';
 
   return h;

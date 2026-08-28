@@ -76,6 +76,21 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 .cmp-rich:empty:before{content:attr(data-ph);color:var(--text5)}
 .cmp-rich ul,.cmp-rich ol{margin:.25rem 0;padding-left:1.3rem}
 .cmp-rich blockquote{margin:.25rem 0;padding-left:.75rem;border-left:2px solid var(--border2)}
+.cmp-rich a{color:var(--bt);text-decoration:underline;word-break:break-word}
+/* Toolbar state (28 Aug). :active only flashed while the mouse was down, which
+   told a teacher nothing about whether bold was currently ON. .on is driven by
+   _composerState() from the real selection. */
+.cmp-tb-btn.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+.cmp-tb-btn:focus-visible{outline:2px solid #1a4fc4;outline-offset:1px}
+.cmp-div{width:1px;height:18px;background:var(--border2);opacity:.7;margin:0 2px;flex:0 0 auto}
+/* Link row — replaces window.prompt(). Hidden until the Link button opens it. */
+.cmp-linkrow{display:none;gap:5px;align-items:center;flex-wrap:wrap}
+.cmp-linkrow.open{display:flex}
+.cmp-linkrow input{flex:1;min-width:130px;margin-top:0;padding:7px 9px;font-size:13px}
+.cmp-linkrow input.bad{border-color:var(--red)}
+.cmp-mini{background:rgba(0,0,0,.12);border:1px solid var(--border2);color:var(--text2);border-radius:var(--r);padding:7px 11px;font-size:12px;font-weight:600;font-family:"Open Sans",sans-serif;cursor:pointer;flex:0 0 auto}
+.cmp-mini:hover{background:rgba(0,0,0,.2);color:var(--text)}
+.cmp-guide{flex:0 0 100%;font-size:11px;color:var(--text4);line-height:1.5}
 .bubble-text ul,.bubble-text ol{margin:.3rem 0;padding-left:1.25rem}
 .bubble-text li{margin:.15rem 0}
 .bubble-text blockquote{margin:.3rem 0;padding-left:.7rem;border-left:2px solid rgba(0,0,0,.15)}
@@ -94,6 +109,54 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 .recipient-row{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:.6rem;font-size:12px;color:var(--text3)}
 .recipient-row label{display:flex;align-items:center;gap:5px;cursor:pointer;text-transform:none;letter-spacing:0;font-family:"Open Sans",sans-serif}
 .recipient-row input{width:14px;height:14px;-webkit-appearance:checkbox;appearance:auto;margin:0}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   DESKTOP (AC, 28 Aug). The portal was built mobile-first and capped at 420px
+   on EVERY screen, so a teacher writing a practice assignment on a laptop
+   composed in a phone column with the rest of the display empty.
+
+   AC's brief was that admin's Comms panel is the right size. The thing that
+   makes that panel good to write in is not its pixel width -- it is a fixed
+   grid filling the viewport with the editor set to flex:1, so the body grows
+   into whatever height is available (EnrollmentAdmin.html, rComms()). That is
+   what is reproduced here: roster and conversation side by side, both filling
+   the window, composer growing down the page.
+
+   Breakpoint at 900px, chosen so an iPad in PORTRAIT (768px) keeps the phone
+   layout. At 768 a 260px roster would leave the composer narrower than the
+   phone column it replaced, which is worse than not splitting at all. iPads
+   in landscape (1024) and every laptop clear 900 comfortably.
+
+   Below 900px nothing changes: .panes collapses to a plain block and .only-sm
+   / .only-lg restore the exact one-view-at-a-time behaviour that shipped.
+   ══════════════════════════════════════════════════════════════════════════ */
+.only-lg{display:none}
+@media (min-width:900px){
+  .wrap{max-width:1120px;padding:2rem 2rem 2.5rem}
+  .only-lg{display:block}
+  .only-sm{display:none}
+
+  /* Two panes, filling the window. The height subtracts the brand row, the
+     tab bar and the page padding above them. */
+  .panes{display:grid;grid-template-columns:290px minmax(0,1fr);gap:1rem;
+         height:calc(100vh - 11.5rem);min-height:430px}
+  .pane{background:rgba(255,255,255,.28);border:1px solid var(--border);
+        border-radius:var(--rl);padding:1rem;display:flex;flex-direction:column;
+        min-height:0;overflow:hidden}
+
+  /* Each pane scrolls internally rather than the page scrolling as a whole. */
+  .pane .thread-list{flex:1;overflow-y:auto;min-height:0;margin-right:-4px;padding-right:4px}
+  .pane .msg-list{flex:1;max-height:none;min-height:0;margin-bottom:.75rem}
+
+  /* The point of the exercise: the composer grows instead of scrolling inside
+     160px. Capped at 40vh so a long message can never push Send off-screen. */
+  .pane .cmp-rich{max-height:40vh;min-height:96px}
+
+  /* The thread pane's header stays put while the messages scroll under it. */
+  .pane .thread-hd{flex:0 0 auto}
+  .pane-empty{flex:1;display:flex;align-items:center;justify-content:center;
+              color:var(--text4);font-size:13px;text-align:center;padding:1rem}
+}
 </style>
 </head>
 <body>
@@ -225,7 +288,22 @@ function render(){
   var _focusedComposer='';
   var _ae=document.activeElement;
   if(_ae && _ae.classList && _ae.classList.contains('cmp-rich')) _focusedComposer=_ae.id;
+  // The link row's two inputs need the same protection as the composer itself:
+  // they are plain inputs, so caret position CAN be restored exactly, unlike
+  // the contenteditable below.
+  var _focusedLink='', _focusedLinkPos=0;
+  if(_ae && _ae.id && /-link(url|text)$/.test(_ae.id)){
+    _focusedLink=_ae.id;
+    try{ _focusedLinkPos=_ae.selectionStart; }catch(e){}
+  }
   el.innerHTML=h;
+  if(_focusedLink){
+    var _li=document.getElementById(_focusedLink);
+    if(_li){
+      _li.focus();
+      try{ _li.setSelectionRange(_focusedLinkPos,_focusedLinkPos); }catch(e){}
+    }
+  }
   if(_focusedComposer){
     var _ce=document.getElementById(_focusedComposer);
     if(_ce){
@@ -474,10 +552,20 @@ function switchTab(tab){
 // ============================================================
 // FAMILY MESSAGES
 // ============================================================
+// Two panes on desktop, one view at a time on a phone -- from the SAME render
+// functions. Nothing about rFamilyThreadList() or rFamilyThread() changes; the
+// difference is entirely which of the two panes CSS shows. That is deliberate:
+// a second set of render functions for desktop would be two things to keep in
+// step, which is how the pricing bug in 1.120 happened one tab over.
 function rFamilyMessagesTab(){
   if(FAMILY_VIEW==='picker') return rFamilyPicker();
-  if(FAMILY_VIEW==='thread') return rFamilyThread();
-  return rFamilyThreadList();
+  var showThread=FAMILY_VIEW==='thread';
+  return '<div class="panes">'+
+    '<div class="pane'+(showThread?' only-lg':'')+'">'+rFamilyThreadList()+'</div>'+
+    '<div class="pane'+(showThread?'':' only-lg')+'">'+
+      (showThread?rFamilyThread():'<div class="pane-empty">Choose a family to see the conversation.</div>')+
+    '</div>'+
+  '</div>';
 }
 
 function rFamilyThreadList(){
@@ -615,7 +703,9 @@ function refreshFamilyThread(){
 function rFamilyThread(){
   var t=ACTIVE_THREAD;
   var names=[t.parent1Name,t.parent2Name].filter(Boolean).join(' & ')||'Family';
-  var h='<button class="btn btn-s" style="margin-bottom:1rem" onclick="FAMILY_VIEW=\'list\';ACTIVE_THREAD=null;loadFamilyThreads()">← Back</button>';
+  // Back is hidden on desktop -- both panes are visible there, so there is
+  // nothing to go back from.
+  var h='<div class="only-sm"><button class="btn btn-s" style="margin-bottom:1rem" onclick="FAMILY_VIEW=\'list\';ACTIVE_THREAD=null;loadFamilyThreads()">← Back</button></div>';
   h+='<div style="display:flex;justify-content:space-between;align-items:center">'+
     '<div class="thread-hd" style="margin-bottom:0">'+esc(names)+'</div>'+
     '<a href="#" style="font-size:11px;color:var(--text4)" onclick="event.preventDefault();refreshFamilyThread()">'+(t.refreshing?'<span class="spin">↻</span>':'↻ Refresh')+'</a></div>';
@@ -666,9 +756,15 @@ function sendFamilyMessage(){
   });
 }
 
+// Same two-pane treatment as Family Messages above, same reasoning.
 function rStaffMessagesTab(){
-  if(STAFF_VIEW==='thread') return rStaffThread();
-  return rStaffRoster();
+  var showThread=STAFF_VIEW==='thread';
+  return '<div class="panes">'+
+    '<div class="pane'+(showThread?' only-lg':'')+'">'+rStaffRoster()+'</div>'+
+    '<div class="pane'+(showThread?'':' only-lg')+'">'+
+      (showThread?rStaffThread():'<div class="pane-empty">Choose someone to see the conversation.</div>')+
+    '</div>'+
+  '</div>';
 }
 
 // Shows the whole team directly (1.19, 18 Aug) — no "+ New Conversation"
@@ -775,7 +871,7 @@ function refreshStaffThread(){
 
 function rStaffThread(){
   var t=ACTIVE_STAFF_THREAD;
-  var h='<button class="btn btn-s" style="margin-bottom:1rem" onclick="STAFF_VIEW=\'list\';ACTIVE_STAFF_THREAD=null;loadStaffThreads()">← Back</button>';
+  var h='<div class="only-sm"><button class="btn btn-s" style="margin-bottom:1rem" onclick="STAFF_VIEW=\'list\';ACTIVE_STAFF_THREAD=null;loadStaffThreads()">← Back</button></div>';
   h+='<div style="display:flex;justify-content:space-between;align-items:center">'+
     '<div class="thread-hd" style="margin-bottom:0">'+esc(t.otherName)+'</div>'+
     '<a href="#" style="font-size:11px;color:var(--text4)" onclick="event.preventDefault();refreshStaffThread()">'+(t.refreshing?'<span class="spin">↻</span>':'↻ Refresh')+'</a></div>';
@@ -908,6 +1004,7 @@ function _composerCmd(id,cmd){
   try{ document.execCommand('styleWithCSS',false,false); }catch(e){}
   document.execCommand(cmd,false,null);
   _composerSync(id);
+  _composerState(id);
 }
 
 // Paste keeps its formatting (AC's call, 19 Aug) — a teacher pasting a
@@ -938,54 +1035,269 @@ function _composerPaste(ev){
   if(clean) document.execCommand('insertHTML',false,clean);
 }
 
-function _composerLink(id){
+// Quote toggles rather than only applying, so a teacher can get back out of a
+// blockquote with the same button they used to enter one. formatBlock('div')
+// is the standard way to undo it.
+function _composerQuote(id){
   var el=document.getElementById(id); if(!el) return;
   el.focus();
-  var url=(window.prompt(CMP_COPY.linkPrompt)||'').trim(); // TODO(copy): AC
-  if(!url) return;
-  if(!/^(https?:\/\/|mailto:)/i.test(url) || /[\s"'<>\\]/.test(url)){
-    showMsg(CMP_COPY.linkRejected,'e'); // TODO(copy): AC
+  try{ document.execCommand('styleWithCSS',false,false); }catch(e){}
+  // Angle-bracket form: Chrome and Safari accept either, Firefox only this one.
+  // Built from a variable rather than written as a bracketed literal, so the
+  // tag-balance check in scripts/check.js doesn't read it as a real open tag.
+  var _blk=_composerInQuote(id)?'div':'blockquote';
+  document.execCommand('formatBlock',false,'<'+_blk+'>');
+  _composerSync(id);
+  _composerState(id);
+}
+// Is the caret inside <sel> and still within this composer? Used for the two
+// states document.queryCommandState() cannot answer honestly.
+function _composerSelIn(id,selector){
+  var el=document.getElementById(id); if(!el) return false;
+  var s=window.getSelection();
+  if(!s || !s.anchorNode) return false;
+  var n=s.anchorNode;
+  var e=(n.nodeType===1)?n:n.parentElement;
+  return !!(e && el.contains(e) && e.closest && e.closest(selector));
+}
+function _composerInQuote(id){ return _composerSelIn(id,'blockquote'); }
+
+// ── Link row ───────────────────────────────────────────────────────────────
+// The selection is saved on open because clicking into the URL input collapses
+// it; without this, inserting the link would drop it wherever the caret
+// happened to land rather than over the words the teacher had highlighted.
+var _cmpLinkSel={};
+
+// Open state and half-typed values live HERE, not in the DOM, because render()
+// replaces #app wholesale every poll tick (5s). Left in the DOM, a teacher
+// typing a URL would watch it vanish a few seconds later -- the same failure
+// as 1.32 in the family portal and 1.28 here, one control further in.
+// rComposerLinkRow() renders from this object, so a re-render redraws the row
+// exactly as it was.
+var _cmpLink={};
+function _cmpLinkState(id){
+  if(!_cmpLink[id]) _cmpLink[id]={open:false,url:'',text:'',bad:false};
+  return _cmpLink[id];
+}
+
+function _composerLinkOpen(id){
+  var row=document.getElementById(id+'-linkrow'); if(!row) return;
+  var sel=window.getSelection();
+  var el=document.getElementById(id);
+  _cmpLinkSel[id]=(sel && sel.rangeCount && el && el.contains(sel.anchorNode))
+    ? sel.getRangeAt(0).cloneRange() : null;
+  var st=_cmpLinkState(id);
+  st.open=true; st.url=''; st.bad=false;
+  // Pre-fill the link text with whatever is selected, so highlighting a phrase
+  // and pressing Link does the obvious thing.
+  st.text=(sel && !sel.isCollapsed && el && el.contains(sel.anchorNode)) ? String(sel).trim() : '';
+  var t=document.getElementById(id+'-linktext');
+  var u=document.getElementById(id+'-linkurl');
+  if(t) t.value=st.text;
+  if(u){ u.value=''; u.classList.remove('bad'); u.placeholder=CMP_COPY.linkUrlPlaceholder; }
+  row.classList.add('open');
+  if(u) u.focus();
+}
+
+function _composerLinkClose(id){
+  var row=document.getElementById(id+'-linkrow'); if(row) row.classList.remove('open');
+  var st=_cmpLinkState(id);
+  st.open=false; st.url=''; st.text=''; st.bad=false;
+  _cmpLinkSel[id]=null;
+  var el=document.getElementById(id); if(el) el.focus();
+}
+
+function _composerLinkKey(ev,id){
+  if(ev.key==='Enter'){ ev.preventDefault(); _composerLinkInsert(id); }
+  if(ev.key==='Escape'){ ev.preventDefault(); _composerLinkClose(id); }
+}
+
+// AC, 28 Aug: site.com, www.site.com, https://www.site.com and https://site.com
+// must all work. So https:// is PREPENDED when absent rather than demanded.
+// Being lenient here is safe -- this file is not the security boundary.
+// _sanitizeMessageHtml_() in Code.js re-checks every href server-side and
+// assumes this file was bypassed, because it can be. Strictness here buys
+// nothing and costs teachers working links.
+function _composerNormalizeUrl(raw){
+  var u=String(raw||'').trim();
+  if(!u) return '';
+  if(/[\s"'<>\\]/.test(u)) return '';          // spaces or quotes: not an address
+  if(/^mailto:/i.test(u)) return u;
+  if(!/^https?:\/\//i.test(u)){
+    // Any other scheme (javascript:, data:, file:) is refused outright rather
+    // than having https:// glued in front of it.
+    if(/^[a-z][a-z0-9+.-]*:/i.test(u)) return '';
+    u='https://'+u;
+  }
+  // Must have a dot somewhere in the host, or "https://notes" would pass.
+  var host=u.replace(/^https?:\/\//i,'').split(/[\/?#]/)[0];
+  if(host.indexOf('.')===-1) return '';
+  return u;
+}
+
+function _composerLinkInsert(id){
+  var el=document.getElementById(id); if(!el) return;
+  var uIn=document.getElementById(id+'-linkurl');
+  var tIn=document.getElementById(id+'-linktext');
+  var url=_composerNormalizeUrl(uIn?uIn.value:'');
+  if(!url){
+    // Corrected in place instead of thrown as a page-level toast -- the error
+    // belongs next to the field that caused it.
+    var stBad=_cmpLinkState(id); stBad.bad=true; stBad.url='';
+    if(uIn){ uIn.classList.add('bad'); uIn.value=''; uIn.placeholder=CMP_COPY.linkRejected; uIn.focus(); }
     return;
   }
+  var label=(tIn && tIn.value.trim()) || url.replace(/^https?:\/\//i,'');
+  el.focus();
+  var saved=_cmpLinkSel[id];
+  if(saved){
+    try{
+      var sel=window.getSelection();
+      sel.removeAllRanges(); sel.addRange(saved);
+    }catch(e){}
+  }
   try{ document.execCommand('styleWithCSS',false,false); }catch(e){}
-  var sel=window.getSelection();
-  if(!sel || sel.isCollapsed) document.execCommand('insertHTML',false,'<a href="'+esc(url)+'">'+esc(url)+'</a>');
-  else document.execCommand('createLink',false,url);
+  document.execCommand('insertHTML',false,'<a href="'+esc(url)+'">'+esc(label)+'</a>&nbsp;');
+  _composerLinkClose(id);
   _composerSync(id);
 }
 
-// TODO(copy): every string here is a placeholder for AC's copy pass. Button
-// labels reuse the wording already live in admin's Comms toolbar so the two
-// tools read the same; the two link strings are new and unreviewed.
+// ── Toolbar active state ───────────────────────────────────────────────────
+// Nothing reflected back before this, so a teacher had to type a letter to
+// find out whether bold was on. queryCommandState covers the inline and list
+// commands; blockquote has no state to query, so it is resolved from the DOM.
+var _CMP_STATE_CMDS=['bold','italic','underline','insertUnorderedList','insertOrderedList'];
+
+function _composerState(id){
+  var el=document.getElementById(id); if(!el) return;
+  var wrap=el.closest?el.closest('.composer-wrap'):null; if(!wrap) return;
+  _CMP_STATE_CMDS.forEach(function(c){
+    var b=wrap.querySelector('[data-cmd="'+c+'"]'); if(!b) return;
+    var on=false;
+    try{ on=document.queryCommandState(c); }catch(e){}
+    // queryCommandState('underline') is TRUE for ANY selection inside a link,
+    // because a link RENDERS underlined -- verified in the browser, not
+    // guessed. Left alone, the Underline button lights up on its own the
+    // moment a teacher clicks into a link they just added, claiming
+    // formatting they never applied. Inside a link, ask the DOM instead.
+    //
+    // Resolved from the selection's anchor, which covers every selection a
+    // person can actually make -- a click, a drag, or Ctrl+A all anchor on a
+    // text node. It does NOT cover a programmatic selectNodeContents() of the
+    // whole box, where the anchor is the composer div itself and there is no
+    // link ancestor to find; nothing in the UI produces that.
+    if(c==='underline' && on && _composerSelIn(id,'a')) on=_composerSelIn(id,'u');
+    b.classList.toggle('on',!!on);
+  });
+  var q=wrap.querySelector('[data-quote]');
+  if(q) q.classList.toggle('on',_composerInQuote(id));
+}
+
+function _composerStateClear(id){
+  var el=document.getElementById(id); if(!el) return;
+  var wrap=el.closest?el.closest('.composer-wrap'):null; if(!wrap) return;
+  var btns=wrap.querySelectorAll('.cmp-tb-btn.on');
+  for(var i=0;i<btns.length;i++) btns[i].classList.remove('on');
+}
+
+// Button labels reuse the wording already live in admin's Comms toolbar so the
+// two tools read the same. The link strings were rewritten 28 Aug on AC's
+// steer: the old prompt demanded a full https:// address, which is not how
+// anyone types one.
+//
+// linkSharing is AC's substance, drafted here and still awaiting his pass:
+// teachers set a file to "anyone with the link", or keep it private and ask
+// admin for the parent's email. (AC, 28 Aug -- a central Keylab hub for
+// digital materials is the eventual answer; until then this is the
+// instruction.) It is the on-screen guidance SPEC_MESSAGING_V1 has asked for
+// since 19 Aug, where it is called the most likely real-world failure.
 var CMP_COPY={
   placeholder:'Type your message here...',
-  linkPrompt:'Paste the link address (it must start with https://)',
-  linkRejected:'That link wasn’t added — links need to start with https:// and contain no spaces.',
-  bold:'Bold', bullet:'Bullet list', number:'Numbered list',
-  indent:'Indent', outdent:'Outdent', link:'Link'
+  linkUrlPlaceholder:'Add link here',
+  linkTextPlaceholder:'Link text (optional)',
+  linkAdd:'Add link',
+  linkCancel:'Cancel',
+  linkRejected:'That doesn’t look like a web address. Try something like keylab.nyc/lessons.',
+  linkSharing:'Set sharing to “Anyone with the link” before you send, or ask admin for the parent’s email to share it privately.',
+  bold:'Bold', italic:'Italic', underline:'Underline',
+  bullet:'Bullet list', number:'Numbered list', quote:'Quote',
+  indent:'Indent', outdent:'Outdent', link:'Link', clear:'Clear formatting'
 };
 
 function _tbBtn(id,cmd,label,title){
   // onmousedown/preventDefault keeps the text selection alive when the button
   // takes the click — without it, execCommand has nothing to act on.
-  return '<button type="button" class="cmp-tb-btn" title="'+esc(title)+'" onmousedown="event.preventDefault()"'+
+  // data-cmd is what _composerState() reads to light the button up.
+  return '<button type="button" class="cmp-tb-btn" data-cmd="'+cmd+'" title="'+esc(title)+'" onmousedown="event.preventDefault()"'+
     ' onclick="_composerCmd(\''+id+'\',\''+cmd+'\')">'+label+'</button>';
+}
+
+// The toolbar now carries everything _sanitizeMessageHtml_() accepts and
+// nothing it doesn't (AC, 28 Aug: "as much formatting control and function as
+// possible"). Italic, underline, quote and clear-formatting were added then.
+// The first three were already reachable by PASTING -- _composerClean()
+// promotes pasted <i>/<u> and styled spans -- so a teacher could receive that
+// formatting into a message but had no button to produce it.
+//
+// Adding a control the server would strip is the mistake to avoid here, so
+// this list and MSG_ALLOWED_TAGS in Code.js have to stay in step. That is why
+// admin's colour, font-size, alignment, image and divider buttons are absent
+// and must stay absent: every one of them is dropped server-side.
+//
+// Grouped with dividers -- emphasis, structure, nesting, link, reset -- so the
+// row reads as five decisions rather than ten buttons.
+function rComposerToolbar(id){
+  return '<div class="cmp-tb">'+
+    _tbBtn(id,'bold','<b>B</b>',CMP_COPY.bold)+
+    _tbBtn(id,'italic','<i>I</i>',CMP_COPY.italic)+
+    _tbBtn(id,'underline','<u>U</u>',CMP_COPY.underline)+
+    '<span class="cmp-div"></span>'+
+    _tbBtn(id,'insertUnorderedList','• List',CMP_COPY.bullet)+
+    _tbBtn(id,'insertOrderedList','1. List',CMP_COPY.number)+
+    '<button type="button" class="cmp-tb-btn" data-quote="1" title="'+esc(CMP_COPY.quote)+'" onmousedown="event.preventDefault()"'+
+      ' onclick="_composerQuote(\''+id+'\')">❝</button>'+
+    '<span class="cmp-div"></span>'+
+    _tbBtn(id,'indent','⇥',CMP_COPY.indent)+
+    _tbBtn(id,'outdent','⇤',CMP_COPY.outdent)+
+    '<span class="cmp-div"></span>'+
+    '<button type="button" class="cmp-tb-btn" title="'+esc(CMP_COPY.link)+'" onmousedown="event.preventDefault()"'+
+      ' onclick="_composerLinkOpen(\''+id+'\')">'+esc(CMP_COPY.link)+'</button>'+
+    _tbBtn(id,'removeFormat','✕',CMP_COPY.clear)+
+  '</div>';
+}
+
+// Replaces window.prompt() (BACKLOG 1.34, and AC again on 28 Aug). The prompt
+// could not be styled or corrected and dropped the teacher out of their
+// message; worse, it refused anything without an https:// prefix. Hidden until
+// the Link button is pressed so the composer stays quiet in normal use.
+function rComposerLinkRow(id){
+  var st=_cmpLinkState(id);
+  return '<div class="cmp-linkrow'+(st.open?' open':'')+'" id="'+id+'-linkrow">'+
+    '<input id="'+id+'-linkurl" class="'+(st.bad?'bad':'')+'" value="'+esc(st.url)+'"'+
+      ' placeholder="'+esc(st.bad?CMP_COPY.linkRejected:CMP_COPY.linkUrlPlaceholder)+'"'+
+      ' aria-label="'+esc(CMP_COPY.linkUrlPlaceholder)+'"'+
+      ' oninput="_cmpLinkState(\''+id+'\').url=this.value"'+
+      ' onkeydown="_composerLinkKey(event,\''+id+'\')">'+
+    '<input id="'+id+'-linktext" value="'+esc(st.text)+'" placeholder="'+esc(CMP_COPY.linkTextPlaceholder)+'" aria-label="'+esc(CMP_COPY.linkTextPlaceholder)+'"'+
+      ' oninput="_cmpLinkState(\''+id+'\').text=this.value"'+
+      ' onkeydown="_composerLinkKey(event,\''+id+'\')">'+
+    '<button type="button" class="cmp-mini" onmousedown="event.preventDefault()" onclick="_composerLinkInsert(\''+id+'\')">'+esc(CMP_COPY.linkAdd)+'</button>'+
+    '<button type="button" class="cmp-mini" onmousedown="event.preventDefault()" onclick="_composerLinkClose(\''+id+'\')" aria-label="'+esc(CMP_COPY.linkCancel)+'">×</button>'+
+    '<div class="cmp-guide">'+esc(CMP_COPY.linkSharing)+'</div>'+
+  '</div>';
 }
 
 function rComposer(id,draft,onInput,sendBtn){
   return '<div class="composer-wrap">'+
-    '<div class="cmp-tb">'+
-      _tbBtn(id,'bold','<b>B</b>',CMP_COPY.bold)+
-      _tbBtn(id,'insertUnorderedList','• List',CMP_COPY.bullet)+
-      _tbBtn(id,'insertOrderedList','1. List',CMP_COPY.number)+
-      _tbBtn(id,'indent','⇥',CMP_COPY.indent)+
-      _tbBtn(id,'outdent','⇤',CMP_COPY.outdent)+
-      '<button type="button" class="cmp-tb-btn" title="'+esc(CMP_COPY.link)+'" onmousedown="event.preventDefault()"'+
-        ' onclick="_composerLink(\''+id+'\')">'+esc(CMP_COPY.link)+'</button>'+
-    '</div>'+
+    rComposerToolbar(id)+
+    rComposerLinkRow(id)+
     '<div class="composer">'+
-      '<div id="'+id+'" class="cmp-rich" contenteditable="true" data-ph="'+esc(CMP_COPY.placeholder)+'"'+
-        ' oninput="'+onInput+'" onpaste="_composerPaste(event)">'+(draft||'')+'</div>'+
+      '<div id="'+id+'" class="cmp-rich" contenteditable="true" role="textbox" aria-multiline="true"'+
+        ' aria-label="Message" data-ph="'+esc(CMP_COPY.placeholder)+'"'+
+        ' oninput="'+onInput+';_composerState(\''+id+'\')"'+
+        ' onkeyup="_composerState(\''+id+'\')" onmouseup="_composerState(\''+id+'\')"'+
+        ' onblur="_composerStateClear(\''+id+'\')"'+
+        ' onpaste="_composerPaste(event)">'+(draft||'')+'</div>'+
       sendBtn+
     '</div></div>';
 }

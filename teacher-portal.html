@@ -194,6 +194,10 @@ var FAMILY_VIEW = 'list';
 // again every 5 seconds, so flipping the lock in admin reaches teachers within
 // seconds without a reload.
 var MSG_LOCK = { locked:false, msg:'' };
+// Sheets turns a stored "TRUE" into a real boolean, so a config flag can arrive
+// as either. The other two portals both carry an isTruthy() for this; this one
+// had no config flags until now and so had none.
+function _tIsTruthy(v){ return v===true||v==='TRUE'||v==='true'; }
 var FAMILY_THREADS = {loading:false, list:[]};
 var FAMILY_PICKER = {loading:false, query:'', all:[]};
 var ACTIVE_THREAD = null; // {familyId, parent1Name, parent2Name, messages, draft, sending, loading, notifyP1, notifyP2}
@@ -638,7 +642,7 @@ function loadFamilyThreads(silent){
     FAMILY_THREADS.loading=false;
     if(e||!r||!r.ok){ if(!silent) showMsg((r&&r.error)||'Could not load conversations.','e'); render(); return; }
     FAMILY_THREADS.list=r.threads||[];
-    MSG_LOCK.locked = String(r.messagingLocked||'')==='TRUE';
+    MSG_LOCK.locked = _tIsTruthy(r.messagingLocked);
     MSG_LOCK.msg = r.messagingLockedMsg||'';
     render();
   });

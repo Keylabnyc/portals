@@ -2188,7 +2188,9 @@ function _klShortTime(ms){
 // and leaving the rest, because a list of contacts you cannot contact invites
 // exactly the click that then does nothing.
 function _familyMessagingLocked(){
-  return String(publicCfg.messagingLocked||'')==='TRUE';
+  // isTruthy(), not a string compare -- see the note in doSendMessage(). Every
+  // other config flag on this page (availabilityOpen) is read the same way.
+  return isTruthy(publicCfg.messagingLocked);
 }
 function rHomeMessagesLocked(){
   var msg=String(publicCfg.messagingLockedMsg||'').trim();

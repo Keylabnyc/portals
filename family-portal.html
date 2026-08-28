@@ -2183,7 +2183,26 @@ function _klShortTime(ms){
   return months[d.getMonth()]+' '+d.getDate();
 }
 
+// BACKLOG 1.136. AC's switch, with AC's words. Replaces the entire Messages
+// block -- guide, contacts and composer -- rather than disabling the composer
+// and leaving the rest, because a list of contacts you cannot contact invites
+// exactly the click that then does nothing.
+function _familyMessagingLocked(){
+  return String(publicCfg.messagingLocked||'')==='TRUE';
+}
+function rHomeMessagesLocked(){
+  var msg=String(publicCfg.messagingLockedMsg||'').trim();
+  return '<h2>Messages</h2>'+
+    '<div class="kl-guide" style="text-align:center;padding:1.1rem .9rem">'+
+      '<div style="font-size:22px;line-height:1;margin-bottom:.5rem">\u{1f6e0}\u{fe0f}</div>'+
+      (msg
+        ? '<div style="white-space:pre-wrap">'+esc(msg)+'</div>'
+        : '<div>Messaging isn\u2019t available just yet.</div>')+
+    '</div>';
+}
+
 function rHomeMessages(){
+  if(_familyMessagingLocked()) return rHomeMessagesLocked();
   // An open conversation takes the whole block over (BACKLOG 1.40) — it does
   // not expand underneath its row. That is what makes "opens on the newest
   // message" true for a thread of any age: there is nothing above it to
@@ -5826,6 +5845,12 @@ function boot(){
   api({action:'getPublicConfig', data:{}}, function(e,r){
     if(!e&&r&&r.ok){
       publicCfg.availabilityOpen=r.availabilityOpen;
+      // BACKLOG 1.136. Assigned unconditionally, not behind an `if` -- the
+      // whole point is that flipping the lock OFF has to reach the page too,
+      // and a truthiness guard would make 'FALSE' and '' unable to overwrite
+      // a previous value.
+      publicCfg.messagingLocked=r.messagingLocked;
+      publicCfg.messagingLockedMsg=r.messagingLockedMsg;
       if(r.schedulingBillingUrl) publicCfg.schedulingBillingUrl=r.schedulingBillingUrl;
       // Everything doGetPublicConfig() returns has to land on publicCfg, not
       // just the two fields this handler started life with. Three of them

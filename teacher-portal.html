@@ -188,6 +188,12 @@ var ACTIVE_STAFF_THREAD = null; // {contactType:'admin'|'staff', otherId, otherN
 // 'picker' (start a new one — any family, confirmed 18 Aug §7 item 4) |
 // 'thread' (one open conversation).
 var FAMILY_VIEW = 'list';
+
+// BACKLOG 1.136. Delivered on the roster payload rather than a config call --
+// this portal has no getPublicConfig, and the roster is fetched on load and
+// again every 5 seconds, so flipping the lock in admin reaches teachers within
+// seconds without a reload.
+var MSG_LOCK = { locked:false, msg:'' };
 var FAMILY_THREADS = {loading:false, list:[]};
 var FAMILY_PICKER = {loading:false, query:'', all:[]};
 var ACTIVE_THREAD = null; // {familyId, parent1Name, parent2Name, messages, draft, sending, loading, notifyP1, notifyP2}
@@ -557,7 +563,22 @@ function switchTab(tab){
 // difference is entirely which of the two panes CSS shows. That is deliberate:
 // a second set of render functions for desktop would be two things to keep in
 // step, which is how the pricing bug in 1.120 happened one tab over.
+// A teacher shown a dead composer with no explanation files a bug, so the
+// lock says the same thing to them that it says to families (AC, 28 Aug).
+// Staff Messages is deliberately untouched -- teachers can still reach each
+// other and admin throughout.
+function rMessagingLocked(){
+  var m=String(MSG_LOCK.msg||'').trim();
+  return '<div class="card" style="text-align:center">'+
+    '<div style="font-size:24px;line-height:1;margin-bottom:.6rem">\u{1f6e0}\u{fe0f}</div>'+
+    '<div class="thread-hd" style="margin-bottom:.5rem">Messaging is paused</div>'+
+    '<div style="font-size:13px;color:var(--text3);white-space:pre-wrap">'+
+      (m?esc(m):'Family messaging is switched off at the moment. Staff messages still work as normal.')+
+    '</div></div>';
+}
+
 function rFamilyMessagesTab(){
+  if(MSG_LOCK.locked) return rMessagingLocked();
   if(FAMILY_VIEW==='picker') return rFamilyPicker();
   var showThread=FAMILY_VIEW==='thread';
   return '<div class="panes">'+
@@ -617,6 +638,8 @@ function loadFamilyThreads(silent){
     FAMILY_THREADS.loading=false;
     if(e||!r||!r.ok){ if(!silent) showMsg((r&&r.error)||'Could not load conversations.','e'); render(); return; }
     FAMILY_THREADS.list=r.threads||[];
+    MSG_LOCK.locked = String(r.messagingLocked||'')==='TRUE';
+    MSG_LOCK.msg = r.messagingLockedMsg||'';
     render();
   });
 }

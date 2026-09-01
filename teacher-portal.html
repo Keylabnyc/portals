@@ -63,6 +63,14 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
   padding:8px 10px;font-size:12px;margin-bottom:.6rem;white-space:pre-wrap}
 .handoff-tag{background:var(--bg3);color:var(--text3);font-size:10px;font-weight:600;
   padding:1px 7px;border-radius:10px;margin-left:6px}
+/* Unread count on a tab (1.161 #1). Blue, like every other unread mark in the
+   tool, so one colour keeps meaning one thing. */
+.tab-badge{display:inline-flex;align-items:center;justify-content:center;min-width:17px;height:17px;
+  padding:0 5px;margin-left:6px;border-radius:9px;background:#1747C0;color:#fff;
+  font-size:10px;font-weight:700;line-height:1;vertical-align:middle}
+/* Roster rows read as the student now, with the parent underneath (AC). */
+.row-student{font-size:13px;font-weight:600;color:var(--text)}
+.row-parent{font-size:11px;color:var(--text3);margin-top:1px}
 .fwd-box{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);
   padding:10px 12px;margin-top:.6rem;font-size:12px}
 .msg-list{display:flex;flex-direction:column;gap:8px;margin-bottom:1rem;max-height:50vh;overflow-y:auto}
@@ -233,6 +241,9 @@ var MSG_LOCK = { locked:false, msg:'' };
 // had no config flags until now and so had none.
 function _tIsTruthy(v){ return v===true||v==='TRUE'||v==='true'; }
 var FAMILY_THREADS = {loading:false, list:[]};
+// Roster search (BACKLOG 1.161 #3). familyIds is what the server matched;
+// an empty query means show everything.
+var FAMILY_SEARCH = {query:'', familyIds:[], searching:false, timer:null};
 var FAMILY_PICKER = {loading:false, query:'', all:[]};
 var ACTIVE_THREAD = null; // {familyId, parent1Name, parent2Name, messages, draft, sending, loading, notifyP1, notifyP2}
 
@@ -343,7 +354,7 @@ function render(){
   // the 5-second poll re-renders underneath, so they need exactly the same
   // protection the link inputs already have — a teacher writing an away
   // message must not lose it mid-sentence.
-  if(_ae && _ae.id && (/-link(url|text)$/.test(_ae.id) || _ae.id==='tset-away' || _ae.id==='tset-after' || _ae.id==='fwd-note')){
+  if(_ae && _ae.id && (/-link(url|text)$/.test(_ae.id) || _ae.id==='tset-away' || _ae.id==='tset-after' || _ae.id==='fwd-note' || _ae.id==='fam-search')){
     _focusedLink=_ae.id;
     try{ _focusedLinkPos=_ae.selectionStart; }catch(e){}
   }
@@ -432,6 +443,9 @@ function doLogin(){
     if(LF.remember) _ktSaveSession(r.token, r.teacherId, r.teacherName);
     PAGE='home'; render();
     loadFamilyThreads();
+    // Both rosters at sign-in, not just the visible one: a badge that only
+    // becomes true once you visit the tab is not a badge (1.161 #1).
+    loadStaffThreads(true);
     _startMessagePolling();
     loadTeacherSettings();
   });
@@ -581,9 +595,15 @@ function doResendResetLink(){
 // piece confirmed as replacing Slack.
 // ============================================================
 function rHome(){
+  // BACKLOG 1.161 #1 — a teacher reading a staff thread or editing their away
+  // message used to have no idea a parent had written. The counts are already
+  // in the roster payloads; this is them, summed, where they can be seen
+  // before opening anything. Same idea the family portal got in 1.7b.
+  var famUnread=(FAMILY_THREADS.list||[]).reduce(function(n,t){return n+(Number(t.unread)||0);},0);
+  var staffUnread=(STAFF_THREADS.list||[]).reduce(function(n,t){return n+(Number(t.unread)||0);},0);
   var tabs='<div class="tabbar">'+
-    '<div class="tab'+(HOME_TAB==='family'?' on':'')+'" onclick="switchTab(\'family\')">Family Messages</div>'+
-    '<div class="tab'+(HOME_TAB==='staff'?' on':'')+'" onclick="switchTab(\'staff\')">Staff Messages</div>'+
+    '<div class="tab'+(HOME_TAB==='family'?' on':'')+'" onclick="switchTab(\'family\')">Family Messages'+rTabBadge(famUnread)+'</div>'+
+    '<div class="tab'+(HOME_TAB==='staff'?' on':'')+'" onclick="switchTab(\'staff\')">Staff Messages'+rTabBadge(staffUnread)+'</div>'+
     '<div class="tab'+(HOME_TAB==='settings'?' on':'')+'" onclick="switchTab(\'settings\')">Settings</div>'+
     '</div>';
   var body = HOME_TAB==='settings' ? rTeacherSettings()
@@ -708,6 +728,11 @@ function _saveSettings(fields){
   });
 }
 
+function rTabBadge(n){
+  if(!n) return '';
+  return '<span class="tab-badge">'+n+'</span>';
+}
+
 function switchTab(tab){
   HOME_TAB=tab;
   render();
@@ -753,31 +778,84 @@ function rFamilyMessagesTab(){
   '</div>';
 }
 
+// AC's format, 1 Sept: "Mia - Wed 4pm piano" with "[parent full name]"
+// underneath. A teacher thinks in students; this row used to name only the
+// parents. A family with two children on this teacher gets both on the first
+// line, because the conversation is still one thread — splitting it into two
+// rows would imply two threads that do not exist.
+function _rosterStudentLine(t){
+  var kids=t.students||[];
+  if(!kids.length) return [t.parent1Name,t.parent2Name].filter(Boolean).join(' & ')||'Family';
+  return kids.map(function(st){
+    var bits=[st.day,st.time].filter(Boolean).join(' ');
+    return [st.studentName, [bits,st.instrument].filter(Boolean).join(' ')]
+      .filter(Boolean).join(' - ');
+  }).join(' · ');
+}
+function _rosterParentLine(t){
+  return [t.parent1Name,t.parent2Name].filter(Boolean).join(' & ')||'';
+}
+
 function rFamilyThreadList(){
   var h='<button class="btn btn-p" style="margin-bottom:1rem" onclick="openFamilyPicker()">+ New Conversation</button>';
+  // BACKLOG 1.161 #3 — search across parent and child names and message
+  // bodies. Runs on the server, because the roster carries only each
+  // conversation's latest line and searching what happens to be loaded would
+  // quietly miss older messages.
+  h+='<input id="fam-search" type="text" placeholder="Search names or messages…" value="'+esc(FAMILY_SEARCH.query)+'" '+
+     'oninput="onFamilySearch(this.value)" style="width:100%;margin-bottom:.75rem;font-size:13px">';
   if(FAMILY_THREADS.loading){
     return h+'<div style="text-align:center;padding:2rem;color:var(--text3)"><span class="spin" style="font-size:20px">↻</span></div>';
   }
   if(!FAMILY_THREADS.list.length){
     return h+'<div class="empty-state">No messages yet — send a message to get started.</div>';
   }
-  h+='<div class="thread-list">'+FAMILY_THREADS.list.map(function(t){
-    var names=[t.parent1Name,t.parent2Name].filter(Boolean).join(' & ')||'Family';
+  var rows=_familyRosterRows();
+  if(!rows.length){
+    return h+'<div class="empty-state">'+(FAMILY_SEARCH.searching?'Searching…':'Nothing matches that.')+'</div>';
+  }
+  h+='<div class="thread-list">'+rows.map(function(t){
     // Ids only in the handler. esc() does not escape an apostrophe, so a
     // parent named O'Brien broke this row's click — the same latent bug found
     // and fixed on the admin side the same day (BACKLOG 1.73).
     return '<div class="thread-row" onclick="openFamilyRow(\''+esc(t.familyId)+'\')">'+
       '<div class="thread-row-main">'+
-      '<div class="thread-row-name">'+esc(names)+
+      '<div class="row-student">'+esc(_rosterStudentLine(t))+
         // BACKLOG 1.135 — this one is with the office now, so the teacher can
         // see at a glance that it is not sitting on them.
-        (t.sharedWithAdmin?'<span class="handoff-tag">Admin asked</span>':'')+'</div>'+
+        (t.sharedWithAdmin?'<span class="handoff-tag">Admin asked</span>':'')+
+        (t.closed?'<span class="handoff-tag">Closed</span>':'')+'</div>'+
+      '<div class="row-parent">'+esc(_rosterParentLine(t))+'</div>'+
       '<div class="thread-row-preview">'+esc((t.lastMessageText||'').slice(0,60))+'</div>'+
       '</div>'+
-      rReadToggle(t.unread, 'family_teacher', t.familyId, TEACHER_ID, '', 'family', t.waitingSince)+
+      rReadToggle(t.unread, 'family_teacher', t.familyId, TEACHER_ID, '', 'family', t.waitingSince, t.closed)+
       '</div>';
   }).join('')+'</div>';
   return h;
+}
+
+// The rows actually shown: everything, or just what the search matched.
+function _familyRosterRows(){
+  if(!FAMILY_SEARCH.query) return FAMILY_THREADS.list;
+  var ids=FAMILY_SEARCH.familyIds||[];
+  return FAMILY_THREADS.list.filter(function(t){ return ids.indexOf(t.familyId)!==-1; });
+}
+// Debounced: a keystroke should not be a round trip.
+function onFamilySearch(v){
+  FAMILY_SEARCH.query=v;
+  if(FAMILY_SEARCH.timer) clearTimeout(FAMILY_SEARCH.timer);
+  if(!String(v||'').trim()){ FAMILY_SEARCH.familyIds=[]; FAMILY_SEARCH.searching=false; render(); return; }
+  FAMILY_SEARCH.searching=true;
+  FAMILY_SEARCH.timer=setTimeout(function(){
+    var q=FAMILY_SEARCH.query;
+    api({action:'searchTeacherMessages', data:{teacherToken:TOKEN, query:q}}, function(e,r){
+      if(FAMILY_SEARCH.query!==q) return;   // a later keystroke already won
+      FAMILY_SEARCH.searching=false;
+      if(e||!r||!r.ok){ FAMILY_SEARCH.familyIds=[]; render(); return; }
+      FAMILY_SEARCH.familyIds=r.familyIds||[];
+      render();
+    });
+  },300);
 }
 
 // Small clickable read/unread control on a roster row (18 Aug) — teachers
@@ -839,9 +917,19 @@ function _agingMark(waitingSince){
 // mark read; an ageing circle clicks to mark unread and returns to blue. The
 // clock keeps running underneath either way, because the family is waiting
 // regardless of what the teacher has ticked.
-function rReadToggle(unread, conversationType, familyId, teacherId, staffId2, listKind, waitingSince){
+// AC, 1 Sept: a teacher cannot mark something read while it is still waiting
+// on their reply — "read" must not become a way to clear an obligation off
+// your own list. Marking UNREAD is always allowed, is private to the teacher,
+// and changes nothing for anyone else. The server refuses the first case too;
+// this is what stops the tool offering a button that would be refused.
+function rReadToggle(unread, conversationType, familyId, teacherId, staffId2, listKind, waitingSince, closed){
   var fn='markThreadRead('+(unread?'true':'false')+',\''+conversationType+'\',\''+esc(familyId)+'\',\''+esc(teacherId)+'\',\''+esc(staffId2)+'\',\''+listKind+'\')';
   var click=' onclick="event.stopPropagation();'+fn+'"';
+  var owed=!!waitingSince && !closed;
+  if(unread && owed){
+    return '<div class="msg-circle p-new" title="Reply first — a conversation waiting on you can\'t be marked read" '+
+      'aria-label="'+unread+' unread">'+unread+'</div>';
+  }
   if(unread) return '<div class="msg-circle p-new"'+click+' title="Mark read" aria-label="'+unread+' unread">'+unread+'</div>';
   var m=_agingMark(waitingSince);
   if(m && m.overdue) return '<div class="msg-overdue"'+click+' title="Mark unread" aria-label="Overdue">OVERDUE</div>';

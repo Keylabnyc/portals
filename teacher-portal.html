@@ -50,6 +50,19 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 .tab.on{color:#fff;background:var(--acc);border-color:var(--acc)}
 .thread-hd{font-size:10px;font-weight:600;color:var(--acc);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.75rem;font-family:"Inter",sans-serif}
 .empty-state{text-align:center;color:var(--text4);padding:2rem 1rem;font-size:13px}
+/* Status banner (BACKLOG 1.125, AC's shapes: red Away/Busy, green Available).
+   Full width and unmissable on purpose — the 28 Aug worry was that a teacher
+   with no return date would leave away switched on forever, and a banner they
+   cannot miss is the mitigation that costs no extra fields. */
+.status-banner{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  border-radius:var(--r);padding:8px 12px;margin-bottom:.75rem;font-size:12px;font-weight:700}
+.status-banner.away{background:#FDECEC;border:1px solid #DC2626;color:#B91C1C}
+.status-banner.avail{background:#ECFDF3;border:1px solid #16A34A;color:#15803D}
+.status-banner a{font-size:11px;font-weight:600}
+.away-note{background:#FDECEC;border:1px solid #DC2626;color:#B91C1C;border-radius:var(--r);
+  padding:8px 10px;font-size:12px;margin-bottom:.6rem;white-space:pre-wrap}
+.handoff-tag{background:var(--bg3);color:var(--text3);font-size:10px;font-weight:600;
+  padding:1px 7px;border-radius:10px;margin-left:6px}
 .msg-list{display:flex;flex-direction:column;gap:8px;margin-bottom:1rem;max-height:50vh;overflow-y:auto}
 .bubble-row{display:flex}
 .bubble-row.mine{justify-content:flex-end}
@@ -181,11 +194,18 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 // PAGE values: boot | login | needsSetup | forgotpw | setpw | home
 var PAGE = 'boot';
 var TOKEN = '', TEACHER_ID = '', TEACHER_NAME = '';
-var HOME_TAB = 'family'; // 'family' | 'staff'
+var HOME_TAB = 'family'; // 'family' | 'staff' | 'settings'
+// The teacher's own status and settings (BACKLOG 1.125, 1.132). Loaded once
+// at sign-in, because the banner is on every screen.
+var TSET = {loading:false, saving:false, loaded:false,
+            awayEnabled:false, awayMessage:'', afterHoursMessage:'',
+            notifyOpen:9, notifyClose:17, notifyDerived:false,
+            draftAway:'', draftAfter:''};
 var MSG = {m:'', t:''};
 var busy = false;
 var RESET_TOKEN = '';
 var _pollTimer = null;
+var _pendingOpenFamilyId = '';   // set by boot() from ?openFamilyId=, consumed once by loadFamilyThreads()
 var _shouldScrollMsgList = false; // see render() — scroll-to-newest, set only when messages actually change
 
 // Staff Messages state. STAFF_VIEW: 'list' (the whole team, always shown
@@ -317,7 +337,11 @@ function render(){
   // they are plain inputs, so caret position CAN be restored exactly, unlike
   // the contenteditable below.
   var _focusedLink='', _focusedLinkPos=0;
-  if(_ae && _ae.id && /-link(url|text)$/.test(_ae.id)){
+  // The settings textareas (1.125/1.132) are plain fields on a screen that
+  // the 5-second poll re-renders underneath, so they need exactly the same
+  // protection the link inputs already have — a teacher writing an away
+  // message must not lose it mid-sentence.
+  if(_ae && _ae.id && (/-link(url|text)$/.test(_ae.id) || _ae.id==='tset-away' || _ae.id==='tset-after')){
     _focusedLink=_ae.id;
     try{ _focusedLinkPos=_ae.selectionStart; }catch(e){}
   }
@@ -407,6 +431,7 @@ function doLogin(){
     PAGE='home'; render();
     loadFamilyThreads();
     _startMessagePolling();
+    loadTeacherSettings();
   });
 }
 
@@ -525,6 +550,7 @@ function doCompleteReset(){
       PAGE='home'; render();
       loadFamilyThreads();
       _startMessagePolling();
+      loadTeacherSettings();
     } else {
       PAGE='login'; render();
     }
@@ -556,17 +582,134 @@ function rHome(){
   var tabs='<div class="tabbar">'+
     '<div class="tab'+(HOME_TAB==='family'?' on':'')+'" onclick="switchTab(\'family\')">Family Messages</div>'+
     '<div class="tab'+(HOME_TAB==='staff'?' on':'')+'" onclick="switchTab(\'staff\')">Staff Messages</div>'+
+    '<div class="tab'+(HOME_TAB==='settings'?' on':'')+'" onclick="switchTab(\'settings\')">Settings</div>'+
     '</div>';
-  var body = HOME_TAB==='family' ? rFamilyMessagesTab() : rStaffMessagesTab();
+  var body = HOME_TAB==='settings' ? rTeacherSettings()
+           : HOME_TAB==='family'   ? rFamilyMessagesTab()
+           : rStaffMessagesTab();
   return '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">'+
     '<div class="login-brand" style="margin:0">KEYLAB</div>'+
     '<a href="#" style="font-size:12px" onclick="event.preventDefault();doSignOut()">Sign Out</a></div>'+
-    tabs+body;
+    rStatusBanner()+tabs+body;
+}
+
+// AC, 1 Sept: red "Away/Busy" when away is on, green "Status: Available" when
+// it is not. On every screen of the teacher's own portal, and nowhere on the
+// family side — a parent shown a green Available badge would read it as a
+// promise of an immediate reply.
+function rStatusBanner(){
+  if(!TSET.loaded) return '';
+  if(TSET.awayEnabled){
+    return '<div class="status-banner away"><span>Away/Busy</span>'+
+      '<a href="#" onclick="event.preventDefault();setAway(false)">Turn off</a></div>';
+  }
+  return '<div class="status-banner avail"><span>Status: Available</span>'+
+    '<a href="#" onclick="event.preventDefault();switchTab(\'settings\')">Set away</a></div>';
+}
+
+// ============================================================
+// SETTINGS — away notice (1.125) and the after-hours line (1.132)
+// ============================================================
+// Two fields, deliberately not one: away is a deliberate act with an end,
+// after-hours is standing and automatic. Both are the teacher's own words —
+// nothing here is written for them.
+function rTeacherSettings(){
+  if(TSET.loading&&!TSET.loaded){
+    return '<div style="text-align:center;padding:2rem;color:var(--text3)"><span class="spin" style="font-size:20px">↻</span></div>';
+  }
+  var h='<div class="card">';
+  h+='<div class="thread-hd">Away / Busy</div>';
+  h+='<div style="font-size:12px;color:var(--text3);margin-bottom:.6rem">'+
+     'While this is on, families see your message before they write, and anyone who writes to you gets it '+
+     'as a reply straight away. They are told once per conversation, not every time.</div>';
+  h+='<textarea id="tset-away" rows="3" placeholder="What should families see while you\'re away?" '+
+     'oninput="TSET.draftAway=this.value" style="width:100%">'+esc(TSET.draftAway)+'</textarea>';
+  h+='<div style="display:flex;gap:8px;align-items:center;margin-top:.6rem">'+
+     (TSET.awayEnabled
+       ? '<button class="btn btn-s" onclick="setAway(false)">Turn off away</button>'
+       : '<button class="btn btn-p" onclick="setAway(true)">Turn on away</button>')+
+     (TSET.saving?'<span class="spin">↻</span>':'')+
+     '</div>';
+  h+='</div>';
+
+  h+='<div class="card" style="margin-top:.75rem">';
+  h+='<div class="thread-hd">After hours</div>';
+  h+='<div style="font-size:12px;color:var(--text3);margin-bottom:.6rem">'+
+     'Shown to a family while they are writing to you outside your hours, so they know when to expect a '+
+     'reply. Leave it blank to use the studio\'s standard wording.</div>';
+  h+='<textarea id="tset-after" rows="3" placeholder="Your own after-hours message (optional)" '+
+     'oninput="TSET.draftAfter=this.value" style="width:100%">'+esc(TSET.draftAfter)+'</textarea>';
+  h+='<div style="font-size:11px;color:var(--text4);margin-top:.5rem">'+
+     'We only email you between '+_fmtHour(TSET.notifyOpen)+' and '+_fmtHour(TSET.notifyClose)+
+     (TSET.notifyDerived?', from your own availability.':', the studio\'s standard hours.')+
+     ' Messages sent outside that reach you when your day starts — nothing is lost.</div>';
+  h+='<div style="margin-top:.6rem"><button class="btn btn-s" onclick="saveTeacherSettings()">Save</button></div>';
+  h+='</div>';
+  return h;
+}
+function _fmtHour(h){
+  h=Number(h)||0;
+  var ap=h>=12?'pm':'am', h12=h%12; if(h12===0)h12=12;
+  return h12+ap;
+}
+function loadTeacherSettings(){
+  TSET.loading=true;
+  api({action:'teacherGetSettings', data:{teacherToken:TOKEN}}, function(e,r){
+    TSET.loading=false;
+    if(e||!r||!r.ok) return;   // silent: a settings read must never block messaging
+    var st=r.settings||{};
+    TSET.awayEnabled=!!st.awayEnabled;
+    TSET.awayMessage=st.awayMessage||'';
+    TSET.afterHoursMessage=st.afterHoursMessage||'';
+    TSET.notifyOpen=st.notifyOpen; TSET.notifyClose=st.notifyClose;
+    TSET.notifyDerived=!!st.notifyDerived;
+    TSET.draftAway=TSET.awayMessage;
+    TSET.draftAfter=TSET.afterHoursMessage;
+    TSET.loaded=true;
+    render();
+  });
+}
+function setAway(on){
+  var msg=(document.getElementById('tset-away')||{}).value;
+  if(msg===undefined) msg=TSET.draftAway;
+  if(on && !String(msg||'').trim()){
+    HOME_TAB='settings';
+    showMsg('Add an away message first, so families are told something.','e');
+    render();
+    return;
+  }
+  _saveSettings({awayEnabled:on, awayMessage:msg});
+}
+function saveTeacherSettings(){
+  _saveSettings({
+    awayEnabled:TSET.awayEnabled,
+    awayMessage:(document.getElementById('tset-away')||{}).value,
+    afterHoursMessage:(document.getElementById('tset-after')||{}).value
+  });
+}
+function _saveSettings(fields){
+  TSET.saving=true; render();
+  var d={teacherToken:TOKEN};
+  for(var k in fields) if(fields[k]!==undefined) d[k]=fields[k];
+  api({action:'teacherSaveSettings', data:d}, function(e,r){
+    TSET.saving=false;
+    if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not save.','e'); render(); return; }
+    var st=r.settings||{};
+    TSET.awayEnabled=!!st.awayEnabled;
+    TSET.awayMessage=st.awayMessage||'';
+    TSET.afterHoursMessage=st.afterHoursMessage||'';
+    TSET.draftAway=TSET.awayMessage;
+    TSET.draftAfter=TSET.afterHoursMessage;
+    TSET.loaded=true;
+    showMsg(TSET.awayEnabled?'You\'re set to away.':'Saved.','s');
+    render();
+  });
 }
 
 function switchTab(tab){
   HOME_TAB=tab;
   render();
+  if(tab==='settings' && !TSET.loaded && !TSET.loading) loadTeacherSettings();
   if(tab==='staff' && STAFF_VIEW==='list'){
     if(!STAFF_PICKER.all.length && !STAFF_PICKER.loading) loadStaffDirectory();
     if(!STAFF_THREADS.list.length && !STAFF_THREADS.loading) loadStaffThreads();
@@ -618,9 +761,15 @@ function rFamilyThreadList(){
   }
   h+='<div class="thread-list">'+FAMILY_THREADS.list.map(function(t){
     var names=[t.parent1Name,t.parent2Name].filter(Boolean).join(' & ')||'Family';
-    return '<div class="thread-row" onclick="openFamilyThread(\''+esc(t.familyId)+'\',\''+esc(t.parent1Name)+'\',\''+esc(t.parent2Name)+'\')">'+
+    // Ids only in the handler. esc() does not escape an apostrophe, so a
+    // parent named O'Brien broke this row's click — the same latent bug found
+    // and fixed on the admin side the same day (BACKLOG 1.73).
+    return '<div class="thread-row" onclick="openFamilyRow(\''+esc(t.familyId)+'\')">'+
       '<div class="thread-row-main">'+
-      '<div class="thread-row-name">'+esc(names)+'</div>'+
+      '<div class="thread-row-name">'+esc(names)+
+        // BACKLOG 1.135 — this one is with the office now, so the teacher can
+        // see at a glance that it is not sitting on them.
+        (t.handedToAdmin?'<span class="handoff-tag">With admin</span>':'')+'</div>'+
       '<div class="thread-row-preview">'+esc((t.lastMessageText||'').slice(0,60))+'</div>'+
       '</div>'+
       rReadToggle(t.unread, 'family_teacher', t.familyId, TEACHER_ID, '', 'family', t.waitingSince)+
@@ -717,6 +866,15 @@ function loadFamilyThreads(silent){
     FAMILY_THREADS.list=r.threads||[];
     MSG_LOCK.locked = _tIsTruthy(r.messagingLocked);
     MSG_LOCK.msg = r.messagingLockedMsg||'';
+    // The deep link from a notification email, spent the moment the roster
+    // arrives — and only once, so a later refresh doesn't drag the teacher
+    // back out of whatever they moved on to.
+    if(_pendingOpenFamilyId){
+      var _want=_pendingOpenFamilyId;
+      _pendingOpenFamilyId='';
+      var _row=FAMILY_THREADS.list.filter(function(t){return t.familyId===_want;})[0];
+      if(_row){ HOME_TAB='family'; openFamilyThread(_row.familyId, _row.parent1Name, _row.parent2Name); return; }
+    }
     render();
   });
 }
@@ -752,7 +910,8 @@ function rFamilyPickerResults(query){
   return '<div class="thread-list">'+results.map(function(f){
     var names=[f.parent1Name,f.parent2Name].filter(Boolean).join(' & ')||'Family';
     var kids=(f.studentNames||[]).join(', ');
-    return '<div class="thread-row" onclick="openFamilyThread(\''+esc(f.familyId)+'\',\''+esc(f.parent1Name)+'\',\''+esc(f.parent2Name)+'\')">'+
+    // Same apostrophe hazard as the roster row above — id only.
+    return '<div class="thread-row" onclick="openPickedFamily(\''+esc(f.familyId)+'\')">'+
       '<div class="thread-row-main">'+
       '<div class="thread-row-name">'+esc(names)+'</div>'+
       (kids?'<div class="thread-row-preview">'+esc(kids)+'</div>':'')+
@@ -771,6 +930,18 @@ function rFamilyPicker(){
   return h;
 }
 
+// Resolves the row, then opens it — so no name is ever interpolated into an
+// inline handler. Two entry points, two lists: the roster and the picker.
+function openPickedFamily(familyId){
+  var f=FAMILY_PICKER.all.filter(function(x){return x.familyId===familyId;})[0];
+  if(!f) return;
+  openFamilyThread(f.familyId, f.parent1Name, f.parent2Name);
+}
+function openFamilyRow(familyId){
+  var t=FAMILY_THREADS.list.filter(function(x){return x.familyId===familyId;})[0];
+  if(!t) return;
+  openFamilyThread(t.familyId, t.parent1Name, t.parent2Name);
+}
 function openFamilyThread(familyId, p1, p2){
   ACTIVE_THREAD = {familyId:familyId, parent1Name:p1, parent2Name:p2, messages:[], draft:'', sending:false, loading:true, refreshing:false, notifyP1:true, notifyP2:true};
   FAMILY_VIEW='thread';
@@ -830,7 +1001,34 @@ function rFamilyThread(){
     ?'<button class="btn btn-p" disabled><span class="spin">↻</span></button>'
     :'<button class="btn btn-p" onclick="sendFamilyMessage()">Send</button>';
   h+=rComposer('family-composer',t.draft,'ACTIVE_THREAD.draft=_composerInput(this)',sendBtn);
+  // BACKLOG 1.135 — hand a question to the office. The family is told in the
+  // thread, and from that moment the conversation ages against admin instead
+  // of this teacher; it does NOT stop ageing, because the family has been
+  // waiting since they wrote.
+  h+='<div style="margin-top:.5rem;text-align:right">'+
+     (t.forwarding
+       ? '<span class="spin" style="font-size:12px">↻</span>'
+       : '<a href="#" style="font-size:11px;color:var(--text4)" onclick="event.preventDefault();forwardToAdmin()">Forward to admin for review</a>')+
+     '</div>';
   return h;
+}
+
+// Sends the family's latest message to the office, with their lesson details,
+// and tells the family it has happened (AC's copy, server-side).
+function forwardToAdmin(){
+  var t=ACTIVE_THREAD;
+  if(!t||t.forwarding) return;
+  if(!confirm('Forward this conversation to admin for review?\n\nThe family will be told, and admin will reply.')) return;
+  t.forwarding=true; render();
+  api({action:'forwardToAdmin', data:{teacherToken:TOKEN, familyId:t.familyId}}, function(e,r){
+    t.forwarding=false;
+    if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not forward.','e'); render(); return; }
+    if(r.message) t.messages=t.messages.concat([r.message]);
+    _shouldScrollMsgList=true;
+    showMsg('Sent to admin.','s');
+    render();
+    loadFamilyThreads(true);
+  });
 }
 
 function sendFamilyMessage(){
@@ -1019,6 +1217,13 @@ function rStaffThread(){
   var sendBtn=t.sending
     ?'<button class="btn btn-p" disabled><span class="spin">↻</span></button>'
     :'<button class="btn btn-p" onclick="sendStaffMessage()">Send</button>';
+  // BACKLOG 1.158 — staff messages stay in-app by default (AC, 1 Sept), with
+  // the same per-message override admin has always had, for reaching someone
+  // who is not watching the portal. Unchecked every time on purpose: a sticky
+  // setting would quietly become "email everything".
+  h+='<label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text3);margin-bottom:.4rem;cursor:pointer">'+
+     '<input type="checkbox" '+(t.emailToo?'checked':'')+' onchange="ACTIVE_STAFF_THREAD.emailToo=this.checked" style="width:14px;height:14px"> '+
+     'Also send by email (for something that can\'t wait for the portal)</label>';
   h+=rComposer('staff-composer',t.draft,'ACTIVE_STAFF_THREAD.draft=_composerInput(this)',sendBtn);
   return h;
 }
@@ -1460,6 +1665,9 @@ function sendStaffMessage(){
   var reqData = t.contactType==='admin'
     ? {conversationType:'teacher_admin', teacherId:TEACHER_ID, teacherToken:TOKEN, messageText:text, messageHtml:html}
     : {conversationType:'staff_staff', teacherId:TEACHER_ID, staffId2:t.otherId, teacherToken:TOKEN, messageText:text, messageHtml:html};
+  // BACKLOG 1.158 — the sender's own per-message email override, read here
+  // and cleared below so the next message starts unchecked again.
+  if(t.emailToo) reqData.notifyByEmail=true;
   // Same optimistic path as sendFamilyMessage() above (BACKLOG 1.124 #2).
   var clientMsgId=_ktNewClientMsgId();
   reqData.clientMsgId=clientMsgId;
@@ -1469,6 +1677,7 @@ function sendStaffMessage(){
   };
   t.messages=t.messages.concat([pending]);
   t.draft='';
+  t.emailToo=false;
   t._sendInFlight=true;
   _shouldScrollMsgList=true;
   render();
@@ -1577,6 +1786,11 @@ function boot(){
     var params = new URLSearchParams(window.location.search);
     resetTokenFromUrl = params.get('resetToken') || '';
     loginTokenFromUrl = params.get('token') || '';
+    // BACKLOG 1.124 #3 — the notification email now names the conversation
+    // it is about, so a teacher lands on the message rather than the roster.
+    // Consumed once, by loadFamilyThreads(), which is the first point the
+    // family's name is known.
+    _pendingOpenFamilyId = params.get('openFamilyId') || '';
   } catch(e) { /* URLSearchParams unsupported — treat as no token */ }
 
   if(loginTokenFromUrl){
@@ -1636,6 +1850,7 @@ function boot(){
         render();
         loadFamilyThreads();
         _startMessagePolling();
+        loadTeacherSettings();
       } else {
         _ktClearSession();
         TOKEN=''; TEACHER_ID=''; TEACHER_NAME='';

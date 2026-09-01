@@ -233,6 +233,13 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 .bubble.mine .bubble-text a{color:#fff}
 .bubble-time{font-size:10px;color:var(--text5);margin-top:.3rem}
 .bubble.mine .bubble-time{color:rgba(255,255,255,.7)}
+/* The two notices above the composer (BACKLOG 1.125, 1.132). Away is the
+   louder of the two on purpose: it means "not today", where after-hours only
+   means "not right now". */
+.kl-away{background:#FDECEC;border:1px solid #DC2626;color:#B91C1C;border-radius:8px;
+  padding:9px 11px;font-size:12px;line-height:1.45;margin-bottom:.6rem;white-space:pre-wrap}
+.kl-afterhours{background:var(--bg2,#F6F6F4);border:1px solid var(--border,#E3E3DE);color:var(--text3,#5A5A55);
+  border-radius:8px;padding:9px 11px;font-size:11.5px;line-height:1.45;margin-bottom:.6rem;white-space:pre-wrap}
 .composer{display:flex;gap:8px;align-items:flex-end}
 .composer textarea{background:rgba(255,255,255,.45);border:1px solid var(--border2);color:var(--text);border-radius:var(--r);padding:9px 10px;font-family:"Inter",sans-serif;font-size:14px;width:100%;outline:none;resize:none;min-height:44px;max-height:120px}
 .composer textarea:focus{border-color:var(--acc);background:rgba(255,255,255,.65)}
@@ -392,6 +399,15 @@ var LF = (function(){
 // than expanding under a row (1.40). The "which teacher" picker that used to
 // sit behind a Contact Teacher button is gone: the contacts are the list.
 var HOME_CONVOS = {loading:false, list:[]};
+// AC's copy, final 28 Aug (BACKLOG 1.132) — the studio's standard after-hours
+// line, shown to a family writing outside their teacher's own hours when that
+// teacher hasn't written their own. The overlap with the Messages block's
+// "contact admin" line is deliberate (AC: "the message redundancy is on
+// purpose. People don't read.") — do not tidy it away.
+var AFTER_HOURS_COPY = "Keylab teachers are professional musicians who are frequently busy rehearsing or "+
+  "performing in the evenings and on weekends, so they can't always respond right away, but will respond "+
+  "asap, typically within 24 hours.\n\nPlease remember: Teachers only teach and do not handle admin "+
+  "requests. Contact admin for all enrollment, scheduling, and billing questions.";
 var HOME_EXPANDED = null; // {teacherId, teacherName, messages, draft, sending, loading, lastSentAt}
 var _pollTimer = null;
 var _pendingOpenTeacherId = ''; // set by boot() from ?openTeacherId=, consumed once after login
@@ -2262,6 +2278,20 @@ function rHomeThreadView(){
     h+='<p class="hint">No messages yet — send a message to get started.</p>';
   } else {
     h+='<div class="msg-list">'+t.messages.map(rMsgBubble).join('')+'</div>';
+  }
+  // BACKLOG 1.125 — the away notice, ABOVE the composer, so a parent knows
+  // before they write rather than being told afterwards by an autoresponder.
+  // There is deliberately no "available" state here: a green badge on a
+  // parent's screen would read as a promise of an immediate reply
+  // (AC, 1 Sept — families get no status banner).
+  if(c.teacherAway && c.teacherAwayMessage){
+    h+='<div class="kl-away">'+esc(c.teacherAwayMessage)+'</div>';
+  }
+  // BACKLOG 1.132 — and the after-hours line, shown while they are writing
+  // outside this teacher's own hours, with the option to phone instead still
+  // in front of them. Teacher's own words where they wrote any.
+  if(c.teacherAfterHours && !c.teacherAway){
+    h+='<div class="kl-afterhours">'+esc(c.teacherAfterHoursMessage||AFTER_HOURS_COPY)+'</div>';
   }
   // No sending/disabled state: the message is already in the history by the
   // time the request goes out, so a spinner would be reporting on work the

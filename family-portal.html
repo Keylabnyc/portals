@@ -2504,33 +2504,43 @@ function sendHomeMessage(){
 // burning script executions.
 function _startMessagePolling(){
   if(_pollTimer) return;
-  _pollTimer=setInterval(function(){
-    if(document.hidden) return;
-    if(!TOKEN) return;
-    if(TAB==='home') loadHomeConversations(true);
-    // _sendInFlight: see sendHomeMessage(). A tick between the optimistic
-    // append and the server's confirmation would otherwise deliver the same
-    // message back and show it twice.
-    if(HOME_EXPANDED && !HOME_EXPANDED.loading && !HOME_EXPANDED._sendInFlight){
-      (function(teacherId){
-        fapi('getMessagesSince', {conversationType:'family_teacher', familyId:FAMILY_ID, teacherId:teacherId, sinceSentAt:String(HOME_EXPANDED.lastSentAt||0)}, function(e,r){
-          if(!HOME_EXPANDED||HOME_EXPANDED.teacherId!==teacherId) return;
-          if(e||!r||!r.ok||!r.messages||!r.messages.length) return;
-          // Second guard, independent of _sendInFlight: drop anything already
-          // in the thread by id. Duplicated messages are the failure mode this
-          // whole path has to avoid, and one cheap filter covers every route
-          // to it, including a retry or a reconnect.
-          var have={};
-          HOME_EXPANDED.messages.forEach(function(m){ if(m.messageId) have[m.messageId]=true; });
-          var fresh=r.messages.filter(function(m){ return !m.messageId || !have[m.messageId]; });
-          if(!fresh.length) return;
-          HOME_EXPANDED.messages=HOME_EXPANDED.messages.concat(fresh);
-          HOME_EXPANDED.lastSentAt=_maxSentAt(HOME_EXPANDED.messages);
-          _shouldScrollMsgList=true; render();
-        });
-      })(HOME_EXPANDED.teacherId);
-    }
-  }, 5000);
+  _pollTimer=setInterval(_pollTick,5000);
+  // Coming back to the tab refreshes at once instead of waiting out the rest
+  // of the interval. Polling pauses while hidden, so without this the worst
+  // case is a full 5 seconds of stale screen at exactly the moment someone is
+  // looking at it. Cheap now that a poll with nothing to report never touches
+  // the messages sheet (1.159).
+  document.addEventListener('visibilitychange',function(){
+    if(document.visibilityState==='visible') _pollTick();
+  });
+  window.addEventListener('focus',_pollTick);
+}
+function _pollTick(){
+  if(document.hidden) return;
+  if(!TOKEN) return;
+  if(TAB==='home') loadHomeConversations(true);
+  // _sendInFlight: see sendHomeMessage(). A tick between the optimistic
+  // append and the server's confirmation would otherwise deliver the same
+  // message back and show it twice.
+  if(HOME_EXPANDED && !HOME_EXPANDED.loading && !HOME_EXPANDED._sendInFlight){
+    (function(teacherId){
+      fapi('getMessagesSince', {conversationType:'family_teacher', familyId:FAMILY_ID, teacherId:teacherId, sinceSentAt:String(HOME_EXPANDED.lastSentAt||0)}, function(e,r){
+        if(!HOME_EXPANDED||HOME_EXPANDED.teacherId!==teacherId) return;
+        if(e||!r||!r.ok||!r.messages||!r.messages.length) return;
+        // Second guard, independent of _sendInFlight: drop anything already
+        // in the thread by id. Duplicated messages are the failure mode this
+        // whole path has to avoid, and one cheap filter covers every route
+        // to it, including a retry or a reconnect.
+        var have={};
+        HOME_EXPANDED.messages.forEach(function(m){ if(m.messageId) have[m.messageId]=true; });
+        var fresh=r.messages.filter(function(m){ return !m.messageId || !have[m.messageId]; });
+        if(!fresh.length) return;
+        HOME_EXPANDED.messages=HOME_EXPANDED.messages.concat(fresh);
+        HOME_EXPANDED.lastSentAt=_maxSentAt(HOME_EXPANDED.messages);
+        _shouldScrollMsgList=true; render();
+      });
+    })(HOME_EXPANDED.teacherId);
+  }
 }
 
 function rMsgBubble(m){

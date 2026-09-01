@@ -1727,55 +1727,66 @@ function sendStaffMessage(){
 // comment in Code.js). Paused while the tab isn't visible.
 function _startMessagePolling(){
   if(_pollTimer) return;
-  _pollTimer=setInterval(function(){
-    if(document.hidden || !TOKEN) return;
-    if(HOME_TAB==='family'){
-      // BACKLOG 1.124 #1. This was gated on FAMILY_VIEW==='list', which was
-      // right while a thread REPLACED the roster and wrong the moment @650 put
-      // both panes on screen: unread badges and previews froze for as long as a
-      // conversation stayed open. Polled in both views now — the fetch is the
-      // same one, and it is what also delivers the messaging lock flag.
-      loadFamilyThreads(true);
-      if(FAMILY_VIEW==='thread' && ACTIVE_THREAD && !ACTIVE_THREAD.loading && !ACTIVE_THREAD._sendInFlight){
-        var ft=ACTIVE_THREAD;
-        api({action:'getMessagesSince', data:{conversationType:'family_teacher', familyId:ft.familyId, teacherId:TEACHER_ID, teacherToken:TOKEN, sinceSentAt:String(_maxSentAt(ft.messages)||0)}}, function(e,r){
-          if(!ACTIVE_THREAD||ACTIVE_THREAD.familyId!==ft.familyId) return;
-          if(e||!r||!r.ok||!r.messages||!r.messages.length) return;
-          // Second guard, independent of _sendInFlight: drop anything already
-          // held by id. Duplicated messages are the failure this path has to
-          // avoid, and one filter covers every route to it.
-          var _have={};
-          ACTIVE_THREAD.messages.forEach(function(m){ if(m.messageId) _have[m.messageId]=true; });
-          var _fresh=r.messages.filter(function(m){ return !m.messageId || !_have[m.messageId]; });
-          if(!_fresh.length) return;
-          ACTIVE_THREAD.messages=ACTIVE_THREAD.messages.concat(_fresh);
-          _shouldScrollMsgList=true; render();
-        });
-      }
-    } else {
-      if(STAFF_VIEW==='list'){ loadStaffThreads(true); }
-      if(STAFF_VIEW==='thread' && ACTIVE_STAFF_THREAD && !ACTIVE_STAFF_THREAD.loading && !ACTIVE_STAFF_THREAD._sendInFlight){
-        var st=ACTIVE_STAFF_THREAD;
-        var reqData=st.contactType==='admin'
-          ? {conversationType:'teacher_admin', teacherId:TEACHER_ID, teacherToken:TOKEN}
-          : {conversationType:'staff_staff', teacherId:TEACHER_ID, staffId2:st.otherId, teacherToken:TOKEN};
-        reqData.sinceSentAt=String(_maxSentAt(st.messages)||0);
-        api({action:'getMessagesSince', data:reqData}, function(e,r){
-          if(!ACTIVE_STAFF_THREAD||ACTIVE_STAFF_THREAD.otherId!==st.otherId) return;
-          if(e||!r||!r.ok||!r.messages||!r.messages.length) return;
-          // Second guard, independent of _sendInFlight: drop anything already
-          // held by id. Duplicated messages are the failure this path has to
-          // avoid, and one filter covers every route to it.
-          var _have={};
-          ACTIVE_STAFF_THREAD.messages.forEach(function(m){ if(m.messageId) _have[m.messageId]=true; });
-          var _fresh=r.messages.filter(function(m){ return !m.messageId || !_have[m.messageId]; });
-          if(!_fresh.length) return;
-          ACTIVE_STAFF_THREAD.messages=ACTIVE_STAFF_THREAD.messages.concat(_fresh);
-          _shouldScrollMsgList=true; render();
-        });
-      }
+  _pollTimer=setInterval(_pollTick,5000);
+  // Coming back to the tab refreshes at once rather than waiting out the rest
+  // of the interval (AC, 1 Sept: "can the tool load new messages upon login so
+  // I can access right away?"). Polling pauses while hidden, so without this
+  // the worst case is a full 5 seconds of stale screen at exactly the moment
+  // someone is looking. Cheap now that a poll with nothing to report never
+  // touches the messages sheet (1.159).
+  document.addEventListener('visibilitychange',function(){
+    if(document.visibilityState==='visible') _pollTick();
+  });
+  window.addEventListener('focus',_pollTick);
+}
+function _pollTick(){
+  if(document.hidden || !TOKEN) return;
+  if(HOME_TAB==='family'){
+    // BACKLOG 1.124 #1. This was gated on FAMILY_VIEW==='list', which was
+    // right while a thread REPLACED the roster and wrong the moment @650 put
+    // both panes on screen: unread badges and previews froze for as long as a
+    // conversation stayed open. Polled in both views now — the fetch is the
+    // same one, and it is what also delivers the messaging lock flag.
+    loadFamilyThreads(true);
+    if(FAMILY_VIEW==='thread' && ACTIVE_THREAD && !ACTIVE_THREAD.loading && !ACTIVE_THREAD._sendInFlight){
+      var ft=ACTIVE_THREAD;
+      api({action:'getMessagesSince', data:{conversationType:'family_teacher', familyId:ft.familyId, teacherId:TEACHER_ID, teacherToken:TOKEN, sinceSentAt:String(_maxSentAt(ft.messages)||0)}}, function(e,r){
+        if(!ACTIVE_THREAD||ACTIVE_THREAD.familyId!==ft.familyId) return;
+        if(e||!r||!r.ok||!r.messages||!r.messages.length) return;
+        // Second guard, independent of _sendInFlight: drop anything already
+        // held by id. Duplicated messages are the failure this path has to
+        // avoid, and one filter covers every route to it.
+        var _have={};
+        ACTIVE_THREAD.messages.forEach(function(m){ if(m.messageId) _have[m.messageId]=true; });
+        var _fresh=r.messages.filter(function(m){ return !m.messageId || !_have[m.messageId]; });
+        if(!_fresh.length) return;
+        ACTIVE_THREAD.messages=ACTIVE_THREAD.messages.concat(_fresh);
+        _shouldScrollMsgList=true; render();
+      });
     }
-  }, 5000);
+  } else {
+    if(STAFF_VIEW==='list'){ loadStaffThreads(true); }
+    if(STAFF_VIEW==='thread' && ACTIVE_STAFF_THREAD && !ACTIVE_STAFF_THREAD.loading && !ACTIVE_STAFF_THREAD._sendInFlight){
+      var st=ACTIVE_STAFF_THREAD;
+      var reqData=st.contactType==='admin'
+        ? {conversationType:'teacher_admin', teacherId:TEACHER_ID, teacherToken:TOKEN}
+        : {conversationType:'staff_staff', teacherId:TEACHER_ID, staffId2:st.otherId, teacherToken:TOKEN};
+      reqData.sinceSentAt=String(_maxSentAt(st.messages)||0);
+      api({action:'getMessagesSince', data:reqData}, function(e,r){
+        if(!ACTIVE_STAFF_THREAD||ACTIVE_STAFF_THREAD.otherId!==st.otherId) return;
+        if(e||!r||!r.ok||!r.messages||!r.messages.length) return;
+        // Second guard, independent of _sendInFlight: drop anything already
+        // held by id. Duplicated messages are the failure this path has to
+        // avoid, and one filter covers every route to it.
+        var _have={};
+        ACTIVE_STAFF_THREAD.messages.forEach(function(m){ if(m.messageId) _have[m.messageId]=true; });
+        var _fresh=r.messages.filter(function(m){ return !m.messageId || !_have[m.messageId]; });
+        if(!_fresh.length) return;
+        ACTIVE_STAFF_THREAD.messages=ACTIVE_STAFF_THREAD.messages.concat(_fresh);
+        _shouldScrollMsgList=true; render();
+      });
+    }
+  }
 }
 
 function doSignOut(){

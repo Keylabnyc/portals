@@ -2461,9 +2461,13 @@ function _maxSentAt(msgs){
 // a message sent before this fix, still holding the old date-only string).
 function fmtMsgTime(ms){
   var n=Number(ms);
-  if(!n) return String(ms||'');
+  // Never print the raw stored value: it is an epoch number or, when
+  // something has gone wrong upstream, a date string — and a parent seeing
+  // "1969-12-31" under their own message is how BACKLOG 1.162 was found.
+  // Showing nothing is the honest failure here.
+  if(!n) return '';
   var d=new Date(n);
-  if(isNaN(d.getTime())) return String(ms||'');
+  if(isNaN(d.getTime())) return '';
   var days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   var h=d.getHours(), mins=d.getMinutes();
   var ampm=h>=12?'PM':'AM';

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Keylab Teacher Portal</title>
-<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -17,13 +17,13 @@
   --blue:#1C4A82;--bbg:#D0E2F8;--bt:#0C2A52;
   --acc:#1E3A6E;--r:5px;--rl:8px
 }
-body{background:var(--bg);color:var(--text);font-family:"Open Sans",sans-serif;font-size:14px;line-height:1.6;min-height:100vh;-webkit-font-smoothing:antialiased}
+body{background:var(--bg);color:var(--text);font-family:"Inter",sans-serif;font-size:14px;line-height:1.6;min-height:100vh;-webkit-font-smoothing:antialiased}
 .wrap{max-width:420px;margin:0 auto;padding:2rem 1.25rem 4rem}
 .login-w{margin:4rem auto 0;text-align:center}
-.login-brand{font-family:"DM Mono",monospace;font-size:15px;letter-spacing:.1em;color:var(--acc);margin-bottom:.3rem;font-weight:500}
+.login-brand{font-family:"Inter",sans-serif;font-size:15px;letter-spacing:.1em;color:var(--acc);margin-bottom:.3rem;font-weight:500}
 .login-sub{font-size:12px;color:var(--text4);margin-bottom:1.75rem}
 h1{font-size:20px;font-weight:400;margin-bottom:.4rem;color:var(--text)}
-h2{font-size:10px;font-weight:600;color:var(--acc);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.75rem;font-family:"DM Mono",monospace}
+h2{font-size:10px;font-weight:600;color:var(--acc);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.75rem;font-family:"Inter",sans-serif}
 p{color:var(--text3);margin-bottom:.75rem;line-height:1.65;font-size:13px}
 a{color:var(--bt);text-decoration:none}
 a:hover{text-decoration:underline}
@@ -31,12 +31,12 @@ a:hover{text-decoration:underline}
 .msg{padding:10px 14px;border-radius:var(--r);font-size:13px;margin-bottom:1rem;border:1px solid;line-height:1.5}
 .ms{background:var(--gbg);color:var(--gt);border-color:var(--green)}
 .me{background:var(--rbg);color:var(--rt);border-color:var(--red)}
-input{background:rgba(255,255,255,.45);border:1px solid var(--border2);color:var(--text);border-radius:var(--r);padding:9px 10px;font-family:"Open Sans",sans-serif;font-size:14px;width:100%;outline:none;margin-top:4px;-webkit-appearance:none}
+input{background:rgba(255,255,255,.45);border:1px solid var(--border2);color:var(--text);border-radius:var(--r);padding:9px 10px;font-family:"Inter",sans-serif;font-size:14px;width:100%;outline:none;margin-top:4px;-webkit-appearance:none}
 input:focus{border-color:var(--acc);background:rgba(255,255,255,.65)}
-label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:.08em;display:block;font-family:"DM Mono",monospace}
+label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:.08em;display:block;font-family:"Inter",sans-serif}
 .field{margin-bottom:1rem}
 .req{color:var(--rt);margin-left:2px}
-.btn{padding:10px 16px;border-radius:var(--r);font-size:13px;cursor:pointer;border:1px solid transparent;font-family:"Open Sans",sans-serif;transition:background .1s,opacity .1s;display:inline-flex;align-items:center;justify-content:center;gap:6px;font-weight:600;line-height:1;letter-spacing:.01em;width:100%}
+.btn{padding:10px 16px;border-radius:var(--r);font-size:13px;cursor:pointer;border:1px solid transparent;font-family:"Inter",sans-serif;transition:background .1s,opacity .1s;display:inline-flex;align-items:center;justify-content:center;gap:6px;font-weight:600;line-height:1;letter-spacing:.01em;width:100%}
 .btn-p{background:#1a4fc4;color:#fff;border-color:#1a4fc4}.btn-p:hover{background:#1440a8;border-color:#1440a8}
 .btn-s{background:rgba(0,0,0,.12);color:var(--text2);border-color:var(--border2)}.btn-s:hover{background:rgba(0,0,0,.2);color:var(--text)}
 .btn:disabled{opacity:.35;cursor:not-allowed}
@@ -46,32 +46,32 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 .remember-row input{width:14px;height:14px;-webkit-appearance:checkbox;appearance:auto;margin:0;flex:0 0 auto}
 .linkline{font-size:13px;color:var(--text3);text-align:center;margin-top:.5rem}
 .tabbar{display:flex;gap:6px;margin-bottom:1rem;padding:5px;background:rgba(255,255,255,.35);border:1px solid var(--border);border-radius:10px}
-.tab{flex:1;text-align:center;padding:9px 8px;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--text4);background:transparent;cursor:pointer;border-radius:7px;font-family:"DM Mono",monospace;font-weight:600;border:1px solid transparent;transition:all .15s}
+.tab{flex:1;text-align:center;padding:9px 8px;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--text4);background:transparent;cursor:pointer;border-radius:7px;font-family:"Inter",sans-serif;font-weight:600;border:1px solid transparent;transition:all .15s}
 .tab.on{color:#fff;background:var(--acc);border-color:var(--acc)}
-.thread-hd{font-size:10px;font-weight:600;color:var(--acc);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.75rem;font-family:"DM Mono",monospace}
+.thread-hd{font-size:10px;font-weight:600;color:var(--acc);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.75rem;font-family:"Inter",sans-serif}
 .empty-state{text-align:center;color:var(--text4);padding:2rem 1rem;font-size:13px}
 .msg-list{display:flex;flex-direction:column;gap:8px;margin-bottom:1rem;max-height:50vh;overflow-y:auto}
 .bubble-row{display:flex}
 .bubble-row.mine{justify-content:flex-end}
 .bubble{max-width:80%;background:rgba(255,255,255,.55);border:1px solid var(--border);border-radius:var(--rl);padding:.6rem .8rem}
 .bubble.mine{background:#1a4fc4;border-color:#1a4fc4;color:#fff}
-.bubble-sender{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--acc);font-family:"DM Mono",monospace;margin-bottom:.2rem}
+.bubble-sender{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--acc);font-family:"Inter",sans-serif;margin-bottom:.2rem}
 .bubble-text{font-size:13px;line-height:1.5;color:inherit}
 .bubble.mine .bubble-text{color:#fff}
 .bubble-time{font-size:10px;color:var(--text5);margin-top:.3rem}
 .bubble.mine .bubble-time{color:rgba(255,255,255,.7)}
 .composer{display:flex;gap:8px;align-items:flex-end}
-.composer textarea{background:rgba(255,255,255,.45);border:1px solid var(--border2);color:var(--text);border-radius:var(--r);padding:9px 10px;font-family:"Open Sans",sans-serif;font-size:14px;width:100%;outline:none;resize:none;min-height:44px;max-height:120px}
+.composer textarea{background:rgba(255,255,255,.45);border:1px solid var(--border2);color:var(--text);border-radius:var(--r);padding:9px 10px;font-family:"Inter",sans-serif;font-size:14px;width:100%;outline:none;resize:none;min-height:44px;max-height:120px}
 .composer textarea:focus{border-color:var(--acc);background:rgba(255,255,255,.65)}
 .composer .btn{width:auto;flex:0 0 auto}
 /* Formatting composer (BACKLOG 1.33). The contenteditable box deliberately
    reuses the textarea's exact look so the toolbar is the only visible change. */
 .composer-wrap{display:flex;flex-direction:column;gap:6px}
 .cmp-tb{display:flex;flex-wrap:wrap;gap:4px}
-.cmp-tb-btn{background:rgba(255,255,255,.45);border:1px solid var(--border2);color:var(--text3);border-radius:6px;min-width:32px;height:30px;padding:0 8px;font-size:12px;line-height:1;cursor:pointer;font-family:"Open Sans",sans-serif}
+.cmp-tb-btn{background:rgba(255,255,255,.45);border:1px solid var(--border2);color:var(--text3);border-radius:6px;min-width:32px;height:30px;padding:0 8px;font-size:12px;line-height:1;cursor:pointer;font-family:"Inter",sans-serif}
 .cmp-tb-btn:hover{background:rgba(255,255,255,.75);color:var(--text)}
 .cmp-tb-btn:active{background:var(--acc);color:#fff;border-color:var(--acc)}
-.cmp-rich{background:rgba(255,255,255,.45);border:1px solid var(--border2);color:var(--text);border-radius:var(--r);padding:9px 10px;font-family:"Open Sans",sans-serif;font-size:14px;line-height:1.5;width:100%;outline:none;min-height:44px;max-height:160px;overflow-y:auto;text-align:left}
+.cmp-rich{background:rgba(255,255,255,.45);border:1px solid var(--border2);color:var(--text);border-radius:var(--r);padding:9px 10px;font-family:"Inter",sans-serif;font-size:14px;line-height:1.5;width:100%;outline:none;min-height:44px;max-height:160px;overflow-y:auto;text-align:left}
 .cmp-rich:focus{border-color:var(--acc);background:rgba(255,255,255,.65)}
 .cmp-rich:empty:before{content:attr(data-ph);color:var(--text5)}
 .cmp-rich ul,.cmp-rich ol{margin:.25rem 0;padding-left:1.3rem}
@@ -88,7 +88,7 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 .cmp-linkrow.open{display:flex}
 .cmp-linkrow input{flex:1;min-width:130px;margin-top:0;padding:7px 9px;font-size:13px}
 .cmp-linkrow input.bad{border-color:var(--red)}
-.cmp-mini{background:rgba(0,0,0,.12);border:1px solid var(--border2);color:var(--text2);border-radius:var(--r);padding:7px 11px;font-size:12px;font-weight:600;font-family:"Open Sans",sans-serif;cursor:pointer;flex:0 0 auto}
+.cmp-mini{background:rgba(0,0,0,.12);border:1px solid var(--border2);color:var(--text2);border-radius:var(--r);padding:7px 11px;font-size:12px;font-weight:600;font-family:"Inter",sans-serif;cursor:pointer;flex:0 0 auto}
 .cmp-mini:hover{background:rgba(0,0,0,.2);color:var(--text)}
 .cmp-guide{flex:0 0 100%;font-size:11px;color:var(--text4);line-height:1.5}
 .bubble-text ul,.bubble-text ol{margin:.3rem 0;padding-left:1.25rem}
@@ -104,10 +104,22 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 .thread-row-name{font-size:13px;font-weight:600;color:var(--text)}
 .thread-row-preview{font-size:12px;color:var(--text4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .unread-badge{background:#1a4fc4;color:#fff;font-size:11px;font-weight:700;border-radius:10px;padding:1px 7px;flex:0 0 auto;cursor:pointer}
+/* BACKLOG 1.128. Text colour is chosen per swatch for contrast rather than for
+   consistency: white on that amber is unreadable, and darkening the amber to
+   fix it would undo the saturation AC asked for. */
+.msg-circle{width:30px;height:30px;border-radius:50%;flex:0 0 auto;display:inline-flex;align-items:center;
+  justify-content:center;font-size:11.5px;font-weight:600;line-height:1;cursor:pointer;
+  font-variant-numeric:tabular-nums;border:1px solid rgba(0,0,0,.22);box-shadow:0 0 0 1.5px rgba(255,255,255,.3)}
+.msg-circle.p-new{background:#1747C0;color:#fff}
+.msg-circle.p-2h{background:#E5A700;color:#3A2900}
+.msg-circle.p-4h{background:#E2620C;color:#3D1A00}
+.msg-circle.p-8h{background:#C42121;color:#fff}
+.msg-overdue{background:#B22222;color:#fff;border:1px solid #8B1A1A;border-radius:10px;padding:3px 8px;
+  font-size:10px;font-weight:600;letter-spacing:.06em;white-space:nowrap;flex:0 0 auto;cursor:pointer}
 .read-toggle{flex:0 0 auto;font-size:14px;color:var(--text5);text-decoration:none;padding:0 4px}
 .read-toggle:hover{color:var(--acc);text-decoration:none}
 .recipient-row{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:.6rem;font-size:12px;color:var(--text3)}
-.recipient-row label{display:flex;align-items:center;gap:5px;cursor:pointer;text-transform:none;letter-spacing:0;font-family:"Open Sans",sans-serif}
+.recipient-row label{display:flex;align-items:center;gap:5px;cursor:pointer;text-transform:none;letter-spacing:0;font-family:"Inter",sans-serif}
 .recipient-row input{width:14px;height:14px;-webkit-appearance:checkbox;appearance:auto;margin:0}
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -254,6 +266,9 @@ function fmtMsgTime(ms){
   return days[d.getDay()]+', '+(d.getMonth()+1)+'/'+d.getDate()+'/'+String(d.getFullYear()).slice(-2)+' '+h12+':'+mm+' '+ampm;
 }
 
+function _ktNewClientMsgId(){
+  return 'cmsg-'+Date.now()+'-'+Math.random().toString(36).slice(2,10);
+}
 function _maxSentAt(msgs){
   var max=0;
   (msgs||[]).forEach(function(m){ var n=Number(m.sentAt)||0; if(n>max) max=n; });
@@ -608,7 +623,7 @@ function rFamilyThreadList(){
       '<div class="thread-row-name">'+esc(names)+'</div>'+
       '<div class="thread-row-preview">'+esc((t.lastMessageText||'').slice(0,60))+'</div>'+
       '</div>'+
-      rReadToggle(t.unread, 'family_teacher', t.familyId, TEACHER_ID, '', 'family')+
+      rReadToggle(t.unread, 'family_teacher', t.familyId, TEACHER_ID, '', 'family', t.waitingSince)+
       '</div>';
   }).join('')+'</div>';
   return h;
@@ -619,9 +634,67 @@ function rFamilyThreadList(){
 // stopPropagation so clicking it doesn't also open the thread underneath.
 // listKind ('family'|'staff') tells markThreadRead() which list to
 // silently refresh afterward, so the toggle's effect is visible right away.
-function rReadToggle(unread, conversationType, familyId, teacherId, staffId2, listKind){
+// ── The ageing circle (BACKLOG 1.128) ──────────────────────────────────
+// Staff-facing only, by AC's instruction on 1 Sept: families never see a
+// countdown. It rides teacher-token endpoints and appears here and in admin's
+// Awaiting Reply, nowhere else.
+//
+// Why not simply elapsed hours. AC first chose a straight clock, then reversed
+// it the same day: "messages sent after friday 5pm shouldn't expect teacher
+// responses until Monday morning." Counting every hour turned every Monday
+// morning red, and a list where everything is red carries no information. So
+// OVERDUE means 24 hours the studio was OPEN.
+//
+// Saturday is excluded deliberately even though it is a teaching day — a
+// Saturday teacher is teaching, not doing message admin (AC, 28 Aug). The
+// window is studio-wide rather than per teacher: the promise is Keylab's, so it
+// has to be explicable to a parent and fair between staff.
+//
+// The clock runs from when the message ARRIVED, never from when it was opened
+// (AC, 1 Sept), which is why marking a thread unread does not reset it.
+var RESP_OPEN_HOUR=9, RESP_CLOSE_HOUR=17;   // 9am–5pm, Mon–Fri
+function _respHoursBetween(fromMs, toMs){
+  var from=Number(fromMs)||0, to=Number(toMs)||0;
+  if(!from || to<=from) return 0;
+  var open=0;
+  var d=new Date(from);
+  // Hour by hour, capped: anything older than a month is far past OVERDUE
+  // already, so the loop stops rather than being made clever.
+  for(var i=0;i<24*31 && d.getTime()<to;i++){
+    var day=d.getDay(), hr=d.getHours();
+    var next=new Date(d.getTime()); next.setMinutes(0,0,0); next.setHours(hr+1);
+    if(day>=1 && day<=5 && hr>=RESP_OPEN_HOUR && hr<RESP_CLOSE_HOUR){
+      open+=(Math.min(to,next.getTime())-d.getTime())/3600000;
+    }
+    d=next;
+  }
+  return open;
+}
+
+// null when there is nothing to show, so the caller falls back to the plain
+// mark-unread control rather than drawing an empty circle.
+function _agingMark(waitingSince){
+  if(!waitingSince) return null;
+  var h=_respHoursBetween(waitingSince, Date.now());
+  if(h>=24) return {cls:'p-od', overdue:true, label:'Overdue'};
+  var n=Math.round(h);
+  if(h>=8) return {cls:'p-8h', t:n+'h', label:'Waiting '+n+'h'};
+  if(h>=4) return {cls:'p-4h', t:n+'h', label:'Waiting '+n+'h'};
+  if(h>=2) return {cls:'p-2h', t:n+'h', label:'Waiting '+n+'h'};
+  return null;
+}
+
+// One control, both states (AC, 1 Sept): blue with the unread count clicks to
+// mark read; an ageing circle clicks to mark unread and returns to blue. The
+// clock keeps running underneath either way, because the family is waiting
+// regardless of what the teacher has ticked.
+function rReadToggle(unread, conversationType, familyId, teacherId, staffId2, listKind, waitingSince){
   var fn='markThreadRead('+(unread?'true':'false')+',\''+conversationType+'\',\''+esc(familyId)+'\',\''+esc(teacherId)+'\',\''+esc(staffId2)+'\',\''+listKind+'\')';
-  if(unread) return '<div class="unread-badge" onclick="event.stopPropagation();'+fn+'" title="Mark read">'+unread+'</div>';
+  var click=' onclick="event.stopPropagation();'+fn+'"';
+  if(unread) return '<div class="msg-circle p-new"'+click+' title="Mark read" aria-label="'+unread+' unread">'+unread+'</div>';
+  var m=_agingMark(waitingSince);
+  if(m && m.overdue) return '<div class="msg-overdue"'+click+' title="Mark unread" aria-label="Overdue">OVERDUE</div>';
+  if(m) return '<div class="msg-circle '+m.cls+'"'+click+' title="Mark unread" aria-label="'+esc(m.label)+'">'+m.t+'</div>';
   return '<a href="#" class="read-toggle" onclick="event.preventDefault();event.stopPropagation();'+fn+'" title="Mark unread">○</a>';
 }
 
@@ -774,12 +847,45 @@ function sendFamilyMessage(){
     if(t.notifyP1) notifyParents.push('parent1');
     if(t.notifyP2) notifyParents.push('parent2');
   }
-  t.sending=true; render();
-  api({action:'sendMessage', data:{conversationType:'family_teacher', familyId:t.familyId, teacherId:TEACHER_ID, teacherToken:TOKEN, messageText:text, messageHtml:html, notifyParents:notifyParents}}, function(e,r){
-    t.sending=false;
-    if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not send message.','e'); render(); return; }
-    t.draft='';
-    refreshFamilyThread(); // not openFamilyThread() — that resets the whole thread (blank + full spinner) instead of refreshing in place; caused the "odd reload" after sending (18 Aug)
+  // BACKLOG 1.124 #2. This used to cost the teacher TWO sequential Apps Script
+  // round trips before their own words left the box: a sendMessage, then a full
+  // refreshFamilyThread() to fetch back the message just sent. The family
+  // portal has done it properly since 1.46 and this is that pattern ported --
+  // append locally, post in the background, reconcile in place.
+  var clientMsgId=_ktNewClientMsgId();
+  var pending={
+    messageId:'', senderId:TEACHER_ID, senderName:TEACHER_NAME||'',
+    messageText:text, messageHtml:html, sentAt:Date.now(), _pending:true
+  };
+  t.messages=t.messages.concat([pending]);
+  t.draft='';
+  // Stops the 5s poll delivering this same message back before the server has
+  // confirmed it, which would show it twice.
+  t._sendInFlight=true;
+  _shouldScrollMsgList=true;
+  render();
+
+  api({action:'sendMessage', data:{conversationType:'family_teacher', familyId:t.familyId, teacherId:TEACHER_ID, teacherToken:TOKEN, messageText:text, messageHtml:html, notifyParents:notifyParents, clientMsgId:clientMsgId}}, function(e,r){
+    if(!ACTIVE_THREAD || ACTIVE_THREAD.familyId!==t.familyId) return; // navigated away mid-flight
+    t._sendInFlight=false;
+    if(e||!r||!r.ok){
+      // Put it back where the teacher can see and retry it, rather than losing
+      // words they watched "send".
+      t.messages=t.messages.filter(function(m){ return m!==pending; });
+      t.draft=html;
+      showMsg((r&&r.error)||'Could not send message.','e');
+      render();
+      return;
+    }
+    // Reconciled in place from the server's own row, and deliberately NO
+    // render() on success: the message is already on screen exactly as it will
+    // stay, and re-rendering it is the flicker this exists to remove.
+    pending._pending=false;
+    if(r.message){
+      pending.messageId=r.message.messageId||'';
+      pending.sentAt=r.message.sentAt||pending.sentAt;
+      pending.senderName=r.message.senderName||pending.senderName;
+    }
   });
 }
 
@@ -815,7 +921,7 @@ function rStaffRoster(){
   var admin=threadsById['admin']||{otherTeacherId:'admin', otherTeacherName:'Admin', lastMessageAt:0, lastMessageText:'', unread:0};
   var rows=STAFF_PICKER.all.map(function(s){
     var t=threadsById[s.teacherId];
-    return {teacherId:s.teacherId, teacherName:s.teacherName, lastMessageAt:t?t.lastMessageAt:0, lastMessageText:t?t.lastMessageText:'', unread:t?t.unread:0};
+    return {teacherId:s.teacherId, teacherName:s.teacherName, lastMessageAt:t?t.lastMessageAt:0, lastMessageText:t?t.lastMessageText:'', unread:t?t.unread:0, waitingSince:t?t.waitingSince:0};
   }).sort(function(a,b){
     if(a.lastMessageAt && b.lastMessageAt) return Number(b.lastMessageAt)-Number(a.lastMessageAt);
     if(a.lastMessageAt) return -1;
@@ -828,7 +934,7 @@ function rStaffRoster(){
     '<div class="thread-row-name">Admin</div>'+
     (admin.lastMessageText?'<div class="thread-row-preview">'+esc(admin.lastMessageText.slice(0,60))+'</div>':'')+
     '</div>'+
-    rReadToggle(admin.unread, 'teacher_admin', '', TEACHER_ID, '', 'staff')+
+    rReadToggle(admin.unread, 'teacher_admin', '', TEACHER_ID, '', 'staff', admin.waitingSince)+
     '</div>';
   h+=rows.map(function(s){
     return '<div class="thread-row" onclick="openStaffThread(\'staff\',\''+esc(s.teacherId)+'\',\''+esc(s.teacherName)+'\')">'+
@@ -836,7 +942,7 @@ function rStaffRoster(){
       '<div class="thread-row-name">'+esc(s.teacherName)+'</div>'+
       (s.lastMessageText?'<div class="thread-row-preview">'+esc(s.lastMessageText.slice(0,60))+'</div>':'')+
       '</div>'+
-      rReadToggle(s.unread, 'staff_staff', '', TEACHER_ID, s.teacherId, 'staff')+
+      rReadToggle(s.unread, 'staff_staff', '', TEACHER_ID, s.teacherId, 'staff', s.waitingSince)+
       '</div>';
   }).join('');
   h+='</div>';
@@ -1354,12 +1460,35 @@ function sendStaffMessage(){
   var reqData = t.contactType==='admin'
     ? {conversationType:'teacher_admin', teacherId:TEACHER_ID, teacherToken:TOKEN, messageText:text, messageHtml:html}
     : {conversationType:'staff_staff', teacherId:TEACHER_ID, staffId2:t.otherId, teacherToken:TOKEN, messageText:text, messageHtml:html};
-  t.sending=true; render();
+  // Same optimistic path as sendFamilyMessage() above (BACKLOG 1.124 #2).
+  var clientMsgId=_ktNewClientMsgId();
+  reqData.clientMsgId=clientMsgId;
+  var pending={
+    messageId:'', senderId:TEACHER_ID, senderName:TEACHER_NAME||'',
+    messageText:text, messageHtml:html, sentAt:Date.now(), _pending:true
+  };
+  t.messages=t.messages.concat([pending]);
+  t.draft='';
+  t._sendInFlight=true;
+  _shouldScrollMsgList=true;
+  render();
+
   api({action:'sendMessage', data:reqData}, function(e,r){
-    t.sending=false;
-    if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not send message.','e'); render(); return; }
-    t.draft='';
-    refreshStaffThread(); // not openStaffThread() — same "odd reload" fix as sendFamilyMessage() above
+    if(!ACTIVE_STAFF_THREAD || ACTIVE_STAFF_THREAD.otherId!==t.otherId) return;
+    t._sendInFlight=false;
+    if(e||!r||!r.ok){
+      t.messages=t.messages.filter(function(m){ return m!==pending; });
+      t.draft=html;
+      showMsg((r&&r.error)||'Could not send message.','e');
+      render();
+      return;
+    }
+    pending._pending=false;
+    if(r.message){
+      pending.messageId=r.message.messageId||'';
+      pending.sentAt=r.message.sentAt||pending.sentAt;
+      pending.senderName=r.message.senderName||pending.senderName;
+    }
   });
 }
 
@@ -1379,18 +1508,25 @@ function _startMessagePolling(){
       // conversation stayed open. Polled in both views now — the fetch is the
       // same one, and it is what also delivers the messaging lock flag.
       loadFamilyThreads(true);
-      if(FAMILY_VIEW==='thread' && ACTIVE_THREAD && !ACTIVE_THREAD.loading){
+      if(FAMILY_VIEW==='thread' && ACTIVE_THREAD && !ACTIVE_THREAD.loading && !ACTIVE_THREAD._sendInFlight){
         var ft=ACTIVE_THREAD;
         api({action:'getMessagesSince', data:{conversationType:'family_teacher', familyId:ft.familyId, teacherId:TEACHER_ID, teacherToken:TOKEN, sinceSentAt:String(_maxSentAt(ft.messages)||0)}}, function(e,r){
           if(!ACTIVE_THREAD||ACTIVE_THREAD.familyId!==ft.familyId) return;
           if(e||!r||!r.ok||!r.messages||!r.messages.length) return;
-          ACTIVE_THREAD.messages=ACTIVE_THREAD.messages.concat(r.messages);
+          // Second guard, independent of _sendInFlight: drop anything already
+          // held by id. Duplicated messages are the failure this path has to
+          // avoid, and one filter covers every route to it.
+          var _have={};
+          ACTIVE_THREAD.messages.forEach(function(m){ if(m.messageId) _have[m.messageId]=true; });
+          var _fresh=r.messages.filter(function(m){ return !m.messageId || !_have[m.messageId]; });
+          if(!_fresh.length) return;
+          ACTIVE_THREAD.messages=ACTIVE_THREAD.messages.concat(_fresh);
           _shouldScrollMsgList=true; render();
         });
       }
     } else {
       if(STAFF_VIEW==='list'){ loadStaffThreads(true); }
-      if(STAFF_VIEW==='thread' && ACTIVE_STAFF_THREAD && !ACTIVE_STAFF_THREAD.loading){
+      if(STAFF_VIEW==='thread' && ACTIVE_STAFF_THREAD && !ACTIVE_STAFF_THREAD.loading && !ACTIVE_STAFF_THREAD._sendInFlight){
         var st=ACTIVE_STAFF_THREAD;
         var reqData=st.contactType==='admin'
           ? {conversationType:'teacher_admin', teacherId:TEACHER_ID, teacherToken:TOKEN}
@@ -1399,7 +1535,14 @@ function _startMessagePolling(){
         api({action:'getMessagesSince', data:reqData}, function(e,r){
           if(!ACTIVE_STAFF_THREAD||ACTIVE_STAFF_THREAD.otherId!==st.otherId) return;
           if(e||!r||!r.ok||!r.messages||!r.messages.length) return;
-          ACTIVE_STAFF_THREAD.messages=ACTIVE_STAFF_THREAD.messages.concat(r.messages);
+          // Second guard, independent of _sendInFlight: drop anything already
+          // held by id. Duplicated messages are the failure this path has to
+          // avoid, and one filter covers every route to it.
+          var _have={};
+          ACTIVE_STAFF_THREAD.messages.forEach(function(m){ if(m.messageId) _have[m.messageId]=true; });
+          var _fresh=r.messages.filter(function(m){ return !m.messageId || !_have[m.messageId]; });
+          if(!_fresh.length) return;
+          ACTIVE_STAFF_THREAD.messages=ACTIVE_STAFF_THREAD.messages.concat(_fresh);
           _shouldScrollMsgList=true; render();
         });
       }

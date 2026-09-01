@@ -238,6 +238,14 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
    means "not right now". */
 .kl-away{background:#FDECEC;border:1px solid #DC2626;color:#B91C1C;border-radius:8px;
   padding:9px 11px;font-size:12px;line-height:1.45;margin-bottom:.6rem;white-space:pre-wrap}
+/* "About [child]" pills (BACKLOG 1.161 #4). Only ever shown when a family has
+   more than one child with this teacher — otherwise the answer is obvious and
+   a control would be friction. */
+.kl-about{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:11px;color:var(--text3,#5A5A55);margin-bottom:.5rem}
+.kl-about-pill{border:1px solid var(--border,#E3E3DE);background:var(--bg2,#F6F6F4);border-radius:20px;
+  padding:2px 10px;cursor:pointer;font-weight:600}
+.kl-about-pill.on{background:var(--acc,#1747C0);border-color:var(--acc,#1747C0);color:#fff}
+.kl-about-tag{font-size:10px;font-weight:600;opacity:.75;display:block;margin-bottom:2px}
 .kl-afterhours{background:var(--bg2,#F6F6F4);border:1px solid var(--border,#E3E3DE);color:var(--text3,#5A5A55);
   border-radius:8px;padding:9px 11px;font-size:11.5px;line-height:1.45;margin-bottom:.6rem;white-space:pre-wrap}
 .composer{display:flex;gap:8px;align-items:flex-end}
@@ -2293,6 +2301,21 @@ function rHomeThreadView(){
   if(c.teacherAfterHours && !c.teacherAway){
     h+='<div class="kl-afterhours">'+esc(c.teacherAfterHoursMessage||AFTER_HOURS_COPY)+'</div>';
   }
+  // BACKLOG 1.161 #4 — which child is this about? Asked only when the answer
+  // is not obvious: one child with this teacher and it is set automatically,
+  // with nothing on screen. The thread stays one conversation per teacher
+  // (SPEC §3) — this labels the message, it does not split the thread.
+  var _kids=c.students||[];
+  if(_kids.length>1){
+    var _sel=_homeStudentId(t,_kids);
+    h+='<div class="kl-about"><span>About</span>'+
+      _kids.map(function(st){
+        return '<span class="kl-about-pill'+(_sel===st.studentId?' on':'')+'" '+
+          'onclick="HOME_EXPANDED.studentId=\''+esc(st.studentId)+'\';render()">'+esc(st.studentName)+'</span>';
+      }).join('')+
+      '<span class="kl-about-pill'+(_sel?'':' on')+'" onclick="HOME_EXPANDED.studentId=\'\';render()">Something else</span>'+
+      '</div>';
+  }
   // No sending/disabled state: the message is already in the history by the
   // time the request goes out, so a spinner would be reporting on work the
   // family has no reason to care about (1.43).
@@ -2302,6 +2325,18 @@ function rHomeThreadView(){
     sendBtn+
     '</div>';
   return h;
+}
+
+// Which child the composer is currently set to. Defaults to whatever the
+// conversation was last about, because a thread tends to stay on one child —
+// asking again for every message would be friction with no new information.
+function _homeStudentId(t,kids){
+  if(t.studentId!==undefined) return t.studentId;
+  var last='';
+  (t.messages||[]).forEach(function(m){ if(m.studentId) last=m.studentId; });
+  if(!last && kids.length===1) last=kids[0].studentId;
+  t.studentId=last;
+  return last;
 }
 
 function closeHomeThread(){
@@ -2467,7 +2502,13 @@ function sendHomeMessage(){
   _shouldScrollMsgList=true;
   render();
 
-  fapiTracked('sendMessage', {conversationType:'family_teacher', familyId:FAMILY_ID, teacherId:t.teacherId, messageText:text, senderParentSlot:MY_PARENT_SLOT, clientMsgId:clientMsgId}, function(e,r){
+  // studentId: which child this is about (1.161 #4). senderParentSlot: which
+  // PARENT is writing (1.24) — together they are AC's "it always needs to
+  // connect to the parent, including specific parent in 2 parent accounts."
+  var _kidsNow=((HOME_CONVOS.list||[]).filter(function(x){return x.teacherId===t.teacherId;})[0]||{}).students||[];
+  var _stuId=_homeStudentId(t,_kidsNow);
+  pending.studentId=_stuId;
+  fapiTracked('sendMessage', {conversationType:'family_teacher', familyId:FAMILY_ID, teacherId:t.teacherId, messageText:text, studentId:_stuId, senderParentSlot:MY_PARENT_SLOT, clientMsgId:clientMsgId}, function(e,r){
     // The send itself is unaffected by the thread being closed — the request
     // is already on its way and the server writes it regardless. Only the
     // local reconciliation is skipped, since there's no longer a thread on
@@ -2555,9 +2596,22 @@ function rMsgBubble(m){
   return '<div class="bubble-row'+(mine?' mine':'')+'">'+
     '<div class="bubble'+(mine?' mine':'')+'">'+
     (!mine?'<div class="bubble-sender">'+esc(m.senderName||'')+'</div>':'')+
+    _klBubbleAbout(m)+
     '<div class="bubble-text">'+body+'</div>'+
     '<div class="bubble-time">'+esc(fmtMsgTime(m.sentAt))+'</div>'+
     '</div></div>';
+}
+
+// Which child a message is about (BACKLOG 1.161 #4). Shown only where it says
+// something: a family with one child on this teacher has one possible answer.
+function _klBubbleAbout(m){
+  if(!m.studentId||!HOME_EXPANDED) return '';
+  var c=(HOME_CONVOS.list||[]).filter(function(x){return x.teacherId===HOME_EXPANDED.teacherId;})[0]||{};
+  var kids=c.students||[];
+  if(kids.length<2) return '';
+  var st=kids.filter(function(x){return x.studentId===m.studentId;})[0];
+  if(!st) return '';
+  return '<span class="kl-about-tag">'+esc(st.studentName)+'</span>';
 }
 
 // Returns a one-page family from a sub-page (BACKLOG 1.90) to their Home.

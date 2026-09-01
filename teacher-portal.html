@@ -71,6 +71,12 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 /* Roster rows read as the student now, with the parent underneath (AC). */
 .row-student{font-size:13px;font-weight:600;color:var(--text)}
 .row-parent{font-size:11px;color:var(--text3);margin-top:1px}
+/* "About [child]" pills (1.161 #4), shown only when a teacher has more than
+   one child in that family. */
+.about-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:11px;color:var(--text3);margin-bottom:.5rem}
+.about-pill{border:1px solid var(--border);background:var(--bg2);border-radius:20px;padding:2px 10px;cursor:pointer;font-weight:600}
+.about-pill.on{background:var(--acc);border-color:var(--acc);color:#fff}
+.about-tag{font-size:10px;font-weight:600;opacity:.75;display:block;margin-bottom:2px}
 .fwd-box{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);
   padding:10px 12px;margin-top:.6rem;font-size:12px}
 .msg-list{display:flex;flex-direction:column;gap:8px;margin-bottom:1rem;max-height:50vh;overflow-y:auto}
@@ -1032,8 +1038,22 @@ function openFamilyRow(familyId){
   if(!t) return;
   openFamilyThread(t.familyId, t.parent1Name, t.parent2Name);
 }
+// Defaults to whatever the conversation was last about — a thread tends to
+// stay on one child, and asking again every time would be friction with no new
+// information.
+function _threadStudentId(t){
+  if(t.studentId!==undefined) return t.studentId;
+  var last='';
+  (t.messages||[]).forEach(function(m){ if(m.studentId) last=m.studentId; });
+  if(!last && (t.students||[]).length===1) last=t.students[0].studentId;
+  t.studentId=last;
+  return last;
+}
+
 function openFamilyThread(familyId, p1, p2){
-  ACTIVE_THREAD = {familyId:familyId, parent1Name:p1, parent2Name:p2, messages:[], draft:'', sending:false, loading:true, refreshing:false, notifyP1:true, notifyP2:true};
+  var _row=(FAMILY_THREADS.list||[]).filter(function(x){return x.familyId===familyId;})[0]||{};
+  ACTIVE_THREAD = {familyId:familyId, parent1Name:p1, parent2Name:p2, messages:[], draft:'', sending:false, loading:true, refreshing:false, notifyP1:true, notifyP2:true,
+                   students:_row.students||[]};
   FAMILY_VIEW='thread';
   render();
   api({action:'getConversation', data:{conversationType:'family_teacher', familyId:familyId, teacherId:TEACHER_ID, teacherToken:TOKEN}}, function(e,r){
@@ -1090,6 +1110,20 @@ function rFamilyThread(){
   var sendBtn=t.sending
     ?'<button class="btn btn-p" disabled><span class="spin">↻</span></button>'
     :'<button class="btn btn-p" onclick="sendFamilyMessage()">Send</button>';
+  // BACKLOG 1.161 #4 — which child, asked only when a teacher has more than
+  // one child in this family. One child and it is set automatically with
+  // nothing on screen.
+  var _kids=t.students||[];
+  if(_kids.length>1){
+    var _sel=_threadStudentId(t);
+    h+='<div class="about-row"><span>About</span>'+
+      _kids.map(function(st){
+        return '<span class="about-pill'+(_sel===st.studentId?' on':'')+'" '+
+          'onclick="ACTIVE_THREAD.studentId=\''+esc(st.studentId)+'\';render()">'+esc(st.studentName)+'</span>';
+      }).join('')+
+      '<span class="about-pill'+(_sel?'':' on')+'" onclick="ACTIVE_THREAD.studentId=\'\';render()">Something else</span>'+
+      '</div>';
+  }
   h+=rComposer('family-composer',t.draft,'ACTIVE_THREAD.draft=_composerInput(this)',sendBtn);
   // BACKLOG 1.135 — ask the office for help with a family question. Sharing,
   // not handing over: the conversation still ages against this teacher until
@@ -1158,9 +1192,10 @@ function sendFamilyMessage(){
   // portal has done it properly since 1.46 and this is that pattern ported --
   // append locally, post in the background, reconcile in place.
   var clientMsgId=_ktNewClientMsgId();
+  var _stuId=_threadStudentId(t);   // which child (1.161 #4)
   var pending={
     messageId:'', senderId:TEACHER_ID, senderName:TEACHER_NAME||'',
-    messageText:text, messageHtml:html, sentAt:Date.now(), _pending:true
+    messageText:text, messageHtml:html, sentAt:Date.now(), studentId:_stuId, _pending:true
   };
   t.messages=t.messages.concat([pending]);
   t.draft='';
@@ -1170,7 +1205,7 @@ function sendFamilyMessage(){
   _shouldScrollMsgList=true;
   render();
 
-  api({action:'sendMessage', data:{conversationType:'family_teacher', familyId:t.familyId, teacherId:TEACHER_ID, teacherToken:TOKEN, messageText:text, messageHtml:html, notifyParents:notifyParents, clientMsgId:clientMsgId}}, function(e,r){
+  api({action:'sendMessage', data:{conversationType:'family_teacher', familyId:t.familyId, teacherId:TEACHER_ID, teacherToken:TOKEN, messageText:text, messageHtml:html, studentId:_stuId, notifyParents:notifyParents, clientMsgId:clientMsgId}}, function(e,r){
     if(!ACTIVE_THREAD || ACTIVE_THREAD.familyId!==t.familyId) return; // navigated away mid-flight
     t._sendInFlight=false;
     if(e||!r||!r.ok){
@@ -1758,9 +1793,22 @@ function rMessageBubble(m){
   return '<div class="bubble-row'+(mine?' mine':'')+'">'+
     '<div class="bubble'+(mine?' mine':'')+'">'+
     (!mine?'<div class="bubble-sender">'+esc(m.senderName||'')+'</div>':'')+
+    _bubbleAbout(m)+
     '<div class="bubble-text">'+body+'</div>'+
     '<div class="bubble-time">'+esc(fmtMsgTime(m.sentAt))+'</div>'+
     '</div></div>';
+}
+
+// Which child a message is about (1.161 #4), shown only where it tells the
+// reader something: a family with one child on this teacher has one possible
+// answer, so labelling every message with it would be noise.
+function _bubbleAbout(m){
+  if(!m.studentId) return '';
+  var t=ACTIVE_THREAD;
+  if(!t||(t.students||[]).length<2) return '';
+  var st=(t.students||[]).filter(function(x){return x.studentId===m.studentId;})[0];
+  if(!st) return '';
+  return '<span class="about-tag">'+esc(st.studentName)+'</span>';
 }
 
 function sendStaffMessage(){

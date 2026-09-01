@@ -1373,7 +1373,12 @@ function _startMessagePolling(){
   _pollTimer=setInterval(function(){
     if(document.hidden || !TOKEN) return;
     if(HOME_TAB==='family'){
-      if(FAMILY_VIEW==='list') loadFamilyThreads(true);
+      // BACKLOG 1.124 #1. This was gated on FAMILY_VIEW==='list', which was
+      // right while a thread REPLACED the roster and wrong the moment @650 put
+      // both panes on screen: unread badges and previews froze for as long as a
+      // conversation stayed open. Polled in both views now — the fetch is the
+      // same one, and it is what also delivers the messaging lock flag.
+      loadFamilyThreads(true);
       if(FAMILY_VIEW==='thread' && ACTIVE_THREAD && !ACTIVE_THREAD.loading){
         var ft=ACTIVE_THREAD;
         api({action:'getMessagesSince', data:{conversationType:'family_teacher', familyId:ft.familyId, teacherId:TEACHER_ID, teacherToken:TOKEN, sinceSentAt:String(_maxSentAt(ft.messages)||0)}}, function(e,r){

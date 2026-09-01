@@ -63,6 +63,8 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
   padding:8px 10px;font-size:12px;margin-bottom:.6rem;white-space:pre-wrap}
 .handoff-tag{background:var(--bg3);color:var(--text3);font-size:10px;font-weight:600;
   padding:1px 7px;border-radius:10px;margin-left:6px}
+.fwd-box{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);
+  padding:10px 12px;margin-top:.6rem;font-size:12px}
 .msg-list{display:flex;flex-direction:column;gap:8px;margin-bottom:1rem;max-height:50vh;overflow-y:auto}
 .bubble-row{display:flex}
 .bubble-row.mine{justify-content:flex-end}
@@ -341,7 +343,7 @@ function render(){
   // the 5-second poll re-renders underneath, so they need exactly the same
   // protection the link inputs already have — a teacher writing an away
   // message must not lose it mid-sentence.
-  if(_ae && _ae.id && (/-link(url|text)$/.test(_ae.id) || _ae.id==='tset-away' || _ae.id==='tset-after')){
+  if(_ae && _ae.id && (/-link(url|text)$/.test(_ae.id) || _ae.id==='tset-away' || _ae.id==='tset-after' || _ae.id==='fwd-note')){
     _focusedLink=_ae.id;
     try{ _focusedLinkPos=_ae.selectionStart; }catch(e){}
   }
@@ -769,7 +771,7 @@ function rFamilyThreadList(){
       '<div class="thread-row-name">'+esc(names)+
         // BACKLOG 1.135 — this one is with the office now, so the teacher can
         // see at a glance that it is not sitting on them.
-        (t.handedToAdmin?'<span class="handoff-tag">With admin</span>':'')+'</div>'+
+        (t.sharedWithAdmin?'<span class="handoff-tag">Admin asked</span>':'')+'</div>'+
       '<div class="thread-row-preview">'+esc((t.lastMessageText||'').slice(0,60))+'</div>'+
       '</div>'+
       rReadToggle(t.unread, 'family_teacher', t.familyId, TEACHER_ID, '', 'family', t.waitingSince)+
@@ -1001,28 +1003,45 @@ function rFamilyThread(){
     ?'<button class="btn btn-p" disabled><span class="spin">↻</span></button>'
     :'<button class="btn btn-p" onclick="sendFamilyMessage()">Send</button>';
   h+=rComposer('family-composer',t.draft,'ACTIVE_THREAD.draft=_composerInput(this)',sendBtn);
-  // BACKLOG 1.135 — hand a question to the office. The family is told in the
-  // thread, and from that moment the conversation ages against admin instead
-  // of this teacher; it does NOT stop ageing, because the family has been
-  // waiting since they wrote.
-  h+='<div style="margin-top:.5rem;text-align:right">'+
-     (t.forwarding
-       ? '<span class="spin" style="font-size:12px">↻</span>'
-       : '<a href="#" style="font-size:11px;color:var(--text4)" onclick="event.preventDefault();forwardToAdmin()">Forward to admin for review</a>')+
-     '</div>';
+  // BACKLOG 1.135 — ask the office for help with a family question. Sharing,
+  // not handing over: the conversation still ages against this teacher until
+  // one of them answers, and a note saying what is needed is required, so a
+  // forward is a question rather than a task passed along.
+  if(t.forwardOpen){
+    h+='<div class="fwd-box">'+
+       '<div style="font-weight:600;margin-bottom:.35rem">What do you need from admin?</div>'+
+       '<textarea id="fwd-note" rows="2" placeholder="e.g. Can we move her to Thursdays? I don\'t know what\'s free." '+
+         'oninput="ACTIVE_THREAD.forwardNote=this.value" style="width:100%">'+esc(t.forwardNote||'')+'</textarea>'+
+       '<div style="font-size:11px;color:var(--text4);margin:.35rem 0 .5rem">'+
+         'Admin gets this with the family\'s message and their lesson details. You both still see the '+
+         'conversation, and either of you replying answers it for the family.</div>'+
+       '<div style="display:flex;gap:8px;justify-content:flex-end">'+
+         '<button class="btn btn-s" onclick="ACTIVE_THREAD.forwardOpen=false;render()">Cancel</button>'+
+         (t.forwarding
+           ? '<button class="btn btn-p" disabled><span class="spin">↻</span></button>'
+           : '<button class="btn btn-p" onclick="forwardToAdmin()">Send to admin</button>')+
+       '</div></div>';
+  } else {
+    h+='<div style="margin-top:.5rem;text-align:right">'+
+       '<a href="#" style="font-size:11px;color:var(--text4)" onclick="event.preventDefault();ACTIVE_THREAD.forwardOpen=true;render()">Ask admin about this</a>'+
+       '</div>';
+  }
   return h;
 }
 
-// Sends the family's latest message to the office, with their lesson details,
+// Sends the family's latest message to the office with the teacher's own note,
 // and tells the family it has happened (AC's copy, server-side).
 function forwardToAdmin(){
   var t=ACTIVE_THREAD;
   if(!t||t.forwarding) return;
-  if(!confirm('Forward this conversation to admin for review?\n\nThe family will be told, and admin will reply.')) return;
+  var note=((document.getElementById('fwd-note')||{}).value||t.forwardNote||'').trim();
+  if(!note){ showMsg('Add a note saying what you need from admin.','e'); return; }
+  t.forwardNote=note;
   t.forwarding=true; render();
-  api({action:'forwardToAdmin', data:{teacherToken:TOKEN, familyId:t.familyId}}, function(e,r){
+  api({action:'forwardToAdmin', data:{teacherToken:TOKEN, familyId:t.familyId, note:note}}, function(e,r){
     t.forwarding=false;
-    if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not forward.','e'); render(); return; }
+    if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not send.','e'); render(); return; }
+    t.forwardOpen=false; t.forwardNote='';
     if(r.message) t.messages=t.messages.concat([r.message]);
     _shouldScrollMsgList=true;
     showMsg('Sent to admin.','s');

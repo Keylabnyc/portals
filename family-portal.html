@@ -10,7 +10,7 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#ABABAB;--bg2:#B8B8B8;--bg3:#C8C8C8;--bg4:#D4D4D4;--bg5:#DEDEDE;
+  --bg:#C2C2C2;--bg2:#CFCFCF;--bg3:#DCDCDC;--bg4:#E5E5E5;--bg5:#EFEFEF;
   --border:#999;--border2:#888;--border3:#666;
   --text:#0A0A0A;--text2:#181818;--text3:#2E2E2E;--text4:#525252;--text5:#757575;
   --green:#1A6B3A;--gbg:#D4EDE0;--gt:#0B3D20;
@@ -216,12 +216,25 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 .kl-tname{font-size:14px;font-weight:700;color:var(--text);line-height:1.2}
 .kl-tsub{font-size:11px;color:var(--text4)}
 .msg-list{display:flex;flex-direction:column;gap:8px;margin-bottom:1rem;max-height:50vh;overflow-y:auto}
+/* 1.190, AC: "NO HYPERLINK TEXT! Buttons only. For everyone." Every control
+   that used to be a text link is this. Sized to be pressed, including on a
+   phone, and readable at arm's length (1.186). */
+.lnk-btn{display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border-radius:var(--r);
+  border:1px solid var(--border2);background:rgba(255,255,255,.55);color:var(--text2);
+  font-family:"Inter",sans-serif;font-size:12.5px;font-weight:600;cursor:pointer;line-height:1.25;
+  text-align:left}
+.lnk-btn:hover{background:rgba(255,255,255,.85);color:var(--text)}
 .bubble-row{display:flex}
 .bubble-row.mine{justify-content:flex-end}
 .bubble{max-width:80%;background:rgba(255,255,255,.55);border:1px solid var(--border);border-radius:var(--rl);padding:.6rem .8rem}
 .bubble.mine{background:var(--acc);border-color:var(--acc);color:#fff}
-.bubble-sender{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--acc);font-family:"Inter",sans-serif;margin-bottom:.2rem}
-.bubble-text{font-size:13px;line-height:1.5;color:inherit}
+.bubble-sender{font-size:11.5px;font-weight:600;letter-spacing:.02em;color:var(--acc);font-family:"Inter",sans-serif;margin-bottom:.25rem}
+/* 1.186, AC: "the dark blue bubble and current text css using small dark red
+   text is terribly hard to read and looks very computery." One messaging
+   typography set, identical in all three portals, so a message reads the same
+   wherever it is seen: bigger body text, timestamps that are readable rather
+   than decorative, and no monospace anywhere a person's words appear. */
+.bubble-text{font-size:14.5px;line-height:1.58;color:inherit}
 .bubble.mine .bubble-text{color:#fff}
 /* Formatted teacher messages (BACKLOG 1.33). The family reply box stays plain
    text — these styles are for receiving, not composing. */
@@ -231,8 +244,8 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 .bubble.mine .bubble-text blockquote{border-left-color:rgba(255,255,255,.4)}
 .bubble-text a{color:var(--acc);text-decoration:underline;word-break:break-word}
 .bubble.mine .bubble-text a{color:#fff}
-.bubble-time{font-size:10px;color:var(--text5);margin-top:.3rem}
-.bubble.mine .bubble-time{color:rgba(255,255,255,.7)}
+.bubble-time{font-size:11.5px;font-weight:500;color:var(--text4);margin-top:.35rem}
+.bubble.mine .bubble-time{color:rgba(255,255,255,.88)}
 /* The two notices above the composer (BACKLOG 1.125, 1.132). Away is the
    louder of the two on purpose: it means "not today", where after-hours only
    means "not right now". */
@@ -381,6 +394,29 @@ function _klReadSession(){
 }
 function _klClearSession(){
   try{ localStorage.removeItem('kl_family_session'); }catch(e){}
+}
+// [1.181] — keep the login, say what is happening, and retry with a backoff
+// that never gives up. A parent walking into a lift should not have to sign in
+// again afterwards.
+var _klRetryMs=4000;
+var BOOT_OFFLINE=false;
+function _klBootRetry(saved){
+  PAGE='boot'; BOOT_OFFLINE=true; render();
+  setTimeout(function(){
+    api({action:'familyCheckSession', data:{familyToken:saved.token}}, function(e,r){
+      if(e||!r){ _klRetryMs=Math.min(_klRetryMs*2, 60000); _klBootRetry(saved); return; }
+      BOOT_OFFLINE=false; _klRetryMs=4000;
+      if(r.ok){
+        // Same landing as the ordinary boot path's fallback: loadFamily()
+        // sets the page and fetches everything, so nothing here has to
+        // second-guess which screen the family belongs on.
+        FAMILY_ID=r.familyId;
+        MY_PARENT_SLOT=saved.parent||MY_PARENT_SLOT||'parent1';
+        loadFamily();
+      }
+      else { _klClearSession(); TOKEN=''; FAMILY_ID=''; MY_PARENT_SLOT=''; PAGE='login'; render(); }
+    });
+  }, _klRetryMs);
 }
 // Which parent slot ('parent1'/'parent2') is currently logged in — set at
 // login/registration/password-reset-auto-login time from the server's
@@ -1113,8 +1149,14 @@ function render(){
 // ============================================================
 // BOOT
 // ============================================================
+// [1.181] — while a reconnect is retrying, say so. A spinner that never
+// resolves is indistinguishable from a broken portal, and the one thing a
+// parent must not conclude here is that their login is gone.
+// AC's copy, 1 Sept.
 function rBoot(){
-  return '<div style="text-align:center;padding:4rem;color:var(--text3)"><span class="spin" style="font-size:22px">\u21bb</span></div>';
+  return '<div style="text-align:center;padding:4rem;color:var(--text3)"><span class="spin" style="font-size:22px">\u21bb</span>'+
+    (BOOT_OFFLINE?'<div style="margin-top:.9rem;font-size:13px;line-height:1.5">The server is temporarily not responding. Your account is still active, but you may not be able to log in until the issue resolves.</div>':'')+
+    '</div>';
 }
 
 // ============================================================
@@ -1165,7 +1207,7 @@ function rLogin(){
 
   // Step 2, account has no password yet: only the setup prompt, never a
   // password field for a password that doesn't exist.
-  var backLink='<p style="font-size:13px;color:var(--text3)"><a href="#" onclick="event.preventDefault();doBackToEmailStep()">\u2190 Use a different email</a></p>';
+  var backLink='<p style="font-size:13px;color:var(--text3)"><button type="button" class="lnk-btn" onclick="doBackToEmailStep()">\u2190 Use a different email</button></p>';
   if(LF.needsSetup){
     var setupBtnInner = LF.settingUp
       ? '<button class="btn btn-p btn-sm" disabled><span class="spin">\u21bb</span> Sending...</button>'
@@ -1189,7 +1231,7 @@ function rLogin(){
     '<input id="lp" type="password" autocomplete="current-password" value="'+esc(LF.password||'')+'" oninput="LF.password=this.value" onkeydown="if(event.keyCode===13)doLogin()"></div>'+
     '<label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer;margin-bottom:.6rem"><input type="checkbox" id="lf-remember" style="width:14px;height:14px;-webkit-appearance:checkbox;appearance:auto" '+(LF.remember?'checked':'')+' onchange="LF.remember=this.checked"> Remember me</label>'+
     btn+'</div>'+
-    '<p style="font-size:13px;color:var(--text3)"><a href="#" onclick="event.preventDefault();PAGE=&apos;forgotpw&apos;;FP={email:LF.email,done:false,success:false,error:&apos;&apos;,busy:false};render()">Forgot your password? Reset it here</a></p>'+
+    '<p style="font-size:13px;color:var(--text3)"><button type="button" class="lnk-btn" onclick="PAGE=&apos;forgotpw&apos;;FP={email:LF.email,done:false,success:false,error:&apos;&apos;,busy:false};render()">Forgot your password? Reset it here</button></p>'+
     backLink+
     '<p style="font-size:12px;color:var(--text4)">Having trouble logging in? Email us at <a href="mailto:info@keylab.nyc">info@keylab.nyc</a> and we\'ll get you sorted out right away.</p>';
 }
@@ -1282,7 +1324,7 @@ function rForgotPassword(){
     '<div class="field"><label>Your email address<span class="req">*</span></label>'+
     '<input id="fpe" type="email" autocomplete="username" inputmode="email" value="'+esc(FP.email)+'" oninput="FP.email=this.value" onkeydown="if(event.keyCode===13)doBeginReset()"></div>'+
     btn+'</div>'+
-    '<p style="font-size:13px;color:var(--text3)"><a href="#" onclick="event.preventDefault();PAGE=&apos;login&apos;;render()">Back to Sign In</a></p>';
+    '<p style="font-size:13px;color:var(--text3)"><button type="button" class="lnk-btn" onclick="PAGE=&apos;login&apos;;render()">Back to Sign In</button></p>';
 }
 
 function doBeginReset(){
@@ -1340,7 +1382,7 @@ function rSetPassword(){
     '<div class="field"><label>Confirm password<span class="req">*</span></label>'+
     '<input id="spw2" type="password" autocomplete="new-password" value="'+esc(SPW.pw2)+'" oninput="SPW.pw2=this.value" onkeydown="if(event.keyCode===13)doCompleteReset()"></div>'+
     btn+'</div>'+
-    '<p style="font-size:13px;color:var(--text3)"><a href="#" onclick="event.preventDefault();PAGE=&apos;login&apos;;render()">Back to Sign In</a></p>';
+    '<p style="font-size:13px;color:var(--text3)"><button type="button" class="lnk-btn" onclick="PAGE=&apos;login&apos;;render()">Back to Sign In</button></p>';
 }
 
 function doCompleteReset(){
@@ -1402,7 +1444,7 @@ function rLookup(){
       '<div class="field"><label>Your email address<span class="req">*</span></label>'+
       '<input id="lkn" type="email" autocomplete="email" inputmode="email" placeholder="e.g. jane@email.com" value="'+esc(LK.email)+'" oninput="LK.email=this.value" onkeydown="if(event.keyCode===13)doLookup()"></div>'+
       btn+'</div>'+
-      '<p style="font-size:13px;color:var(--text3)">Already have an account? <a href="#" onclick="event.preventDefault();PAGE=&apos;login&apos;;render()">Sign in here.</a></p>';
+      '<p style="font-size:13px;color:var(--text3)">Already have an account? <button type="button" class="lnk-btn" onclick="PAGE=&apos;login&apos;;render()">Sign in here.</button></p>';
   }
   if(!LK.matches.length){
     return '<h1>Create Your Account</h1>'+
@@ -1481,7 +1523,7 @@ function rRegisterParent(){
       '<input id="r-p2p" type="tel" inputmode="tel" autocomplete="tel" placeholder="e.g. (718) 555-1234" value="'+esc(RF.parent2Phone)+'" oninput="RF.parent2Phone=_maskPhone(this)"></div>';
     h+='</div>';
   } else {
-    h+='<p style="font-size:13px;margin:.25rem 0 .75rem 0"><a href="#" onclick="event.preventDefault();RF.showParent2=true;render()">+ Add a second parent</a></p>';
+    h+='<p style="font-size:13px;margin:.25rem 0 .75rem 0"><button type="button" class="lnk-btn" onclick="RF.showParent2=true;render()">+ Add a second parent</button></p>';
   }
 
   // Address card
@@ -1507,7 +1549,7 @@ function rRegisterParent(){
   h+=busy
     ?'<button class="btn btn-p btn-full" disabled><span class="spin">\u21bb</span> Continuing...</button>'
     :'<button class="btn btn-p btn-full" onclick="doGoToChildrenStep()">Continue</button>';
-  h+='<p style="font-size:12px;color:var(--text4);margin-top:.75rem">Already have an account? <a href="#" onclick="event.preventDefault();PAGE=&apos;login&apos;;render()">Sign in here.</a></p>';
+  h+='<p style="font-size:12px;color:var(--text4);margin-top:.75rem">Already have an account? <button type="button" class="lnk-btn" onclick="PAGE=&apos;login&apos;;render()">Sign in here.</button></p>';
   return h;
 }
 
@@ -1635,7 +1677,7 @@ function rRegisterChildren(){
   var h='<div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:.5rem">Step 2 of 2 \u00b7 '+stepLbl+'</div>';
   h+='<h1>'+(addingAnother?'Add Another Child':'Tell Us About Your Child')+'</h1>';
   h+='<p>Add your child\'s info and when your family is available for their lessons this school year.</p>';
-  h+='<p style="font-size:13px;color:var(--text3)"><a href="#" onclick="event.preventDefault();RF.step=&apos;parent&apos;;render()">\u2190 Back to your info</a></p>';
+  h+='<p style="font-size:13px;color:var(--text3)"><button type="button" class="lnk-btn" onclick="RF.step=&apos;parent&apos;;render()">\u2190 Back to your info</button></p>';
 
   // Every child the family has reached, in order: the one being filled in
   // renders as a full card, the rest as summaries. This used to render
@@ -2093,7 +2135,7 @@ function rApp(){
   var onePage=!_familyLoading && !_familyLoadError && _familyUsesOnePage();
   if(onePage){
     var _signOut='<div style="display:flex;justify-content:flex-end;margin-bottom:1rem">'+
-      '<a href="#" style="font-size:12px;color:var(--text4);white-space:nowrap" onclick="event.preventDefault();doSignOut()">Sign Out</a>'+
+      '<button type="button" class="lnk-btn" style="white-space:nowrap" onclick="doSignOut()">Sign Out</button>'+
       '</div>';
     // A deliberate sub-page visit for one child (BACKLOG 1.90) — the family
     // clicked a real CTA on a sibling's action card. Honoured instead of being
@@ -2101,7 +2143,7 @@ function rApp(){
     // bar here to navigate with.
     if(_onePageSub && _onePageSub.tab===TAB){
       var _backBar='<p style="font-size:13px;color:var(--text3);margin-bottom:1rem">'+
-        '<a href="#" style="color:var(--acc)" onclick="event.preventDefault();_klGoHome()">← Back to home</a></p>';
+        '<button type="button" class="lnk-btn"  onclick="_klGoHome()">← Back to home</button></p>';
       var _subContent=(TAB==='enrollment')?rEnrollment(_onePageSub.studentId):rScheduling();
       return _signOut+_backBar+_subContent;
     }
@@ -2120,7 +2162,7 @@ function rApp(){
     (avOpen?'<div class="tab'+(TAB==='scheduling'?' on':'')+'" onclick="gotoScheduling()">Availability</div>':'')+
     '<div class="tab'+(TAB==='enrollment'?' on':'')+'" onclick="gotoEnrollment()">Enrollment</div>'+
     '</div>'+
-    '<a href="#" style="font-size:12px;color:var(--text4);white-space:nowrap" onclick="event.preventDefault();doSignOut()">Sign Out</a>'+
+    '<button type="button" class="lnk-btn" style="white-space:nowrap" onclick="doSignOut()">Sign Out</button>'+
     '</div>';
   var content='';
   if(TAB==='home')         content=rHome();
@@ -2184,7 +2226,7 @@ function rHomeContactRow(c){
     right='<div class="unread-badge" title="Mark read" onclick="event.stopPropagation();markHomeThreadRead(true,\''+esc(c.teacherId)+'\')">'+c.unread+'</div>';
   } else if(c.needsResponse){
     right='<span class="chip" style="background:var(--bg3);color:var(--text4)" title="Read — no reply sent yet">1</span>'+
-      '<a href="#" style="font-size:11px;color:var(--text4);margin-left:5px" title="Clear — no response needed" onclick="event.preventDefault();event.stopPropagation();clearHomeThread(\''+esc(c.teacherId)+'\')">✕</a>';
+      '<button type="button" class="lnk-btn" style="margin-left:5px" title="Clear — no response needed" onclick="event.stopPropagation();clearHomeThread(\''+esc(c.teacherId)+'\')">✕</button>';
   } else {
     right='<span class="kl-cchev">›</span>';
   }
@@ -2256,7 +2298,7 @@ function rHomeMessages(){
 
   if(unreadTotal){
     h+='<div style="text-align:right;margin-bottom:.4rem">'+
-      '<a href="#" style="font-size:11px;color:var(--text4)" onclick="event.preventDefault();markAllHomeRead()">Mark all read</a></div>';
+      '<button type="button" class="lnk-btn"  onclick="markAllHomeRead()">Mark all read</button></div>';
   }
   h+='<div class="kl-subhd">Your contacts</div>';
   h+=HOME_CONVOS.list.map(rHomeContactRow).join('');
@@ -2275,8 +2317,8 @@ function rHomeThreadView(){
       // Mark-unread lives here rather than on the list row: the row already
       // has one job, and this is only ever wanted while looking at a message
       // you've just read.
-      '<a href="#" class="read-toggle" title="Mark unread" onclick="event.preventDefault();markHomeThreadRead(false,\''+esc(t.teacherId)+'\')">○</a>'+
-      '<a href="#" style="font-size:11px;color:var(--text4);margin-left:6px" onclick="event.preventDefault();refreshHomeThread()">'+(t.refreshing?'<span class="spin">↻</span>':'↻ Refresh')+'</a>'+
+      '<button type="button" class="read-toggle" title="Mark unread" onclick="markHomeThreadRead(false,\''+esc(t.teacherId)+'\')">○</button>'+
+      '<button type="button" class="lnk-btn" style="margin-left:6px" onclick="refreshHomeThread()">'+(t.refreshing?'<span class="spin">↻</span>':'↻ Refresh')+'</button>'+
     '</span></div>';
   h+='<div class="kl-thead">'+
     '<div class="kl-cav'+(t.teacherId==='admin'?' adm':'')+'">'+esc(t.teacherId==='admin'?'K':_klInitials(t.teacherName))+'</div>'+
@@ -3337,9 +3379,14 @@ function rHomeSchedule(){
       var s=L.s;
       var first=s.studentName?s.studentName.trim().split(' ')[0]:'';
       // Room is never shown to families (standing rule 6) — teacher, day, time only.
+      // [1.170], AC: the next lesson should say how long it is. A family
+      // booking around a lesson needs the length, not only the start time,
+      // and it is already on the record.
+      var _dur=_effDur(s.durationBase,s.durationExtra);
+      var _timeStr=(s.time||'')+(_dur?' · '+_dur+' min':'');
       var when=L.d
-        ? esc(_fmtLessonDate(L.d))+(s.time?'<br>'+esc(s.time):'')
-        : esc(s.day+(s.time?' · '+s.time:''));
+        ? esc(_fmtLessonDate(L.d))+(_timeStr?'<br>'+esc(_timeStr):'')
+        : esc(s.day+(_timeStr?' · '+_timeStr:''));
       h+='<div class="kl-row"><div>'+
         '<div class="kl-who">'+esc(first)+'</div>'+
         '<div class="kl-sub">'+esc([s.instrument,s.teacher].filter(Boolean).join(' · '))+'</div>'+
@@ -3989,7 +4036,7 @@ function _rHomeParent2(){
     return h;
   }
   if(!INV.open){
-    h+='<a href="#" style="font-size:13px" onclick="event.preventDefault();INV.open=true;render()">+ Add a second parent to this account</a>';
+    h+='<button type="button" class="lnk-btn"  onclick="INV.open=true;render()">+ Add a second parent to this account</button>';
     h+='</div>';
     return h;
   }
@@ -4142,7 +4189,7 @@ function rScheduling(){
     var _scName='';
     var _scInstr='';
     for(var _ni=0;_ni<students.length;_ni++){ if(students[_ni].studentId===SC.studentId){_scName=students[_ni].studentName;_scInstr=students[_ni].instrument||'';break;} }
-    if(_scName) h+='<div style="font-size:13px;color:var(--text3);margin-bottom:1rem">Submitting for: <strong style="color:var(--text)">'+esc(_scName)+(_scInstr?' \u2014 '+esc(_scInstr):'')+'</strong> \u00b7 <a href="#" onclick="_klGoHome();return false" style="color:var(--acc)">Back to home</a></div>';
+    if(_scName) h+='<div style="font-size:13px;color:var(--text3);margin-bottom:1rem">Submitting for: <strong style="color:var(--text)">'+esc(_scName)+(_scInstr?' \u2014 '+esc(_scInstr):'')+'</strong> \u00b7 <button type="button" class="lnk-btn" onclick="_klGoHome();return false" >Back to home</button></div>';
   }
 
   if(!SC.studentId){
@@ -4418,7 +4465,7 @@ function rSchedViewMode(){
 
     h+='<div style="padding:.35rem 0">';
     h+='<div style="'+monoFont+'">Teacher preference</div>';
-    if(SC.teachersError) h+='<div class="aw" style="margin:.3rem 0">'+esc(SC.teachersError)+' <a href="#" onclick="event.preventDefault();loadSchedTeachers()" style="color:var(--bt)">Try again</a></div>';
+    if(SC.teachersError) h+='<div class="aw" style="margin:.3rem 0">'+esc(SC.teachersError)+' <button type="button" class="lnk-btn" onclick="loadSchedTeachers()" >Try again</button></div>';
     h+='<select onchange="SC.teacherPref=this.value;SC.pendingChanges=true;render()" style="margin-top:.3rem;margin-bottom:0">'+rViewTchOpts()+'</select>';
     h+='</div>';
 
@@ -4444,7 +4491,7 @@ function rSchedViewMode(){
       h+='<div class="av-slot" style="opacity:.65;margin-bottom:.5rem">';
       h+='<div style="font-size:13px;color:var(--text3)">';
       h+=esc(slot.day||'Time window '+(i+1))+' \u2014 removed. ';
-      h+='<a href="#" onclick="SC.slotDeleted['+i+']=false;SC.pendingChanges=true;render();return false" style="color:var(--acc)">Undo</a>';
+      h+='<button type="button" class="lnk-btn" onclick="SC.slotDeleted['+i+']=false;SC.pendingChanges=true;render();return false" >Undo</button>';
       h+='</div></div>';
       return;
     }
@@ -4831,7 +4878,7 @@ function rSchedForm(forReg){
   var _noTeacherForDays=!_noTeacherForInstrument&&_availTchs.length>0&&_famSelectedDays().length>0&&_availTchsForPref.length===0;
   h+='<div class="card">';
   if(SC.teachersError){
-    h+='<div class="aw" style="margin-bottom:.5rem">'+esc(SC.teachersError)+' Teacher-preference options and waitlist prompts may not be accurate right now. <a href="#" onclick="event.preventDefault();loadSchedTeachers()" style="color:var(--bt)">Try again</a></div>';
+    h+='<div class="aw" style="margin-bottom:.5rem">'+esc(SC.teachersError)+' Teacher-preference options and waitlist prompts may not be accurate right now. <button type="button" class="lnk-btn" onclick="loadSchedTeachers()" >Try again</button></div>';
   }
   if(_noTeacherForInstrument){
     h+='<h2 style="margin-bottom:.15rem">We don\u2019t currently have a teacher for '+esc(SC.instrument)+'</h2>';
@@ -6156,7 +6203,12 @@ function boot(){
     };
 
     api({action:'familyCheckSession', data:{familyToken:saved.token}}, function(e3,r3){
-      _sessionOk = (!e3 && r3 && r3.ok) ? true : false;
+      // [1.181] — a failed REQUEST is not an invalid LOGIN. Treating them the
+      // same deleted the saved session, so one dropped connection signed a
+      // family out for good; during the 1 Sept outage it did that to everyone
+      // who opened the portal. Unreachable means unknown, and unknown waits.
+      if(e3||!r3){ _klBootRetry(saved); return; }
+      _sessionOk = r3.ok ? true : false;
       if(_sessionOk) FAMILY_ID = r3.familyId;
       _bootSettle();
     });

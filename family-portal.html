@@ -451,10 +451,18 @@ var HOME_CONVOS = {loading:false, list:[]};
 // teacher hasn't written their own. The overlap with the Messages block's
 // "contact admin" line is deliberate (AC: "the message redundancy is on
 // purpose. People don't read.") — do not tidy it away.
-var AFTER_HOURS_COPY = "Keylab teachers are professional musicians who are frequently busy rehearsing or "+
-  "performing in the evenings and on weekends, so they can't always respond right away, but will respond "+
-  "asap, typically within 24 hours.\n\nPlease remember: Teachers only teach and do not handle admin "+
-  "requests. Contact admin for all enrollment, scheduling, and billing questions.";
+// AC's copy, 2 September 2026 — replaces the "professional musicians" wording.
+// [TEACHER] is filled with the teacher's first name at render time; a message
+// with no teacher to name falls back to "your teacher" rather than printing
+// the token.
+var AFTER_HOURS_COPY = "If you have a question about your children's lesson assignment, need advice on an "+
+  "instrument, or have another musical question, [TEACHER] is happy to help! They aren't scheduled to work "+
+  "right now and may not see your message right away, but they will do their best to respond asap, and "+
+  "within 24 hours at most. For enrollment, scheduling, or billing questions, please contact admin.";
+function _afterHoursCopy(teacherName){
+  var first=String(teacherName||'').trim().split(/\s+/)[0];
+  return AFTER_HOURS_COPY.replace('[TEACHER]', first||'your teacher');
+}
 var HOME_EXPANDED = null; // {teacherId, teacherName, messages, draft, sending, loading, lastSentAt}
 var _pollTimer = null;
 var _pendingOpenTeacherId = ''; // set by boot() from ?openTeacherId=, consumed once after login
@@ -2247,6 +2255,10 @@ function rHomeContactRow(c){
 function _klShortTime(ms){
   var n=Number(ms);
   if(!n) return '';
+  // [1.222] — a spreadsheet epoch-zero cell arrives as a large NEGATIVE
+  // number, which is truthy and used to print as "12/30/99". Anything before
+  // the year 2000 is not a real message time; showing nothing is honest.
+  if(n < 946684800000) return '';
   var d=new Date(n);
   if(isNaN(d.getTime())) return '';
   var now=new Date();
@@ -2344,7 +2356,7 @@ function rHomeThreadView(){
   // outside this teacher's own hours, with the option to phone instead still
   // in front of them. Teacher's own words where they wrote any.
   if(c.teacherAfterHours && !c.teacherAway){
-    h+='<div class="kl-afterhours">'+esc(c.teacherAfterHoursMessage||AFTER_HOURS_COPY)+'</div>';
+    h+='<div class="kl-afterhours">'+esc(c.teacherAfterHoursMessage||_afterHoursCopy(c.teacherName))+'</div>';
   }
   // BACKLOG 1.161 #4 — which child is this about? Asked only when the answer
   // is not obvious: one child with this teacher and it is set automatically,
@@ -2511,6 +2523,10 @@ function fmtMsgTime(ms){
   // "1969-12-31" under their own message is how BACKLOG 1.162 was found.
   // Showing nothing is the honest failure here.
   if(!n) return '';
+  // [1.222] — a spreadsheet epoch-zero cell arrives as a large NEGATIVE
+  // number, which is truthy and used to print as "12/30/99". Anything before
+  // the year 2000 is not a real message time; showing nothing is honest.
+  if(n < 946684800000) return '';
   var d=new Date(n);
   if(isNaN(d.getTime())) return '';
   var days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];

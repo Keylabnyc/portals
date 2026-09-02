@@ -693,8 +693,8 @@ function rTimerKey(){
     '<span class="k"><i style="background:#1747C0"></i>unread</span>'+
     '<span class="k"><i style="background:#E5A700"></i>2h</span>'+
     '<span class="k"><i style="background:#F97316"></i>4h</span>'+
-    '<span class="k"><i style="background:#C42121"></i>8h \u2014 nudge</span>'+
-    '<span class="k"><span class="msg-overdue" style="padding:1px 5px;font-size:9px">OVERDUE</span>24h</span>'+
+    '<span class="k"><i style="background:#C42121"></i>12h \u2014 nudge</span>'+
+    '<span class="k"><span class="msg-overdue" style="padding:1px 5px;font-size:9px">OVERDUE</span>past due</span>'+
     '<span style="flex-basis:100%;color:var(--text4)">'+esc(CMP_COPY.keyFoot)+'</span>'+
     '</div>';
 }
@@ -834,6 +834,10 @@ function _saveSettings(fields){
 
 function rTabBadge(n){
   if(!n) return '';
+  // [1.222] — a spreadsheet epoch-zero cell arrives as a large NEGATIVE
+  // number, which is truthy and used to print as "12/30/99". Anything before
+  // the year 2000 is not a real message time; showing nothing is honest.
+  if(n < 946684800000) return '';
   return '<span class="tab-badge">'+n+'</span>';
 }
 
@@ -939,7 +943,7 @@ function rFamilyThreadList(){
         ? esc((t.lastMessageText||'').slice(0,60))
         : '<span style="opacity:.7">No messages yet</span>')+'</div>'+
       '</div>'+
-      rReadToggle(t.unread, 'family_teacher', t.familyId, TEACHER_ID, '', 'family', t.waitingSince, t.closed)+
+      rReadToggle(t.unread, 'family_teacher', t.familyId, TEACHER_ID, '', 'family', t.waitingSince, t.closed, t.replyDueBy)+
       '</div>';
   }).join('')+'</div>';
   return h;
@@ -992,7 +996,7 @@ function onFamilySearch(v){
 //
 // The clock runs from when the message ARRIVED, never from when it was opened
 // (AC, 1 Sept), which is why marking a thread unread does not reset it.
-var RESP_OPEN_HOUR=9, RESP_CLOSE_HOUR=17;   // 9am–5pm, Mon–Fri
+var RESP_OPEN_HOUR=9, RESP_CLOSE_HOUR=17;   // studio hours — kept for the notify window, no longer the clock
 function _respHoursBetween(fromMs, toMs){
   var from=Number(fromMs)||0, to=Number(toMs)||0;
   if(!from || to<=from) return 0;
@@ -1003,7 +1007,7 @@ function _respHoursBetween(fromMs, toMs){
   for(var i=0;i<24*31 && d.getTime()<to;i++){
     var day=d.getDay(), hr=d.getHours();
     var next=new Date(d.getTime()); next.setMinutes(0,0,0); next.setHours(hr+1);
-    if(day>=1 && day<=5 && hr>=RESP_OPEN_HOUR && hr<RESP_CLOSE_HOUR){
+    if(day>=1 && day<=5){
       open+=(Math.min(to,next.getTime())-d.getTime())/3600000;
     }
     d=next;
@@ -1017,12 +1021,17 @@ function _respHoursBetween(fromMs, toMs){
 // thing: nobody is waiting. Kept character-identical to the admin copy — a
 // teacher and admin looking at the same conversation must never see different
 // colours (there is a check for exactly this).
-function _agingMark(waitingSince){
+function _agingMark(waitingSince, dueBy){
   if(!waitingSince) return null;
-  var h=_respHoursBetween(waitingSince, Date.now());
-  if(h>=24) return {cls:'p-od', overdue:true, label:'Overdue'};
+  var now=Date.now();
+  var h=_respHoursBetween(waitingSince, now);
+  // [1.197] — OVERDUE is the server's deadline, not a count. The deadline is
+  // per teacher (their own evening boundary), which the portal cannot derive,
+  // so it arrives on the row as replyDueBy. The 24-hour fallback is only for a
+  // row from an older payload.
+  if(dueBy ? (now>=Number(dueBy)) : (h>=24)) return {cls:'p-od', overdue:true, label:'Overdue'};
   var n=Math.round(h);
-  if(h>=8) return {cls:'p-8h', t:n+'h', label:'Waiting '+n+'h'};
+  if(h>=12) return {cls:'p-8h', t:n+'h', label:'Waiting '+n+'h'};
   if(h>=4) return {cls:'p-4h', t:n+'h', label:'Waiting '+n+'h'};
   if(h>=2) return {cls:'p-2h', t:n+'h', label:'Waiting '+n+'h'};
   return {cls:'p-rest', t:(n>=1?n+'h':'new'), label:(n>=1?'Waiting '+n+'h':'Waiting — less than an hour')};
@@ -1037,7 +1046,7 @@ function _agingMark(waitingSince){
 // your own list. Marking UNREAD is always allowed, is private to the teacher,
 // and changes nothing for anyone else. The server refuses the first case too;
 // this is what stops the tool offering a button that would be refused.
-function rReadToggle(unread, conversationType, familyId, teacherId, staffId2, listKind, waitingSince, closed){
+function rReadToggle(unread, conversationType, familyId, teacherId, staffId2, listKind, waitingSince, closed, dueBy){
   var fn='markThreadRead('+(unread?'true':'false')+',\''+conversationType+'\',\''+esc(familyId)+'\',\''+esc(teacherId)+'\',\''+esc(staffId2)+'\',\''+listKind+'\')';
   var click=' onclick="event.stopPropagation();'+fn+'"';
   var owed=!!waitingSince && !closed;
@@ -1046,7 +1055,7 @@ function rReadToggle(unread, conversationType, familyId, teacherId, staffId2, li
       'aria-label="'+unread+' unread">'+unread+'</div>';
   }
   if(unread) return '<div class="msg-circle p-new"'+click+' title="Mark read" aria-label="'+unread+' unread">'+unread+'</div>';
-  var m=_agingMark(waitingSince);
+  var m=_agingMark(waitingSince, dueBy);
   if(m && m.overdue) return '<div class="msg-overdue"'+click+' title="Mark unread" aria-label="Overdue">OVERDUE</div>';
   if(m) return '<div class="msg-circle '+m.cls+'"'+click+' title="Mark unread" aria-label="'+esc(m.label)+'">'+m.t+'</div>';
   return '<button type="button" class="read-toggle" onclick="event.stopPropagation();'+fn+'" title="Mark unread">○</button>';
@@ -1420,7 +1429,7 @@ function rStaffRoster(){
     '<div class="thread-row-name">Admin</div>'+
     (admin.lastMessageText?'<div class="thread-row-preview">'+esc(admin.lastMessageText.slice(0,60))+'</div>':'')+
     '</div>'+
-    rReadToggle(admin.unread, 'teacher_admin', '', TEACHER_ID, '', 'staff', admin.waitingSince)+
+    rReadToggle(admin.unread, 'teacher_admin', '', TEACHER_ID, '', 'staff', admin.waitingSince, false, admin.replyDueBy)+
     '</div>';
   h+=rows.map(function(s){
     return '<div class="thread-row" onclick="openStaffThread(\'staff\',\''+esc(s.teacherId)+'\',\''+esc(s.teacherName)+'\')">'+
@@ -1428,7 +1437,7 @@ function rStaffRoster(){
       '<div class="thread-row-name">'+esc(s.teacherName)+'</div>'+
       (s.lastMessageText?'<div class="thread-row-preview">'+esc(s.lastMessageText.slice(0,60))+'</div>':'')+
       '</div>'+
-      rReadToggle(s.unread, 'staff_staff', '', TEACHER_ID, s.teacherId, 'staff', s.waitingSince)+
+      rReadToggle(s.unread, 'staff_staff', '', TEACHER_ID, s.teacherId, 'staff', s.waitingSince, false, s.replyDueBy)+
       '</div>';
   }).join('');
   h+='</div>';
@@ -1843,7 +1852,7 @@ var CMP_COPY={
   // [1.176] — the key admin has, for the people the colours are actually
   // aimed at. Same words, so the two screens cannot explain it differently.
   keyLead:'Message Response Timer Key:',
-  keyFoot:'Response timer only counts time Weekdays 9\u20135 (Friday evening messages not overdue on Monday)',
+  keyFoot:'Respond to family messages within a few hours, and in 24 hours at most whenever possible. Time sensitive messages sent at any time should be responded to or forwarded to admin with details asap. Family messages sent on Friday evening or over the weekend that are not time sensitive should be responded to by Monday 12pm',
   // AC's wording, 1 Sept, for [1.189] — identical in both portals.
   internal:'Internal Message - not visible to family',
   internalReply:'Reply privately',

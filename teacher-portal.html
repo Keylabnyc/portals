@@ -304,12 +304,21 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
    thread does not keep a permanent highlight on one message. */
 .bubble-row.flash .bubble{animation:revflash 1.8s ease-out}
 @keyframes revflash{0%{box-shadow:0 0 0 4px rgba(26,86,219,.45)}100%{box-shadow:0 0 0 2px rgba(26,86,219,.18)}}
-/* [1.237] — the one line that says a message did not reach the family. Only
-   ever drawn on your OWN message, and only when the server says nothing went
-   out; a notification that worked says nothing, because a marker that is
-   always present stops being read. */
-.msg-notify-warn{margin-top:5px;font-size:11.5px;line-height:1.35;color:var(--rt);
-  background:var(--rbg);border-radius:5px;padding:5px 8px}
+/* [1.237] — AC, 4 September: "email fail message 'message did not send' red
+   warning banner." A banner, not the quiet inline line this started as: it is
+   the one thing on a message that means somebody has to do something. Drawn
+   only when the server says nothing went out, so a notification that worked
+   says nothing at all — a marker that is always present stops being read.
+   The second line is the server's own reason, quieter than the banner because
+   it is what you pass on rather than what you notice. */
+.msg-notify-warn{display:block;margin-top:8px;padding:7px 10px;border-radius:5px;
+  background:var(--rbg);border-left:3px solid var(--red);color:var(--rt)}
+.msg-notify-warn b{display:block;font-size:12.5px;font-weight:700;line-height:1.3}
+.msg-notify-warn span{display:block;margin-top:2px;font-size:11.5px;font-weight:500;line-height:1.35;opacity:.9}
+/* On your own bubble the ground is solid accent blue, so the banner keeps its
+   own light-red surface rather than inheriting — the same fault [1.230] was
+   raised about, and not one to rebuild here. */
+.bubble.mine .msg-notify-warn{background:var(--rbg);color:var(--rt);border-left-color:var(--red)}
 /* The guide. Closed by default and quiet when closed — it sits under the
    colour key all day and should not compete with the messages. */
 .guide{margin:-.35rem 0 1rem}
@@ -2663,6 +2672,10 @@ var TCH_COPY={
   saveForReview:'Save for review',
   // AC, 3 Sept (second pass): "the checkbox label follows its state."
   savedForReview:'Saved for review',
+  // [1.237], AC's words, 4 September — the banner on a message whose
+  // notification never left the building. The server's own reason for it is
+  // rendered under this and is not copy.
+  notSent:'Message did not send',
   markSeen:'Mark seen',
   closeConversation:'Close conversation',
   closeConfirm:'Close conversation?',
@@ -2818,29 +2831,39 @@ function rMessageBubble(m){
     _bubbleAbout(m)+
     '<div class="bubble-text">'+body+'</div>'+
     '<div class="bubble-time">'+esc(fmtMsgTime(m.sentAt))+'</div>'+
-    rNotifyWarn(m,mine)+
+    rNotifyWarn(m)+
     rMsgTools(m,mine)+
     '</div></div>';
 }
 
 // [1.237] — "a test parent received no email when a teacher sent them a
-// message", and nothing on any screen said so. The server now records what
-// the notification actually did on the message row (notifyState/notifyDetail,
-// see _notifyNewMessage) and this is where the teacher who sent it finds out.
+// message", and nothing on any screen said so. The server records what the
+// notification actually did on the message row (notifyState/notifyDetail, see
+// _notifyNewMessage) and this is where staff find out.
 //
-// Only on your own message: it answers "did what I just sent reach them",
-// which is a question only the sender has. And only when something did NOT go
-// out — 'sent' and 'queued' draw nothing. A message with no state at all was
-// sent before this shipped and says nothing either, rather than claiming a
-// failure it has no evidence of.
-function rNotifyWarn(m, mine){
-  if(!mine) return '';
+// AC, 4 September, on both halves of this:
+//
+//   THE WORDING is his — "message did not send", as a red warning banner. The
+//   server's own reason sits under it in smaller text, because the whole point
+//   of the item is that the cause stops being invisible; the banner is what
+//   you notice and the second line is what you tell somebody.
+//
+//   WHO SEES IT: everyone on staff in the thread, not only the sender. It was
+//   scoped to your own message on the first pass; AC widened it. A teacher can
+//   see that a message admin sent their family never arrived, and admin — who
+//   is the only one who can actually fix "no email address on file" — sees it
+//   on a teacher's message too.
+//
+// Still only on a STAFF-sent message: this answers "did what we sent reach
+// the family". And still only when something did NOT go out — 'sent' and
+// 'queued' draw nothing, and a message with no state at all predates the
+// record and says nothing rather than claiming a failure it cannot evidence.
+function rNotifyWarn(m){
+  if(m.senderType!=='teacher' && m.senderType!=='admin') return '';
   var st=m.notifyState||'';
   if(st!=='none' && st!=='error') return '';
-  // TODO(copy): AC. Staff-facing, and the reason half is the server's own
-  // factual string ("no email address on file for this family").
-  var why=m.notifyDetail?' — '+m.notifyDetail:'';
-  return '<div class="msg-notify-warn">'+esc('Not emailed'+why)+'</div>';
+  return '<div class="msg-notify-warn"><b>'+esc(TCH_COPY.notSent)+'</b>'+
+    (m.notifyDetail?'<span>'+esc(m.notifyDetail)+'</span>':'')+'</div>';
 }
 
 // ── Two lines in the thread, not a message (AC, 3 September 2026) ────────
@@ -2848,9 +2871,13 @@ function rNotifyWarn(m, mine){
 // lines only. The header line with sender and timestamp, and 2nd line text
 // message." No bubble, no border, no button — a note saying the studio has it,
 // which cannot be replied to and is not something to read past.
+// AC, 4 September: the note is "auto-response: [first name] has seen your
+// message..." with a timestamp. The sender's name moved INTO the sentence when
+// he rewrote it, so the header keeps the timestamp and drops the name — it was
+// printing the same person twice, once above the line and once inside it.
 function rNoteLine(m){
   return '<div class="note-line">'+
-    '<div class="note-head">'+esc(m.senderName||'')+' · '+esc(fmtMsgTime(m.sentAt))+'</div>'+
+    '<div class="note-head">'+esc(fmtMsgTime(m.sentAt))+'</div>'+
     '<div class="note-body">'+esc(m.messageText||'')+'</div>'+
     '</div>';
 }

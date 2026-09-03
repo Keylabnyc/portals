@@ -2680,8 +2680,11 @@ function rMsgBubble(m){
   // the whole point of [1.220] — the receipt it replaces "shouldn't send the
   // message", it should just say the message has been seen.
   if(m.noteKind==='seen'){
+    // AC, 4 September: the name is inside the sentence now ("auto-response:
+    // [first name] has seen your message..."), so the header is the timestamp
+    // alone rather than naming the same person twice.
     return '<div class="kl-note">'+
-      '<div class="kl-note-head">'+esc(m.senderName||'')+' · '+esc(fmtMsgTime(m.sentAt))+'</div>'+
+      '<div class="kl-note-head">'+esc(fmtMsgTime(m.sentAt))+'</div>'+
       '<div class="kl-note-body">'+esc(m.messageText||'')+'</div>'+
       '</div>';
   }

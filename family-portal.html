@@ -106,12 +106,32 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 .c-warn{background:#FDECD6;color:#7C3A00}
 .c-danger{background:var(--rbg);color:var(--rt)}
 .unread-badge{background:var(--red);color:#fff;font-size:11px;font-weight:700;border-radius:10px;padding:1px 7px;flex:0 0 auto;cursor:pointer}
+/* [1.250] — the SAME badge, greyed and without a number: "Message bubble
+   turns grey without message count when there are no outstanding messages to
+   reply to" (AC, 3 September). One shape in three states rather than three
+   different controls, so a parent learns one thing. The width is pinned to
+   the filled badge's own so the row does not shift as it changes state.
+   min-width covers the one-digit case, which is nearly every case. */
+.unread-badge.rest{background:var(--bg3);color:transparent;min-width:20px;cursor:default}
 /* The "seen" note (3 Sept): two lines, no bubble. A note about the
    conversation rather than a turn in it, so it is quieter than a message and
    cannot be mistaken for an answer. */
-.kl-note{padding:2px 2px 6px 0;max-width:80%}
-.kl-note-head{font-size:11px;color:var(--text4)}
-.kl-note-body{font-size:12.5px;color:var(--text3);font-style:italic}
+/* [1.249] — a rule down the left with no fill, italic body, upright label.
+   Three signals that a row was not written by a person, with the LABEL alone
+   saying which kind. This closes [1.173]: the dashed unfilled bubble AC
+   rejected on 1 September is replaced by a treatment that survives three
+   stacked system rows without becoming a wall of grey. */
+.kl-note{padding:2px 2px 6px 10px;max-width:80%;border-left:3px solid var(--border2,#CFCFC9);margin:.35rem 0}
+.kl-note-head{font-size:10.5px;color:var(--text5,var(--text4))}
+/* AC, 3 September, on the auto-reply no longer collapsing: "we can omit this
+   for now and see how it works without collapsing. Perhaps having it be a
+   slightly smaller font would help save space and bump it down the visual
+   hierarchy?" So 12.5px -> 11.5px on the body and the label, and a lighter
+   colour on the body. The row is now smaller than a person's message rather
+   than the same size, which does the job the collapse was doing — taking it
+   out of the reading order — without hiding what it says. */
+.kl-note-body{font-size:11.5px;line-height:1.5;color:var(--text4);font-style:italic}
+.kl-note-label{font-style:normal;font-weight:600;color:var(--text4);margin-right:4px;font-size:11.5px}
 .read-toggle:hover{color:var(--acc);text-decoration:none}
 .divider{border:none;border-top:1px solid var(--border);margin:1.5rem 0}
 .add-btn:hover{border-color:var(--acc);color:var(--acc)}
@@ -270,10 +290,6 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 .kl-about-pill{border:1px solid var(--border,#E3E3DE);background:var(--bg2,#F6F6F4);border-radius:20px;
   padding:2px 10px;cursor:pointer;font-weight:600}
 .kl-about-pill.on{background:var(--acc,#1747C0);border-color:var(--acc,#1747C0);color:#fff}
-.kl-about-tag{font-size:10px;font-weight:600;opacity:.75;display:block;margin-bottom:2px}
-.bubble.auto{background:transparent;border:1px dashed var(--border,#E3E3DE);color:var(--text3,#5A5A55);cursor:pointer;max-width:100%}
-.auto-line{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:600}
-.auto-when{font-weight:400;opacity:.7}
 .kl-afterhours{background:var(--bg2,#F6F6F4);border:1px solid var(--border,#E3E3DE);color:var(--text3,#5A5A55);
   border-radius:8px;padding:9px 11px;font-size:11.5px;line-height:1.45;margin-bottom:.6rem;white-space:pre-wrap}
 .composer{display:flex;gap:8px;align-items:flex-end}
@@ -2250,8 +2266,24 @@ function rHomeContactRow(c){
     // already right. It is now purely a count.
     right='<div class="unread-badge" aria-label="'+c.unread+' unread">'+c.unread+'</div>';
   } else if(c.needsResponse){
-    right='<span class="chip" style="background:var(--bg3);color:var(--text4)" title="Read — no reply sent yet">1</span>'+
-      '<button type="button" class="lnk-btn" style="margin-left:5px" title="Clear — no response needed" onclick="event.stopPropagation();clearHomeThread(\''+esc(c.teacherId)+'\')">✕</button>';
+    // [1.250], AC: "remove the x. It is not needed." — then, asked what should
+    // stand in its place: "We don't need an x or anything. Message bubble
+    // turns grey without message count when there are no outstanding messages
+    // to reply to."
+    //
+    // The ✕ that was here was NOT a dismiss control, which is how it read and
+    // why it was reported: it was clearHomeThread(), the only way to clear
+    // [1.7b]'s greyed "read, no reply sent" marker. So removing it on its own
+    // would have removed a working feature and stranded the marker until a
+    // new message arrived. AC's replacement removes the clearing PROBLEM
+    // instead: a grey, numberless badge needs no clearing, and a new message
+    // turns it filled and numbered again by itself.
+    // The "0" is a spacer, not information: it is transparent, hidden from
+    // screen readers, and there only so the grey badge is exactly the size of
+    // the filled one and the row does not shift when the state changes. The
+    // aria-label carries the actual meaning.
+    right='<div class="unread-badge rest" role="img" aria-label="Read — no reply sent yet" '+
+      'title="Read — no reply sent yet"><span aria-hidden="true">0</span></div>';
   } else {
     right='<span class="kl-cchev">›</span>';
   }
@@ -2363,20 +2395,6 @@ function rHomeThreadView(){
   } else {
     h+='<div class="msg-list">'+t.messages.map(rMsgBubble).join('')+'</div>';
   }
-  // BACKLOG 1.125 — the away notice, ABOVE the composer, so a parent knows
-  // before they write rather than being told afterwards by an autoresponder.
-  // There is deliberately no "available" state here: a green badge on a
-  // parent's screen would read as a promise of an immediate reply
-  // (AC, 1 Sept — families get no status banner).
-  if(c.teacherAway && c.teacherAwayMessage){
-    h+='<div class="kl-away">'+esc(c.teacherAwayMessage)+'</div>';
-  }
-  // BACKLOG 1.132 — and the after-hours line, shown while they are writing
-  // outside this teacher's own hours, with the option to phone instead still
-  // in front of them. Teacher's own words where they wrote any.
-  if(c.teacherAfterHours && !c.teacherAway){
-    h+='<div class="kl-afterhours">'+esc(c.teacherAfterHoursMessage||_afterHoursCopy(c.teacherName))+'</div>';
-  }
   // BACKLOG 1.161 #4 — which child is this about? Asked only when the answer
   // is not obvious: one child with this teacher and it is set automatically,
   // with nothing on screen. The thread stays one conversation per teacher
@@ -2400,6 +2418,29 @@ function rHomeThreadView(){
     '<textarea id="home-composer" placeholder="Type your message here..." oninput="HOME_EXPANDED.draft=this.value">'+esc(t.draft)+'</textarea>'+
     sendBtn+
     '</div>';
+  // [1.247] / C1 — BELOW the composer's send button. FAMILY-FACING.
+  //
+  // AC first asked for this "in the thread"; asked which message it should
+  // anchor to, he corrected himself: "i don't want it in the thread, so I
+  // misspoke. I want it to sit just below the composer send button area."
+  //
+  // It is NOT the auto-reply row inside the thread — that is a separate,
+  // already-settled thing ([1.173], closed by the two labelled system rows).
+  // This is the notice shown BEFORE composing, and it kept its whole job when
+  // it moved: BACKLOG 1.125's point is that a parent finds out the teacher is
+  // away rather than being told afterwards by an autoresponder, and it is
+  // still on screen while they write. There is deliberately still no
+  // "available" state — a green badge on a parent's screen would read as a
+  // promise of an immediate reply (AC, 1 Sept: families get no status banner).
+  if(c.teacherAway && c.teacherAwayMessage){
+    h+='<div class="kl-away">'+esc(c.teacherAwayMessage)+'</div>';
+  }
+  // BACKLOG 1.132 — the after-hours line moves with it, for the same reason
+  // and to the same place: two notices about the same thing must not end up
+  // on opposite sides of the box.
+  if(c.teacherAfterHours && !c.teacherAway){
+    h+='<div class="kl-afterhours">'+esc(c.teacherAfterHoursMessage||_afterHoursCopy(c.teacherName))+'</div>';
+  }
   return h;
 }
 
@@ -2429,12 +2470,10 @@ function markAllHomeRead(){
   });
 }
 
-function clearHomeThread(teacherId){
-  fapi('clearConversation', {teacherId:teacherId}, function(e,r){
-    if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not update.','e'); return; }
-    loadHomeConversations(true);
-  });
-}
+// [1.250] — clearHomeThread() was here and is gone with the ✕ that called it.
+// The clearConversation ENDPOINT stays on the server deliberately: a family
+// with the page still open on the previous version can call it, and it does
+// no harm. Nothing in this file calls it any more.
 
 
 
@@ -2525,9 +2564,14 @@ function _maxSentAt(msgs){
   return max;
 }
 
-// Formats an epoch-ms timestamp as "Tue, 8/18/26 5:30 PM" — see BACKLOG.md
-// 1.18. Falls back to the raw value for anything that doesn't parse (e.g.
-// a message sent before this fix, still holding the old date-only string).
+// Formats an epoch-ms timestamp as "Thursday, 9/3/26 2:12 AM" — see BACKLOG
+// 1.18. Falls back to nothing for anything that doesn't parse.
+//
+// [1.249] — THE FULL WEEKDAY, everywhere, in all three portals. AC gave this
+// for the system row; applying it to one row would have preserved the very
+// inconsistency he raised a pass earlier — two date formats in one thread.
+// FAMILY-FACING: this is the only pixel of [1.249] real parents see, and it
+// is subtractive of nothing.
 function fmtMsgTime(ms){
   var n=Number(ms);
   // Never print the raw stored value: it is an epoch number or, when
@@ -2541,7 +2585,7 @@ function fmtMsgTime(ms){
   if(n < 946684800000) return '';
   var d=new Date(n);
   if(isNaN(d.getTime())) return '';
-  var days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  var days=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
   var h=d.getHours(), mins=d.getMinutes();
   var ampm=h>=12?'PM':'AM';
   var h12=h%12; if(h12===0) h12=12;
@@ -2680,50 +2724,73 @@ function rMsgBubble(m){
   // the whole point of [1.220] — the receipt it replaces "shouldn't send the
   // message", it should just say the message has been seen.
   if(m.noteKind==='seen'){
-    // AC, 3 September: the name is inside the sentence now ("auto-response:
-    // [first name] has seen your message..."), so the header is the timestamp
-    // alone rather than naming the same person twice.
-    return '<div class="kl-note">'+
-      '<div class="kl-note-head">'+esc(fmtMsgTime(m.sentAt))+'</div>'+
-      '<div class="kl-note-body">'+esc(m.messageText||'')+'</div>'+
-      '</div>';
+    // AC, 3 September: the name is inside the sentence now, so the header is
+    // the timestamp alone rather than naming the same person twice.
+    return _rKlNote(KL_NOTE_LABEL_SEEN, m.sentAt, m.messageText);
   }
-  // AC, 1 Sept — collapsed, and clearly not a person. The away reply is the
-  // same words every time; a family should not scroll past it repeatedly.
   if(isTruthy(m.isAuto)) return rKlAutoBubble(m,mine);
+  // [1.249] — the sender's name moves onto the TIMESTAMP LINE, on every
+  // message including the family's own: "Xavier Tombstone · Thursday, 9/3/26
+  // 2:12 AM". A family thread can carry two parents and admin as well as the
+  // teacher, and until now only the incoming bubbles named anybody.
+  //
+  // No child name on the bubble here either, settled by AC after this side was
+  // kept for one pass: "Child's name doesn't need to be on the message bubble.
+  // The parent and teacher know who they are talking about and can ask if they
+  // need clarification from the other party." One rule, three portals.
   return '<div class="bubble-row'+(mine?' mine':'')+'">'+
     '<div class="bubble'+(mine?' mine':'')+'">'+
-    (!mine?'<div class="bubble-sender">'+esc(m.senderName||'')+'</div>':'')+
-    _klBubbleAbout(m)+
     '<div class="bubble-text">'+body+'</div>'+
-    '<div class="bubble-time">'+esc(fmtMsgTime(m.sentAt))+'</div>'+
+    '<div class="bubble-time">'+_klBubbleMeta(m)+'</div>'+
     '</div></div>';
 }
+// The one meta line every human message carries: who, then when.
+function _klBubbleMeta(m){
+  var who=String(m.senderName||'').trim();
+  var when=fmtMsgTime(m.sentAt);
+  return (who?esc(who)+(when?' \u00b7 ':''):'')+esc(when);
+}
 
-var _klAutoOpen={};
-function klToggleAuto(id){ _klAutoOpen[id]=!_klAutoOpen[id]; render(); }
+// [1.249] — TWO SYSTEM ROWS, TWO LABELS, both italic, both with the side rule,
+// neither carrying a sender name. Same shape and same two labels as the staff
+// portals, because a family and a teacher reading the same thread must see the
+// same thing.
+//
+// AC's correction is the one that mattered: "for the seen message it shouldn't
+// say 'auto reply' because it's not an auto reply." One is a reply sent on the
+// teacher's behalf; the other is a notification about a person's action.
+//
+// The collapse is gone. The away reply used to be one clickable line (AC,
+// 1 Sept) because a repeated full bubble buried the conversation; as an
+// italic, side-ruled, labelled note it no longer does, and a collapsed row
+// that shows a label and a timestamp but not the sentence is worse for a
+// parent than two short lines. FAMILY-FACING.
+var KL_NOTE_LABEL_SEEN='System Message:';
+var KL_NOTE_LABEL_AUTO='auto-reply:';
+function _rKlNote(label, at, text){
+  return '<div class="kl-note">'+
+    '<div class="kl-note-head">'+esc(fmtMsgTime(at))+'</div>'+
+    '<div class="kl-note-body"><span class="kl-note-label">'+esc(label)+'</span>'+
+      esc(text||'')+'</div>'+
+    '</div>';
+}
 function rKlAutoBubble(m,mine){
-  var id=m.messageId||('a'+m.sentAt);
-  var open=!!_klAutoOpen[id];
-  return '<div class="bubble-row'+(mine?' mine':'')+'">'+
-    '<div class="bubble auto" onclick="klToggleAuto(\''+esc(id)+'\')" title="Automatic reply — click to '+(open?'hide':'read')+'">'+
-    '<div class="auto-line">Auto-response'+
-      '<span class="auto-when">'+esc(fmtMsgTime(m.sentAt))+'</span></div>'+
-    (open?'<div class="bubble-text" style="margin-top:4px">'+esc(m.messageText||'').replace(/\n/g,'<br>')+'</div>':'')+
-    '</div></div>';
+  return _rKlNote(KL_NOTE_LABEL_AUTO, m.sentAt, m.messageText);
 }
 
 // Which child a message is about (BACKLOG 1.161 #4). Shown only where it says
 // something: a family with one child on this teacher has one possible answer.
-function _klBubbleAbout(m){
-  if(!m.studentId||!HOME_EXPANDED) return '';
-  var c=(HOME_CONVOS.list||[]).filter(function(x){return x.teacherId===HOME_EXPANDED.teacherId;})[0]||{};
-  var kids=c.students||[];
-  if(kids.length<2) return '';
-  var st=kids.filter(function(x){return x.studentId===m.studentId;})[0];
-  if(!st) return '';
-  return '<span class="kl-about-tag">'+esc(st.studentName)+'</span>';
-}
+// [1.249] — _klBubbleAbout() was here and is gone. It was kept for one pass on
+// the reasoning that the family thread has no header to move the child's name
+// into; AC settled it the other way: "Child's name doesn't need to be on the
+// message bubble. The parent and teacher know who they are talking about and
+// can ask if they need clarification from the other party."
+//
+// So no bubble in any of the three portals carries a child's name now. The
+// composer's "About" picker STAYS — it records which child a message concerns
+// on the row itself, which is what the studio reads later — but its choice is
+// no longer drawn on the message. Flagged rather than removed as well: taking
+// out the picker is a separate decision and a family-facing one.
 
 // Returns a one-page family from a sub-page (BACKLOG 1.90) to their Home.
 // Clearing _onePageSub is what makes rApp()'s stale-TAB guard apply again.

@@ -15,7 +15,12 @@
   --amber:#7A5000;--abg:#FAEABB;--at:#4A2E00;
   --red:#962020;--rbg:#FAD4D4;--rt:#560A0A;
   --blue:#1C4A82;--bbg:#D0E2F8;--bt:#0C2A52;
-  --acc:#1E3A6E;--link:#1155CC;--r:5px;--rl:8px
+  --acc:#1E3A6E;--link:#1155CC;--r:5px;--rl:8px;
+  /* [1.249] — the ageing ladder, as tokens rather than literals, because the
+     teacher portal and the admin portal must never show a teacher and admin
+     different colours for the same conversation. There is a check that
+     compares the two files on exactly this. */
+  --age-rest:#A9AEB4;--age-4h:#EF9F27;--age-12h:#E9865A;--age-od:#B32F2F;
 }
 body{background:var(--bg);color:var(--text);font-family:"Inter",sans-serif;font-size:14px;line-height:1.6;min-height:100vh;-webkit-font-smoothing:antialiased}
 .wrap{max-width:420px;margin:0 auto;padding:2rem 1.25rem 4rem}
@@ -49,6 +54,18 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 .tab{flex:1;text-align:center;padding:9px 8px;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--text4);background:transparent;cursor:pointer;border-radius:7px;font-family:"Inter",sans-serif;font-weight:600;border:1px solid transparent;transition:all .15s}
 .tab.on{color:#fff;background:var(--acc);border-color:var(--acc)}
 .thread-hd{font-size:10px;font-weight:600;color:var(--acc);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.75rem;font-family:"Inter",sans-serif}
+/* [1.249] — the child's lesson details, in the THREAD HEADER and nowhere else.
+   AC settled this by splitting a question he was offered three answers to:
+   the student name comes off the ROW entirely AND the full lesson line moves
+   here, which none of the three drawn options had. Twice, on where it must
+   not appear: "Don't have the child info on the message. It's in the header
+   only" — and "the thread header".
+   One line per child THIS teacher teaches: two children with this teacher
+   gets two lines, one child with this teacher gets one. Above a divider,
+   never attached to a bubble. */
+.thread-kids{margin:.25rem 0 .6rem;padding-bottom:.6rem;border-bottom:1px solid var(--border)}
+.thread-kid{font-size:12px;color:var(--text3);line-height:1.5}
+.thread-kid b{font-weight:600;color:var(--text2)}
 .empty-state{text-align:center;color:var(--text4);padding:2rem 1rem;font-size:13px}
 /* Status banner (BACKLOG 1.125, AC's shapes: red Away/Busy, green Available).
    Full width and unmissable on purpose — the 28 Aug worry was that a teacher
@@ -79,16 +96,12 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 .about-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:11px;color:var(--text3);margin-bottom:.5rem}
 .about-pill{border:1px solid var(--border);background:var(--bg2);border-radius:20px;padding:2px 10px;cursor:pointer;font-weight:600}
 .about-pill.on{background:var(--acc);border-color:var(--acc);color:#fff}
-.about-tag{font-size:10px;font-weight:600;opacity:.75;display:block;margin-bottom:2px}
 /* A system message never looks like a person's (AC, 1 Sept): no colour, a
    dashed edge, and one line until you ask for the rest. */
-.bubble.auto{background:transparent;border:1px dashed var(--border2);color:var(--text3);cursor:pointer;max-width:100%}
 /* [1.189] — the one bubble on the screen the family cannot see, and the only
    one in this colour. It says so in words too. */
 .bubble.internal{background:#FAECCB;border:1px solid #D9AE55;border-left:4px solid #D9AE55;max-width:100%}
 .internal-tag{font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#7A4E00;margin-bottom:.3rem}
-.auto-line{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:600}
-.auto-when{font-weight:400;opacity:.7}
 .fwd-box{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);
   padding:10px 12px;margin-top:.6rem;font-size:12px}
 .msg-list{display:flex;flex-direction:column;gap:8px;margin-bottom:1rem;max-height:50vh;overflow-y:auto}
@@ -167,7 +180,34 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 .bubble-text a{color:var(--link);text-decoration:underline;word-break:break-word}
 .bubble.mine .bubble-text a{color:#fff}
 .thread-list{display:flex;flex-direction:column;gap:6px}
-.thread-row{display:flex;justify-content:space-between;align-items:center;gap:8px;background:rgba(255,255,255,.45);border:1px solid var(--border);border-radius:var(--r);padding:.7rem .85rem;cursor:pointer;transition:background .12s}
+/* [1.249] — the row, settled with AC on screen, 3 September 2026.
+   TWO RULES UNDERNEATH ALL OF IT, and everything else follows from them:
+     1. the left edge bar carries TIME PRESSURE and nothing else ever colours it;
+     2. the right-hand badge carries WHO IS WAITING.
+   The row had a coloured status dot, a numeric badge, a white review circle,
+   a "Nudge" tag, an "Answered by you" tag, an "Unread" tag, a deadline and a
+   student line, all at once. AC: "too much info and too messy overall." */
+.thread-row{display:flex;justify-content:space-between;align-items:center;gap:8px;background:rgba(255,255,255,.45);border:1px solid var(--border);border-left:3px solid var(--age-rest);border-radius:var(--r);padding:.7rem .85rem;cursor:pointer;transition:background .12s}
+/* The ageing ladder — four stages, AC's own, cut from five and then given the
+   nudge stage back. The two middle colours were tuned on screen over two
+   passes (#D85A30→#E2703F→#E9865A and #E24B4A→#C93A39→#B32F2F): "go a little
+   more in each direction for both colors and we'll have it." Moving them
+   APART widened the gap between orange and red, which is the pair hardest to
+   tell apart in a 3px strip, so it improved legibility rather than only taste.
+
+   THE RESTING STRIP IS VISIBLY GREY, not a hairline, and that is not a
+   styling preference: AC's own guide copy calls it "Grey - under 4 hours", and
+   a teacher who checks the guide against the screen has to find the grey it
+   names. A marker that only appears when something is wrong reads as broken.
+
+   "24 hours" in AC's shorthand is NOT what red means — he confirmed it: "24
+   hour clock is stale, use what we decided on". Overdue is _replyDueBy_()'s
+   rule (evening rolls to noon next day, Friday and the weekend to Monday
+   noon). The 4h and 12h marks ARE literal elapsed weekday hours. Anyone
+   reading the ladder without this paragraph will get it wrong. */
+.thread-row.age-4h{border-left-color:var(--age-4h)}
+.thread-row.age-12h{border-left-color:var(--age-12h)}
+.thread-row.age-od{border-left-color:var(--age-od)}
 .thread-row:hover{background:rgba(255,255,255,.65)}
 .thread-row-main{min-width:0}
 .thread-row-name{font-size:13px;font-weight:600;color:var(--text)}
@@ -188,23 +228,21 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 .mp-key span.k{display:inline-flex;align-items:center;gap:5px}
 .mp-key i{width:11px;height:11px;border-radius:50%;display:inline-block}
 .msg-circle.p-new{background:#1747C0;color:#fff}
-/* [1.178] the resting state: present, readable, carrying no alarm. */
-.msg-circle.p-rest{background:var(--bg4);color:var(--text3);border:1px solid var(--border2);font-size:11px}
-.msg-circle.p-2h{background:#8B5FCF;color:#fff}
-.msg-circle.p-4h{background:#E5A700;color:#3A2900}
-/* AC's key, 3 Sept 2026: blue when new, purple at 2h, amber at 4h, orange at
-   12h, red once OVERDUE. Every stage moved down one and purple was added, so
-   red now means only one thing — past the reply time — instead of sharing
-   duty with the 12-hour band. Class names are the HOURS, not the colours,
-   which is why p-8h became p-12h rather than being renamed after a hue that
-   has now changed twice. */
-.msg-circle.p-12h{background:#F97316;color:#3D1A00}
-/* Overdue keeps a circle for the count, in a deeper red, with the OVERDUE word beside it (AC, 3 Sept). */
-.msg-circle.p-od{background:#8B1A1A;color:#fff}
+/* [1.249] — THE BADGE NO LONGER CARRIES THE AGE. It used to be coloured by
+   the ageing ladder (blue new, purple 2h, amber 4h, orange 12h, red overdue)
+   AND to hold the count, so one control answered two questions and the row
+   then repeated the same answer in a dot, a tag and a deadline. The colour
+   moved to the left edge strip; the badge answers "who is waiting" alone.
+
+   Three states, and every one of them is drawn at rest — [1.178]'s rule:
+     filled blue with a count  — someone is waiting on you
+     grey, no number           — read, nothing owed
+     outline with a count      — your OWN saved-for-review marks (below)
+   The last is a different question from the first two, so it may sit
+   alongside the filled badge rather than replacing it. */
+.msg-circle.p-rest{background:var(--bg4);color:transparent;border:1px solid var(--border2);font-size:11px;cursor:default}
 /* Saved for review (1.215): white circle, blue number, blue ring. Deliberately the inverse of the unread circle — same shape, opposite fill, because it is the other half of one idea. */
 .msg-circle.p-review{background:#fff;color:#1747C0;border:2px solid #1747C0}
-.msg-overdue{background:#B22222;color:#fff;border:1px solid #8B1A1A;border-radius:10px;padding:3px 8px;
-  font-size:10px;font-weight:600;letter-spacing:.06em;white-space:nowrap;flex:0 0 auto;cursor:pointer}
 /* ── The sectioned messages page (AC, 3 September 2026) ──────────────────
    Section headers carry the counts the tab badges used to, so nothing has to
    be opened to find out something is waiting. */
@@ -260,10 +298,35 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 .msg-search-sub{font-size:11px;color:var(--text4)}
 /* Two lines in the thread, not a message (AC, 3 Sept). Deliberately without a
    bubble, a border or a background: it is a note about the conversation, not a
-   turn in it. */
-.note-line{padding:2px 2px 2px 0;max-width:74%}
-.note-head{font-size:11px;color:var(--text4)}
-.note-body{font-size:12.5px;color:var(--text3);font-style:italic}
+   turn in it.
+
+   [1.173] is CLOSED by this. AC rejected the dashed unfilled bubble on
+   1 September and no replacement had been specified since; three treatments
+   were drawn — no bubble, a filled grey block, or a rule down the left with no
+   fill — and the rule won because it survives three stacked system rows
+   without becoming a wall of grey. That is the real case and not a
+   hypothetical: AC's own Fig-03 shows three consecutive system rows. Its side
+   rule also echoes the list row's colour strip, so one idea covers both
+   surfaces.
+
+   "Not written by a person" is now signalled three ways — the rule, the
+   italic, and an explicit label — and the LABEL alone says which kind. Both
+   rows are italic: AC overruled an upright seen-note ("system and auto
+   messages italic"), and he was right, because making the type carry a second
+   distinction would have left an upright system row looking like a person's
+   message. Labels stay upright inside the italic line so a label still reads
+   as a label. */
+.note-line{padding:2px 2px 2px 10px;max-width:74%;border-left:3px solid var(--border2);margin:.35rem 0}
+.note-head{font-size:10.5px;color:var(--text5,var(--text4))}
+/* AC, 3 September, on the auto-reply no longer collapsing: "we can omit this
+   for now and see how it works without collapsing. Perhaps having it be a
+   slightly smaller font would help save space and bump it down the visual
+   hierarchy?" So 12.5px -> 11.5px on the body and the label, and a lighter
+   colour on the body. The row is now smaller than a person's message rather
+   than the same size, which does the job the collapse was doing — taking it
+   out of the reading order — without hiding what it says. */
+.note-body{font-size:11.5px;line-height:1.5;color:var(--text4);font-style:italic}
+.note-label{font-style:normal;font-weight:600;color:var(--text4);margin-right:4px;font-size:11.5px}
 .note-when{font-style:normal;color:var(--text4)}
 /* The per-message controls. Present on every message rather than appearing
    only on some, so neither reads as a control that shows up when something is
@@ -523,15 +586,21 @@ function showMsg(m, t){
   setTimeout(function(){ MSG={m:'',t:''}; render(); }, 7000);
 }
 
-// Formats an epoch-ms timestamp as "Tue, 8/18/26 5:30 PM" — see BACKLOG.md
+// Formats an epoch-ms timestamp as "Thursday, 9/3/26 2:12 AM" — see BACKLOG
 // 1.18. Falls back to the raw value for anything that doesn't parse (e.g.
 // a message sent before this fix, still holding the old date-only string).
+//
+// [1.249] — THE FULL WEEKDAY, everywhere, in all three portals. AC gave this
+// for the system row; it is applied to every message timestamp rather than to
+// that one line, because two date formats in one thread is the exact
+// inconsistency he raised a pass earlier, and applying it to one row would
+// have preserved it.
 function fmtMsgTime(ms){
   var n=Number(ms);
   if(!n) return String(ms||'');
   var d=new Date(n);
   if(isNaN(d.getTime())) return String(ms||'');
-  var days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  var days=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
   var h=d.getHours(), mins=d.getMinutes();
   var ampm=h>=12?'PM':'AM';
   var h12=h%12; if(h12===0) h12=12;
@@ -554,18 +623,10 @@ function fmtMsgTime(ms){
 function fmtDueFull(ms){
   return Number(ms) ? 'Reply by '+fmtMsgTime(ms) : '';
 }
-function fmtDueShort(ms){
-  var n=Number(ms);
-  if(!n) return '';
-  var d=new Date(n);
-  if(isNaN(d.getTime())) return '';
-  var days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  var h=d.getHours(), mins=d.getMinutes();
-  var ampm=h>=12?'PM':'AM';
-  var h12=h%12; if(h12===0) h12=12;
-  var mm=mins<10?'0'+mins:String(mins);
-  return 'Reply by '+days[d.getDay()]+' '+h12+(mins?':'+mm:'')+' '+ampm;
-}
+// [1.249] — fmtDueShort() was here and is gone with the deadline it formatted.
+// The row no longer carries a reply-by line at all: the ageing strip carries
+// urgency, and the deadline in full stays in the open conversation, where AC
+// put it. fmtDueFull() is still very much alive.
 
 function _ktNewClientMsgId(){
   return 'cmsg-'+Date.now()+'-'+Math.random().toString(36).slice(2,10);
@@ -958,11 +1019,16 @@ function doResendResetLink(){
 function rTimerKey(){
   return '<div class="mp-key">'+
     '<span style="font-weight:700;color:var(--text3)">'+esc(CMP_COPY.keyLead)+'</span>'+
-    '<span class="k"><i style="background:#1747C0"></i>unread</span>'+
-    '<span class="k"><i style="background:#8B5FCF"></i>2h</span>'+
-    '<span class="k"><i style="background:#E5A700"></i>4h</span>'+
-    '<span class="k"><i style="background:#F97316"></i>12h \u2014 nudge</span>'+
-    '<span class="k"><span class="msg-overdue" style="padding:1px 5px;font-size:9px">OVERDUE</span>past due</span>'+
+    // [1.249] — four stages, matching the strip on the rows and, word for
+    // word, AC's own guide copy below it ("Grey - under 4 hours, amber at 4
+    // hours, orange at 12 hours ... Red when past the response deadline").
+    // The swatches are the strip's own tokens, so this key cannot describe a
+    // colour the rows do not draw. The 2h purple is retired.
+    '<span class="k"><i style="background:#1747C0"></i>waiting for a reply</span>'+
+    '<span class="k"><i style="background:var(--age-rest)"></i>under 4h</span>'+
+    '<span class="k"><i style="background:var(--age-4h)"></i>4h</span>'+
+    '<span class="k"><i style="background:var(--age-12h)"></i>12h \u2014 nudge</span>'+
+    '<span class="k"><i style="background:var(--age-od)"></i>past due \u2014 overdue</span>'+
     '<span style="flex-basis:100%;color:var(--text4)">'+esc(CMP_COPY.keyFoot)+'</span>'+
     '</div>'+rGuide();
 }
@@ -1071,13 +1137,25 @@ var TSET_COPY={
   awayBody:'When enabled, families, other staff, and admin see this before they compose their message to you. If they send you a message, it also appears in the thread as an auto-generated message. Change the message to suit your needs, or use the generic message.',
   afterHeading:'After hours',
   afterBody:'Shown to a family before creating a message and sending outside of your set working hours. Feel free to customize your away message or leave it blank to use the studio\'s generic after hours message.',
-  // AC proposed this line with a second half about nudges, and asked for it to
-  // be fact-checked before it shipped. Half of it was wrong: the automatic
-  // nudge is gated on the same window (Code.js, _sendNudge_), so a teacher is
-  // never nudged outside their own hours. What CAN arrive at any time is a
-  // staff message where admin ticked the email override ([1.158]). This is his
-  // corrected line, and the reason it reads the way it does.
-  hoursNote:'Family messages and notifications are only sent within your regular working hours, but admin may email you outside your working hours if something is time sensitive.'
+  // [1.238] — AC's copy, 3 September, replacing his own line from earlier the
+  // same day. The delay is now DOCUMENTED to the teacher in his words rather
+  // than being invisible, and that was the actual defect all along: A1 was
+  // reported as "messages are not reaching the teacher" when the message had
+  // arrived in the portal within seconds and only the email was held, with
+  // nothing anywhere saying so.
+  //
+  // One sentence in it was flagged to him rather than silently corrected,
+  // because it is his: "the following day at 9am" is right for a message sent
+  // at 8pm and wrong for one sent at 2am, which is delivered the SAME day at
+  // 9am — and the 2am case is the exact one that opened this investigation.
+  // AC: "Adjust the language as suggested." It reads "at 9am the next
+  // morning" below.
+  //
+  // His previous line — "Family messages and notifications are only sent
+  // within your regular working hours, but admin may email you outside your
+  // working hours if something is time sensitive" — is stale the moment the
+  // window stops being per teacher, which is why it could not simply stay.
+  hoursNote:"You'll receive email notifications between 9 am and 7 pm for all family messages. Email notifications for messages sent after 7pm will be sent at 9am the next morning. You do not have to respond to weekend messages until Monday 12 pm, but if the message is time sensitive please try to respond or forward to admin."
 };
 function rTeacherSettings(){
   if(TSET.loading&&!TSET.loaded){
@@ -1111,18 +1189,16 @@ function rTeacherSettings(){
   h+='<div style="font-size:12px;color:var(--text3);margin-bottom:.6rem">'+esc(TSET_COPY.afterBody)+'</div>';
   h+='<textarea id="tset-after" rows="3" placeholder="Your own after-hours message (optional)" '+
      'oninput="TSET.draftAfter=this.value" style="width:100%">'+esc(TSET.draftAfter)+'</textarea>';
+  // [1.238] — the generated sentence that used to open this line is gone.
+  // It read "We only email you between 9am and 5pm, from your own
+  // availability", which is exactly the per-teacher window AC removed, and its
+  // second half would have been telling a teacher something untrue. AC's copy
+  // states the hours itself, so nothing here is derived any more.
   h+='<div style="font-size:11px;color:var(--text4);margin-top:.5rem">'+
-     'We only email you between '+_fmtHour(TSET.notifyOpen)+' and '+_fmtHour(TSET.notifyClose)+
-     (TSET.notifyDerived?', from your own availability.':', the studio\'s standard hours.')+
-     ' '+esc(TSET_COPY.hoursNote)+'</div>';
+     esc(TSET_COPY.hoursNote)+'</div>';
   h+='<div style="margin-top:.6rem"><button class="btn btn-s" onclick="saveTeacherSettings()">Save</button></div>';
   h+='</div>';
   return h;
-}
-function _fmtHour(h){
-  h=Number(h)||0;
-  var ap=h>=12?'pm':'am', h12=h%12; if(h12===0)h12=12;
-  return h12+ap;
 }
 function loadTeacherSettings(){
   TSET.loading=true;
@@ -1521,35 +1597,57 @@ function rZone(label, n){
 // Every fallback is a real word: a family with no parent name on file is
 // "Family", a staff member with no name is "Staff". A blank is never correct
 // here, because the whole point of the line is to say who.
+// [1.249] — ONE NAME, the person the teacher is speaking with. The row used to
+// read "Xavier Tombstone → Adrian Cohen", which in AC's Fig-03 wrapped to one
+// word per line in the admin pane, and the "→ You" half said nothing a roster
+// of your own conversations does not already say. AC: "message cards in this
+// order: Parent Name, no child name or overdue, etc on next line, just go to
+// message."
+//
+// CONSEQUENCE, flagged when the row was cut back and accepted: the type word
+// (Family / Admin / Staff) is gone with it, so a teacher tells a family thread
+// from a staff one by the name alone. "Admin" is self-evident — it keeps its
+// pill — but a colleague's name beside a parent's name is not. This is the one
+// part of [1.249]/C3 the new row does not answer.
 function _rowNames(r){
-  var other = r.kind==='family' ? esc(_rosterParentLine(r.row)||'Family')
-            : r.kind==='admin'  ? '<span class="apill">Admin</span>'
-                                : esc(r.name||'Staff');
-  var a = other, b = 'You';
-  if(_lastWasMine(r.row)){ a = 'You'; b = other; }
-  return a+' <span class="dir">→</span> '+b;
+  return r.kind==='family' ? esc(_rosterParentLine(r.row)||'Family')
+       : r.kind==='admin'  ? '<span class="apill">Admin</span>'
+                           : esc(r.name||'Staff');
 }
 
 // [1.235] — focusReview is set only for the rows in the Marked for review
 // section, so opening a conversation from anywhere else still lands at the
 // newest message. It is the section that carries the intent, not the row.
+// [1.249] — THE ROW IS: parent name, time, message preview, colour strip,
+// badge. Nothing else. Everything below was taken off it, and each one is
+// named because each will otherwise be re-reported as missing:
+//
+//   the student / lesson line — moved into the THREAD HEADER, AC's own split
+//     of the question ("When teacher opens message, he sees children's info
+//     ... as a subheader under parent name, not on the message bubble itself");
+//   the reply deadline and the word "overdue" — the red strip carries urgency
+//     alone. This is coherent ONLY because AC's guide copy names the colours,
+//     which is why that copy is load-bearing rather than decorative;
+//   the "Admin asked" tag, the Nudge and "Answered by you" chips, the coloured
+//     status dot, the red "!", the "→ You" direction and the full date — the
+//     four competing signals of [1.245], with no hierarchy between them.
+//
+// The metadata line goes with them: there is no second line but the preview.
 function rConvRow(r, focusReview){
   var _f = focusReview ? ',true' : '';
   var open = r.kind==='family'
     ? 'openFamilyRow(\'' + esc(r.id) + '\''+_f+')'
     : (r.kind==='admin' ? 'openStaffThread(\'admin\',\'admin\',\'Admin\''+_f+')'
                         : 'openStaffThread(\'staff\',\'' + esc(r.id) + '\',\'' + esc(r.name||'') + '\''+_f+')');
-  var kids = r.kind==='family' ? _rosterStudentLine(r.row) : '';
   var head = _rowNames(r);
   var when = r.at ? ' <span class="dir">· '+esc(fmtMsgTime(r.at))+'</span>' : '';
-  // The deadline, on the row, so nobody has to work it out from a colour.
-  var due = (!r.closed && r.replyDueBy)
-    ? ' <span class="due">'+esc(fmtDueShort(r.replyDueBy))+'</span>' : '';
-  return '<div class="thread-row" onclick="'+open+'">'+
+  // Rule 1: the left edge bar carries time pressure and nothing else ever
+  // colours it. A closed conversation is waiting on nobody, so it rests.
+  var age = (!r.closed && _agingMark(r.waitingSince, r.replyDueBy)) || {cls:'age-rest', label:''};
+  return '<div class="thread-row '+age.cls+'" onclick="'+open+'"'+
+    (age.label?' title="'+esc(age.label)+'"':'')+'>'+
     '<div class="thread-row-main">'+
-    '<div class="r-parent">'+head+when+due+
-      (r.row.sharedWithAdmin?'<span class="handoff-tag">Admin asked</span>':'')+'</div>'+
-    (kids?'<div class="r-student"><span class="lbl">Student:</span> '+esc(kids)+'</div>':'')+
+    '<div class="r-parent">'+head+when+'</div>'+
     '<div class="thread-row-preview">'+(r.hasMessages
       ? (r.sender?'<b>'+esc(r.sender)+':</b> ':'')+esc((r.preview||'').slice(0,80))
       : '<span style="opacity:.7">No messages yet</span>')+'</div>'+
@@ -1566,11 +1664,20 @@ function rConvRow(r, focusReview){
 // is nothing else to show — a row that is waiting on you shows why, and a row
 // that is not offers the thing you might want to do with it. The confirm still
 // guards it, so a stray click cannot close anything.
+// [1.249] — the badge is always drawn now, in one of its two row states, so
+// the slot never sits empty and "nothing is owed" is a state you can see
+// rather than an absence you have to interpret ([1.178], and the same three
+// states [1.250] gives the family's contact row).
+//
+// The resting Close button AC asked for on 3 September stays, BESIDE the grey
+// badge rather than in place of it. Worth one word from AC if he wants only
+// one of the two there: the badge is a status and the button is an action, so
+// they are not the competing signals [1.245] was about, but it is his call.
 function rRowMarks(r){
   if(r.closed) return '<span class="closed-tag">Closed</span>';
-  var marks=rReadMark(r.unread, r.waitingSince, r.closed, r.replyDueBy)+rReviewMark(r.review);
-  if(marks) return marks;
-  return '<button type="button" class="btn btn-s row-close" '+
+  var marks=rReadMark(r.unread)+rReviewMark(r.review);
+  if(Number(r.unread)||Number(r.review)) return marks;
+  return marks+'<button type="button" class="btn btn-s row-close" '+
     'onclick="event.stopPropagation();closeRow('+_rowArgs(r)+')">'+
     esc(TCH_COPY.closeConversation)+'</button>';
 }
@@ -1616,14 +1723,8 @@ function closeRow(kind, id){
 // Who spoke last, for the direction on the row. The roster carries the last
 // sender for family threads; for a staff thread "waiting on you" is the same
 // question and is already answered by waitingSince.
-function _lastWasMine(t){
-  if(!t) return false;
-  // The server answers this, because the portal cannot: a thread with nothing
-  // unread and nobody waiting could have ended with either side. The fallback
-  // is for a staff row, whose payload does not carry the flag.
-  if(t.lastSenderIsTeacher!==undefined) return !!t.lastSenderIsTeacher;
-  return !t.waitingSince && !Number(t.unread||0) && !!t.lastMessageAt;
-}
+// [1.249] — _lastWasMine() was here and is gone with the two-name direction
+// line it decided the order of. The row names one person now.
 
 function _rosterStudentLine(t){
   var kids=t.students||[];
@@ -1658,12 +1759,26 @@ function _respHoursBetween(fromMs, toMs){
   return open;
 }
 
-// [1.178] — the resting stage is drawn too, in neutral grey. This used to
+// [1.178] — the resting stage is drawn too, in a definite grey. This used to
 // return null under two hours and the row fell back to a bare ○, which is why
 // AC reported "no status on a conversation at all". null now means only one
 // thing: nobody is waiting. Kept character-identical to the admin copy — a
 // teacher and admin looking at the same conversation must never see different
 // colours (there is a check for exactly this).
+//
+// [1.249] — FOUR STAGES, and what the mark drives has changed. It used to
+// colour the BADGE, through five stages with a purple at 2h. AC cut his own
+// key to four — "simplify to three, under 4 hours no color or grey, amber at
+// 4h, nudge at 12 hours, then 24 hours overdue" — then added the nudge stage
+// back as its own colour: "let's turn to orange at 12 hour mark when nudge
+// has been fired". What it colours now is the row's LEFT EDGE STRIP, and the
+// badge carries the count alone.
+//
+// The 12h stage is keyed on twelve elapsed hours rather than on the nudge
+// having actually fired, and deliberately: AC's own guide copy — which is
+// load-bearing, since the row no longer carries the words "overdue" or a
+// deadline — says "orange at 12 hours (you'll also receive an automated
+// reminder)". Twelve hours is the mark and the reminder is its consequence.
 function _agingMark(waitingSince, dueBy){
   if(!waitingSince) return null;
   var now=Date.now();
@@ -1672,12 +1787,11 @@ function _agingMark(waitingSince, dueBy){
   // per teacher (their own evening boundary), which the portal cannot derive,
   // so it arrives on the row as replyDueBy. The 24-hour fallback is only for a
   // row from an older payload.
-  if(dueBy ? (now>=Number(dueBy)) : (h>=24)) return {cls:'p-od', overdue:true, label:'Overdue'};
+  if(dueBy ? (now>=Number(dueBy)) : (h>=24)) return {cls:'age-od', overdue:true, label:'Overdue'};
   var n=Math.round(h);
-  if(h>=12) return {cls:'p-12h', t:n+'h', label:'Waiting '+n+'h'};
-  if(h>=4) return {cls:'p-4h', t:n+'h', label:'Waiting '+n+'h'};
-  if(h>=2) return {cls:'p-2h', t:n+'h', label:'Waiting '+n+'h'};
-  return {cls:'p-rest', t:(n>=1?n+'h':'new'), label:(n>=1?'Waiting '+n+'h':'Waiting — less than an hour')};
+  if(h>=12) return {cls:'age-12h', t:n+'h', label:'Waiting '+n+'h'};
+  if(h>=4) return {cls:'age-4h', t:n+'h', label:'Waiting '+n+'h'};
+  return {cls:'age-rest', t:(n>=1?n+'h':'new'), label:(n>=1?'Waiting '+n+'h':'Waiting — less than an hour')};
 }
 
 // ── The ageing circle (BACKLOG 1.128, rebuilt 3 September 2026) ─────────
@@ -1703,29 +1817,33 @@ function _agingMark(waitingSince, dueBy){
 // whether each needs its own circle: no. One circle, the count says how many,
 // and the colour comes from the OLDEST unanswered one — see [1.228], which is
 // the defect that question uncovered.
-function rReadMark(unread, waitingSince, closed, dueBy){
+// [1.249] — RULE 2: the badge carries who is waiting, and nothing else ever
+// colours it. It took the ageing colour as well until now, so one control was
+// answering two questions and the row then repeated the second answer in a
+// dot, a tag and a deadline. The age moved to the left edge strip and the word
+// OVERDUE came off the row entirely.
+//
+// Two states here, both drawn at rest:
+//   filled blue with the count — someone is waiting on you
+//   grey, with no number       — read, nothing owed
+// The "0" in the grey badge is a transparent spacer, hidden from screen
+// readers, so the two states are the same size and the row does not shift as
+// it changes. The aria-label carries the meaning.
+function rReadMark(unread){
   var n = Number(unread) || 0;
-  var m = closed ? null : _agingMark(waitingSince, dueBy);
-  // Nothing outstanding: no mark at all. AC's resting-state rule — the little
-  // ○ that used to sit here was the mark-unread control, and with that gone an
-  // empty column is the honest version of "nothing needs you".
-  if (!n && !m) return '';
-  // Overdue keeps its word BESIDE the circle rather than replacing it, so the
-  // count survives to the last stage instead of disappearing exactly when the
-  // conversation matters most.
-  if (m && m.overdue){
-    return (n?'<div class="msg-circle p-od" aria-label="'+n+' unread">'+n+'</div>':'')+
-           '<div class="msg-overdue" aria-label="Overdue">OVERDUE</div>';
-  }
-  var cls = m ? m.cls : 'p-new';
-  var label = m ? m.label : (n+' unread');
-  return '<div class="msg-circle '+cls+'" aria-label="'+esc(label)+'">'+(n||'')+'</div>';
+  if (!n) return '<div class="msg-circle p-rest" role="img" aria-label="Read — nothing waiting on you">'+
+    '<span aria-hidden="true">0</span></div>';
+  return '<div class="msg-circle p-new" aria-label="'+n+' waiting for a reply">'+n+'</div>';
 }
 
 // The white circle: how many messages in this thread this teacher has saved
 // for review ([1.215]). A separate meaning from the one above and never mixed
 // with it — the blue/aged circle says someone is waiting on you, this one says
 // you parked something for yourself. Private: nobody else is sent it.
+// [1.249] — the outline badge with a count: YOUR OWN saved-for-review marks.
+// A different question from "who is waiting", which is why it may sit
+// alongside the filled badge rather than replacing it. Private: nobody else is
+// sent it.
 function rReviewMark(count){
   var n = Number(count) || 0;
   if (!n) return '';
@@ -1882,6 +2000,42 @@ function refreshFamilyThread(){
   });
 }
 
+// [1.249] — the child's lesson details, in the THREAD HEADER and nowhere else.
+//
+// AC was offered three ways of fitting the student name onto the ROW and took
+// none of them. He split the question instead, which is the better answer:
+//
+//   "message cards in this order: Parent Name, no child name or overdue, etc
+//    on next line, just go to message. When teacher opens message, he sees
+//    children's info 'Abcess Tombstone - 30 min piano - Mondays 3pm' as a
+//    subheader under parent name, not on the message bubble itself. If there
+//    are two children both with that same teacher, list both child's info. If
+//    the teacher only teaches one of the children, only list that child."
+//
+// And twice, on where it must NOT appear: "Don't have the child info on the
+// message. It's in the header only. The teacher or parent can infer from the
+// message" — and "the thread header".
+//
+// The list is already scoped to this teacher's own students by the server
+// (_teacherStudentLines_ filters on the teacher's name), so "only list that
+// child" needs nothing here.
+function _kidLine(st){
+  var day=String(st.day||'').trim();
+  var when=[day?day+'s':'', String(st.time||'').trim()].filter(Boolean).join(' ');
+  var what=[st.duration?st.duration+' min':'', String(st.instrument||'').trim().toLowerCase()]
+             .filter(Boolean).join(' ');
+  return [what, when].filter(Boolean).join(' \u00b7 ');
+}
+function rThreadKids(students){
+  var list=(students||[]).filter(function(st){ return st && st.studentName; });
+  if(!list.length) return '';
+  return '<div class="thread-kids">'+list.map(function(st){
+    var rest=_kidLine(st);
+    return '<div class="thread-kid"><b>'+esc(st.studentName)+'</b>'+
+           (rest?' \u00b7 '+esc(rest):'')+'</div>';
+  }).join('')+'</div>';
+}
+
 function rFamilyThread(){
   var t=ACTIVE_THREAD;
   var names=[t.parent1Name,t.parent2Name].filter(Boolean).join(' & ')||'Family';
@@ -1898,6 +2052,7 @@ function rFamilyThread(){
   h+='<div style="display:flex;justify-content:space-between;align-items:center">'+
     '<div class="thread-hd" style="margin-bottom:0">'+esc(names)+'</div>'+
     '<button type="button" class="lnk-btn"  onclick="refreshFamilyThread()">'+(t.refreshing?'<span class="spin">↻</span>':'↻ Refresh')+'</button></div>';
+  h+=rThreadKids(t.students);
   if(t.loading){
     return h+'<div style="text-align:center;padding:2rem;color:var(--text3)"><span class="spin" style="font-size:20px">↻</span></div>';
   }
@@ -2685,14 +2840,36 @@ var TCH_COPY={
   // If reading started the clock, leaving something unopened would push the
   // deadline back, which is exactly what the promise exists to prevent.
   guide:[
-    {h:'Message badge — solid colour, white number', items:[
+    // [1.238]/[1.249] — TODO(copy): AC. These two HEADINGS are Claude's, not
+    // AC's, and they had to change: the badge no longer carries the ageing
+    // colour at all (that moved to the left edge strip), so "solid colour,
+    // white number" and "white circle, blue number" both described a control
+    // that will not exist. The items under them are still his.
+    {h:'Message badge — blue with a number', items:[
       {t:'The number', d:'How many messages in a thread are waiting for you to respond. This will usually be “1”, but could be more based on how many messages the parent sends. If responding to multiple messages, one reply will zero out all messages, so be sure to read and answer thoroughly so you don’t miss anything!'},
-      {t:'The colour', d:'How long the oldest message in a thread has been waiting: blue when it is new, purple at 2 hours, amber at 4, orange at 12, and red OVERDUE once it is past the response deadline.'}
+      // AC wrote this one himself. He approved Claude to write it, was offered
+      // a draft, and replaced it with his own — so it is verbatim and final.
+      //
+      // It is load-bearing rather than descriptive, and that is the thing to
+      // know before editing anything it names. The row lost the words
+      // "overdue", the deadline and the type label in [1.249]'s pass, so the
+      // strip carries urgency alone — and this sentence is the only place a
+      // teacher is told what the colours mean. It also CHANGED the design: the
+      // resting strip was drawn as var(--border), a hairline, and his copy
+      // calls it "Grey", so it has to BE grey. A marker that only appears when
+      // something is wrong reads as broken.
+      {t:'The color', d:'The left side of a conversation has a vertical colored strip that shows how long the message has been waiting without a response. Grey - under 4 hours, amber at 4 hours, orange at 12 hours (you’ll also receive an automated reminder), Red when past the response deadline'}
     ]},
-    {h:'Marked for review badge — white circle, blue number', items:[
-      {t:'What it is', d:'These are messages you have set to review. This badge is independent of the solid colour message badge. Marked for review is a private setting and will not be seen by family or admin.'}
+    {h:'Marked for review badge — outline with a number', items:[
+      {t:'What it is', d:'These are messages you have set to review. This badge is independent of the solid color message badge. Marked for review is a private setting and will not be seen by family or admin.'}
     ]},
-    {h:'No circle, “Close conversation” button visible', items:[
+    // [1.246]/[1.249] — TODO(copy): AC. This heading is Claude's and it had to
+    // change: there is no "no circle" state any more. The badge is drawn at
+    // rest now, grey and without a number ([1.178]'s rule, and the same three
+    // states [1.250] gives the family's contact row), so a guide promising an
+    // absent circle would be describing something a teacher will never see.
+    // The sentence under it is unchanged and is still true.
+    {h:'Grey badge with no number, “Close conversation” button visible', items:[
       {t:'What it means', d:'Nothing is waiting on you in that conversation. Close the conversation if no response is due and the conversation is resolved.'}
     ]},
     {h:'Message sections', items:[
@@ -2707,7 +2884,10 @@ var TCH_COPY={
     ]},
     {h:'Your schedule and notifications', items:[
       {t:'Your reply time', d:'The response clock starts when a family’s message arrives, not when you open it. You have 24 hours max to answer, but should reply asap. A message that arrives in the evening should be responded to by noon the next day, and anything sent Friday evening or over the weekend should be replied to by Monday at noon. Evening is generally defined as being after your last scheduled lesson on any given day, so the boundary follows your timetable rather than the studio’s. Be sensitive to time sensitive messages, and reach out to admin if you need help!'},
-      {t:'Reminders', d:'If something is still unanswered you’ll get one email a day, sent within your own working hours, and none at all when nothing is outstanding. If you’ve forwarded a message to admin for review, reminders pause until you receive a response from the admin.'},
+      // [1.238] — AC: "approved." His existing sentence with the window
+      // changed and nothing else touched. It had to change: "within your own
+      // working hours" describes the per-teacher window that no longer exists.
+      {t:'Reminders', d:'If something is still unanswered you’ll get one email a day, sent between 9am and 7pm, and none at all when nothing is outstanding. If you’ve forwarded a message to admin for review, reminders pause until you receive a response from the admin.'},
       {t:'When you’re away', d:'Turning on Away shows families your away message automatically and sends an auto-reply via email. The response clock keeps running while you’re away; Away tells families what to expect, but the message will still need to be responded to when you are active again. If the admin responds, you do not need to respond unless it’s clear in the message that you should respond, or the admin has requested you follow up with the family.'}
     ]},
     {h:'Message helpers — seen on individual messages in a thread', items:[
@@ -2885,16 +3065,29 @@ function rMessageBubble(m){
   // which is invisible while scrolling past. The bubble itself now says so,
   // and the id is on the element so [1.235] can scroll to it.
   var saved = !!m.reviewAt;
+  // [1.249] — AC: "now attach sender name on the message", and, choosing
+  // between two drawn options, "2 is better": the name goes on the TIMESTAMP
+  // LINE, not inside the bubble. "Xavier Tombstone · Thursday, 9/3/26 2:12 AM".
+  //
+  // On EVERY message, including your own. This matters beyond tidiness — a
+  // family thread can carry two parents and admin, and until now only the
+  // incoming bubbles named anybody at all.
+  //
+  // _bubbleAbout is gone with it: the child a message is about now lives in
+  // the thread header, once, which is AC's rule twice over.
   return '<div class="bubble-row'+(mine?' mine':'')+'" id="msg-'+esc(m.messageId||'')+'">'+
     '<div class="bubble'+(mine?' mine':'')+(saved?' saved':'')+'">'+
     (saved?'<div class="saved-tag">'+esc(TCH_COPY.savedForReview)+'</div>':'')+
-    (!mine?'<div class="bubble-sender">'+esc(m.senderName||'')+'</div>':'')+
-    _bubbleAbout(m)+
     '<div class="bubble-text">'+body+'</div>'+
-    '<div class="bubble-time">'+esc(fmtMsgTime(m.sentAt))+'</div>'+
+    '<div class="bubble-time">'+_bubbleMeta(m)+'</div>'+
     rNotifyWarn(m)+
     rMsgTools(m,mine)+
     '</div></div>';
+}
+// The one meta line every human message carries: who, then when.
+function _bubbleMeta(m){
+  var who=String(m.senderName||'').trim();
+  return (who?esc(who)+' \u00b7 ':'')+esc(fmtMsgTime(m.sentAt));
 }
 
 // [1.237] — "a test parent received no email when a teacher sent them a
@@ -2936,10 +3129,36 @@ function rNotifyWarn(m){
 // message..." with a timestamp. The sender's name moved INTO the sentence when
 // he rewrote it, so the header keeps the timestamp and drops the name — it was
 // printing the same person twice, once above the line and once inside it.
+// [1.249] — TWO SYSTEM ROWS, TWO LABELS, and they are not the same kind of row
+// any more. AC settled this over four passes:
+//
+//   away auto-reply -> "auto-reply:"      italic, side rule
+//   seen note       -> "System Message:"  italic, side rule
+//
+// His correction is the one that mattered: "for the seen message it shouldn't
+// say 'auto reply' because it's not an auto reply." It is a notification about
+// a person's action, not a reply sent on their behalf, and labelling both
+// "auto-reply:" — which is where this had got to a pass earlier — would have
+// made the label mean two different things.
+//
+// "System Message:" returns capitalised for the seen note ONLY. @697 replaced
+// it with lower-case "auto-response:" on both rows; AC has put it back on the
+// one row where it is accurate, and his capitalisation is kept exactly as his
+// lower-case was then.
+//
+// NEITHER carries a sender name: the meta line is the timestamp alone. That is
+// @697's rule and it removes the double-labelling flagged on two separate
+// passes — the sender moved into the sentence when AC rewrote it.
+var NOTE_LABEL_SEEN='System Message:';
+var NOTE_LABEL_AUTO='auto-reply:';
 function rNoteLine(m){
+  return _rNote(NOTE_LABEL_SEEN, m.sentAt, m.messageText);
+}
+function _rNote(label, at, text){
   return '<div class="note-line">'+
-    '<div class="note-head">'+esc(fmtMsgTime(m.sentAt))+'</div>'+
-    '<div class="note-body">'+esc(m.messageText||'')+'</div>'+
+    '<div class="note-head">'+esc(fmtMsgTime(at))+'</div>'+
+    '<div class="note-body"><span class="note-label">'+esc(label)+'</span>'+
+      esc(text||'')+'</div>'+
     '</div>';
 }
 
@@ -2992,9 +3211,9 @@ function rInternalBubble(m){
   var body=m.messageHtml?m.messageHtml:esc(m.messageText||'').replace(/\n/g,'<br>');
   var h='<div class="bubble-row"><div class="bubble internal">'+
     '<div class="internal-tag">'+esc(CMP_COPY.internal)+'</div>'+
-    (m.senderName?'<div class="bubble-sender">'+esc(m.senderName)+'</div>':'')+
+
     '<div class="bubble-text">'+body+'</div>'+
-    '<div class="bubble-time">'+esc(fmtMsgTime(m.sentAt))+'</div>'+
+    '<div class="bubble-time">'+_bubbleMeta(m)+'</div>'+
     '<button type="button" class="btn btn-s" style="margin-top:.45rem" '+
       'onclick="internalReply(\''+esc(m.messageId)+'\')">'+esc(CMP_COPY.internalReply)+'</button>';
   if(open){
@@ -3031,31 +3250,31 @@ function sendInternal(){
   });
 }
 
-// One line, clearly not a person, click to read it in full.
-var _autoOpen={};
-function toggleAuto(id){ _autoOpen[id]=!_autoOpen[id]; render(); }
+// [1.249] — the away auto-reply is now the SAME two-line shape as the seen
+// note, with its own label. It used to be a collapsed bubble opened by
+// clicking (AC, 1 Sept: an auto-response "collapses to one line and opens on
+// click"), which existed because a full repeated bubble buried the
+// conversation. As an italic, side-ruled, labelled note it no longer does, and
+// a collapsed row that shows the label and the timestamp but not the sentence
+// is a worse answer than simply showing the two lines. The collapse is
+// therefore gone rather than restyled — worth one word from AC if he wants it
+// back.
+//
+// Consecutive system rows are NOT grouped, deliberately. Three writers append
+// them independently and none knows about the others: the away auto-reply, the
+// seen note, and the daily nudge into teacher_admin. The stack of three in
+// AC's Fig-03 is three NUDGES, and those stop existing in this same release
+// when staff threads leave the overdue machinery ([1.242]). Grouping would be
+// machinery for a problem the release already removes. If they still stack
+// afterwards it is a real item then, raised on evidence.
 function rAutoBubble(m,mine){
-  var id=m.messageId||('a'+m.sentAt);
-  var open=!!_autoOpen[id];
-  return '<div class="bubble-row'+(mine?' mine':'')+'">'+
-    '<div class="bubble auto" onclick="toggleAuto(\''+esc(id)+'\')" title="System message — click to '+(open?'hide':'read')+'">'+
-    '<div class="auto-line">Auto-response'+
-      '<span class="auto-when">'+esc(fmtMsgTime(m.sentAt))+'</span></div>'+
-    (open?'<div class="bubble-text" style="margin-top:4px">'+esc(m.messageText||'').replace(/\n/g,'<br>')+'</div>':'')+
-    '</div></div>';
+  return _rNote(NOTE_LABEL_AUTO, m.sentAt, m.messageText);
 }
 
-// Which child a message is about (1.161 #4), shown only where it tells the
-// reader something: a family with one child on this teacher has one possible
-// answer, so labelling every message with it would be noise.
-function _bubbleAbout(m){
-  if(!m.studentId) return '';
-  var t=ACTIVE_THREAD;
-  if(!t||(t.students||[]).length<2) return '';
-  var st=(t.students||[]).filter(function(x){return x.studentId===m.studentId;})[0];
-  if(!st) return '';
-  return '<span class="about-tag">'+esc(st.studentName)+'</span>';
-}
+// [1.249] — _bubbleAbout() was here and is gone. It put the child's name on
+// the BUBBLE, which is the exact instance AC ruled out twice: "Don't have the
+// child info on the message. It's in the header only." rThreadKids() above is
+// where it lives now, once per conversation instead of once per message.
 
 function sendStaffMessage(){
   var t=ACTIVE_STAFF_THREAD;
@@ -3294,4 +3513,3 @@ document.addEventListener('DOMContentLoaded', function(){
 </script>
 </body>
 </html>
-

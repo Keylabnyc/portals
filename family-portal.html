@@ -17,7 +17,7 @@
   --amber:#7A5000;--abg:#FAEABB;--at:#4A2E00;
   --red:#962020;--rbg:#FAD4D4;--rt:#560A0A;
   --blue:#1C4A82;--bbg:#D0E2F8;--bt:#0C2A52;
-  --acc:#1E3A6E;--r:5px;--rl:8px
+  --acc:#1E3A6E;--link:#1155CC;--r:5px;--rl:8px
 }
 body{background:var(--bg);color:var(--text);font-family:"Inter",sans-serif;font-size:14px;line-height:1.6;min-height:100vh;-webkit-font-smoothing:antialiased}
 .wrap{max-width:680px;margin:0 auto;padding:2rem 1.25rem 4rem}
@@ -247,7 +247,14 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 .bubble-text li{margin:.15rem 0}
 .bubble-text blockquote{margin:.3rem 0;padding-left:.7rem;border-left:2px solid rgba(0,0,0,.15)}
 .bubble.mine .bubble-text blockquote{border-left-color:rgba(255,255,255,.4)}
-.bubble-text a{color:var(--acc);text-decoration:underline;word-break:break-word}
+/* [1.236], AC: "the links sent by admin should be blue like normal hyperlinks
+   in gmail." They were var(--acc) — #1E3A6E, the dark navy this tool uses for
+   headings and primary buttons — which does not read as a link at all. This is
+   Gmail's own link blue, and it is its own token rather than an existing one
+   precisely so that restyling the accent can never quietly restyle links back.
+   [1.190]'s standing rule is against hyperlinks that PERFORM an action; a link
+   to a web page is not that, and AC said so when raising this. */
+.bubble-text a{color:var(--link);text-decoration:underline;word-break:break-word}
 .bubble.mine .bubble-text a{color:#fff}
 .bubble-time{font-size:11.5px;font-weight:500;color:var(--text4);margin-top:.35rem}
 .bubble.mine .bubble-time{color:rgba(255,255,255,.88)}

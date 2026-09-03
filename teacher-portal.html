@@ -15,7 +15,7 @@
   --amber:#7A5000;--abg:#FAEABB;--at:#4A2E00;
   --red:#962020;--rbg:#FAD4D4;--rt:#560A0A;
   --blue:#1C4A82;--bbg:#D0E2F8;--bt:#0C2A52;
-  --acc:#1E3A6E;--r:5px;--rl:8px
+  --acc:#1E3A6E;--link:#1155CC;--r:5px;--rl:8px
 }
 body{background:var(--bg);color:var(--text);font-family:"Inter",sans-serif;font-size:14px;line-height:1.6;min-height:100vh;-webkit-font-smoothing:antialiased}
 .wrap{max-width:420px;margin:0 auto;padding:2rem 1.25rem 4rem}
@@ -114,7 +114,13 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 .bubble.mine .bubble-text{color:#fff}
 .bubble-time{font-size:11.5px;font-weight:500;color:var(--text4);margin-top:.35rem}
 .bubble.mine .bubble-time{color:rgba(255,255,255,.88)}
-.composer{display:flex;gap:8px;align-items:flex-end}
+/* [1.234] — the buttons go BELOW the writing box, not beside it. This was a
+   row: the box and three buttons competing for one line, so the composer got
+   whatever width was left. Now the box gets the whole width and the buttons
+   get their own line under it. The flex:1 spacer inside the button row still
+   works exactly as it did — it pushes Close conversation to the right end. */
+.composer{display:flex;flex-direction:column;gap:8px;align-items:stretch}
+.composer-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .composer textarea{background:rgba(255,255,255,.55);border:1px solid var(--border2);color:var(--text);border-radius:var(--r);padding:10px 11px;font-family:"Inter",sans-serif;font-size:14.5px;width:100%;outline:none;resize:none;min-height:72px;max-height:200px}
 .composer textarea:focus{border-color:var(--acc);background:rgba(255,255,255,.65)}
 .composer .btn{width:auto;flex:0 0 auto}
@@ -151,7 +157,14 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 .bubble-text li{margin:.15rem 0}
 .bubble-text blockquote{margin:.3rem 0;padding-left:.7rem;border-left:2px solid rgba(0,0,0,.15)}
 .bubble.mine .bubble-text blockquote{border-left-color:rgba(255,255,255,.4)}
-.bubble-text a{color:var(--acc);text-decoration:underline;word-break:break-word}
+/* [1.236], AC: "the links sent by admin should be blue like normal hyperlinks
+   in gmail." They were var(--acc) — #1E3A6E, the dark navy this tool uses for
+   headings and primary buttons — which does not read as a link at all. This is
+   Gmail's own link blue, and it is its own token rather than an existing one
+   precisely so that restyling the accent can never quietly restyle links back.
+   [1.190]'s standing rule is against hyperlinks that PERFORM an action; a link
+   to a web page is not that, and AC said so when raising this. */
+.bubble-text a{color:var(--link);text-decoration:underline;word-break:break-word}
 .bubble.mine .bubble-text a{color:#fff}
 .thread-list{display:flex;flex-direction:column;gap:6px}
 .thread-row{display:flex;justify-content:space-between;align-items:center;gap:8px;background:rgba(255,255,255,.45);border:1px solid var(--border);border-radius:var(--r);padding:.7rem .85rem;cursor:pointer;transition:background .12s}
@@ -250,11 +263,53 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 .note-when{font-style:normal;color:var(--text4)}
 /* The per-message controls. Present on every message rather than appearing
    only on some, so neither reads as a control that shows up when something is
-   wrong. */
-.msg-tools{display:flex;gap:10px;align-items:center;margin-top:7px;padding-top:6px;
-  border-top:1px solid rgba(0,0,0,.12);font-size:11px;color:var(--text3)}
-.msg-tools label{display:inline-flex;align-items:center;gap:5px;cursor:pointer}
-".msg-tools-sep{color:var(--text5)}
+   wrong.
+
+   [1.230], AC: "Css for teacher message bubbles is all out of whack... no
+   subtle small fonts or odd hidden colors, etc. Clear, clean, functional."
+   Four things were wrong and all four were in this block:
+
+   1. 11px, which is smaller than anything else in the thread and is the
+      "subtle small font" — it is a control, not a footnote.
+   2. The label wrapped to three lines. The row is a flex container and the
+      label was allowed to shrink, so it broke mid-phrase rather than the ROW
+      wrapping. flex-wrap on the row and nowrap on the label swap that round.
+   3. The checkbox was the browser's default: a different size on every
+      platform and sitting off the text baseline.
+   4. THE HIDDEN COLOURS. Inside .bubble.mine the bubble is solid accent blue
+      and this row inherited var(--text3) — dark grey text and a black hairline
+      on dark blue. That is the half of AC's screenshot that reads as an
+      accident, and it had no override at all. */
+.msg-tools{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;margin-top:9px;padding-top:7px;
+  border-top:1px solid rgba(0,0,0,.12);font-size:12.5px;line-height:1.3;color:var(--text3)}
+.msg-tools label{display:inline-flex;align-items:center;gap:6px;cursor:pointer;white-space:nowrap}
+.msg-tools input[type=checkbox]{width:15px;height:15px;margin:0;flex:0 0 auto;accent-color:var(--acc);cursor:pointer}
+.msg-tools-sep{color:var(--text5)}
+.rev-check.on{font-weight:600;color:var(--acc)}
+.bubble.mine .msg-tools{color:rgba(255,255,255,.92);border-top-color:rgba(255,255,255,.3)}
+.bubble.mine .msg-tools input[type=checkbox]{accent-color:#fff}
+.bubble.mine .msg-tools-sep{color:rgba(255,255,255,.55)}
+.bubble.mine .rev-check.on{color:#fff}
+.bubble.mine .lnk-btn{background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.38);color:#fff}
+.bubble.mine .lnk-btn:hover{background:rgba(255,255,255,.28);color:#fff}
+/* [1.232] — a message saved for review looks saved, from across the thread.
+   AC: "Otherwise, the person doesn't know which message they marked, and this
+   will easily get lost." An outline plus a word, not a colour alone. */
+.bubble.saved{border-color:var(--acc);box-shadow:0 0 0 2px rgba(26,86,219,.18)}
+.bubble.mine.saved{box-shadow:0 0 0 2px rgba(255,255,255,.55)}
+.saved-tag{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.02em;
+  color:var(--acc);margin-bottom:.3rem}
+.bubble.mine .saved-tag{color:#fff}
+/* [1.235] — where clicking a row in Marked for review lands. It fades, so the
+   thread does not keep a permanent highlight on one message. */
+.bubble-row.flash .bubble{animation:revflash 1.8s ease-out}
+@keyframes revflash{0%{box-shadow:0 0 0 4px rgba(26,86,219,.45)}100%{box-shadow:0 0 0 2px rgba(26,86,219,.18)}}
+/* [1.237] — the one line that says a message did not reach the family. Only
+   ever drawn on your OWN message, and only when the server says nothing went
+   out; a notification that worked says nothing, because a marker that is
+   always present stops being read. */
+.msg-notify-warn{margin-top:5px;font-size:11.5px;line-height:1.35;color:var(--rt);
+  background:var(--rbg);border-radius:5px;padding:5px 8px}
 /* The guide. Closed by default and quiet when closed — it sits under the
    colour key all day and should not compete with the messages. */
 .guide{margin:-.35rem 0 1rem}
@@ -263,8 +318,15 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 .guide-toggle:hover{text-decoration:underline}
 .guide-body{margin-top:.5rem;padding:.75rem .9rem;background:rgba(255,255,255,.45);
   border:1px solid var(--border);border-radius:var(--r);max-width:62ch}
-.guide-sec + .guide-sec{margin-top:.7rem}
-.guide-h{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text4)}
+.guide-sec + .guide-sec{margin-top:.45rem;border-top:1px solid var(--border);padding-top:.45rem}
+/* AC, 3 September (second pass): "Section headers in the guide are dark navy
+   (#1E3A6E)", item titles and body text unchanged. It is also the control that
+   opens the section now, so it is sized and weighted to be pressed rather than
+   read past — the 10.5px uppercase label it was is not a button. */
+.guide-h{display:flex;align-items:center;gap:5px;width:100%;text-align:left;
+  background:none;border:0;padding:3px 0;font-family:inherit;
+  font-size:12.5px;font-weight:700;letter-spacing:.01em;color:#1E3A6E;cursor:pointer}
+.guide-h:hover{text-decoration:underline}
 .guide-body ul{margin:.25rem 0 0;padding-left:1.1rem}
 .guide-body li{font-size:12.5px;color:var(--text3);line-height:1.45;margin-bottom:.25rem}
 .guide-body li b{color:var(--text);font-weight:700}
@@ -344,7 +406,7 @@ var HOME_TAB = 'family'; // 'family' | 'staff' | 'settings'
 // The teacher's own status and settings (BACKLOG 1.125, 1.132). Loaded once
 // at sign-in, because the banner is on every screen.
 var TSET = {loading:false, saving:false, loaded:false,
-            awayEnabled:false, awayMessage:'', afterHoursMessage:'',
+            awayEnabled:false, awayMessage:'', afterHoursMessage:'', awayDefaultCopy:'',
             notifyOpen:9, notifyClose:17, notifyDerived:false,
             draftAway:'', draftAfter:''};
 var MSG = {m:'', t:''};
@@ -353,6 +415,9 @@ var RESET_TOKEN = '';
 var _pollTimer = null;
 var _pendingOpenFamilyId = '';   // set by boot() from ?openFamilyId=, consumed once by loadFamilyThreads()
 var _shouldScrollMsgList = false; // see render() — scroll-to-newest, set only when messages actually change
+// [1.235] — set when a conversation is opened FROM the Marked for review
+// section, cleared by the first render that has a thread to look in.
+var _focusReview = false;
 
 // Staff Messages state. STAFF_VIEW: 'list' (the whole team, always shown
 // directly — 1.19, 18 Aug) | 'thread' (one open conversation — admin or
@@ -596,7 +661,29 @@ function render(){
   // the specific call sites where messages actually changed, not on every
   // render (typing in the composer re-renders too), so it doesn't fight
   // someone scrolled up reading history.
-  if(_shouldScrollMsgList){
+  // [1.235] — clicking a row in Marked for review lands ON the marked message.
+  // AC's answer: open the thread, jump to it, highlight it briefly. Which is
+  // also why [1.232] had to come first — there has to be something to land on.
+  // Deliberately not scrollIntoView(): that scrolls every ancestor including
+  // the window, which is [1.221] exactly.
+  var _didFocusReview=false;
+  if(_focusReview){
+    var mlR=el.querySelector('.msg-list');
+    if(mlR){
+      _focusReview=false;   // one jump per click, whether or not it lands
+      var _tgt=mlR.querySelector('.bubble.saved');
+      if(_tgt&&_tgt.parentNode){
+        _shouldScrollMsgList=false;
+        var _rw=_tgt.parentNode;
+        mlR.scrollTop=Math.max(0,_rw.offsetTop-mlR.offsetTop-12);
+        _rw.className+=' flash';
+        _didFocusReview=true;
+      }
+    }
+  }
+  if(_didFocusReview){
+    /* already positioned */
+  } else if(_shouldScrollMsgList){
     _shouldScrollMsgList=false;
     var ml=el.querySelector('.msg-list');
     if(ml) ml.scrollTop=ml.scrollHeight;
@@ -861,18 +948,33 @@ function rTimerKey(){
 // opens it: a guide that reopens itself every five seconds is worse than no
 // guide.
 var GUIDE_OPEN = false;
+// AC, 3 September: the guide should render as collapsible SECTIONS rather than
+// one long block — it is eight sections deep now, and opening it to check one
+// thing meant scrolling past the other seven.
+//
+// Every section starts closed, including when the guide itself is first
+// opened. A teacher opens the guide with a question in mind; showing all of it
+// expanded is the state that made this an item. Nothing here remembers itself
+// between sessions on purpose: the next question will be a different one.
+var GUIDE_SEC_OPEN = {};
+function toggleGuideSec(i){ GUIDE_SEC_OPEN[i]=!GUIDE_SEC_OPEN[i]; render(); }
 function rGuide(){
   // One return, one closing tag: an early return that closed the wrapper in a
   // second place read as unbalanced markup to the check suite, and a reader
   // has the same problem.
   var body='';
   if(GUIDE_OPEN){
-    body='<div class="guide-body">'+TCH_COPY.guide.map(function(sec){
-      return '<div class="guide-sec"><div class="guide-h">'+esc(sec.h)+'</div><ul>'+
-        sec.items.map(function(li){
-          return '<li><b>'+esc(li.t)+'</b> — '+esc(li.d)+'</li>';
-        }).join('')+
-        '</ul></div>';
+    body='<div class="guide-body">'+TCH_COPY.guide.map(function(sec,i){
+      var on=!!GUIDE_SEC_OPEN[i];
+      return '<div class="guide-sec">'+
+        '<button type="button" class="guide-h" onclick="toggleGuideSec('+i+')">'+
+          '<span class="caret">'+(on?'▾':'▸')+'</span>'+esc(sec.h)+'</button>'+
+        (on?'<ul>'+
+          sec.items.map(function(li){
+            return '<li><b>'+esc(li.t)+'</b> — '+esc(li.d)+'</li>';
+          }).join('')+
+        '</ul>':'')+
+        '</div>';
     }).join('')+'</div>';
   }
   return '<div class="guide">'+
@@ -926,16 +1028,42 @@ function rStatusBanner(){
 // Two fields, deliberately not one: away is a deliberate act with an end,
 // after-hours is standing and automatic. Both are the teacher's own words —
 // nothing here is written for them.
+//
+// AC's copy for this panel, 3 September. Kept in one object rather than inline
+// in the markup for the same reason TCH_COPY exists: his words are the thing
+// that must not be edited by accident while somebody is changing a div.
+var TSET_COPY={
+  awayHeading:'Away / Busy Message',
+  // AC's third revision of this sentence on 3 September.
+  awayBody:'When enabled, families, other staff, and admin see this before they compose their message to you. If they send you a message, it also appears in the thread as an auto-generated message. Change the message to suit your needs, or use the generic message.',
+  afterHeading:'After hours',
+  afterBody:'Shown to a family before creating a message and sending outside of your set working hours. Feel free to customize your away message or leave it blank to use the studio\'s generic after hours message.',
+  // AC proposed this line with a second half about nudges, and asked for it to
+  // be fact-checked before it shipped. Half of it was wrong: the automatic
+  // nudge is gated on the same window (Code.js, _sendNudge_), so a teacher is
+  // never nudged outside their own hours. What CAN arrive at any time is a
+  // staff message where admin ticked the email override ([1.158]). This is his
+  // corrected line, and the reason it reads the way it does.
+  hoursNote:'Family messages and notifications are only sent within your regular working hours, but admin may email you outside your working hours if something is time sensitive.'
+};
 function rTeacherSettings(){
   if(TSET.loading&&!TSET.loaded){
     return '<div style="text-align:center;padding:2rem;color:var(--text3)"><span class="spin" style="font-size:20px">↻</span></div>';
   }
   var h='<div class="card">';
-  h+='<div class="thread-hd">Away / Busy</div>';
-  h+='<div style="font-size:12px;color:var(--text3);margin-bottom:.6rem">'+
-     'While this is on, families see your message before they write, and anyone who writes to you gets it '+
-     'as a reply straight away. They are told once per conversation, not every time.</div>';
-  h+='<textarea id="tset-away" rows="3" placeholder="What should families see while you\'re away?" '+
+  // AC's heading and copy, 3 September — his THIRD revision of this box that
+  // day. The heading gained "Message"; the audience widened from families to
+  // families, staff and admin, which is what the code has always done; and the
+  // last sentence changed from explaining why the message appears to telling
+  // the teacher they can change it.
+  h+='<div class="thread-hd">'+esc(TSET_COPY.awayHeading)+'</div>';
+  h+='<div style="font-size:12px;color:var(--text3);margin-bottom:.6rem">'+esc(TSET_COPY.awayBody)+'</div>';
+  // The generic message as the placeholder — greyed until the teacher writes
+  // their own, so "or use the generic message" points at something visible.
+  // It comes from the server (AWAY_DEFAULT_COPY, the sentence that actually
+  // goes out); the fallback below is only for a payload that predates it, and
+  // is deliberately NOT a second copy of the wording.
+  h+='<textarea id="tset-away" rows="3" placeholder="'+esc(TSET.awayDefaultCopy||'Leave this blank to use the studio\'s generic away message.')+'" '+
      'oninput="TSET.draftAway=this.value" style="width:100%">'+esc(TSET.draftAway)+'</textarea>';
   h+='<div style="display:flex;gap:8px;align-items:center;margin-top:.6rem">'+
      (TSET.awayEnabled
@@ -946,16 +1074,14 @@ function rTeacherSettings(){
   h+='</div>';
 
   h+='<div class="card" style="margin-top:.75rem">';
-  h+='<div class="thread-hd">After hours</div>';
-  h+='<div style="font-size:12px;color:var(--text3);margin-bottom:.6rem">'+
-     'Shown to a family while they are writing to you outside your hours, so they know when to expect a '+
-     'reply. Leave it blank to use the studio\'s standard wording.</div>';
+  h+='<div class="thread-hd">'+esc(TSET_COPY.afterHeading)+'</div>';
+  h+='<div style="font-size:12px;color:var(--text3);margin-bottom:.6rem">'+esc(TSET_COPY.afterBody)+'</div>';
   h+='<textarea id="tset-after" rows="3" placeholder="Your own after-hours message (optional)" '+
      'oninput="TSET.draftAfter=this.value" style="width:100%">'+esc(TSET.draftAfter)+'</textarea>';
   h+='<div style="font-size:11px;color:var(--text4);margin-top:.5rem">'+
      'We only email you between '+_fmtHour(TSET.notifyOpen)+' and '+_fmtHour(TSET.notifyClose)+
      (TSET.notifyDerived?', from your own availability.':', the studio\'s standard hours.')+
-     ' Messages sent outside that reach you when your day starts — nothing is lost.</div>';
+     ' '+esc(TSET_COPY.hoursNote)+'</div>';
   h+='<div style="margin-top:.6rem"><button class="btn btn-s" onclick="saveTeacherSettings()">Save</button></div>';
   h+='</div>';
   return h;
@@ -974,6 +1100,7 @@ function loadTeacherSettings(){
     TSET.awayEnabled=!!st.awayEnabled;
     TSET.awayMessage=st.awayMessage||'';
     TSET.afterHoursMessage=st.afterHoursMessage||'';
+    TSET.awayDefaultCopy=st.awayDefaultCopy||TSET.awayDefaultCopy;
     TSET.notifyOpen=st.notifyOpen; TSET.notifyClose=st.notifyClose;
     TSET.notifyDerived=!!st.notifyDerived;
     TSET.draftAway=TSET.awayMessage;
@@ -985,12 +1112,13 @@ function loadTeacherSettings(){
 function setAway(on){
   var msg=(document.getElementById('tset-away')||{}).value;
   if(msg===undefined) msg=TSET.draftAway;
-  if(on && !String(msg||'').trim()){
-    HOME_TAB='settings';
-    showMsg('Add an away message first, so families are told something.','e');
-    render();
-    return;
-  }
+  // The refusal that used to be here is gone, found 4 September while wiring
+  // the generic message into this box. [1.196] took it out of the SERVER on
+  // 2 September — "away without writing anything", using AC's default wording
+  // — and the portal kept its own copy of the old rule, so the switch still
+  // demanded text the tool no longer needed. A teacher who switches Away on
+  // with an empty box now gets AWAY_DEFAULT_COPY, which is the sentence shown
+  // greyed in that same box.
   _saveSettings({awayEnabled:on, awayMessage:msg});
 }
 function saveTeacherSettings(){
@@ -1011,6 +1139,7 @@ function _saveSettings(fields){
     TSET.awayEnabled=!!st.awayEnabled;
     TSET.awayMessage=st.awayMessage||'';
     TSET.afterHoursMessage=st.afterHoursMessage||'';
+    TSET.awayDefaultCopy=st.awayDefaultCopy||TSET.awayDefaultCopy;
     TSET.draftAway=TSET.awayMessage;
     TSET.draftAfter=TSET.afterHoursMessage;
     TSET.loaded=true;
@@ -1082,12 +1211,39 @@ function rMessagingLocked(){
 // later reading the name literally.
 var CLOSED_OPEN = false;   // AC's browsing areas start collapsed — see below.
 
+// [1.231], AC: "Save optimistically and process on the back end... like with
+// all other buttons and saving functions in the tool."
+//
+// The tick already flipped instantly; the white circle on the ROW did not,
+// because its number came from the roster payload and the roster is only
+// re-read after the write comes back. So the visible half of the action
+// lagged by a round trip, which is what makes a control feel broken.
+//
+// The fix is not a pending-delta ledger reconciled against the server — that
+// is the race [1.46] and [1.124 #2] each had to solve for sending, and it is
+// only necessary when the client cannot know the answer. Here it can: an open
+// conversation holds ALL of its messages, and this client has already applied
+// the tick to them. So the open conversation's count is counted from the
+// messages on screen, and every other row keeps the server's number, which is
+// the only one it has. Nothing to reconcile and nothing a landing poll can
+// undo, because the number is derived rather than stored.
+function _reviewCountFor(kind, id, serverN){
+  var t = (kind==='family') ? ACTIVE_THREAD : ACTIVE_STAFF_THREAD;
+  var open = t && !t.loading &&
+    (kind==='family' ? t.familyId===id
+                     : (kind==='admin' ? t.contactType==='admin' : t.otherId===id));
+  if(!open) return Number(serverN)||0;
+  var n=0;
+  (t.messages||[]).forEach(function(m){ if(m.reviewAt) n++; });
+  return n;
+}
+
 // One shape for both kinds of conversation, so a section can hold either.
 function _msgRows(){
   var out=[];
   (FAMILY_THREADS.list||[]).forEach(function(t){
     out.push({kind:'family', id:t.familyId, row:t,
-      unread:Number(t.unread)||0, review:Number(t.reviewCount)||0,
+      unread:Number(t.unread)||0, review:_reviewCountFor('family',t.familyId,t.reviewCount),
       waitingSince:Number(t.waitingSince)||0, replyDueBy:Number(t.replyDueBy)||0,
       closed:!!t.closed, at:Number(t.lastMessageAt)||0,
       preview:t.hasMessages?(t.lastMessageText||''):'',
@@ -1096,14 +1252,14 @@ function _msgRows(){
   var st=STAFF_THREADS.list||[];
   var admin=(st.filter(function(x){return x.contactType==='admin';})[0])||{};
   out.push({kind:'admin', id:'admin', row:admin,
-    unread:Number(admin.unread)||0, review:Number(admin.reviewCount)||0,
+    unread:Number(admin.unread)||0, review:_reviewCountFor('admin','admin',admin.reviewCount),
     waitingSince:Number(admin.waitingSince)||0, replyDueBy:Number(admin.replyDueBy)||0,
     closed:false, at:Number(admin.lastMessageAt)||0,
     preview:admin.lastMessageText||'', hasMessages:!!admin.lastMessageAt});
   st.forEach(function(x){
     if(x.contactType==='admin') return;
     out.push({kind:'staff', id:x.teacherId, row:x, name:x.teacherName,
-      unread:Number(x.unread)||0, review:Number(x.reviewCount)||0,
+      unread:Number(x.unread)||0, review:_reviewCountFor('staff',x.teacherId,x.reviewCount),
       waitingSince:Number(x.waitingSince)||0, replyDueBy:Number(x.replyDueBy)||0,
       closed:false, at:Number(x.lastMessageAt)||0,
       preview:x.lastMessageText||'', hasMessages:!!x.lastMessageAt});
@@ -1188,7 +1344,7 @@ function rSectionedRoster(){
                  :'<div class="zone-empty">Nothing waiting on you.</div>');
   if(revs.length){
     h+=rZone(TCH_COPY.sectionReview, revs.length)+
-       '<div class="thread-list">'+revs.map(rConvRow).join('')+'</div>';
+       '<div class="thread-list">'+revs.map(function(r){ return rConvRow(r,true); }).join('')+'</div>';
   }
   // AC's two browsing areas, kept exactly as they were and put under one
   // separator. Collapsed to start: a teacher with twenty-four families should
@@ -1304,11 +1460,15 @@ function rZone(label, n){
 //     student is labelled, being the one name on the row belonging to someone
 //     who is not in the conversation;
 //   • staff conversations carry no parent and no student at all.
-function rConvRow(r){
+// [1.235] — focusReview is set only for the rows in the Marked for review
+// section, so opening a conversation from anywhere else still lands at the
+// newest message. It is the section that carries the intent, not the row.
+function rConvRow(r, focusReview){
+  var _f = focusReview ? ',true' : '';
   var open = r.kind==='family'
-    ? 'openFamilyRow(\'' + esc(r.id) + '\')'
-    : (r.kind==='admin' ? 'openStaffThread(\'admin\',\'admin\',\'Admin\')'
-                        : 'openStaffThread(\'staff\',\'' + esc(r.id) + '\',\'' + esc(r.name||'') + '\')');
+    ? 'openFamilyRow(\'' + esc(r.id) + '\''+_f+')'
+    : (r.kind==='admin' ? 'openStaffThread(\'admin\',\'admin\',\'Admin\''+_f+')'
+                        : 'openStaffThread(\'staff\',\'' + esc(r.id) + '\',\'' + esc(r.name||'') + '\''+_f+')');
   var head, kids='';
   if(r.kind==='family'){
     var parent=_rosterParentLine(r.row)||'Family';
@@ -1361,14 +1521,35 @@ function _rowArgs(r){
   return "'"+esc(r.kind)+"','"+esc(r.id)+"'";
 }
 function closeRow(kind, id){
-  if(!confirm(TCH_COPY.closeConfirm)) return;
+  // [1.233] — the same rule from the roster. This path has no thread open, so
+  // it goes on the row's own review count, which is the number the white
+  // circle beside the button is already showing. The dialog is the browser's
+  // here rather than the inline panel: there is no thread on screen to put a
+  // panel inside, and the alternative — opening the conversation just to
+  // refuse — is a worse answer to "close this row".
+  var _r=_msgRows().filter(function(x){ return x.kind===kind && x.id===id; })[0];
+  var _marks=_r?Number(_r.review)||0:0;
+  if(_marks){
+    if(!confirm(TCH_COPY.closeNeedsReview)) return;
+  } else if(!confirm(TCH_COPY.closeConfirm)) return;
   var d={teacherToken:TOKEN, teacherId:TEACHER_ID, closed:true};
   if(kind==='family'){ d.conversationType='family_teacher'; d.familyId=id; }
   else if(kind==='admin'){ d.conversationType='teacher_admin'; }
   else { d.conversationType='staff_staff'; d.staffId2=id; }
-  api({action:'setConversationClosed', data:d}, function(e,r){
-    if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not close that.','e'); return; }
-    _refreshRosters();
+  var _go=function(){
+    api({action:'setConversationClosed', data:d}, function(e,r){
+      if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not close that.','e'); return; }
+      _refreshRosters();
+    });
+  };
+  if(!_marks) return _go();
+  // Clear first, close second — a close that half-clears is the state this
+  // item exists to prevent.
+  var _c={teacherToken:TOKEN, teacherId:TEACHER_ID};
+  ['conversationType','familyId','staffId2'].forEach(function(k){ if(d[k]!==undefined) _c[k]=d[k]; });
+  api({action:'clearConversationReviews', data:_c}, function(e,r){
+    if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not clear those.','e'); return; }
+    _go();
   });
 }
 
@@ -1590,10 +1771,10 @@ function openPickedFamily(familyId){
   if(!f) return;
   openFamilyThread(f.familyId, f.parent1Name, f.parent2Name);
 }
-function openFamilyRow(familyId){
+function openFamilyRow(familyId, focusReview){
   var t=FAMILY_THREADS.list.filter(function(x){return x.familyId===familyId;})[0];
   if(!t) return;
-  openFamilyThread(t.familyId, t.parent1Name, t.parent2Name);
+  openFamilyThread(t.familyId, t.parent1Name, t.parent2Name, focusReview);
 }
 // Defaults to whatever the conversation was last about — a thread tends to
 // stay on one child, and asking again every time would be friction with no new
@@ -1607,7 +1788,8 @@ function _threadStudentId(t){
   return last;
 }
 
-function openFamilyThread(familyId, p1, p2){
+function openFamilyThread(familyId, p1, p2, focusReview){
+  _focusReview=!!focusReview;   // [1.235]
   var _row=(FAMILY_THREADS.list||[]).filter(function(x){return x.familyId===familyId;})[0]||{};
   ACTIVE_THREAD = {familyId:familyId, parent1Name:p1, parent2Name:p2, messages:[], draft:'', sending:false, loading:true, refreshing:false, notifyP1:true, notifyP2:true,
                    students:_row.students||[]};
@@ -1618,6 +1800,7 @@ function openFamilyThread(familyId, p1, p2){
     ACTIVE_THREAD.loading=false;
     if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not load conversation.','e'); render(); return; }
     ACTIVE_THREAD.messages=r.messages||[];
+    _applyPendingReviews(ACTIVE_THREAD);   // [1.231]
     _shouldScrollMsgList=true; render();
   });
 }
@@ -1634,6 +1817,7 @@ function refreshFamilyThread(){
     ACTIVE_THREAD.refreshing=false;
     if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not refresh.','e'); render(); return; }
     ACTIVE_THREAD.messages=r.messages||[];
+    _applyPendingReviews(ACTIVE_THREAD);   // [1.231]
     _shouldScrollMsgList=true; render();
   });
 }
@@ -1720,6 +1904,19 @@ function rFamilyThread(){
   // not handing over: the conversation still ages against this teacher until
   // one of them answers, and a note saying what is needed is required, so a
   // forward is a question rather than a task passed along.
+  // [1.233] — AC's dialog, in the same inline shape the Ask Admin panel uses,
+  // so a decision is made where the button is rather than in a browser popup
+  // that says nothing about this thread.
+  if(t.closeReviewOpen){
+    h+='<div class="fwd-box">'+
+       '<div style="margin-bottom:.55rem">'+esc(TCH_COPY.closeNeedsReview)+'</div>'+
+       '<div style="display:flex;gap:8px;justify-content:flex-end">'+
+         '<button class="btn btn-s" onclick="cancelCloseReview()">'+esc(TCH_COPY.cancel)+'</button>'+
+         (t.closing
+           ? '<button class="btn btn-p" disabled><span class="spin">↻</span></button>'
+           : '<button class="btn btn-p" onclick="clearAndClose()">'+esc(TCH_COPY.clearAndClose)+'</button>')+
+       '</div></div>';
+  }
   if(t.forwardOpen){
     h+='<div class="fwd-box">'+
        '<div style="font-weight:600;margin-bottom:.35rem">What do you need from admin?</div>'+
@@ -1758,16 +1955,58 @@ function _convRow(familyId){
 function toggleReview(messageId, on){
   var t=ACTIVE_THREAD||ACTIVE_STAFF_THREAD;
   if(!t) return;
-  (t.messages||[]).forEach(function(m){ if(m.messageId===messageId) m.reviewAt=on?Date.now():''; });
+  var was=null;
+  (t.messages||[]).forEach(function(m){
+    if(m.messageId!==messageId) return;
+    was=m.reviewAt||'';
+    m.reviewAt=on?Date.now():'';
+  });
+  // [1.231] — held until the write lands, so a wholesale re-read of the
+  // thread (a manual Refresh, or the re-read after Mark seen) cannot put a
+  // tick back the way it was before the server has been told. The poll itself
+  // only ever APPENDS, so it was never the risk; these two are.
+  t._reviewPending=t._reviewPending||{};
+  t._reviewPending[messageId]=on?Date.now():'';
+  render();   // the tick, the marked bubble and the roster circle, all now
   api({action:'setMessageReview', data:_threadKey(t,{messageId:messageId, review:!!on})}, function(e,r){
+    delete t._reviewPending[messageId];
     if(e||!r||!r.ok){
       // Put it back rather than leaving a tick that did not stick.
-      (t.messages||[]).forEach(function(m){ if(m.messageId===messageId) m.reviewAt=on?'':Date.now(); });
+      (t.messages||[]).forEach(function(m){ if(m.messageId===messageId) m.reviewAt=was; });
       showMsg((r&&r.error)||'Could not save that for review.','e'); render(); return;
     }
     _refreshRosters();
   });
+}
+
+// Re-applies whatever this client has ticked and the server has not yet
+// confirmed, after a fetch that replaced the thread wholesale.
+function _applyPendingReviews(t){
+  if(!t||!t._reviewPending) return;
+  (t.messages||[]).forEach(function(m){
+    if(m.messageId && t._reviewPending.hasOwnProperty(m.messageId)) m.reviewAt=t._reviewPending[m.messageId];
+  });
+}
+
+// [1.233] — clearing every review mark in this conversation, which is the
+// first half of Clear & close. One server call, not a loop: a close that
+// half-clears is worse than one that refuses.
+function clearAllReviews(t, done){
+  if(!t) return;
+  (t.messages||[]).forEach(function(m){ if(m.reviewAt) m.reviewAt=''; });
+  t._reviewPending={};
   render();
+  api({action:'clearConversationReviews', data:_threadKey(t,{})}, function(e,r){
+    if(e||!r||!r.ok){
+      // Nothing was cleared and nothing is closed — put the thread back the
+      // way it was and say so, rather than leaving a half-done action.
+      t.closing=false; t.closeReviewOpen=false;
+      showMsg((r&&r.error)||'Could not clear those.','e');
+      _refreshOpenThread(); render(); return;
+    }
+    _refreshRosters();
+    if(done) done();
+  });
 }
 
 // "Mark seen" ([1.220]) — the two-line note, sent on purpose. It does NOT stop
@@ -1791,11 +2030,42 @@ function markSeen(){
 // confirm step"). Replying closes nothing — a teacher who answers "I'll check
 // and come back to you" has replied without finishing, and no rule can tell
 // that from a real answer.
+// [1.233], AC: "Don't allow user to close conversation unless all reviewed
+// messages are cleared."
+//
+// He then replaced the greyed-out button with a dialog, and it is the better
+// of the two: the button stays live and EXPLAINS ITSELF at the moment it is
+// pressed, rather than being disabled with the reason somewhere else on the
+// page. A conversation with no marks still gets the plain confirm — two
+// dialogs, each saying the one thing that matters at that moment.
+function _openReviewMarks(t){
+  var n=0;
+  (t&&t.messages||[]).forEach(function(m){ if(m.reviewAt) n++; });
+  return n;
+}
 function closeConversation(){
   var t=ACTIVE_THREAD||ACTIVE_STAFF_THREAD;
   if(!t||t.closing) return;
+  if(_openReviewMarks(t)){ t.closeReviewOpen=true; render(); return; }
   if(!confirm(TCH_COPY.closeConfirm)) return;
+  _doCloseConversation(t);
+}
+// Clear & close: one action, in that order. Closing first and clearing after
+// would leave a thread closed with marks still on it if the second call
+// failed, which is the state the whole item exists to prevent.
+function clearAndClose(){
+  var t=ACTIVE_THREAD||ACTIVE_STAFF_THREAD;
+  if(!t||t.closing) return;
   t.closing=true; render();
+  clearAllReviews(t, function(){ _doCloseConversation(t); });
+}
+function cancelCloseReview(){
+  var t=ACTIVE_THREAD||ACTIVE_STAFF_THREAD;
+  if(!t) return;
+  t.closeReviewOpen=false; t.closing=false; render();
+}
+function _doCloseConversation(t){
+  t.closing=true; t.closeReviewOpen=false; render();
   api({action:'setConversationClosed', data:_threadKey(t,{closed:true})}, function(e,r){
     t.closing=false;
     if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not close that.','e'); render(); return; }
@@ -1926,7 +2196,8 @@ function loadStaffDirectory(){
   });
 }
 
-function openStaffThread(contactType, otherId, otherName){
+function openStaffThread(contactType, otherId, otherName, focusReview){
+  _focusReview=!!focusReview;   // [1.235]
   ACTIVE_STAFF_THREAD = {contactType:contactType, otherId:otherId, otherName:otherName, messages:[], draft:'', sending:false, loading:true, refreshing:false};
   STAFF_VIEW='thread';
   render();
@@ -1938,6 +2209,7 @@ function openStaffThread(contactType, otherId, otherName){
     ACTIVE_STAFF_THREAD.loading=false;
     if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not load messages.','e'); render(); return; }
     ACTIVE_STAFF_THREAD.messages=r.messages||[];
+    _applyPendingReviews(ACTIVE_STAFF_THREAD);   // [1.231]
     _shouldScrollMsgList=true; render();
   });
 }
@@ -1955,6 +2227,7 @@ function refreshStaffThread(){
     ACTIVE_STAFF_THREAD.refreshing=false;
     if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not refresh.','e'); render(); return; }
     ACTIVE_STAFF_THREAD.messages=r.messages||[];
+    _applyPendingReviews(ACTIVE_STAFF_THREAD);   // [1.231]
     _shouldScrollMsgList=true; render();
   });
 }
@@ -1988,6 +2261,19 @@ function rStaffThread(){
      '<input type="checkbox" '+(t.emailToo?'checked':'')+' onchange="ACTIVE_STAFF_THREAD.emailToo=this.checked" style="width:14px;height:14px"> '+
      'Also send by email (for something that can\'t wait for the portal)</label>';
   h+=rComposer('staff-composer',t.draft,'ACTIVE_STAFF_THREAD.draft=_composerInput(this)',sendBtn);
+  // [1.233] — the same dialog as the family thread. A staff conversation can
+  // hold review marks too, and closing one with marks outstanding is the same
+  // mistake wherever it happens.
+  if(t.closeReviewOpen){
+    h+='<div class="fwd-box">'+
+       '<div style="margin-bottom:.55rem">'+esc(TCH_COPY.closeNeedsReview)+'</div>'+
+       '<div style="display:flex;gap:8px;justify-content:flex-end">'+
+         '<button class="btn btn-s" onclick="cancelCloseReview()">'+esc(TCH_COPY.cancel)+'</button>'+
+         (t.closing
+           ? '<button class="btn btn-p" disabled><span class="spin">↻</span></button>'
+           : '<button class="btn btn-p" onclick="clearAndClose()">'+esc(TCH_COPY.clearAndClose)+'</button>')+
+       '</div></div>';
+  }
   return h;
 }
 
@@ -2363,6 +2649,9 @@ var TCH_COPY={
     ]},
     {h:'Message helpers — seen on individual messages in a thread', items:[
       {t:'Save for review', d:'Tick “Save for review” on the message in the thread (not the entire thread). It will move to the review area. Private setting to use however you like.'},
+      // [1.233] — AC's guide line, verbatim. TODO(copy): AC — the item TITLE
+      // is Claude's, not his; he supplied the sentence only.
+      {t:'Clearing before closing', d:'Messages saved for review need to be cleared before closing a conversation.'},
       {t:'Mark seen', d:'Adds a quick generic message to the conversation thread letting the family know their message has been seen. Admin or teacher can mark a message as seen and this is visible to all parties. It is not a reply, and the timer keeps running until you send one. Use this when you don’t have time to respond but want the parent to know you have seen the message.'}
     ]},
     {h:'Send, Ask Admin, and Close Conversation', items:[
@@ -2372,9 +2661,17 @@ var TCH_COPY={
     ]}
   ],
   saveForReview:'Save for review',
+  // AC, 3 Sept (second pass): "the checkbox label follows its state."
+  savedForReview:'Saved for review',
   markSeen:'Mark seen',
   closeConversation:'Close conversation',
-  closeConfirm:'Close conversation?'
+  closeConfirm:'Close conversation?',
+  // [1.233], AC's words. He replaced the greyed-out-button plan with this:
+  // the button stays live and explains itself, rather than being disabled
+  // with the reason somewhere else on the page.
+  closeNeedsReview:'There are messages still marked for review in this thread. Click to clear all and close the conversation.',
+  clearAndClose:'Clear & close',
+  cancel:'Cancel'
 };
 
 var CMP_COPY={
@@ -2477,7 +2774,14 @@ function rComposer(id,draft,onInput,sendBtn){
         ' onkeyup="_composerState(\''+id+'\')" onmouseup="_composerState(\''+id+'\')"'+
         ' onblur="_composerStateClear(\''+id+'\')"'+
         ' onpaste="_composerPaste(event)">'+(draft||'')+'</div>'+
-      sendBtn+
+      // [1.234], AC: "there is very little room for the composer. On teacher
+      // side, there is too much information packed into that little square."
+      // Send / Ask Admin / Close conversation used to sit in the same flex
+      // ROW as the writing box, so three buttons took their width out of the
+      // one thing on the screen that needs it. They are the same buttons in
+      // the same order — this moves the row, not the placement AC chose on
+      // 3 September, which was "beside Send" and still is.
+      '<div class="composer-actions">'+sendBtn+'</div>'+
     '</div></div>';
 }
 
@@ -2501,14 +2805,42 @@ function rMessageBubble(m){
   // it as a reply, but it must not collapse like an away message.
   if(m.noteKind==='seen') return rNoteLine(m);
   if(_tIsTruthy(m.isAuto)) return rAutoBubble(m,mine);
-  return '<div class="bubble-row'+(mine?' mine':'')+'">'+
-    '<div class="bubble'+(mine?' mine':'')+'">'+
+  // [1.232], AC: "Otherwise, the person doesn't know which message they
+  // marked, and this will easily get lost." The white circle on the roster
+  // counts them; inside the thread the only difference was a ticked checkbox,
+  // which is invisible while scrolling past. The bubble itself now says so,
+  // and the id is on the element so [1.235] can scroll to it.
+  var saved = !!m.reviewAt;
+  return '<div class="bubble-row'+(mine?' mine':'')+'" id="msg-'+esc(m.messageId||'')+'">'+
+    '<div class="bubble'+(mine?' mine':'')+(saved?' saved':'')+'">'+
+    (saved?'<div class="saved-tag">'+esc(TCH_COPY.savedForReview)+'</div>':'')+
     (!mine?'<div class="bubble-sender">'+esc(m.senderName||'')+'</div>':'')+
     _bubbleAbout(m)+
     '<div class="bubble-text">'+body+'</div>'+
     '<div class="bubble-time">'+esc(fmtMsgTime(m.sentAt))+'</div>'+
+    rNotifyWarn(m,mine)+
     rMsgTools(m,mine)+
     '</div></div>';
+}
+
+// [1.237] — "a test parent received no email when a teacher sent them a
+// message", and nothing on any screen said so. The server now records what
+// the notification actually did on the message row (notifyState/notifyDetail,
+// see _notifyNewMessage) and this is where the teacher who sent it finds out.
+//
+// Only on your own message: it answers "did what I just sent reach them",
+// which is a question only the sender has. And only when something did NOT go
+// out — 'sent' and 'queued' draw nothing. A message with no state at all was
+// sent before this shipped and says nothing either, rather than claiming a
+// failure it has no evidence of.
+function rNotifyWarn(m, mine){
+  if(!mine) return '';
+  var st=m.notifyState||'';
+  if(st!=='none' && st!=='error') return '';
+  // TODO(copy): AC. Staff-facing, and the reason half is the server's own
+  // factual string ("no email address on file for this family").
+  var why=m.notifyDetail?' — '+m.notifyDetail:'';
+  return '<div class="msg-notify-warn">'+esc('Not emailed'+why)+'</div>';
 }
 
 // ── Two lines in the thread, not a message (AC, 3 September 2026) ────────
@@ -2547,9 +2879,10 @@ function rClosedLine(closedAt, closedByName){
 function rMsgTools(m, mine){
   var saved = !!m.reviewAt;
   var h = '<div class="msg-tools">'+
-    '<label><input type="checkbox"'+(saved?' checked':'')+
+    '<label class="rev-check'+(saved?' on':'')+'"><input type="checkbox"'+(saved?' checked':'')+
       ' onclick="event.stopPropagation();toggleReview(\''+esc(m.messageId)+'\',this.checked)"> '+
-      esc(TCH_COPY.saveForReview)+'</label>';
+      // AC, 3 Sept (second pass): the label follows its state.
+      esc(saved?TCH_COPY.savedForReview:TCH_COPY.saveForReview)+'</label>';
   // Only on a message someone else sent: marking your own message "seen" says
   // nothing to anybody.
   if(!mine){
@@ -2873,3 +3206,4 @@ document.addEventListener('DOMContentLoaded', function(){
 </script>
 </body>
 </html>
+

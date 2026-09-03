@@ -173,11 +173,106 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 .msg-circle.p-new{background:#1747C0;color:#fff}
 /* [1.178] the resting state: present, readable, carrying no alarm. */
 .msg-circle.p-rest{background:var(--bg4);color:var(--text3);border:1px solid var(--border2);font-size:11px}
-.msg-circle.p-2h{background:#E5A700;color:#3A2900}
-.msg-circle.p-4h{background:#F97316;color:#3D1A00}  /* AC, 1 Sept: pulled well clear of the 8h red */
-.msg-circle.p-8h{background:#C42121;color:#fff}
+.msg-circle.p-2h{background:#8B5FCF;color:#fff}
+.msg-circle.p-4h{background:#E5A700;color:#3A2900}
+/* AC's key, 3 Sept 2026: blue when new, purple at 2h, amber at 4h, orange at
+   12h, red once OVERDUE. Every stage moved down one and purple was added, so
+   red now means only one thing — past the reply time — instead of sharing
+   duty with the 12-hour band. Class names are the HOURS, not the colours,
+   which is why p-8h became p-12h rather than being renamed after a hue that
+   has now changed twice. */
+.msg-circle.p-12h{background:#F97316;color:#3D1A00}
+/* Overdue keeps a circle for the count, in a deeper red, with the OVERDUE word beside it (AC, 3 Sept). */
+.msg-circle.p-od{background:#8B1A1A;color:#fff}
+/* Saved for review (1.215): white circle, blue number, blue ring. Deliberately the inverse of the unread circle — same shape, opposite fill, because it is the other half of one idea. */
+.msg-circle.p-review{background:#fff;color:#1747C0;border:2px solid #1747C0}
 .msg-overdue{background:#B22222;color:#fff;border:1px solid #8B1A1A;border-radius:10px;padding:3px 8px;
   font-size:10px;font-weight:600;letter-spacing:.06em;white-space:nowrap;flex:0 0 auto;cursor:pointer}
+/* ── The sectioned messages page (AC, 3 September 2026) ──────────────────
+   Section headers carry the counts the tab badges used to, so nothing has to
+   be opened to find out something is waiting. */
+.zone{font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--text4);margin:16px 0 6px;display:flex;align-items:center;gap:8px}
+.zone::after{content:"";flex:1;height:1px;background:var(--border)}
+.zcount{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;
+  padding:0 5px;border-radius:9px;background:var(--bg3);border:1px solid var(--border);
+  color:var(--text3);font-size:10px;letter-spacing:0}
+.zone-empty{font-size:12px;color:var(--text4);padding:2px 2px 8px}
+/* Closed Conversations: a control, not a label. Collapsed to start, and it
+   carries its counts while collapsed so it says what it holds rather than
+   looking empty (the resting-state rule). */
+.sep{font-size:11.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--text3);margin:22px 0 2px;padding-top:14px;border-top:2px solid var(--border2);
+  cursor:pointer;display:flex;align-items:center;gap:6px}
+.sepc{font-size:10px;font-weight:600;letter-spacing:0;text-transform:none;color:var(--text4);margin-left:auto}
+.caret{display:inline-block;width:12px;color:var(--text4)}
+/* The row. The parent is who the teacher is speaking with, so their name is
+   the largest thing on it; the student sits under it, labelled, because that
+   name belongs to the one person on the row who is not in the conversation. */
+.r-parent{font-size:14px;font-weight:700;color:var(--text);line-height:1.3}
+.r-student{font-size:11.5px;font-weight:600;color:var(--text3);line-height:1.35;margin-bottom:2px}
+.lbl{font-size:10px;font-weight:600;color:var(--text4);text-transform:uppercase;letter-spacing:.06em}
+.dir{font-size:11px;font-weight:400;color:var(--text4)}
+.row-marks{display:flex;align-items:center;gap:6px;flex:0 0 auto}
+/* The reply deadline. Quiet on the row — it is a fact, not an alarm; the
+   colour is what carries urgency. */
+.due{font-size:11px;font-weight:600;color:var(--text4)}
+.due-line{font-size:12px;font-weight:700;color:var(--text3);margin:.1rem 0 .6rem}
+/* The close button in the resting slot — quiet, so a page of answered
+   conversations does not read as a page of buttons. */
+.row-close{font-size:10.5px;padding:3px 9px;opacity:.75}
+.thread-row:hover .row-close{opacity:1}
+/* Admin, wherever it appears as a correspondent — a message from the studio
+   should never look like one from a family. Deliberately the SOFT blue, not
+   the #1747C0 of the unread circle: two different things in one blue would
+   read as related. */
+.apill{display:inline-flex;align-items:center;padding:1px 8px;border-radius:9px;
+  background:var(--bbg);border:1px solid #7FA5D6;color:var(--bt);
+  font-size:10px;font-weight:700;letter-spacing:.02em}
+/* The searchable dropdown. */
+.msg-search{position:relative;margin-bottom:.75rem}
+.msg-search input{width:100%;font-size:13px}
+.msg-search-x{position:absolute;right:8px;top:7px;font-size:12px}
+.msg-search-menu{position:absolute;left:0;right:0;top:100%;z-index:20;background:var(--bg5);
+  border:1px solid var(--border2);border-radius:var(--r);box-shadow:0 6px 18px rgba(0,0,0,.18);
+  max-height:260px;overflow-y:auto}
+.msg-search-item{padding:8px 10px;font-size:13px;color:var(--text);cursor:pointer;
+  display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.msg-search-item:hover{background:var(--bg4)}
+.msg-search-item.q{color:var(--text4);cursor:default}
+.msg-search-sub{font-size:11px;color:var(--text4)}
+/* Two lines in the thread, not a message (AC, 3 Sept). Deliberately without a
+   bubble, a border or a background: it is a note about the conversation, not a
+   turn in it. */
+.note-line{padding:2px 2px 2px 0;max-width:74%}
+.note-head{font-size:11px;color:var(--text4)}
+.note-body{font-size:12.5px;color:var(--text3);font-style:italic}
+.note-when{font-style:normal;color:var(--text4)}
+/* The per-message controls. Present on every message rather than appearing
+   only on some, so neither reads as a control that shows up when something is
+   wrong. */
+.msg-tools{display:flex;gap:10px;align-items:center;margin-top:7px;padding-top:6px;
+  border-top:1px solid rgba(0,0,0,.12);font-size:11px;color:var(--text3)}
+.msg-tools label{display:inline-flex;align-items:center;gap:5px;cursor:pointer}
+".msg-tools-sep{color:var(--text5)}
+/* The guide. Closed by default and quiet when closed — it sits under the
+   colour key all day and should not compete with the messages. */
+.guide{margin:-.35rem 0 1rem}
+.guide-toggle{background:none;border:0;padding:2px 0;font-family:inherit;font-size:12px;font-weight:600;
+  color:var(--acc);cursor:pointer;display:inline-flex;align-items:center;gap:4px}
+.guide-toggle:hover{text-decoration:underline}
+.guide-body{margin-top:.5rem;padding:.75rem .9rem;background:rgba(255,255,255,.45);
+  border:1px solid var(--border);border-radius:var(--r);max-width:62ch}
+.guide-sec + .guide-sec{margin-top:.7rem}
+.guide-h{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text4)}
+.guide-body ul{margin:.25rem 0 0;padding-left:1.1rem}
+.guide-body li{font-size:12.5px;color:var(--text3);line-height:1.45;margin-bottom:.25rem}
+.guide-body li b{color:var(--text);font-weight:700}
+/* "Ask admin about this" beside Send — [1.201]'s white button with the blue
+   border, so it reads as a second way to send rather than a second Send. */
+.btn-ask{background:#fff;border:1px solid var(--acc);color:var(--acc)}
+.closed-tag{font-size:11px;font-weight:600;color:var(--text4);padding:3px 9px;
+  border:1px solid var(--border);border-radius:4px;background:var(--bg4)}
 .read-toggle{flex:0 0 auto;font-size:14px;color:var(--text5);text-decoration:none;padding:0 4px}
 .read-toggle:hover{color:var(--acc);text-decoration:none}
 .recipient-row{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:.6rem;font-size:12px;color:var(--text3)}
@@ -284,7 +379,13 @@ function _tIsTruthy(v){ return v===true||v==='TRUE'||v==='true'; }
 var FAMILY_THREADS = {loading:false, list:[], _sig:''};
 // Roster search (BACKLOG 1.161 #3). familyIds is what the server matched;
 // an empty query means show everything.
-var FAMILY_SEARCH = {query:'', familyIds:[], searching:false, timer:null};
+// AC, 3 September: "Dropdown with all the teacher's families and students,
+// searchable by either. Make sure the text field doesn't time out or act
+// jumpy." Names come from the roster the page already has, so typing filters
+// locally and costs no round trip at all — the old version debounced a server
+// search, which is what made it feel laggy. `matches` is only ever what is
+// currently typed; nothing is cached across keystrokes.
+var MSG_SEARCH = {query:'', open:false};
 var FAMILY_PICKER = {loading:false, query:'', all:[]};
 var ACTIVE_THREAD = null; // {familyId, parent1Name, parent2Name, messages, draft, sending, loading, notifyP1, notifyP2}
 
@@ -338,6 +439,34 @@ function fmtMsgTime(ms){
   var h12=h%12; if(h12===0) h12=12;
   var mm=mins<10?'0'+mins:String(mins);
   return days[d.getDay()]+', '+(d.getMonth()+1)+'/'+d.getDate()+'/'+String(d.getFullYear()).slice(-2)+' '+h12+':'+mm+' '+ampm;
+}
+
+// AC, 3 September: "The teacher should see a reply by deadline on a message to
+// make it extra clear so they aren't doing math (and neither am I)."
+//
+// The deadline has been computed on the server since [1.197] — per teacher,
+// with the evening and weekend rules applied — and sent on every row as
+// replyDueBy. It has simply never been shown. Nothing is derived here: the
+// portals must not re-derive a rule whose inputs they cannot see, which is why
+// [1.197] moved the calculation server-side in the first place.
+//
+// Full date in the open conversation, where there is room and it must be
+// unambiguous. On a roster row, weekday and time only — a deadline is never
+// more than three days out, so the date adds length without adding meaning.
+function fmtDueFull(ms){
+  return Number(ms) ? 'Reply by '+fmtMsgTime(ms) : '';
+}
+function fmtDueShort(ms){
+  var n=Number(ms);
+  if(!n) return '';
+  var d=new Date(n);
+  if(isNaN(d.getTime())) return '';
+  var days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  var h=d.getHours(), mins=d.getMinutes();
+  var ampm=h>=12?'PM':'AM';
+  var h12=h%12; if(h12===0) h12=12;
+  var mm=mins<10?'0'+mins:String(mins);
+  return 'Reply by '+days[d.getDay()]+' '+h12+(mins?':'+mm:'')+' '+ampm;
 }
 
 function _ktNewClientMsgId(){
@@ -437,18 +566,26 @@ function render(){
   // every poll re-render dropped the reader back to the top of the list.
   var _prevList=el.querySelector('.msg-list');
   var _prevListTop=_prevList?_prevList.scrollTop:null;
+  // [1.221], AC: "composers are still jumpy, with unstable scrolling snaps."
+  // The residue of 1.192/1.193, and it is the refocus that does it: focus()
+  // scrolls the focused element into view, so every poll landing while the
+  // composer had the caret yanked the page to it. preventScroll stops that at
+  // source; the window offset is remembered as well, because replacing the
+  // page's HTML can briefly shorten the document and the browser clamps the
+  // scroll position when it does.
+  var _prevWinY=window.pageYOffset||document.documentElement.scrollTop||0;
   el.innerHTML=h;
   if(_focusedLink){
     var _li=document.getElementById(_focusedLink);
     if(_li){
-      _li.focus();
+      _focusNoScroll(_li);
       try{ _li.setSelectionRange(_focusedLinkPos,_focusedLinkPos); }catch(e){}
     }
   }
   if(_focusedComposer){
     var _ce=document.getElementById(_focusedComposer);
     if(_ce){
-      _ce.focus();
+      _focusNoScroll(_ce);
       try{
         var _r=document.createRange(); _r.selectNodeContents(_ce); _r.collapse(false);
         var _s=window.getSelection(); _s.removeAllRanges(); _s.addRange(_r);
@@ -468,6 +605,17 @@ function render(){
     var ml2=el.querySelector('.msg-list');
     if(ml2) ml2.scrollTop=_prevListTop;
   }
+  // [1.221] — and the page itself, last, after every other restore above has
+  // had its say.
+  var _nowWinY=window.pageYOffset||document.documentElement.scrollTop||0;
+  if(_prevWinY&&_nowWinY!==_prevWinY) window.scrollTo(0,_prevWinY);
+}
+
+// [1.221] — focus without the browser's automatic scroll-into-view. Where
+// preventScroll is not honoured, the scroll offsets are put back by the
+// caller, so the worst case is the behaviour we already had.
+function _focusNoScroll(el){
+  try{ el.focus({preventScroll:true}); }catch(e){ try{ el.focus(); }catch(e2){} }
 }
 
 function loginHeader(){
@@ -691,12 +839,46 @@ function rTimerKey(){
   return '<div class="mp-key">'+
     '<span style="font-weight:700;color:var(--text3)">'+esc(CMP_COPY.keyLead)+'</span>'+
     '<span class="k"><i style="background:#1747C0"></i>unread</span>'+
-    '<span class="k"><i style="background:#E5A700"></i>2h</span>'+
-    '<span class="k"><i style="background:#F97316"></i>4h</span>'+
-    '<span class="k"><i style="background:#C42121"></i>12h \u2014 nudge</span>'+
+    '<span class="k"><i style="background:#8B5FCF"></i>2h</span>'+
+    '<span class="k"><i style="background:#E5A700"></i>4h</span>'+
+    '<span class="k"><i style="background:#F97316"></i>12h \u2014 nudge</span>'+
     '<span class="k"><span class="msg-overdue" style="padding:1px 5px;font-size:9px">OVERDUE</span>past due</span>'+
     '<span style="flex-basis:100%;color:var(--text4)">'+esc(CMP_COPY.keyFoot)+'</span>'+
-    '</div>';
+    '</div>'+rGuide();
+}
+
+// ── The teacher's guide (AC, 3 September 2026) ──────────────────────────
+// Asked for as "an expandable user guide for teachers to click under their
+// color key... simple, clear, concise terms that leave no ambiguity".
+//
+// **THIS COPY IS CLAUDE'S, NOT AC'S, AND IT IS TEACHER-FACING.** Every other
+// teacher-facing sentence in this file is AC's own. He asked for this one to
+// be drafted rather than left blank, so it is written functionally — what the
+// control does, in the fewest words that leave no second reading — rather than
+// in his voice. It is flagged for him to edit or replace.
+//
+// Closed by default, and it stays closed between renders unless the teacher
+// opens it: a guide that reopens itself every five seconds is worse than no
+// guide.
+var GUIDE_OPEN = false;
+function rGuide(){
+  // One return, one closing tag: an early return that closed the wrapper in a
+  // second place read as unbalanced markup to the check suite, and a reader
+  // has the same problem.
+  var body='';
+  if(GUIDE_OPEN){
+    body='<div class="guide-body">'+TCH_COPY.guide.map(function(sec){
+      return '<div class="guide-sec"><div class="guide-h">'+esc(sec.h)+'</div><ul>'+
+        sec.items.map(function(li){
+          return '<li><b>'+esc(li.t)+'</b> — '+esc(li.d)+'</li>';
+        }).join('')+
+        '</ul></div>';
+    }).join('')+'</div>';
+  }
+  return '<div class="guide">'+
+    '<button type="button" class="guide-toggle" onclick="GUIDE_OPEN=!GUIDE_OPEN;render()">'+
+      '<span class="caret">'+(GUIDE_OPEN?'▾':'▸')+'</span>'+esc(TCH_COPY.guideTitle)+'</button>'+
+    body+'</div>';
 }
 function rHome(){
   // BACKLOG 1.161 #1 — a teacher reading a staff thread or editing their away
@@ -705,14 +887,19 @@ function rHome(){
   // before opening anything. Same idea the family portal got in 1.7b.
   var famUnread=(FAMILY_THREADS.list||[]).reduce(function(n,t){return n+(Number(t.unread)||0);},0);
   var staffUnread=(STAFF_THREADS.list||[]).reduce(function(n,t){return n+(Number(t.unread)||0);},0);
+  // AC, 3 September: "Teachers should not be tabbing through different message
+  // sections. They should be on the same page scrollable to different
+  // sections." So the two MESSAGE tabs are gone and their contents are one
+  // scrolling page; Settings is not a message section and keeps its own tab.
+  // The section headers carry the counts the tab badges used to
+  // ([1.161] #1's guarantee — a teacher must not have to open something to
+  // discover a message is waiting — now met by having nothing to open).
   var tabs='<div class="tabbar">'+
-    '<div class="tab'+(HOME_TAB==='family'?' on':'')+'" onclick="switchTab(\'family\')">Family Messages'+rTabBadge(famUnread)+'</div>'+
-    '<div class="tab'+(HOME_TAB==='staff'?' on':'')+'" onclick="switchTab(\'staff\')">Staff Messages'+rTabBadge(staffUnread)+'</div>'+
+    '<div class="tab'+(HOME_TAB!=='settings'?' on':'')+'" onclick="switchTab(\'family\')">Messages'+rTabBadge(famUnread+staffUnread)+'</div>'+
     '<div class="tab'+(HOME_TAB==='settings'?' on':'')+'" onclick="switchTab(\'settings\')">Settings</div>'+
     '</div>';
   var body = HOME_TAB==='settings' ? rTeacherSettings()
-           : HOME_TAB==='family'   ? rTimerKey()+rFamilyMessagesTab()
-           : rTimerKey()+rStaffMessagesTab();
+           : rTimerKey()+rMessagesPage();
   return '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">'+
     '<div class="login-brand" style="margin:0">KEYLAB</div>'+
     '<button type="button" class="lnk-btn"  onclick="doSignOut()">Sign Out</button></div>'+
@@ -874,23 +1061,329 @@ function rMessagingLocked(){
     '</div></div>';
 }
 
-function rFamilyMessagesTab(){
+// ══ The teacher's messages, one scrolling page (AC, 3 September 2026) ══════
+//
+// Four sections, in the order a teacher has to do something about them:
+//
+//   New Messages          everything owed — unread OR read-but-unanswered.
+//   Marked for review     read, nothing new on it, saved by this teacher.
+//   Closed Conversations  everything else, split Families / Admin & staff.
+//
+// THE TOP SECTION IS NOT SPLIT BY WHO WROTE, and that is deliberate — flagged
+// to AC rather than slipped in. It is the one place a teacher answers "what do
+// I owe?", and splitting it into family and admin means an overdue parent
+// message and an overdue admin message sit in two places with neither visible
+// at a glance. AC's teacher/admin split lives in the two browsing areas below,
+// where you are looking for a person rather than reacting to something.
+//
+// The section names are AC's own words. "New Messages" holds read-but-
+// unanswered conversations too, which makes it slightly wider than its name —
+// recorded here because it is his call and should not be "fixed" by someone
+// later reading the name literally.
+var CLOSED_OPEN = false;   // AC's browsing areas start collapsed — see below.
+
+// One shape for both kinds of conversation, so a section can hold either.
+function _msgRows(){
+  var out=[];
+  (FAMILY_THREADS.list||[]).forEach(function(t){
+    out.push({kind:'family', id:t.familyId, row:t,
+      unread:Number(t.unread)||0, review:Number(t.reviewCount)||0,
+      waitingSince:Number(t.waitingSince)||0, replyDueBy:Number(t.replyDueBy)||0,
+      closed:!!t.closed, at:Number(t.lastMessageAt)||0,
+      preview:t.hasMessages?(t.lastMessageText||''):'',
+      hasMessages:!!t.hasMessages});
+  });
+  var st=STAFF_THREADS.list||[];
+  var admin=(st.filter(function(x){return x.contactType==='admin';})[0])||{};
+  out.push({kind:'admin', id:'admin', row:admin,
+    unread:Number(admin.unread)||0, review:Number(admin.reviewCount)||0,
+    waitingSince:Number(admin.waitingSince)||0, replyDueBy:Number(admin.replyDueBy)||0,
+    closed:false, at:Number(admin.lastMessageAt)||0,
+    preview:admin.lastMessageText||'', hasMessages:!!admin.lastMessageAt});
+  st.forEach(function(x){
+    if(x.contactType==='admin') return;
+    out.push({kind:'staff', id:x.teacherId, row:x, name:x.teacherName,
+      unread:Number(x.unread)||0, review:Number(x.reviewCount)||0,
+      waitingSince:Number(x.waitingSince)||0, replyDueBy:Number(x.replyDueBy)||0,
+      closed:false, at:Number(x.lastMessageAt)||0,
+      preview:x.lastMessageText||'', hasMessages:!!x.lastMessageAt});
+  });
+  return out;
+}
+
+// Which section a conversation belongs to. A conversation is in exactly one.
+//
+// AC, 3 Sept: "when a new message arrives, the thread should bump up back to
+// the new messages area and not be stuck in a stale area", and "marked for
+// review is strictly for read messages that don't have new messages". Both
+// fall out of the order of these tests rather than needing a rule of their
+// own: anything owed is caught first, so a review-marked thread that receives
+// a new message leaves the review area by itself and carries both circles at
+// the top.
+function _sectionOf(r){
+  // AC, 3 September, settling what a reply does and does not do: a
+  // conversation you have answered but not closed "sits in the new messages
+  // area". Replying is not closing — you decide when something is finished —
+  // so an answered conversation stays where you can see it, with the Close
+  // conversation button in the slot the circle has vacated.
+  //
+  // This is the correction to a real mistake: when the two browsing areas were
+  // put under a "Closed Conversations" separator, replying still closed a
+  // conversation automatically, so everything down there genuinely was closed.
+  // AC then reversed auto-close and the section rule was not carried over, so
+  // answered-but-open conversations were filed under a heading that said they
+  // were closed. Now only closed ones are, and the heading is true again.
+  if(r.closed) return 'closed';
+  // A family on the roster you have never written to is not a conversation at
+  // all — it belongs in the browsing list, not in the day's work ([1.172]).
+  if(!r.hasMessages) return 'closed';
+  if(r.review>0 && !r.unread && !r.waitingSince) return 'review';
+  return 'new';
+}
+
+// Unread first, then whoever has been waiting longest. Within the browsing
+// areas, most recent first — there is no urgency there to sort by.
+function _sortNew(a,b){
+  if((a.unread>0)!==(b.unread>0)) return a.unread>0?-1:1;
+  if(a.waitingSince&&b.waitingSince) return a.waitingSince-b.waitingSince;
+  if(a.waitingSince) return -1;
+  if(b.waitingSince) return 1;
+  return b.at-a.at;
+}
+
+function rMessagesPage(){
   if(MSG_LOCK.locked) return rMessagingLocked();
   if(FAMILY_VIEW==='picker') return rFamilyPicker();
-  var showThread=FAMILY_VIEW==='thread';
+  var showThread = FAMILY_VIEW==='thread' || STAFF_VIEW==='thread';
+  var thread = STAFF_VIEW==='thread' ? rStaffThread()
+             : FAMILY_VIEW==='thread' ? rFamilyThread()
+             : '<div class="pane-empty">Choose a conversation to open it.</div>';
   return '<div class="panes">'+
-    '<div class="pane'+(showThread?' only-lg':'')+'">'+rFamilyThreadList()+'</div>'+
-    '<div class="pane'+(showThread?'':' only-lg')+'">'+
-      (showThread?rFamilyThread():'<div class="pane-empty">Choose a family to see the conversation.</div>')+
-    '</div>'+
+    '<div class="pane'+(showThread?' only-lg':'')+'">'+rSectionedRoster()+'</div>'+
+    '<div class="pane'+(showThread?'':' only-lg')+'">'+thread+'</div>'+
   '</div>';
 }
 
-// AC's format, 1 Sept: "Mia - Wed 4pm piano" with "[parent full name]"
-// underneath. A teacher thinks in students; this row used to name only the
-// parents. A family with two children on this teacher gets both on the first
-// line, because the conversation is still one thread — splitting it into two
-// rows would imply two threads that do not exist.
+function rSectionedRoster(){
+  var h='<button class="btn btn-p" style="margin-bottom:.75rem" onclick="openFamilyPicker()">+ New Conversation</button>';
+  h+=rMsgSearch();
+  if(FAMILY_THREADS.loading && !FAMILY_THREADS.list.length){
+    return h+'<div style="text-align:center;padding:2rem;color:var(--text3)"><span class="spin" style="font-size:20px">↻</span></div>';
+  }
+  var all=_msgRows();
+  // A search narrows the whole page rather than one section of it, so a
+  // parent is found without knowing which section they ended up in.
+  if(MSG_SEARCH.query){
+    var hits=_searchHits();
+    all=all.filter(function(r){ return hits.indexOf(r.kind+':'+r.id)!==-1; });
+  }
+  var news=all.filter(function(r){return _sectionOf(r)==='new';}).sort(_sortNew);
+  var revs=all.filter(function(r){return _sectionOf(r)==='review';}).sort(function(a,b){return b.at-a.at;});
+  var rest=all.filter(function(r){return _sectionOf(r)==='closed';}).sort(function(a,b){return b.at-a.at;});
+  var fams=rest.filter(function(r){return r.kind==='family';});
+  var staff=rest.filter(function(r){return r.kind!=='family';});
+
+  h+=rZone(TCH_COPY.sectionNew, news.length)+
+     (news.length?'<div class="thread-list">'+news.map(rConvRow).join('')+'</div>'
+                 :'<div class="zone-empty">Nothing waiting on you.</div>');
+  if(revs.length){
+    h+=rZone(TCH_COPY.sectionReview, revs.length)+
+       '<div class="thread-list">'+revs.map(rConvRow).join('')+'</div>';
+  }
+  // AC's two browsing areas, kept exactly as they were and put under one
+  // separator. Collapsed to start: a teacher with twenty-four families should
+  // not scroll past all of them to reach the four things that need doing.
+  // Collapsed it still carries its counts, so it says what it holds rather
+  // than looking empty.
+  h+='<div class="sep" onclick="CLOSED_OPEN=!CLOSED_OPEN;render()">'+
+     '<span class="caret">'+(CLOSED_OPEN?'▾':'▸')+'</span>'+esc(TCH_COPY.sectionClosed)+
+     '<span class="sepc">Families '+fams.length+' · Admin &amp; staff '+staff.length+'</span></div>';
+  if(CLOSED_OPEN){
+    h+=rZone(TCH_COPY.sectionFamilies, fams.length)+
+       (fams.length?'<div class="thread-list">'+fams.map(rConvRow).join('')+'</div>':'<div class="zone-empty">Nothing here.</div>');
+    h+=rZone(TCH_COPY.sectionStaff, staff.length)+
+       (staff.length?'<div class="thread-list">'+staff.map(rConvRow).join('')+'</div>':'<div class="zone-empty">Nothing here.</div>');
+  }
+  return h;
+}
+
+// The search itself. One input and a list under it — every family and every
+// student this teacher has, matched on either, so typing "Charlie" and typing
+// "Ragsdale" land in the same conversation. It reaches every section,
+// including the closed ones, so finding a parent never depends on knowing
+// where they ended up.
+//
+// ON NOT GOING JUMPY, which AC asked for specifically: this page repaints on
+// every poll that finds something new, and a field inside a repaint loses
+// whatever is half-typed in it — the same root as [1.193]'s "why does the
+// cursor time out?" and [1.221]'s snapping composer. render() already restores
+// the caret for any text input BY TYPE rather than by name ([1.193]), which is
+// what makes this safe; there is a check that the rule still covers it.
+function rMsgSearch(){
+  var q=MSG_SEARCH.query||'';
+  var h='<div class="msg-search">'+
+    '<input id="msg-search" type="text" autocomplete="off" placeholder="'+esc(TCH_COPY.searchPlaceholder)+'" '+
+      'value="'+esc(q)+'" oninput="onMsgSearch(this.value)" onfocus="MSG_SEARCH.open=true;render()">';
+  if(q){
+    h+='<button type="button" class="lnk-btn msg-search-x" onclick="clearMsgSearch()" '+
+       'aria-label="Clear search">✕</button>';
+  }
+  if(MSG_SEARCH.open && q){
+    var hits=_searchNames(q);
+    h+='<div class="msg-search-menu">'+
+      (hits.length?hits.map(function(o){
+        return '<div class="msg-search-item" onclick="'+o.open+'">'+esc(o.label)+
+          (o.sub?'<span class="msg-search-sub">'+esc(o.sub)+'</span>':'')+'</div>';
+      }).join(''):'<div class="msg-search-item q">Nothing matches that.</div>')+
+      '</div>';
+  }
+  return h+'</div>';
+}
+
+function onMsgSearch(v){ MSG_SEARCH.query=v; MSG_SEARCH.open=true; render(); }
+function clearMsgSearch(){ MSG_SEARCH.query=''; MSG_SEARCH.open=false; render(); }
+
+// Every name the dropdown can offer: each family by its parents, each student
+// by their own name, and every staff conversation. A student and their parent
+// open the same thread, because there is one conversation per family.
+function _searchNames(q){
+  var needle=String(q||'').toLowerCase().trim();
+  if(!needle) return [];
+  var out=[];
+  (FAMILY_THREADS.list||[]).forEach(function(t){
+    var parents=_rosterParentLine(t)||'Family';
+    var open='openFamilyRow(\''+esc(t.familyId)+'\');clearMsgSearch()';
+    if(parents.toLowerCase().indexOf(needle)!==-1){
+      out.push({label:parents, sub:_rosterStudentLine(t), open:open});
+    }
+    (t.students||[]).forEach(function(st){
+      if(String(st.studentName||'').toLowerCase().indexOf(needle)===-1) return;
+      out.push({label:st.studentName, sub:parents, open:open});
+    });
+  });
+  (STAFF_THREADS.list||[]).forEach(function(x){
+    var nm=x.contactType==='admin'?'Admin':(x.teacherName||'');
+    if(nm.toLowerCase().indexOf(needle)===-1) return;
+    out.push({label:nm, sub:'Admin & staff',
+      open:(x.contactType==='admin'
+        ? 'openStaffThread(\'admin\',\'admin\',\'Admin\')'
+        : 'openStaffThread(\'staff\',\''+esc(x.teacherId)+'\',\''+esc(nm)+'\')')+';clearMsgSearch()'});
+  });
+  return out.slice(0,12);
+}
+
+// Which conversations survive a search, for the sections themselves — the same
+// matching as the dropdown, expressed as keys.
+function _searchHits(){
+  var needle=String(MSG_SEARCH.query||'').toLowerCase().trim();
+  var keys=[];
+  (FAMILY_THREADS.list||[]).forEach(function(t){
+    var hay=[_rosterParentLine(t), _rosterStudentLine(t)].join(' ').toLowerCase();
+    if(hay.indexOf(needle)!==-1) keys.push('family:'+t.familyId);
+  });
+  (STAFF_THREADS.list||[]).forEach(function(x){
+    var nm=(x.contactType==='admin'?'Admin':(x.teacherName||'')).toLowerCase();
+    if(nm.indexOf(needle)!==-1) keys.push((x.contactType==='admin'?'admin:admin':'staff:'+x.teacherId));
+  });
+  return keys;
+}
+
+function rZone(label, n){
+  return '<div class="zone">'+esc(label)+
+    (n?'<span class="zcount">'+n+'</span>':'')+'</div>';
+}
+
+// One row, both kinds. AC, 3 September:
+//   • the parent is who the teacher is speaking with, so the parent's name is
+//     the largest thing on the row and the student sits under it, labelled;
+//   • the arrow ALWAYS points right and the sender is always on the left —
+//     the first draft flipped it to keep the parent's name in one column, and
+//     that put the recipient first, which is [1.205] backwards;
+//   • "we don't need the word parent actually. Just student:" — the two names
+//     on the top line are the people talking and need no explaining; only the
+//     student is labelled, being the one name on the row belonging to someone
+//     who is not in the conversation;
+//   • staff conversations carry no parent and no student at all.
+function rConvRow(r){
+  var open = r.kind==='family'
+    ? 'openFamilyRow(\'' + esc(r.id) + '\')'
+    : (r.kind==='admin' ? 'openStaffThread(\'admin\',\'admin\',\'Admin\')'
+                        : 'openStaffThread(\'staff\',\'' + esc(r.id) + '\',\'' + esc(r.name||'') + '\')');
+  var head, kids='';
+  if(r.kind==='family'){
+    var parent=_rosterParentLine(r.row)||'Family';
+    var mine=_lastWasMine(r.row);
+    head = mine
+      ? '<span class="dir">You →</span> '+esc(parent)
+      : esc(parent)+' <span class="dir">→ you</span>';
+    kids=_rosterStudentLine(r.row);
+  } else {
+    var who = r.kind==='admin' ? '<span class="apill">Admin</span>' : esc(r.name||'');
+    head = _lastWasMine(r.row) ? '<span class="dir">You →</span> '+who : who+' <span class="dir">→ you</span>';
+  }
+  var when = r.at ? ' <span class="dir">· '+esc(fmtMsgTime(r.at))+'</span>' : '';
+  // The deadline, on the row, so nobody has to work it out from a colour.
+  var due = (!r.closed && r.replyDueBy)
+    ? ' <span class="due">'+esc(fmtDueShort(r.replyDueBy))+'</span>' : '';
+  return '<div class="thread-row" onclick="'+open+'">'+
+    '<div class="thread-row-main">'+
+    '<div class="r-parent">'+head+when+due+
+      (r.row.sharedWithAdmin?'<span class="handoff-tag">Admin asked</span>':'')+'</div>'+
+    (kids?'<div class="r-student"><span class="lbl">Student:</span> '+esc(kids)+'</div>':'')+
+    '<div class="thread-row-preview">'+(r.hasMessages
+      ? esc((r.preview||'').slice(0,60))
+      : '<span style="opacity:.7">No messages yet</span>')+'</div>'+
+    '</div>'+
+    '<div class="row-marks">'+rRowMarks(r)+'</div></div>';
+}
+
+// What sits on the right of a row. AC, 3 September: "If the message has been
+// responded to and there is no bubble, maybe put the 'close conversation'
+// button in place of that?"
+//
+// So the empty slot gets the one action that conversation still has. It is not
+// the repetition [1.198] set out to strip, because it appears ONLY where there
+// is nothing else to show — a row that is waiting on you shows why, and a row
+// that is not offers the thing you might want to do with it. The confirm still
+// guards it, so a stray click cannot close anything.
+function rRowMarks(r){
+  if(r.closed) return '<span class="closed-tag">Closed</span>';
+  var marks=rReadMark(r.unread, r.waitingSince, r.closed, r.replyDueBy)+rReviewMark(r.review);
+  if(marks) return marks;
+  return '<button type="button" class="btn btn-s row-close" '+
+    'onclick="event.stopPropagation();closeRow('+_rowArgs(r)+')">'+
+    esc(TCH_COPY.closeConversation)+'</button>';
+}
+
+// Closing from the roster, without opening the conversation first. Same
+// confirm and the same endpoint as the button in the thread.
+function _rowArgs(r){
+  return "'"+esc(r.kind)+"','"+esc(r.id)+"'";
+}
+function closeRow(kind, id){
+  if(!confirm(TCH_COPY.closeConfirm)) return;
+  var d={teacherToken:TOKEN, teacherId:TEACHER_ID, closed:true};
+  if(kind==='family'){ d.conversationType='family_teacher'; d.familyId=id; }
+  else if(kind==='admin'){ d.conversationType='teacher_admin'; }
+  else { d.conversationType='staff_staff'; d.staffId2=id; }
+  api({action:'setConversationClosed', data:d}, function(e,r){
+    if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not close that.','e'); return; }
+    _refreshRosters();
+  });
+}
+
+// Who spoke last, for the direction on the row. The roster carries the last
+// sender for family threads; for a staff thread "waiting on you" is the same
+// question and is already answered by waitingSince.
+function _lastWasMine(t){
+  if(!t) return false;
+  // The server answers this, because the portal cannot: a thread with nothing
+  // unread and nobody waiting could have ended with either side. The fallback
+  // is for a staff row, whose payload does not carry the flag.
+  if(t.lastSenderIsTeacher!==undefined) return !!t.lastSenderIsTeacher;
+  return !t.waitingSince && !Number(t.unread||0) && !!t.lastMessageAt;
+}
+
 function _rosterStudentLine(t){
   var kids=t.students||[];
   if(!kids.length) return [t.parent1Name,t.parent2Name].filter(Boolean).join(' & ')||'Family';
@@ -904,99 +1397,8 @@ function _rosterParentLine(t){
   return [t.parent1Name,t.parent2Name].filter(Boolean).join(' & ')||'';
 }
 
-function rFamilyThreadList(){
-  var h='<button class="btn btn-p" style="margin-bottom:1rem" onclick="openFamilyPicker()">+ New Conversation</button>';
-  // BACKLOG 1.161 #3 — search across parent and child names and message
-  // bodies. Runs on the server, because the roster carries only each
-  // conversation's latest line and searching what happens to be loaded would
-  // quietly miss older messages.
-  h+='<input id="fam-search" type="text" placeholder="Search names or messages…" value="'+esc(FAMILY_SEARCH.query)+'" '+
-     'oninput="onFamilySearch(this.value)" style="width:100%;margin-bottom:.75rem;font-size:13px">';
-  if(FAMILY_THREADS.loading){
-    return h+'<div style="text-align:center;padding:2rem;color:var(--text3)"><span class="spin" style="font-size:20px">↻</span></div>';
-  }
-  if(!FAMILY_THREADS.list.length){
-    // [1.172] — the roster is now built from this teacher's students, so an
-    // empty list means no students assigned, not no messages.
-    return h+'<div class="empty-state">No students assigned to you yet.</div>';
-  }
-  var rows=_familyRosterRows();
-  if(!rows.length){
-    return h+'<div class="empty-state">'+(FAMILY_SEARCH.searching?'Searching…':'Nothing matches that.')+'</div>';
-  }
-  h+='<div class="thread-list">'+rows.map(function(t){
-    // Ids only in the handler. esc() does not escape an apostrophe, so a
-    // parent named O'Brien broke this row's click — the same latent bug found
-    // and fixed on the admin side the same day (BACKLOG 1.73).
-    return '<div class="thread-row" onclick="openFamilyRow(\''+esc(t.familyId)+'\')">'+
-      '<div class="thread-row-main">'+
-      // 1.191 — parent first, then the student line beneath it.
-      '<div class="row-parent">'+esc(_rosterParentLine(t)||_rosterStudentLine(t))+
-        // BACKLOG 1.135 — this one is with the office now, so the teacher can
-        // see at a glance that it is not sitting on them.
-        (t.sharedWithAdmin?'<span class="handoff-tag">Admin asked</span>':'')+
-        (t.closed?'<span class="handoff-tag">Closed</span>':'')+'</div>'+
-      (_rosterParentLine(t)?'<div class="row-student">'+esc(_rosterStudentLine(t))+'</div>':'')+
-      // [1.172] — a family on the roster who has never written is normal, and
-      // an empty preview line reads as a broken row.
-      '<div class="thread-row-preview">'+(t.hasMessages
-        ? esc((t.lastMessageText||'').slice(0,60))
-        : '<span style="opacity:.7">No messages yet</span>')+'</div>'+
-      '</div>'+
-      rReadToggle(t.unread, 'family_teacher', t.familyId, TEACHER_ID, '', 'family', t.waitingSince, t.closed, t.replyDueBy)+
-      '</div>';
-  }).join('')+'</div>';
-  return h;
-}
-
-// The rows actually shown: everything, or just what the search matched.
-function _familyRosterRows(){
-  if(!FAMILY_SEARCH.query) return FAMILY_THREADS.list;
-  var ids=FAMILY_SEARCH.familyIds||[];
-  return FAMILY_THREADS.list.filter(function(t){ return ids.indexOf(t.familyId)!==-1; });
-}
-// Debounced: a keystroke should not be a round trip.
-function onFamilySearch(v){
-  FAMILY_SEARCH.query=v;
-  if(FAMILY_SEARCH.timer) clearTimeout(FAMILY_SEARCH.timer);
-  if(!String(v||'').trim()){ FAMILY_SEARCH.familyIds=[]; FAMILY_SEARCH.searching=false; render(); return; }
-  FAMILY_SEARCH.searching=true;
-  FAMILY_SEARCH.timer=setTimeout(function(){
-    var q=FAMILY_SEARCH.query;
-    api({action:'searchTeacherMessages', data:{teacherToken:TOKEN, query:q}}, function(e,r){
-      if(FAMILY_SEARCH.query!==q) return;   // a later keystroke already won
-      FAMILY_SEARCH.searching=false;
-      if(e||!r||!r.ok){ FAMILY_SEARCH.familyIds=[]; render(); return; }
-      FAMILY_SEARCH.familyIds=r.familyIds||[];
-      render();
-    });
-  },300);
-}
-
-// Small clickable read/unread control on a roster row (18 Aug) — teachers
-// wanted a Gmail-style manual toggle, not just automatic read-on-open.
-// stopPropagation so clicking it doesn't also open the thread underneath.
-// listKind ('family'|'staff') tells markThreadRead() which list to
-// silently refresh afterward, so the toggle's effect is visible right away.
-// ── The ageing circle (BACKLOG 1.128) ──────────────────────────────────
-// Staff-facing only, by AC's instruction on 1 Sept: families never see a
-// countdown. It rides teacher-token endpoints and appears here and in admin's
-// Awaiting Reply, nowhere else.
-//
-// Why not simply elapsed hours. AC first chose a straight clock, then reversed
-// it the same day: "messages sent after friday 5pm shouldn't expect teacher
-// responses until Monday morning." Counting every hour turned every Monday
-// morning red, and a list where everything is red carries no information. So
-// OVERDUE means 24 hours the studio was OPEN.
-//
-// Saturday is excluded deliberately even though it is a teaching day — a
-// Saturday teacher is teaching, not doing message admin (AC, 28 Aug). The
-// window is studio-wide rather than per teacher: the promise is Keylab's, so it
-// has to be explicable to a parent and fair between staff.
-//
-// The clock runs from when the message ARRIVED, never from when it was opened
-// (AC, 1 Sept), which is why marking a thread unread does not reset it.
 var RESP_OPEN_HOUR=9, RESP_CLOSE_HOUR=17;   // studio hours — kept for the notify window, no longer the clock
+
 function _respHoursBetween(fromMs, toMs){
   var from=Number(fromMs)||0, to=Number(toMs)||0;
   if(!from || to<=from) return 0;
@@ -1031,45 +1433,62 @@ function _agingMark(waitingSince, dueBy){
   // row from an older payload.
   if(dueBy ? (now>=Number(dueBy)) : (h>=24)) return {cls:'p-od', overdue:true, label:'Overdue'};
   var n=Math.round(h);
-  if(h>=12) return {cls:'p-8h', t:n+'h', label:'Waiting '+n+'h'};
+  if(h>=12) return {cls:'p-12h', t:n+'h', label:'Waiting '+n+'h'};
   if(h>=4) return {cls:'p-4h', t:n+'h', label:'Waiting '+n+'h'};
   if(h>=2) return {cls:'p-2h', t:n+'h', label:'Waiting '+n+'h'};
   return {cls:'p-rest', t:(n>=1?n+'h':'new'), label:(n>=1?'Waiting '+n+'h':'Waiting — less than an hour')};
 }
 
-// One control, both states (AC, 1 Sept): blue with the unread count clicks to
-// mark read; an ageing circle clicks to mark unread and returns to blue. The
-// clock keeps running underneath either way, because the family is waiting
-// regardless of what the teacher has ticked.
-// AC, 1 Sept: a teacher cannot mark something read while it is still waiting
-// on their reply — "read" must not become a way to clear an obligation off
-// your own list. Marking UNREAD is always allowed, is private to the teacher,
-// and changes nothing for anyone else. The server refuses the first case too;
-// this is what stops the tool offering a button that would be refused.
-function rReadToggle(unread, conversationType, familyId, teacherId, staffId2, listKind, waitingSince, closed, dueBy){
-  var fn='markThreadRead('+(unread?'true':'false')+',\''+conversationType+'\',\''+esc(familyId)+'\',\''+esc(teacherId)+'\',\''+esc(staffId2)+'\',\''+listKind+'\')';
-  var click=' onclick="event.stopPropagation();'+fn+'"';
-  var owed=!!waitingSince && !closed;
-  if(unread && owed){
-    return '<div class="msg-circle p-new" title="Reply first — a conversation waiting on you can\'t be marked read" '+
-      'aria-label="'+unread+' unread">'+unread+'</div>';
+// ── The ageing circle (BACKLOG 1.128, rebuilt 3 September 2026) ─────────
+// AC, 3 Sept: "it seems unnecessary to have an unread button. If the message
+// has been read, it's read... Read becomes automatic for everyone."
+//
+// So this is no longer a control. Mark-unread is gone from all three portals:
+// it marked a whole thread, it asserted something untrue about a message that
+// had been read, and it was most of why [1.216] says the counts are messy.
+// Saving an individual message for review replaces it. Read has always been
+// stamped automatically on open by doGetConversation(), so nothing had to be
+// built for "read is automatic" — the manual buttons were overrides on top of
+// behaviour that was already right, and they simply go.
+//
+// AC, 3 Sept, on what the mark now means: "agreed on the color not showing the
+// hours." THE NUMBER IS ALWAYS A COUNT. THE COLOUR IS ALWAYS THE AGE. The
+// circle used to hold the unread count for two hours and then silently switch
+// to holding a duration ("6h"), so its content changed meaning as time passed
+// — which is [1.216]'s complaint present in the design. Now the count stays at
+// every stage and the colour alone says how long.
+//
+// He asked what happens with two unread messages sent at different times, and
+// whether each needs its own circle: no. One circle, the count says how many,
+// and the colour comes from the OLDEST unanswered one — see [1.228], which is
+// the defect that question uncovered.
+function rReadMark(unread, waitingSince, closed, dueBy){
+  var n = Number(unread) || 0;
+  var m = closed ? null : _agingMark(waitingSince, dueBy);
+  // Nothing outstanding: no mark at all. AC's resting-state rule — the little
+  // ○ that used to sit here was the mark-unread control, and with that gone an
+  // empty column is the honest version of "nothing needs you".
+  if (!n && !m) return '';
+  // Overdue keeps its word BESIDE the circle rather than replacing it, so the
+  // count survives to the last stage instead of disappearing exactly when the
+  // conversation matters most.
+  if (m && m.overdue){
+    return (n?'<div class="msg-circle p-od" aria-label="'+n+' unread">'+n+'</div>':'')+
+           '<div class="msg-overdue" aria-label="Overdue">OVERDUE</div>';
   }
-  if(unread) return '<div class="msg-circle p-new"'+click+' title="Mark read" aria-label="'+unread+' unread">'+unread+'</div>';
-  var m=_agingMark(waitingSince, dueBy);
-  if(m && m.overdue) return '<div class="msg-overdue"'+click+' title="Mark unread" aria-label="Overdue">OVERDUE</div>';
-  if(m) return '<div class="msg-circle '+m.cls+'"'+click+' title="Mark unread" aria-label="'+esc(m.label)+'">'+m.t+'</div>';
-  return '<button type="button" class="read-toggle" onclick="event.stopPropagation();'+fn+'" title="Mark unread">○</button>';
+  var cls = m ? m.cls : 'p-new';
+  var label = m ? m.label : (n+' unread');
+  return '<div class="msg-circle '+cls+'" aria-label="'+esc(label)+'">'+(n||'')+'</div>';
 }
 
-function markThreadRead(read, conversationType, familyId, teacherId, staffId2, listKind){
-  var reqData={conversationType:conversationType, teacherToken:TOKEN, read:read};
-  if(familyId) reqData.familyId=familyId;
-  if(teacherId) reqData.teacherId=teacherId;
-  if(staffId2) reqData.staffId2=staffId2;
-  api({action:'setConversationReadState', data:reqData}, function(e,r){
-    if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not update.','e'); return; }
-    if(listKind==='family') loadFamilyThreads(true); else loadStaffThreads(true);
-  });
+// The white circle: how many messages in this thread this teacher has saved
+// for review ([1.215]). A separate meaning from the one above and never mixed
+// with it — the blue/aged circle says someone is waiting on you, this one says
+// you parked something for yourself. Private: nobody else is sent it.
+function rReviewMark(count){
+  var n = Number(count) || 0;
+  if (!n) return '';
+  return '<div class="msg-circle p-review" title="Saved for review" aria-label="'+n+' saved for review">'+n+'</div>';
 }
 
 function loadFamilyThreads(silent){
@@ -1241,7 +1660,9 @@ function rFamilyThread(){
   if(!t.messages.length){
     h+='<div class="empty-state">No messages yet — send a message to get started.</div>';
   } else {
-    h+='<div class="msg-list">'+t.messages.map(rMessageBubble).join('')+'</div>';
+    var _r=_convRow(t.familyId);
+    h+='<div class="msg-list">'+t.messages.map(rMessageBubble).join('')+
+       (_r?rClosedLine(_r.closedAt,_r.closedByName):'')+'</div>';
   }
   // Recipient choice only matters when there are two distinct parents on
   // file — mirrors admin Comms' recipient picker (confirmed 18 Aug, SPEC §7
@@ -1252,9 +1673,34 @@ function rFamilyThread(){
       '<label><input type="checkbox" '+(t.notifyP2?'checked':'')+' onchange="ACTIVE_THREAD.notifyP2=this.checked"> '+esc(t.parent2Name)+'</label>'+
       '</div>';
   }
-  var sendBtn=t.sending
+  // AC, 3 September: Send and "Ask admin about this" sit together on the left
+  // — both send something — and Close conversation sits alone hard right,
+  // because it ends something. Close lives here, in the open conversation, and
+  // deliberately not on the roster rows: closing needs the conversation in
+  // front of you, which is why AC asked for a confirm step, and a button
+  // repeated down every row is the repetition [1.198] set out to strip.
+  var _cRow=_convRow(t.familyId);
+  // AC, 3 September, settling where this lives: on the thread, in the main
+  // message view, not on an individual message.
+  //
+  // It belongs to the CONVERSATION — one deadline, however many messages are
+  // waiting — and hanging it off a message made that untrue. It was also the
+  // wrong message in practice: the clock runs from the OLDEST unanswered one
+  // ([1.228]), which in a burst of three is the furthest up the thread and the
+  // most likely to be scrolled past. Here it is in view whenever the
+  // conversation is open.
+  if(_cRow && !_cRow.closed && _cRow.replyDueBy){
+    h+='<div class="due-line">'+esc(fmtDueFull(_cRow.replyDueBy))+'</div>';
+  }
+  var sendBtn=(t.sending
     ?'<button class="btn btn-p" disabled><span class="spin">↻</span></button>'
-    :'<button class="btn btn-p" onclick="sendFamilyMessage()">Send</button>';
+    :'<button class="btn btn-p" onclick="sendFamilyMessage()">Send</button>')+
+    (t.forwardOpen?'':'<button type="button" class="btn btn-ask" onclick="ACTIVE_THREAD.forwardOpen=true;render()">'+
+      esc(CMP_COPY.askAdmin)+'</button>')+
+    '<span style="flex:1"></span>'+
+    (_cRow&&_cRow.closed
+      ? '<span class="closed-tag">Closed</span>'
+      : '<button type="button" class="btn btn-s" onclick="closeConversation()">'+esc(TCH_COPY.closeConversation)+'</button>');
   // BACKLOG 1.161 #4 — which child, asked only when a teacher has more than
   // one child in this family. One child and it is set automatically with
   // nothing on screen.
@@ -1292,15 +1738,91 @@ function rFamilyThread(){
            ? '<button class="btn btn-p" disabled><span class="spin">↻</span></button>'
            : '<button class="btn btn-p" onclick="forwardToAdmin()">Send to admin</button>')+
        '</div></div>';
-  } else {
-    // [1.164], AC: "Terrible design. Should be prominent and a button." It was
-    // a hyperlink, then a quiet one; this is the actual ask.
-    h+='<div style="margin-top:.6rem">'+
-       '<button type="button" class="btn btn-s" style="width:100%;justify-content:center" '+
-       'onclick="ACTIVE_THREAD.forwardOpen=true;render()">Ask admin about this</button>'+
-       '</div>';
   }
   return h;
+}
+
+// The conversation's roster row, for the facts the thread payload does not
+// carry — whether it is closed, and who closed it.
+function _convRow(familyId){
+  return (FAMILY_THREADS.list||[]).filter(function(x){ return x.familyId===familyId; })[0]||null;
+}
+
+// ── The three things a teacher does to a conversation (3 September 2026) ──
+
+// Save a message for review ([1.215]). Private, per message, and the only
+// hand-made mark left anywhere: it replaced mark-unread, which marked a whole
+// thread and claimed something untrue about a message that had been read.
+// Optimistic — the tick is instant and the roster catches up behind it, since
+// a checkbox that waits on a round trip feels broken.
+function toggleReview(messageId, on){
+  var t=ACTIVE_THREAD||ACTIVE_STAFF_THREAD;
+  if(!t) return;
+  (t.messages||[]).forEach(function(m){ if(m.messageId===messageId) m.reviewAt=on?Date.now():''; });
+  api({action:'setMessageReview', data:_threadKey(t,{messageId:messageId, review:!!on})}, function(e,r){
+    if(e||!r||!r.ok){
+      // Put it back rather than leaving a tick that did not stick.
+      (t.messages||[]).forEach(function(m){ if(m.messageId===messageId) m.reviewAt=on?'':Date.now(); });
+      showMsg((r&&r.error)||'Could not save that for review.','e'); render(); return;
+    }
+    _refreshRosters();
+  });
+  render();
+}
+
+// "Mark seen" ([1.220]) — the two-line note, sent on purpose. It does NOT stop
+// the clock: the conversation goes on ageing, keeps its place, and stays on
+// admin's list until someone actually answers. Being seen is not being
+// answered, and the tool must never let the two look the same — that is the
+// whole of the item.
+function markSeen(){
+  var t=ACTIVE_THREAD||ACTIVE_STAFF_THREAD;
+  if(!t||t.seenSending) return;
+  t.seenSending=true; render();
+  api({action:'markMessageSeen', data:_threadKey(t,{})}, function(e,r){
+    t.seenSending=false;
+    if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not send that.','e'); render(); return; }
+    _refreshOpenThread();
+  });
+}
+
+// Closing, which is deliberate and confirmed (AC, 3 Sept: "make teachers
+// formally close conversations using a checkbox or button to close, with a
+// confirm step"). Replying closes nothing — a teacher who answers "I'll check
+// and come back to you" has replied without finishing, and no rule can tell
+// that from a real answer.
+function closeConversation(){
+  var t=ACTIVE_THREAD||ACTIVE_STAFF_THREAD;
+  if(!t||t.closing) return;
+  if(!confirm(TCH_COPY.closeConfirm)) return;
+  t.closing=true; render();
+  api({action:'setConversationClosed', data:_threadKey(t,{closed:true})}, function(e,r){
+    t.closing=false;
+    if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not close that.','e'); render(); return; }
+    _refreshRosters();
+    _refreshOpenThread();
+  });
+}
+
+// The four fields every one of these endpoints identifies a conversation by,
+// in one place — three copies of this is how two of them would end up
+// disagreeing about which thread they were talking to.
+function _threadKey(t, extra){
+  var d={teacherToken:TOKEN, teacherId:TEACHER_ID};
+  if(t===ACTIVE_STAFF_THREAD){
+    // A staff thread names itself by who it is with, not by a family.
+    if(t.contactType==='admin'){ d.conversationType='teacher_admin'; }
+    else { d.conversationType='staff_staff'; d.staffId2=t.otherId; }
+  } else {
+    d.conversationType='family_teacher';
+    d.familyId=t.familyId;
+  }
+  Object.keys(extra||{}).forEach(function(k){ d[k]=extra[k]; });
+  return d;
+}
+function _refreshRosters(){ loadFamilyThreads(true); loadStaffThreads(true); }
+function _refreshOpenThread(){
+  if(ACTIVE_STAFF_THREAD) refreshStaffThread(); else if(ACTIVE_THREAD) refreshFamilyThread();
 }
 
 // Sends the family's latest message to the office with the teacher's own note,
@@ -1384,66 +1906,6 @@ function sendFamilyMessage(){
   });
 }
 
-// Same two-pane treatment as Family Messages above, same reasoning.
-function rStaffMessagesTab(){
-  var showThread=STAFF_VIEW==='thread';
-  return '<div class="panes">'+
-    '<div class="pane'+(showThread?' only-lg':'')+'">'+rStaffRoster()+'</div>'+
-    '<div class="pane'+(showThread?'':' only-lg')+'">'+
-      (showThread?rStaffThread():'<div class="pane-empty">Choose someone to see the conversation.</div>')+
-    '</div>'+
-  '</div>';
-}
-
-// Shows the whole team directly (1.19, 18 Aug) — no "+ New Conversation"
-// picker for staff, unlike Family Messages. With ~7 people total, hiding
-// the roster behind a button was pure friction; a small team should look
-// like a Slack workspace list, always visible. Admin is always pinned
-// first regardless of activity; everyone else is merged from the staff
-// directory (so people with no conversation yet still show up) plus
-// existing thread previews where they exist, then sorted by most recent
-// activity (no-activity entries last, alphabetical among themselves).
-function rStaffRoster(){
-  if(STAFF_PICKER.loading || STAFF_THREADS.loading){
-    return '<div style="text-align:center;padding:2rem;color:var(--text3)"><span class="spin" style="font-size:20px">↻</span></div>';
-  }
-  // Admin now comes from the same live thread data as everyone else
-  // (doGetTeacherStaffThreads covers teacher_admin too as of 18 Aug) —
-  // still pinned first regardless of activity, but with a real preview and
-  // unread badge instead of being a static row.
-  var threadsById={};
-  STAFF_THREADS.list.forEach(function(t){ threadsById[t.otherTeacherId]=t; });
-  var admin=threadsById['admin']||{otherTeacherId:'admin', otherTeacherName:'Admin', lastMessageAt:0, lastMessageText:'', unread:0};
-  var rows=STAFF_PICKER.all.map(function(s){
-    var t=threadsById[s.teacherId];
-    return {teacherId:s.teacherId, teacherName:s.teacherName, lastMessageAt:t?t.lastMessageAt:0, lastMessageText:t?t.lastMessageText:'', unread:t?t.unread:0, waitingSince:t?t.waitingSince:0};
-  }).sort(function(a,b){
-    if(a.lastMessageAt && b.lastMessageAt) return Number(b.lastMessageAt)-Number(a.lastMessageAt);
-    if(a.lastMessageAt) return -1;
-    if(b.lastMessageAt) return 1;
-    return a.teacherName.localeCompare(b.teacherName);
-  });
-  var h='<div class="thread-list">';
-  h+='<div class="thread-row" onclick="openStaffThread(\'admin\',\'admin\',\'Admin\')">'+
-    '<div class="thread-row-main">'+
-    '<div class="thread-row-name">Admin</div>'+
-    (admin.lastMessageText?'<div class="thread-row-preview">'+esc(admin.lastMessageText.slice(0,60))+'</div>':'')+
-    '</div>'+
-    rReadToggle(admin.unread, 'teacher_admin', '', TEACHER_ID, '', 'staff', admin.waitingSince, false, admin.replyDueBy)+
-    '</div>';
-  h+=rows.map(function(s){
-    return '<div class="thread-row" onclick="openStaffThread(\'staff\',\''+esc(s.teacherId)+'\',\''+esc(s.teacherName)+'\')">'+
-      '<div class="thread-row-main">'+
-      '<div class="thread-row-name">'+esc(s.teacherName)+'</div>'+
-      (s.lastMessageText?'<div class="thread-row-preview">'+esc(s.lastMessageText.slice(0,60))+'</div>':'')+
-      '</div>'+
-      rReadToggle(s.unread, 'staff_staff', '', TEACHER_ID, s.teacherId, 'staff', s.waitingSince, false, s.replyDueBy)+
-      '</div>';
-  }).join('');
-  h+='</div>';
-  return h;
-}
-
 function loadStaffThreads(silent){
   if(!silent){ STAFF_THREADS.loading=true; render(); }
   api({action:'getTeacherStaffThreads', data:{teacherToken:TOKEN}}, function(e,r){
@@ -1511,9 +1973,13 @@ function rStaffThread(){
   } else {
     h+='<div class="msg-list">'+t.messages.map(rMessageBubble).join('')+'</div>';
   }
-  var sendBtn=t.sending
+  var sendBtn=(t.sending
     ?'<button class="btn btn-p" disabled><span class="spin">↻</span></button>'
-    :'<button class="btn btn-p" onclick="sendStaffMessage()">Send</button>';
+    :'<button class="btn btn-p" onclick="sendStaffMessage()">Send</button>')+
+    // Same row as the family thread, minus "Ask admin about this" — you do not
+    // ask admin about a conversation you are already having with them.
+    '<span style="flex:1"></span>'+
+    '<button type="button" class="btn btn-s" onclick="closeConversation()">'+esc(TCH_COPY.closeConversation)+'</button>';
   // BACKLOG 1.158 — staff messages stay in-app by default (AC, 1 Sept), with
   // the same per-message override admin has always had, for reaching someone
   // who is not watching the portal. Unchecked every time on purpose: a sticky
@@ -1846,6 +2312,71 @@ function _composerStateClear(id){
 // digital materials is the eventual answer; until then this is the
 // instruction.) It is the on-screen guidance SPEC_MESSAGING_V1 has asked for
 // since 19 Aug, where it is called the most likely real-world failure.
+// AC's words, 3 September 2026. Every one of these was given by him: the two
+// control labels, the confirm, and the closing line. The "seen" sentence the
+// family is shown is NOT here — it lives on the server (SEEN_NOTE_TEXT), so
+// the teacher and admin portals cannot ship two versions of the same promise.
+var TCH_COPY={
+  // The section names are AC's. "New Messages" became "Messages" on 3 Sept,
+  // once he settled that a conversation you have answered but not closed stays
+  // in this section: it holds live conversations from arrival until you close
+  // them, not only new ones, and the name now says so.
+  sectionNew:'Messages',
+  sectionReview:'Marked for review',
+  sectionClosed:'Closed Conversations',
+  sectionFamilies:'Families',
+  sectionStaff:'Admin & staff',
+  searchPlaceholder:'Search families or students…',
+  guideTitle:'How to use Messages',
+  // AC's copy, 3 September 2026 — his draft, his headings, his wording. Two
+  // things were corrected with him before it went in and both are noted where
+  // they land: the colour stages (his new key: blue, purple, amber, orange,
+  // red — the palette moved to match, it was not the guide that changed), and
+  // the timer, which starts when a message ARRIVES and not when it is opened.
+  // If reading started the clock, leaving something unopened would push the
+  // deadline back, which is exactly what the promise exists to prevent.
+  guide:[
+    {h:'Message badge — solid colour, white number', items:[
+      {t:'The number', d:'How many messages in a thread are waiting for you to respond. This will usually be “1”, but could be more based on how many messages the parent sends. If responding to multiple messages, one reply will zero out all messages, so be sure to read and answer thoroughly so you don’t miss anything!'},
+      {t:'The colour', d:'How long the oldest message in a thread has been waiting: blue when it is new, purple at 2 hours, amber at 4, orange at 12, and red OVERDUE once it is past the response deadline.'}
+    ]},
+    {h:'Marked for review badge — white circle, blue number', items:[
+      {t:'What it is', d:'These are messages you have set to review. This badge is independent of the solid colour message badge. Marked for review is a private setting and will not be seen by family or admin.'}
+    ]},
+    {h:'No circle, “Close conversation” button visible', items:[
+      {t:'What it means', d:'Nothing is waiting on you in that conversation. Close the conversation if no response is due and the conversation is resolved.'}
+    ]},
+    {h:'Message sections', items:[
+      {t:'Messages', d:'Messages stay here until you mark a conversation closed.'},
+      {t:'Marked for review', d:'Threads with individual messages marked for review. If a family sends a new message, the conversation moves back up to Messages, but you’ll still see the review count in the white circle with the blue number. Unclick the checkbox to revert messages marked for review to normal/read status.'},
+      {t:'Closed Conversations', d:'Messages that have been formally closed (see below). Families and staff/admin are kept separate. Click the heading to expand to see all closed conversations.'},
+      {t:'Search', d:'Finds any of your currently enrolled students and their families.'}
+    ]},
+    {h:'Reading a message', items:[
+      {t:'Opening a conversation', d:'Marks it read. There is nothing to click.'},
+      {t:'The timer', d:'The response clock starts when the message arrives, not when you open it. Reading a message does not pause it — only your reply stops it.'}
+    ]},
+    {h:'Your schedule and notifications', items:[
+      {t:'Your reply time', d:'The response clock starts when a family’s message arrives, not when you open it. You have 24 hours max to answer, but should reply asap. A message that arrives in the evening should be responded to by noon the next day, and anything sent Friday evening or over the weekend should be replied to by Monday at noon. Evening is generally defined as being after your last scheduled lesson on any given day, so the boundary follows your timetable rather than the studio’s. Be sensitive to time sensitive messages, and reach out to admin if you need help!'},
+      {t:'Reminders', d:'If something is still unanswered you’ll get one email a day, sent within your own working hours, and none at all when nothing is outstanding. If you’ve forwarded a message to admin for review, reminders pause until you receive a response from the admin.'},
+      {t:'When you’re away', d:'Turning on Away shows families your away message automatically and sends an auto-reply via email. The response clock keeps running while you’re away; Away tells families what to expect, but the message will still need to be responded to when you are active again. If the admin responds, you do not need to respond unless it’s clear in the message that you should respond, or the admin has requested you follow up with the family.'}
+    ]},
+    {h:'Message helpers — seen on individual messages in a thread', items:[
+      {t:'Save for review', d:'Tick “Save for review” on the message in the thread (not the entire thread). It will move to the review area. Private setting to use however you like.'},
+      {t:'Mark seen', d:'Adds a quick generic message to the conversation thread letting the family know their message has been seen. Admin or teacher can mark a message as seen and this is visible to all parties. It is not a reply, and the timer keeps running until you send one. Use this when you don’t have time to respond but want the parent to know you have seen the message.'}
+    ]},
+    {h:'Send, Ask Admin, and Close Conversation', items:[
+      {t:'Send', d:'Sends your reply to the sender (family or admin or other staff member). Visible to the recipient and admin.'},
+      {t:'Ask Admin', d:'Shares the conversation with admin. Teachers need to add a required note to give admin context on what they need help with. This is a private message between admin and teacher and will not be seen by family. The message response countdown continues until the message has been responded to — by either you or admin — or the conversation is marked as closed.'},
+      {t:'Close conversation', d:'Conversations can be marked closed by teacher or admin. When marking a conversation as closed, the conversation has reached its natural conclusion and can be archived to the closed conversation area. If the family sends another message, it moves back to Messages so you’ll always have full context on message history with your families, other staff, and admin.'}
+    ]}
+  ],
+  saveForReview:'Save for review',
+  markSeen:'Mark seen',
+  closeConversation:'Close conversation',
+  closeConfirm:'Close conversation?'
+};
+
 var CMP_COPY={
   // AC, 1 Sept — the validation the teacher sees beside the Send button.
   forwardNeedsNote:'Add a note saying what you need from admin.',
@@ -1857,6 +2388,9 @@ var CMP_COPY={
   internal:'Internal Message - not visible to family',
   internalReply:'Reply privately',
   internalPh:'Reply to the office — the family cannot see this',
+  // [1.164], AC: "Terrible design. Should be prominent and a button." Same
+  // words, moved beside Send on 3 Sept at AC's instruction.
+  askAdmin:'Ask Admin',
   placeholder:'Type your message here...',
   linkUrlPlaceholder:'Add link here',
   linkTextPlaceholder:'Link text (optional)',
@@ -1962,6 +2496,10 @@ function rMessageBubble(m){
   // about. AC: teachers see these inline too. Never mistakable for something
   // the family can read.
   if(m.staffOnly) return rInternalBubble(m);
+  // The "seen" note (1.220) — two lines, no bubble, no button, sent by hand.
+  // Checked BEFORE the auto branch: it carries isAuto so that nothing counts
+  // it as a reply, but it must not collapse like an away message.
+  if(m.noteKind==='seen') return rNoteLine(m);
   if(_tIsTruthy(m.isAuto)) return rAutoBubble(m,mine);
   return '<div class="bubble-row'+(mine?' mine':'')+'">'+
     '<div class="bubble'+(mine?' mine':'')+'">'+
@@ -1969,7 +2507,57 @@ function rMessageBubble(m){
     _bubbleAbout(m)+
     '<div class="bubble-text">'+body+'</div>'+
     '<div class="bubble-time">'+esc(fmtMsgTime(m.sentAt))+'</div>'+
+    rMsgTools(m,mine)+
     '</div></div>';
+}
+
+// ── Two lines in the thread, not a message (AC, 3 September 2026) ────────
+// The shape both system lines use. AC on the "seen" note: "It should be two
+// lines only. The header line with sender and timestamp, and 2nd line text
+// message." No bubble, no border, no button — a note saying the studio has it,
+// which cannot be replied to and is not something to read past.
+function rNoteLine(m){
+  return '<div class="note-line">'+
+    '<div class="note-head">'+esc(m.senderName||'')+' · '+esc(fmtMsgTime(m.sentAt))+'</div>'+
+    '<div class="note-body">'+esc(m.messageText||'')+'</div>'+
+    '</div>';
+}
+
+// The record of who closed a conversation, in the same shape. AC: "The admin
+// should have a record of who closed the conversation on the message when
+// closed in the message thread: one line like read receipt." Drawn from the
+// row's own closedAt/closedByName rather than written as a message, so closing
+// never adds anything to what a family is sent — this line is staff-only.
+function rClosedLine(closedAt, closedByName){
+  if(!closedAt) return '';
+  return '<div class="note-line">'+
+    '<div class="note-body">'+esc(closedByName||'Someone')+' closed this conversation'+
+      ' <span class="note-when">· '+esc(fmtMsgTime(closedAt))+'</span></div>'+
+    '</div>';
+}
+
+// ── Per-message controls (AC, 3 September 2026) ──────────────────────────
+// The only things anyone marks by hand, and both are private to this teacher.
+// "Save for review" replaces mark-unread: it points at the message rather than
+// the thread, it survives being read, and it is what puts the white circle on
+// the roster row. "Mark seen" sends the two-line note above — a deliberate act,
+// never automatic, and it does NOT stop the clock: the conversation goes on
+// ageing and stays where it is until a real reply is sent. Being seen is not
+// being answered.
+function rMsgTools(m, mine){
+  var saved = !!m.reviewAt;
+  var h = '<div class="msg-tools">'+
+    '<label><input type="checkbox"'+(saved?' checked':'')+
+      ' onclick="event.stopPropagation();toggleReview(\''+esc(m.messageId)+'\',this.checked)"> '+
+      esc(TCH_COPY.saveForReview)+'</label>';
+  // Only on a message someone else sent: marking your own message "seen" says
+  // nothing to anybody.
+  if(!mine){
+    h += '<span class="msg-tools-sep">·</span>'+
+      '<button type="button" class="lnk-btn" onclick="event.stopPropagation();markSeen()">'+
+      esc(TCH_COPY.markSeen)+'</button>';
+  }
+  return h+'</div>';
 }
 
 // [1.189]. The teacher asked the office a question about this family; the

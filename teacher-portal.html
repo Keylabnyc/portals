@@ -172,6 +172,10 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 .thread-row-main{min-width:0}
 .thread-row-name{font-size:13px;font-weight:600;color:var(--text)}
 .thread-row-preview{font-size:12px;color:var(--text4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* The sender's name leading the preview, exactly as the admin roster draws it
+   (AC: "adopt that css"). Darker than the message text, so the eye gets who
+   before what. */
+.thread-row-preview b{font-weight:600;color:var(--text3)}
 .unread-badge{background:#1a4fc4;color:#fff;font-size:11px;font-weight:700;border-radius:10px;padding:1px 7px;flex:0 0 auto;cursor:pointer}
 /* BACKLOG 1.128. Text colour is chosen per swatch for contrast rather than for
    consistency: white on that amber is unreadable, and darkening the amber to
@@ -282,16 +286,36 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
       accident, and it had no override at all. */
 .msg-tools{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;margin-top:9px;padding-top:7px;
   border-top:1px solid rgba(0,0,0,.12);font-size:12.5px;line-height:1.3;color:var(--text3)}
-.msg-tools label{display:inline-flex;align-items:center;gap:6px;cursor:pointer;white-space:nowrap}
+/* EVERY property the page-wide `label{}` rule at the top of this file sets is
+   re-set here, and that is the point. That rule is
+   `label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:.08em;display:block}`
+   — a form-field caption style — and it applies to every <label> in the file
+   including this one. The first pass at [1.230] set layout properties only, so
+   the global kept font-size, colour, uppercase and letter-spacing, and "Save
+   for review" went on rendering as 10px grey SMALL CAPS on the dark navy
+   bubble: unreadable, which is exactly what AC reported the second time.
+   Anything scoped under a bare element selector has to out-specify all of it,
+   not just the parts that look wrong in isolation. */
+.msg-tools label{display:inline-flex;align-items:center;gap:6px;cursor:pointer;white-space:nowrap;
+  font-size:12.5px;color:var(--text2);text-transform:none;letter-spacing:normal;font-weight:600}
 .msg-tools input[type=checkbox]{width:15px;height:15px;margin:0;flex:0 0 auto;accent-color:var(--acc);cursor:pointer}
 .msg-tools-sep{color:var(--text5)}
 .rev-check.on{font-weight:600;color:var(--acc)}
 .bubble.mine .msg-tools{color:rgba(255,255,255,.92);border-top-color:rgba(255,255,255,.3)}
+/* A colour set directly on the label beats one inherited from its parent, no
+   matter how specific the parent's selector is — so the dark-on-dark fault
+   comes straight back without this line. */
+.bubble.mine .msg-tools label{color:#fff}
 .bubble.mine .msg-tools input[type=checkbox]{accent-color:#fff}
 .bubble.mine .msg-tools-sep{color:rgba(255,255,255,.55)}
 .bubble.mine .rev-check.on{color:#fff}
 .bubble.mine .lnk-btn{background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.38);color:#fff}
 .bubble.mine .lnk-btn:hover{background:rgba(255,255,255,.28);color:#fff}
+/* An inline checkbox with a sentence beside it, anywhere in the messaging
+   pages. Out-specifies the page-wide label rule for the same reason above. */
+.opt-check{display:flex;align-items:center;gap:7px;margin-bottom:.5rem;cursor:pointer;
+  font-size:12.5px;font-weight:500;color:var(--text2);text-transform:none;letter-spacing:normal;line-height:1.35}
+.opt-check input[type=checkbox]{width:15px;height:15px;margin:0;flex:0 0 auto;accent-color:var(--acc);cursor:pointer}
 /* [1.232] — a message saved for review looks saved, from across the thread.
    AC: "Otherwise, the person doesn't know which message they marked, and this
    will easily get lost." An outline plus a word, not a colour alone. */
@@ -304,7 +328,7 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
    thread does not keep a permanent highlight on one message. */
 .bubble-row.flash .bubble{animation:revflash 1.8s ease-out}
 @keyframes revflash{0%{box-shadow:0 0 0 4px rgba(26,86,219,.45)}100%{box-shadow:0 0 0 2px rgba(26,86,219,.18)}}
-/* [1.237] — AC, 4 September: "email fail message 'message did not send' red
+/* [1.237] — AC, 3 September: "email fail message 'message did not send' red
    warning banner." A banner, not the quiet inline line this started as: it is
    the one thing on a message that means somebody has to do something. Drawn
    only when the server says nothing went out, so a notification that worked
@@ -1121,7 +1145,7 @@ function loadTeacherSettings(){
 function setAway(on){
   var msg=(document.getElementById('tset-away')||{}).value;
   if(msg===undefined) msg=TSET.draftAway;
-  // The refusal that used to be here is gone, found 4 September while wiring
+  // The refusal that used to be here is gone, found 3 September while wiring
   // the generic message into this box. [1.196] took it out of the SERVER on
   // 2 September — "away without writing anything", using AC's default wording
   // — and the portal kept its own copy of the old rule, so the switch still
@@ -1256,22 +1280,27 @@ function _msgRows(){
       waitingSince:Number(t.waitingSince)||0, replyDueBy:Number(t.replyDueBy)||0,
       closed:!!t.closed, at:Number(t.lastMessageAt)||0,
       preview:t.hasMessages?(t.lastMessageText||''):'',
+      sender:t.lastSenderName||'',
       hasMessages:!!t.hasMessages});
   });
   var st=STAFF_THREADS.list||[];
   var admin=(st.filter(function(x){return x.contactType==='admin';})[0])||{};
-  out.push({kind:'admin', id:'admin', row:admin,
+  out.push({kind:'admin', id:'admin', row:admin, name:'Admin',
     unread:Number(admin.unread)||0, review:_reviewCountFor('admin','admin',admin.reviewCount),
     waitingSince:Number(admin.waitingSince)||0, replyDueBy:Number(admin.replyDueBy)||0,
-    closed:false, at:Number(admin.lastMessageAt)||0,
-    preview:admin.lastMessageText||'', hasMessages:!!admin.lastMessageAt});
+    // A staff conversation can be closed like any other — this said false
+    // unconditionally, so a closed one never left the working list.
+    closed:!!admin.closed, at:Number(admin.lastMessageAt)||0,
+    preview:admin.lastMessageText||'', sender:admin.lastSenderName||'',
+    hasMessages:!!admin.lastMessageAt});
   st.forEach(function(x){
     if(x.contactType==='admin') return;
     out.push({kind:'staff', id:x.teacherId, row:x, name:x.teacherName,
       unread:Number(x.unread)||0, review:_reviewCountFor('staff',x.teacherId,x.reviewCount),
       waitingSince:Number(x.waitingSince)||0, replyDueBy:Number(x.replyDueBy)||0,
-      closed:false, at:Number(x.lastMessageAt)||0,
-      preview:x.lastMessageText||'', hasMessages:!!x.lastMessageAt});
+      closed:!!x.closed, at:Number(x.lastMessageAt)||0,
+      preview:x.lastMessageText||'', sender:x.lastSenderName||'',
+      hasMessages:!!x.lastMessageAt});
   });
   return out;
 }
@@ -1469,6 +1498,38 @@ function rZone(label, n){
 //     student is labelled, being the one name on the row belonging to someone
 //     who is not in the conversation;
 //   • staff conversations carry no parent and no student at all.
+// AC, 3 September: "It's not clear who's sending, who's receiving, the arrows
+// are small and thin and are visual clutter... Messages were addressed in the
+// admin message area. Adopt that css."
+//
+// This is the admin page's _admRowNames(), for a roster where one of the two
+// parties is always the teacher reading it. Three things change from what was
+// here:
+//
+//   BOTH PARTIES ARE NAMED. It used to draw "You →" or "→ you" and the other
+//   side only — so a row whose other side had no name (which was every staff
+//   and admin row, see doGetTeacherStaffThreads) rendered as a bare arrow with
+//   nothing on either end. That is what AC was looking at.
+//
+//   THE ARROW IS THE SEPARATOR, not part of a phrase. One glyph between two
+//   names, in the same .dir style admin uses, rather than "You →" read as a
+//   unit and a second arrow-word at the far end.
+//
+//   THE LAST SPEAKER LEADS, so the row reads in the direction the message
+//   travelled — admin's rule, and the reason the arrow means anything.
+//
+// Every fallback is a real word: a family with no parent name on file is
+// "Family", a staff member with no name is "Staff". A blank is never correct
+// here, because the whole point of the line is to say who.
+function _rowNames(r){
+  var other = r.kind==='family' ? esc(_rosterParentLine(r.row)||'Family')
+            : r.kind==='admin'  ? '<span class="apill">Admin</span>'
+                                : esc(r.name||'Staff');
+  var a = other, b = 'You';
+  if(_lastWasMine(r.row)){ a = 'You'; b = other; }
+  return a+' <span class="dir">→</span> '+b;
+}
+
 // [1.235] — focusReview is set only for the rows in the Marked for review
 // section, so opening a conversation from anywhere else still lands at the
 // newest message. It is the section that carries the intent, not the row.
@@ -1478,18 +1539,8 @@ function rConvRow(r, focusReview){
     ? 'openFamilyRow(\'' + esc(r.id) + '\''+_f+')'
     : (r.kind==='admin' ? 'openStaffThread(\'admin\',\'admin\',\'Admin\''+_f+')'
                         : 'openStaffThread(\'staff\',\'' + esc(r.id) + '\',\'' + esc(r.name||'') + '\''+_f+')');
-  var head, kids='';
-  if(r.kind==='family'){
-    var parent=_rosterParentLine(r.row)||'Family';
-    var mine=_lastWasMine(r.row);
-    head = mine
-      ? '<span class="dir">You →</span> '+esc(parent)
-      : esc(parent)+' <span class="dir">→ you</span>';
-    kids=_rosterStudentLine(r.row);
-  } else {
-    var who = r.kind==='admin' ? '<span class="apill">Admin</span>' : esc(r.name||'');
-    head = _lastWasMine(r.row) ? '<span class="dir">You →</span> '+who : who+' <span class="dir">→ you</span>';
-  }
+  var kids = r.kind==='family' ? _rosterStudentLine(r.row) : '';
+  var head = _rowNames(r);
   var when = r.at ? ' <span class="dir">· '+esc(fmtMsgTime(r.at))+'</span>' : '';
   // The deadline, on the row, so nobody has to work it out from a colour.
   var due = (!r.closed && r.replyDueBy)
@@ -1500,7 +1551,7 @@ function rConvRow(r, focusReview){
       (r.row.sharedWithAdmin?'<span class="handoff-tag">Admin asked</span>':'')+'</div>'+
     (kids?'<div class="r-student"><span class="lbl">Student:</span> '+esc(kids)+'</div>':'')+
     '<div class="thread-row-preview">'+(r.hasMessages
-      ? esc((r.preview||'').slice(0,60))
+      ? (r.sender?'<b>'+esc(r.sender)+':</b> ':'')+esc((r.preview||'').slice(0,80))
       : '<span style="opacity:.7">No messages yet</span>')+'</div>'+
     '</div>'+
     '<div class="row-marks">'+rRowMarks(r)+'</div></div>';
@@ -2266,8 +2317,11 @@ function rStaffThread(){
   // the same per-message override admin has always had, for reaching someone
   // who is not watching the portal. Unchecked every time on purpose: a sticky
   // setting would quietly become "email everything".
-  h+='<label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text3);margin-bottom:.4rem;cursor:pointer">'+
-     '<input type="checkbox" '+(t.emailToo?'checked':'')+' onchange="ACTIVE_STAFF_THREAD.emailToo=this.checked" style="width:14px;height:14px"> '+
+  // Same trap as .msg-tools label above: the inline style set size and colour
+  // but not text-transform, so the page-wide label rule still rendered this as
+  // SMALL CAPS. Given a class so it is styled in one place with the rest.
+  h+='<label class="opt-check">'+
+     '<input type="checkbox" '+(t.emailToo?'checked':'')+' onchange="ACTIVE_STAFF_THREAD.emailToo=this.checked"> '+
      'Also send by email (for something that can\'t wait for the portal)</label>';
   h+=rComposer('staff-composer',t.draft,'ACTIVE_STAFF_THREAD.draft=_composerInput(this)',sendBtn);
   // [1.233] — the same dialog as the family thread. A staff conversation can
@@ -2658,7 +2712,7 @@ var TCH_COPY={
     ]},
     {h:'Message helpers — seen on individual messages in a thread', items:[
       {t:'Save for review', d:'Tick “Save for review” on the message in the thread (not the entire thread). It will move to the review area. Private setting to use however you like.'},
-      // AC's own copy, 4 September, answering the one question left open from
+      // AC's own copy, 3 September, answering the one question left open from
       // the 3 September batch (loose end 5). It is the fact the guide never
       // stated and the most likely reason a teacher opens it: a reply clears
       // the whole conversation, and Save for review is the only mark that
@@ -2679,7 +2733,7 @@ var TCH_COPY={
   saveForReview:'Save for review',
   // AC, 3 Sept (second pass): "the checkbox label follows its state."
   savedForReview:'Saved for review',
-  // [1.237], AC's words, 4 September — the banner on a message whose
+  // [1.237], AC's words, 3 September — the banner on a message whose
   // notification never left the building. The server's own reason for it is
   // rendered under this and is not copy.
   notSent:'Message did not send',
@@ -2848,7 +2902,7 @@ function rMessageBubble(m){
 // notification actually did on the message row (notifyState/notifyDetail, see
 // _notifyNewMessage) and this is where staff find out.
 //
-// AC, 4 September, on both halves of this:
+// AC, 3 September, on both halves of this:
 //
 //   THE WORDING is his — "message did not send", as a red warning banner. The
 //   server's own reason sits under it in smaller text, because the whole point
@@ -2878,7 +2932,7 @@ function rNotifyWarn(m){
 // lines only. The header line with sender and timestamp, and 2nd line text
 // message." No bubble, no border, no button — a note saying the studio has it,
 // which cannot be replied to and is not something to read past.
-// AC, 4 September: the note is "auto-response: [first name] has seen your
+// AC, 3 September: the note is "auto-response: [first name] has seen your
 // message..." with a timestamp. The sender's name moved INTO the sentence when
 // he rewrote it, so the header keeps the timestamp and drops the name — it was
 // printing the same person twice, once above the line and once inside it.

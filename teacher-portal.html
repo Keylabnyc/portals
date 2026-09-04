@@ -2158,6 +2158,11 @@ function _threadCacheKey(d){
     : (d.conversationType==='family_teacher' ? 'ft_'+d.familyId+'_'+d.teacherId
                                              : 'ta_'+d.teacherId);
 }
+// [1.291] — what is worth redrawing from cache, which is never an empty list.
+function _cachedMessages(d){
+  var m=THREAD_CACHE[_threadCacheKey(d)];
+  return (m && m.length) ? m : null;
+}
 // Fire and forget. A failure costs an unread badge that clears the next time
 // the thread is opened, so there is nothing here worth interrupting anyone
 // for — and nothing worth making them wait for either.
@@ -2169,7 +2174,20 @@ function openFamilyThread(familyId, p1, p2, focusReview){
   _focusReview=!!focusReview;   // [1.235]
   var _row=(FAMILY_THREADS.list||[]).filter(function(x){return x.familyId===familyId;})[0]||{};
   var _req={conversationType:'family_teacher', familyId:familyId, teacherId:TEACHER_ID, teacherToken:TOKEN};
-  var _had=THREAD_CACHE[_threadCacheKey(_req)];
+// ── [1.291] — an EMPTY answer is not an answer ─────────────────────────
+//
+// [1.263] cached the messages a thread had already loaded so reopening it
+// redraws instantly instead of blanking. It cached an EMPTY list the same way
+// — and an empty array is truthy, so a thread opened once while it had no
+// messages was thereafter drawn as "loaded, and empty", with no spinner,
+// until a fetch corrected it.
+//
+// That is a plausible half of what AC reported as "New messages sent from
+// family are not opening in the teacher portal", and it is Claude's own, from
+// the same day. **Caching nothing is not caching an answer** — an empty
+// conversation has to keep showing that it is still loading, because the only
+// honest thing to say about it is that we do not know yet.
+  var _had=_cachedMessages(_req);
   ACTIVE_THREAD = {familyId:familyId, parent1Name:p1, parent2Name:p2, messages:_had||[], draft:'', sending:false,
                    loading:!_had, refreshing:!!_had, notifyP1:true, notifyP2:true,
                    students:_row.students||[]};
@@ -2629,7 +2647,7 @@ function openStaffThread(contactType, otherId, otherName, focusReview){
   var reqData = contactType==='admin'
     ? {conversationType:'teacher_admin', teacherId:TEACHER_ID, teacherToken:TOKEN}
     : {conversationType:'staff_staff', teacherId:TEACHER_ID, staffId2:otherId, teacherToken:TOKEN};
-  var _had=THREAD_CACHE[_threadCacheKey(reqData)];
+  var _had=_cachedMessages(reqData);   // [1.291]
   ACTIVE_STAFF_THREAD = {contactType:contactType, otherId:otherId, otherName:otherName, messages:_had||[], draft:'', sending:false,
                          loading:!_had, refreshing:!!_had};
   STAFF_VIEW='thread';

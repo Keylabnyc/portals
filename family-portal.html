@@ -2563,7 +2563,13 @@ function _klMarkThreadRead(teacherId){
 
 function toggleHomeThread(teacherId, teacherName){
   if(HOME_EXPANDED && HOME_EXPANDED.teacherId===teacherId){ HOME_EXPANDED=null; render(); return; }
-  var _had=KL_THREAD_CACHE[teacherId];
+  // [1.291] — an EMPTY answer is not an answer. [1.263] cached an empty list
+  // the same way it cached a full one, and an empty array is truthy, so a
+  // thread opened once while empty was thereafter drawn as "loaded, and
+  // empty" with no spinner. A conversation with nothing in it has to keep
+  // saying it is still loading, because that is the only honest thing to say.
+  var _cached=KL_THREAD_CACHE[teacherId];
+  var _had=(_cached && _cached.length) ? _cached : null;
   HOME_EXPANDED={teacherId:teacherId, teacherName:teacherName, messages:_had||[], draft:'', loading:!_had, refreshing:!!_had, lastSentAt:_maxSentAt(_had||[]), _sendInFlight:false};
   // The thread replaces the contact list in a block that may be halfway down
   // a long page, so opening it has to move the page too — otherwise a family

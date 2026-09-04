@@ -1916,9 +1916,18 @@ function rConvRow(r, focusReview){
     // button stay on the right.
     '<div class="thread-row-main">'+
     '<div class="r-parent">'+head+when+'</div>'+
-    '<div class="thread-row-preview">'+(r.hasMessages
-      ? (r.sender?'<b>'+esc(r.sender)+':</b> ':'')+esc((r.preview||'').slice(0,80))
-      : '<span style="opacity:.7">No messages yet</span>')+'</div>'+
+    // [1.314], AC: "Remove the message preview text from the message card."
+    // The row's job is to say WHO and WHETHER SOMETHING IS OWED; the message
+    // itself is one click away and was the longest thing on a card in a pane
+    // that can be 180px wide. It is the last of [1.284]'s "too much
+    // information squashed together", and the fourth thing to come off this
+    // row after the student line, the deadline and the ageing badge ([1.249]).
+    //
+    // "No messages yet" STAYS on a contact who has none — that is not a
+    // preview of a message, it is the answer to "is there anything here",
+    // which is the one thing a row with no name under it cannot show.
+    (r.hasMessages ? ''
+      : '<div class="thread-row-preview"><span style="opacity:.7">No messages yet</span></div>')+
     _rowWaitLine(r)+
     '</div>'+
     '<div class="row-marks">'+rRowMarks(r)+'</div></div>';

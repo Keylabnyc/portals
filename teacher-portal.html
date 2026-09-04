@@ -365,8 +365,23 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
    was wrong there was the inheritance, not the size — the label was
    unreadable navy-on-navy small caps, and it still spells out every property
    the page-wide label{} rule sets. 11.5px deliberately, not back to 10px. */
-.msg-tools{display:flex;flex-wrap:wrap;gap:2px 10px;align-items:center;margin-top:4px;padding-top:0;
-  border-top:0;font-size:11.5px;line-height:1.2;color:var(--text3)}
+/* [1.285] — AC, 4 September, with a screenshot: "teacher's save for review
+   text and checkbox are quite large. They should use the same general sizing
+   of the admin page. And honestly, both could even be smaller."
+
+   The two files were already character-identical here — compared rule by rule
+   before changing anything, because guessing at a difference that is not there
+   is [1.235]. So this is the second half of what he asked for and the half
+   that was actually available: BOTH come down, together, and they stay
+   identical. 11.5px to 10.5px, and the box from 13px to 12px. */
+/* [1.285] — the one real asymmetry found between the two files: admin has a
+   page-wide checkbox size and this file had none, so every checkbox OUTSIDE
+   .msg-tools here was whatever the browser chose. Stated now, matching
+   admin's, so the two pages cannot drift again through an element nobody
+   styled. */
+input[type=checkbox]{width:13px;height:13px;cursor:pointer;flex-shrink:0;accent-color:var(--acc)}
+.msg-tools{display:flex;flex-wrap:wrap;gap:2px 9px;align-items:center;margin-top:3px;padding-top:0;
+  border-top:0;font-size:10.5px;line-height:1.2;color:var(--text3)}
 /* EVERY property the page-wide `label{}` rule at the top of this file sets is
    re-set here, and that is the point. That rule is
    `label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:.08em;display:block}`
@@ -377,9 +392,9 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
    bubble: unreadable, which is exactly what AC reported the second time.
    Anything scoped under a bare element selector has to out-specify all of it,
    not just the parts that look wrong in isolation. */
-.msg-tools label{display:inline-flex;align-items:center;gap:5px;cursor:pointer;white-space:nowrap;
-  font-size:11.5px;color:var(--text2);text-transform:none;letter-spacing:normal;font-weight:600}
-.msg-tools input[type=checkbox]{width:13px;height:13px;margin:0;flex:0 0 auto;accent-color:var(--acc);cursor:pointer}
+.msg-tools label{display:inline-flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap;
+  font-size:10.5px;color:var(--text2);text-transform:none;letter-spacing:normal;font-weight:600}
+.msg-tools input[type=checkbox]{width:12px;height:12px;margin:0;flex:0 0 auto;accent-color:var(--acc);cursor:pointer}
 .msg-tools-sep{color:var(--text5)}
 .rev-check.on{font-weight:600;color:var(--acc)}
 .bubble.mine .msg-tools{color:rgba(255,255,255,.92);border-top-color:rgba(255,255,255,.3)}
@@ -393,7 +408,7 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 /* Mark seen shares this row, so it comes down with the rest of it — a
    full-size button beside an 11.5px label would just move the height problem
    from the label to the button. */
-.msg-tools .lnk-btn{padding:2px 8px;font-size:11.5px;line-height:1.2}
+.msg-tools .lnk-btn{padding:1px 7px;font-size:10.5px;line-height:1.2}
 .bubble.mine .lnk-btn{background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.38);color:#fff}
 .bubble.mine .lnk-btn:hover{background:rgba(255,255,255,.28);color:#fff}
 /* An inline checkbox with a sentence beside it, anywhere in the messaging
@@ -1842,6 +1857,21 @@ function rConvRow(r, focusReview){
 // they are not the competing signals [1.245] was about, but it is his call.
 function rRowMarks(r){
   if(r.closed) return '<span class="closed-tag">Closed</span>';
+  // ── [1.287] — nothing to close, so nothing offers to close it ───────────
+  //
+  // AC, 4 September: "a conversation that is opened but never started should
+  // not need to be closed. It should be as though it never existed."
+  //
+  // [1.283] gave the open conversation a row so the left pane names who the
+  // right pane is writing to. That row then inherited the resting Close
+  // button, which asks you to finish something that has not begun — and
+  // closing it would write a closedAt onto a conversation with no messages,
+  // making a real record out of a click. Walk away instead and there is
+  // nothing to walk away from: no messages, no row, no trace.
+  //
+  // The badge is dropped with it. A grey zero on a conversation that does not
+  // exist is [1.178] backwards — a resting state for something with no state.
+  if(!r.hasMessages) return '';
   var marks=rReadMark(r.unread)+rReviewMark(r.review);
   if(Number(r.unread)||Number(r.review)) return marks;
   return marks+'<button type="button" class="btn btn-s row-close" '+
@@ -2275,7 +2305,12 @@ function rFamilyThread(){
     (t.forwardOpen?'':'<button type="button" class="btn btn-ask" onclick="ACTIVE_THREAD.forwardOpen=true;render()">'+
       esc(CMP_COPY.askAdmin)+'</button>')+
     '<span style="flex:1"></span>'+
-    (_cRow&&_cRow.closed
+    // [1.287] — nothing sent yet, so there is nothing to close. AC: "a
+    // conversation that is opened but never started should not need to be
+    // closed. It should be as though it never existed."
+    (!(t.messages||[]).length
+      ? ''
+      : _cRow&&_cRow.closed
       ? '<span class="closed-tag">Closed</span>'
       : '<button type="button" class="btn btn-s" onclick="closeConversation()">'+esc(TCH_COPY.closeConversation)+'</button>');
   // BACKLOG 1.161 #4 — which child, asked only when a teacher has more than
@@ -2652,7 +2687,12 @@ function rStaffThread(){
     // Same row as the family thread, minus "Ask admin about this" — you do not
     // ask admin about a conversation you are already having with them.
     '<span style="flex:1"></span>'+
-    '<button type="button" class="btn btn-s" onclick="closeConversation()">'+esc(TCH_COPY.closeConversation)+'</button>';
+    // [1.287] — nothing sent yet, so there is nothing to close. AC: "a
+    // conversation that is opened but never started should not need to be
+    // closed. It should be as though it never existed."
+    ((t.messages||[]).length
+      ? '<button type="button" class="btn btn-s" onclick="closeConversation()">'+esc(TCH_COPY.closeConversation)+'</button>'
+      : '');
   // BACKLOG 1.158 — staff messages stay in-app by default (AC, 1 Sept), with
   // the same per-message override admin has always had, for reaching someone
   // who is not watching the portal. Unchecked every time on purpose: a sticky

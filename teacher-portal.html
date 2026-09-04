@@ -2001,7 +2001,19 @@ function _rowWaitLine(r){
     return '<span class="wait-line"><span class="dir">From</span> '+from+
            ' <span class="dir">to</span> '+to+'</span>';
   };
-  return (r.row||{}).lastSenderIsTeacher ? wrap('you', them) : wrap(sender||them, 'you');
+  // [1.317] — only "waiting for YOUR reply" was struck. AC: "You left in the
+  // 'waiting for adrian to reply' or 'waiting for Xavier to reply' though,
+  // right?" The two sentences say different things and both are his:
+  //
+  //   THEY owe it   "Waiting for Rachel to reply" — somebody else is late,
+  //                 which from/to would not say.
+  //   YOU owe it    "From Rachel Lande to you" — you know you owe it; what you
+  //                 want is who it is from.
+  if((r.row||{}).lastSenderIsTeacher){
+    var first=String(_rosterParentLine(r.row)||r.name||'').trim().split(/\s+/)[0];
+    return first ? '<span class="wait-line">Waiting for '+esc(first)+' to reply</span>' : '';
+  }
+  return wrap(sender||them, 'you');
 }
 
 function rRowMarks(r){

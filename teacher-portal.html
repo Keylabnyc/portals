@@ -159,6 +159,8 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 .cmp-tb-btn:focus-visible{outline:2px solid #1a4fc4;outline-offset:1px}
 .cmp-div{width:1px;height:18px;background:var(--border2);opacity:.7;margin:0 2px;flex:0 0 auto}
 /* Link row — replaces window.prompt(). Hidden until the Link button opens it. */
+.cmp-saved{display:flex;flex-wrap:wrap;gap:4px;width:100%;margin-top:4px}
+.cmp-saved .cmp-mini{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cmp-linkrow{display:none;gap:5px;align-items:center;flex-wrap:wrap}
 .cmp-linkrow.open{display:flex}
 .cmp-linkrow input{flex:1;min-width:130px;margin-top:0;padding:7px 9px;font-size:13px}
@@ -3167,6 +3169,50 @@ var _cmpLinkSel={};
 // rComposerLinkRow() renders from this object, so a re-render redraws the row
 // exactly as it was.
 var _cmpLink={};
+
+// ── [1.324] — AC's saved links, in the Link box ─────────────────────────
+// AC: "build the link library empty and allow me to add as many as I want and
+// use in the composer when I click 'link'."
+//
+// Above the paste-a-URL box that was already there, never instead of it: a
+// one-off link is still typed, and a saved one is one click. An empty library
+// draws nothing at all, so a studio that never adds any sees the box exactly
+// as it is today ([1.178]: a control that appears from nowhere is confusing,
+// and one that shows an empty shelf is worse).
+//
+// Clicking a saved link fills BOTH boxes rather than inserting immediately —
+// the label is usually right and occasionally is not, and the sentence it lands
+// in is the sender's. One more click sends it; nothing is inserted behind
+// their back.
+var SAVED_LINKS = [];
+function loadSavedLinks(){
+  if(SAVED_LINKS.length) return;
+  _linkApi(function(list){ SAVED_LINKS = list || []; render(); });
+}
+function rSavedLinks(id){
+  if(!SAVED_LINKS.length) return '';
+  return '<div class="cmp-saved">'+SAVED_LINKS.map(function(l){
+    return '<button type="button" class="cmp-mini" onmousedown="event.preventDefault()" '+
+      'title="'+esc(l.url)+'" onclick="_composerUseSaved(\''+esc(id)+'\',\''+esc(l.linkId)+'\')">'+
+      esc(l.label)+'</button>';
+  }).join('')+'</div>';
+}
+function _composerUseSaved(id, linkId){
+  var l=SAVED_LINKS.filter(function(x){ return x.linkId===linkId; })[0];
+  if(!l) return;
+  var st=_cmpLinkState(id);
+  st.url=l.url;
+  // Keep whatever they highlighted; use the saved name only when there is
+  // nothing to keep, so selecting a phrase and picking a link still links the
+  // phrase ([1.34]'s rule, unchanged).
+  if(!st.text) st.text=l.label;
+  var u=document.getElementById(id+'-linkurl');
+  var t=document.getElementById(id+'-linktext');
+  if(u){ u.value=st.url; u.classList.remove('bad'); }
+  if(t) t.value=st.text;
+  st.bad=false;
+}
+function _linkApi(cb){ api({action:'getMessageLinks', data:{teacherToken:TOKEN}}, function(e,r){ cb(e||!r||!r.ok?[]:(r.links||[])); }); }
 function _cmpLinkState(id){
   if(!_cmpLink[id]) _cmpLink[id]={open:false,url:'',text:'',bad:false};
   return _cmpLink[id];
@@ -3174,6 +3220,7 @@ function _cmpLinkState(id){
 
 function _composerLinkOpen(id){
   var row=document.getElementById(id+'-linkrow'); if(!row) return;
+  loadSavedLinks();   // [1.324] — fetched once, on the first Link press
   var sel=window.getSelection();
   var el=document.getElementById(id);
   _cmpLinkSel[id]=(sel && sel.rangeCount && el && el.contains(sel.anchorNode))
@@ -3524,6 +3571,7 @@ function rComposerLinkRow(id){
       ' onkeydown="_composerLinkKey(event,\''+id+'\')">'+
     '<button type="button" class="cmp-mini" onmousedown="event.preventDefault()" onclick="_composerLinkInsert(\''+id+'\')">'+esc(CMP_COPY.linkAdd)+'</button>'+
     '<button type="button" class="cmp-mini" onmousedown="event.preventDefault()" onclick="_composerLinkClose(\''+id+'\')" aria-label="'+esc(CMP_COPY.linkCancel)+'">×</button>'+
+    rSavedLinks(id)+
     '<div class="cmp-guide">'+esc(CMP_COPY.linkSharing)+'</div>'+
   '</div>';
 }

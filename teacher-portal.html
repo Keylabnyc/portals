@@ -1530,7 +1530,8 @@ function rSectionedRoster(){
   var mates=all.filter(function(r){return _sectionOf(r)==='contacts';})
     .sort(function(a,b){ return String(a.name||'').localeCompare(String(b.name||'')); });
   var shut=all.filter(function(r){return _sectionOf(r)==='closed';}).sort(function(a,b){return b.at-a.at;});
-  var fams=mates.filter(function(r){return r.kind==='family';});
+  // [1.273] — families with no conversation are no longer listed anywhere;
+  // only the staff contacts are. See the note below the staff section.
   var staff=mates.filter(function(r){return r.kind!=='family';});
 
   h+=rZone(TCH_COPY.sectionNew, news.length)+
@@ -1563,9 +1564,41 @@ function rSectionedRoster(){
   h+=rZone(TCH_COPY.sectionStaff, staff.length)+
      (staff.length?'<div class="thread-list">'+staff.map(rConvRow).join('')+'</div>'
                   :'<div class="zone-empty">Nobody to show.</div>');
-  h+=rZone(TCH_COPY.sectionFamilies, fams.length)+
-     (fams.length?'<div class="thread-list">'+fams.map(rConvRow).join('')+'</div>'
-                 :'<div class="zone-empty">Every family has a conversation already.</div>');
+  // ── [1.273] — no list of every family here either ───────────────────────
+  //
+  // AC, 4 September, after the same fix landed on the admin screen: "Teachers
+  // may not know the name of the parent, but getting rid of the full list is
+  // good there also. A teacher should be able to search by student or parent,
+  // and either parent if two parents."
+  //
+  // So families a teacher has never written to appear only once something is
+  // typed, exactly as on the admin screen — and the search already matches
+  // BOTH parents and every student, which is what makes removing the list safe
+  // here: a teacher who only knows the child can still find the family.
+  //
+  // ADMIN & STAFF ABOVE IS DELIBERATELY NOT TREATED THIS WAY. It is short, it
+  // is the same for every teacher, and AC asked for it by name on 3 September
+  // — "Options to see a staff list has disappeared in teacher portal. There is
+  // no way for a teacher to message admin." A teacher who does not know who to
+  // ask needs to SEE that list, not guess a name into a search box.
+  // ── [1.273] — no list of every family here either ───────────────────────
+  //
+  // AC, 4 September, after the same fix landed on the admin screen: "Teachers
+  // may not know the name of the parent, but getting rid of the full list is
+  // good there also. A teacher should be able to search by student or parent,
+  // and either parent if two parents."
+  //
+  // Families a teacher has never written to are drawn NOWHERE now. Not gated
+  // behind a query, not moved — gone. The search box at the top of this pane
+  // already offers every family by EITHER parent's name and every student by
+  // their own (_searchNames), and clicking a result opens the thread. A second
+  // list below it would have put the same names on screen twice.
+  //
+  // ADMIN & STAFF ABOVE IS DELIBERATELY KEPT. It is short, identical for every
+  // teacher, and AC asked for it by name on 3 September — "Options to see a
+  // staff list has disappeared in teacher portal. There is no way for a
+  // teacher to message admin." Somebody who does not know who to ask has to
+  // SEE that list, not guess a name into a search box.
   // Closed now holds only what is actually closed, so the heading is true.
   // Still collapsed to start and still carrying its count while collapsed —
   // it says what it holds rather than looking empty ([1.178]).
@@ -2925,9 +2958,16 @@ var TCH_COPY={
   sectionNew:'Messages',
   sectionReview:'Marked for review',
   sectionClosed:'Closed Conversations',
-  sectionFamilies:'Families',
+  // [1.273], AC 4 September 2026: "Teachers may not know the name of the
+  // parent, but getting rid of the full list is good there also. A teacher
+  // should be able to search by student or parent, and either parent if two
+  // parents." Same words as the admin screen's, deliberately.
+  // sectionFamilies and its empty line are gone with the section: the search
+  // dropdown is the only place a family with no conversation now appears, and
+  // it has its own "Nothing matches that." already.
+  // TODO(copy): AC — searchPlaceholder below is Claude's.
   sectionStaff:'Admin & staff',
-  searchPlaceholder:'Search families or students…',
+  searchPlaceholder:'Search by student or parent, or type a name to start\u2026',
   guideTitle:'How to use Messages',
   // AC's copy, 3 September 2026 — his draft, his headings, his wording. Two
   // things were corrected with him before it went in and both are noted where

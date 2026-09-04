@@ -2543,9 +2543,28 @@ function loadHomeConversations(silent){
   });
 }
 
+// ── [1.263] — opening a conversation is one fast read ───────────────────
+//
+// getConversation is a pure read now; filing the read receipts is a second
+// request, fired once the messages are on screen and never waited for. The
+// reasoning and the measurements are in Code.js above doGetConversation().
+// FAMILY-FACING: this is the same change made in all three portals, and what
+// a parent sees is that a thread opens instead of hanging.
+//
+// KL_THREAD_CACHE holds what this page already loaded per teacher, so
+// reopening a contact draws immediately and the fetch fills in behind it. The
+// spinner is only for a thread that has genuinely never been opened.
+var KL_THREAD_CACHE = {};
+// Fire and forget. A failure costs a receipt that lands the next time the
+// thread is opened; nothing here is worth making a parent wait for.
+function _klMarkThreadRead(teacherId){
+  fapi('markConversationRead', {conversationType:'family_teacher', familyId:FAMILY_ID, teacherId:teacherId}, function(){});
+}
+
 function toggleHomeThread(teacherId, teacherName){
   if(HOME_EXPANDED && HOME_EXPANDED.teacherId===teacherId){ HOME_EXPANDED=null; render(); return; }
-  HOME_EXPANDED={teacherId:teacherId, teacherName:teacherName, messages:[], draft:'', loading:true, refreshing:false, lastSentAt:0, _sendInFlight:false};
+  var _had=KL_THREAD_CACHE[teacherId];
+  HOME_EXPANDED={teacherId:teacherId, teacherName:teacherName, messages:_had||[], draft:'', loading:!_had, refreshing:!!_had, lastSentAt:_maxSentAt(_had||[]), _sendInFlight:false};
   // The thread replaces the contact list in a block that may be halfway down
   // a long page, so opening it has to move the page too — otherwise a family
   // clicks a contact and nothing appears to happen (1.40).
@@ -2556,15 +2575,17 @@ function toggleHomeThread(teacherId, teacherName){
     HOME_EXPANDED.loading=false;
     if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not load conversation.','e'); render(); return; }
     HOME_EXPANDED.messages=r.messages||[];
+    KL_THREAD_CACHE[teacherId]=HOME_EXPANDED.messages;
     HOME_EXPANDED.lastSentAt=_maxSentAt(HOME_EXPANDED.messages);
     _shouldScrollMsgList=true; render();
+    _klMarkThreadRead(teacherId);   // [1.263] — after the thread is drawn, never before
   });
 }
 
 // Manual "Refresh" — same fetch as opening the thread, without the polling
-// wait. Uses the full getConversation() (marks read too), not the lock-free
-// poll endpoint, since this is a deliberate user action, not a background
-// tick — same reasoning as any other explicit reload.
+// wait. A deliberate user action, not a background tick, so it uses the same
+// read the open does and files receipts after it, rather than the poll
+// endpoint — same reasoning as any other explicit reload.
 function refreshHomeThread(){
   var t=HOME_EXPANDED;
   if(!t||t.refreshing) return;
@@ -2574,8 +2595,10 @@ function refreshHomeThread(){
     HOME_EXPANDED.refreshing=false;
     if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not refresh.','e'); render(); return; }
     HOME_EXPANDED.messages=r.messages||[];
+    KL_THREAD_CACHE[t.teacherId]=HOME_EXPANDED.messages;
     HOME_EXPANDED.lastSentAt=_maxSentAt(HOME_EXPANDED.messages);
     _shouldScrollMsgList=true; render();
+    _klMarkThreadRead(t.teacherId);   // [1.263]
   });
 }
 
@@ -2719,8 +2742,13 @@ function _pollTick(){
         var fresh=r.messages.filter(function(m){ return !m.messageId || !have[m.messageId]; });
         if(!fresh.length) return;
         HOME_EXPANDED.messages=HOME_EXPANDED.messages.concat(fresh);
+        KL_THREAD_CACHE[teacherId]=HOME_EXPANDED.messages;
         HOME_EXPANDED.lastSentAt=_maxSentAt(HOME_EXPANDED.messages);
         _shouldScrollMsgList=true; render();
+        // [1.263] — a message that ARRIVES while the thread is open has been
+        // read as surely as one that was there when it opened. The old shape
+        // stamped only on open, so anything the poll delivered stayed unread.
+        _klMarkThreadRead(teacherId);
       });
     })(HOME_EXPANDED.teacherId);
   }

@@ -2015,20 +2015,58 @@ function _threadStudentId(t){
   return last;
 }
 
+// ── [1.263] — opening a conversation is one fast read ───────────────────
+//
+// AC: "the teacher page takes a long time to load the message when I click in
+// the message list. Can this be faster?" — measured server-side before any of
+// this was written; the numbers and the reasoning are in Code.js above
+// doGetConversation().
+//
+// Two things changed here, and they are the same change in all three portals:
+//
+//   1. getConversation is now a pure read, so what the client waits for is one
+//      round trip. Filing the read receipts is a SECOND request, fired once
+//      the messages are on screen and never waited for — _markThreadRead()
+//      below. Nobody stares at a spinner while their own receipts are written.
+//
+//   2. The pane no longer blanks. Reopening a thread draws the messages this
+//      client already loaded, immediately, and the fetch fills in behind it.
+//      The spinner is only for a thread that has genuinely never been opened,
+//      which is the only case where there is nothing true to draw.
+var THREAD_CACHE = {};   // conversation key -> the messages last loaded for it
+function _threadCacheKey(d){
+  return d.conversationType==='staff_staff'
+    ? 'ss_'+[String(d.teacherId||''), String(d.staffId2||'')].sort().join('_')
+    : (d.conversationType==='family_teacher' ? 'ft_'+d.familyId+'_'+d.teacherId
+                                             : 'ta_'+d.teacherId);
+}
+// Fire and forget. A failure costs an unread badge that clears the next time
+// the thread is opened, so there is nothing here worth interrupting anyone
+// for — and nothing worth making them wait for either.
+function _markThreadRead(reqData){
+  api({action:'markConversationRead', data:reqData}, function(){});
+}
+
 function openFamilyThread(familyId, p1, p2, focusReview){
   _focusReview=!!focusReview;   // [1.235]
   var _row=(FAMILY_THREADS.list||[]).filter(function(x){return x.familyId===familyId;})[0]||{};
-  ACTIVE_THREAD = {familyId:familyId, parent1Name:p1, parent2Name:p2, messages:[], draft:'', sending:false, loading:true, refreshing:false, notifyP1:true, notifyP2:true,
+  var _req={conversationType:'family_teacher', familyId:familyId, teacherId:TEACHER_ID, teacherToken:TOKEN};
+  var _had=THREAD_CACHE[_threadCacheKey(_req)];
+  ACTIVE_THREAD = {familyId:familyId, parent1Name:p1, parent2Name:p2, messages:_had||[], draft:'', sending:false,
+                   loading:!_had, refreshing:!!_had, notifyP1:true, notifyP2:true,
                    students:_row.students||[]};
   FAMILY_VIEW='thread';
+  _shouldScrollMsgList=true;
   render();
-  api({action:'getConversation', data:{conversationType:'family_teacher', familyId:familyId, teacherId:TEACHER_ID, teacherToken:TOKEN}}, function(e,r){
+  api({action:'getConversation', data:_req}, function(e,r){
     if(!ACTIVE_THREAD || ACTIVE_THREAD.familyId!==familyId) return; // navigated away before this resolved
-    ACTIVE_THREAD.loading=false;
+    ACTIVE_THREAD.loading=false; ACTIVE_THREAD.refreshing=false;
     if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not load conversation.','e'); render(); return; }
     ACTIVE_THREAD.messages=r.messages||[];
+    THREAD_CACHE[_threadCacheKey(_req)]=ACTIVE_THREAD.messages;
     _applyPendingReviews(ACTIVE_THREAD);   // [1.231]
     _shouldScrollMsgList=true; render();
+    _markThreadRead(_req);   // [1.263] — after the thread is drawn, never before
   });
 }
 
@@ -2039,13 +2077,16 @@ function refreshFamilyThread(){
   var t=ACTIVE_THREAD;
   if(!t||t.refreshing) return;
   t.refreshing=true; render();
-  api({action:'getConversation', data:{conversationType:'family_teacher', familyId:t.familyId, teacherId:TEACHER_ID, teacherToken:TOKEN}}, function(e,r){
+  var _req={conversationType:'family_teacher', familyId:t.familyId, teacherId:TEACHER_ID, teacherToken:TOKEN};
+  api({action:'getConversation', data:_req}, function(e,r){
     if(!ACTIVE_THREAD||ACTIVE_THREAD.familyId!==t.familyId) return;
     ACTIVE_THREAD.refreshing=false;
     if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not refresh.','e'); render(); return; }
     ACTIVE_THREAD.messages=r.messages||[];
+    THREAD_CACHE[_threadCacheKey(_req)]=ACTIVE_THREAD.messages;
     _applyPendingReviews(ACTIVE_THREAD);   // [1.231]
     _shouldScrollMsgList=true; render();
+    _markThreadRead(_req);   // [1.263]
   });
 }
 
@@ -2462,19 +2503,24 @@ function loadStaffDirectory(){
 
 function openStaffThread(contactType, otherId, otherName, focusReview){
   _focusReview=!!focusReview;   // [1.235]
-  ACTIVE_STAFF_THREAD = {contactType:contactType, otherId:otherId, otherName:otherName, messages:[], draft:'', sending:false, loading:true, refreshing:false};
-  STAFF_VIEW='thread';
-  render();
   var reqData = contactType==='admin'
     ? {conversationType:'teacher_admin', teacherId:TEACHER_ID, teacherToken:TOKEN}
     : {conversationType:'staff_staff', teacherId:TEACHER_ID, staffId2:otherId, teacherToken:TOKEN};
+  var _had=THREAD_CACHE[_threadCacheKey(reqData)];
+  ACTIVE_STAFF_THREAD = {contactType:contactType, otherId:otherId, otherName:otherName, messages:_had||[], draft:'', sending:false,
+                         loading:!_had, refreshing:!!_had};
+  STAFF_VIEW='thread';
+  _shouldScrollMsgList=true;
+  render();
   api({action:'getConversation', data:reqData}, function(e,r){
     if(!ACTIVE_STAFF_THREAD || ACTIVE_STAFF_THREAD.otherId!==otherId) return; // navigated away before this resolved
-    ACTIVE_STAFF_THREAD.loading=false;
+    ACTIVE_STAFF_THREAD.loading=false; ACTIVE_STAFF_THREAD.refreshing=false;
     if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not load messages.','e'); render(); return; }
     ACTIVE_STAFF_THREAD.messages=r.messages||[];
+    THREAD_CACHE[_threadCacheKey(reqData)]=ACTIVE_STAFF_THREAD.messages;
     _applyPendingReviews(ACTIVE_STAFF_THREAD);   // [1.231]
     _shouldScrollMsgList=true; render();
+    _markThreadRead(reqData);   // [1.263] — after the thread is drawn, never before
   });
 }
 
@@ -2491,8 +2537,10 @@ function refreshStaffThread(){
     ACTIVE_STAFF_THREAD.refreshing=false;
     if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not refresh.','e'); render(); return; }
     ACTIVE_STAFF_THREAD.messages=r.messages||[];
+    THREAD_CACHE[_threadCacheKey(reqData)]=ACTIVE_STAFF_THREAD.messages;
     _applyPendingReviews(ACTIVE_STAFF_THREAD);   // [1.231]
     _shouldScrollMsgList=true; render();
+    _markThreadRead(reqData);   // [1.263]
   });
 }
 
@@ -3411,7 +3459,13 @@ function _pollTick(){
         var _fresh=r.messages.filter(function(m){ return !m.messageId || !_have[m.messageId]; });
         if(!_fresh.length) return;
         ACTIVE_THREAD.messages=ACTIVE_THREAD.messages.concat(_fresh);
+        THREAD_CACHE[_threadCacheKey({conversationType:'family_teacher', familyId:ft.familyId, teacherId:TEACHER_ID})]=ACTIVE_THREAD.messages;
         _shouldScrollMsgList=true; render();
+        // [1.263] — a message that ARRIVES while you are looking at the thread
+        // has been read as surely as one that was there when you opened it.
+        // The old shape only ever stamped on open, so anything delivered by
+        // the poll stayed unread until the thread was opened again.
+        _markThreadRead({conversationType:'family_teacher', familyId:ft.familyId, teacherId:TEACHER_ID, teacherToken:TOKEN});
       });
     }
   } else {
@@ -3433,7 +3487,9 @@ function _pollTick(){
         var _fresh=r.messages.filter(function(m){ return !m.messageId || !_have[m.messageId]; });
         if(!_fresh.length) return;
         ACTIVE_STAFF_THREAD.messages=ACTIVE_STAFF_THREAD.messages.concat(_fresh);
+        THREAD_CACHE[_threadCacheKey(reqData)]=ACTIVE_STAFF_THREAD.messages;
         _shouldScrollMsgList=true; render();
+        _markThreadRead({conversationType:reqData.conversationType, teacherId:TEACHER_ID, staffId2:reqData.staffId2, teacherToken:TOKEN});   // [1.263]
       });
     }
   }

@@ -1451,6 +1451,16 @@ function _msgRows(){
 // own: anything owed is caught first, so a review-marked thread that receives
 // a new message leaves the review area by itself and carries both circles at
 // the top.
+// Is this row the conversation currently on screen? Asked by _sectionOf so a
+// contact being written to for the first time appears in the live list rather
+// than nowhere.
+function _isOpenRow(r){
+  if(!r) return false;
+  if(r.kind==='family') return FAMILY_VIEW==='thread' && !!ACTIVE_THREAD && ACTIVE_THREAD.familyId===r.id;
+  if(!ACTIVE_STAFF_THREAD || STAFF_VIEW!=='thread') return false;
+  if(r.kind==='admin') return ACTIVE_STAFF_THREAD.contactType==='admin';
+  return ACTIVE_STAFF_THREAD.otherId===r.id;
+}
 function _sectionOf(r){
   // AC, 3 September, settling what a reply does and does not do: a
   // conversation you have answered but not closed "sits in the new messages
@@ -1465,6 +1475,28 @@ function _sectionOf(r){
   // answered-but-open conversations were filed under a heading that said they
   // were closed. Now only closed ones are, and the heading is true again.
   if(r.closed) return 'closed';
+  // ── [1.283] — the conversation that is OPEN always has a row ────────────
+  //
+  // AC, testing @712: "teacher can't click on a family to compose a message.
+  // Search works, but family card doesn't appear in the message list on the
+  // left and there is no way to assign a recipient."
+  //
+  // THIS IS A REGRESSION [1.273] CAUSED, and the mechanism was never broken —
+  // running the page shows the search dropdown offering the family and its
+  // handler opening the thread correctly. What broke is that the dropdown is
+  // transient: clearMsgSearch() closes it the moment it is used, and after
+  // that the LEFT LIST has no row for a family with no messages, because
+  // [1.273] stopped drawing those. So the right pane sits open on somebody the
+  // left pane says nothing about, and nothing on screen names a recipient.
+  //
+  // The rule that was missing is this one line: a list that does not contain
+  // what is open beside it is the two halves of the screen disagreeing about
+  // what exists — the same class of fault as [1.272]'s rows stating things
+  // that were not true.
+  //
+  // It also answers "no way to assign a recipient" without a recipient field:
+  // the row names them, and so does the thread header ([1.275]).
+  if(!r.hasMessages && _isOpenRow(r)) return 'new';
   // [1.244]/[1.260] — a contact you have never written to is not a conversation
   // at all, and it is not a CLOSED one either. It used to return 'closed' here,
   // which put a teacher's entire browsable roster — every family they had never
@@ -1838,9 +1870,32 @@ function closeRow(kind, id){
   if(kind==='family'){ d.conversationType='family_teacher'; d.familyId=id; }
   else if(kind==='admin'){ d.conversationType='teacher_admin'; }
   else { d.conversationType='staff_staff'; d.staffId2=id; }
+  // ── [1.279] — the row moves NOW, not in twenty seconds ──────────────────
+  //
+  // AC, timing it: "it takes about 20 seconds for a teacher's conversation
+  // marked as cleared to actually clear. Should be optimistic."
+  //
+  // Two round trips before anything moved: the write, then a full roster
+  // reload nobody was waiting to read. At [1.263]'s measured ~2s fixed plus
+  // ~1s a sheet read, twenty seconds is arithmetic, not a mystery.
+  //
+  // The same shape toggleReview() has used since [1.231], which is the model
+  // in this file: move it locally, draw, write, put it back if the write
+  // fails. The roster refresh still runs — the server decides what is really
+  // closed — but behind the change rather than in front of it.
+  var _src=(kind==='family'
+    ? (FAMILY_THREADS.list||[]).filter(function(x){ return x.familyId===id; })[0]
+    : (STAFF_THREADS.list||[]).filter(function(x){
+        return kind==='admin' ? x.contactType==='admin' : x.teacherId===id;
+      })[0]);
+  var _was=!!(_src&&_src.closed);
   var _go=function(){
+    if(_src){ _src.closed=true; render(); }
     api({action:'setConversationClosed', data:d}, function(e,r){
-      if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not close that.','e'); return; }
+      if(e||!r||!r.ok){
+        if(_src){ _src.closed=_was; render(); }
+        showMsg((r&&r.error)||'Could not close that.','e'); return;
+      }
       _refreshRosters();
     });
   };
@@ -2965,7 +3020,7 @@ var TCH_COPY={
   // sectionFamilies and its empty line are gone with the section: the search
   // dropdown is the only place a family with no conversation now appears, and
   // it has its own "Nothing matches that." already.
-  // TODO(copy): AC — searchPlaceholder below is Claude's.
+  // searchPlaceholder below was Claude's. APPROVED by AC, 4 September 2026 — he reviewed the eight placeholder strings, changed three, and said "everything else is approved".
   sectionStaff:'Admin & staff',
   searchPlaceholder:'Search by student or parent, or type a name to start\u2026',
   guideTitle:'How to use Messages',
@@ -2977,12 +3032,25 @@ var TCH_COPY={
   // If reading started the clock, leaving something unopened would push the
   // deadline back, which is exactly what the promise exists to prevent.
   guide:[
-    // [1.238]/[1.249] — TODO(copy): AC. These two HEADINGS are Claude's, not
+    // [1.238]/[1.249]. The FIRST heading is AC's own, 4 September 2026,
+    // verbatim: 'Teacher Guide: "New Message Badge" - blue with a number'.
+    //
+    // The SECOND was briefly changed to a line of his that turned out not to be
+    // copy at all — AC: "I didn't mean to quote grey with no number close
+    // conversation button. use the right text there, I'm not sure what that was
+    // about. I just wanted to have a 'close conversation' button if there are no
+    // outstanding messages." So it is back to Claude's wording, which is what
+    // he approved before and what actually describes the state he is naming.
+    // Worth the note rather than a silent revert: [1.253] says his words are
+    // final, and the failure mode of that rule is treating something he wrote
+    // in passing as a ruling. Ask, or he will have to correct it — as here.
+    //
+    // They had to change once before because the badge no longer carries the ageing, not
     // AC's, and they had to change: the badge no longer carries the ageing
     // colour at all (that moved to the left edge strip), so "solid colour,
     // white number" and "white circle, blue number" both described a control
     // that will not exist. The items under them are still his.
-    {h:'Message badge — blue with a number', items:[
+    {h:'New Message Badge - blue with a number', items:[
       {t:'The number', d:'How many messages in a thread are waiting for you to respond. This will usually be “1”, but could be more based on how many messages the parent sends. If responding to multiple messages, one reply will zero out all messages, so be sure to read and answer thoroughly so you don’t miss anything!'},
       // AC wrote this one himself. He approved Claude to write it, was offered
       // a draft, and replaced it with his own — so it is verbatim and final.
@@ -3000,7 +3068,7 @@ var TCH_COPY={
     {h:'Marked for review badge — outline with a number', items:[
       {t:'What it is', d:'These are messages you have set to review. This badge is independent of the solid color message badge. Marked for review is a private setting and will not be seen by family or admin.'}
     ]},
-    // [1.246]/[1.249] — TODO(copy): AC. This heading is Claude's and it had to
+    // [1.246]/[1.249] — AC's heading, 4 September 2026, verbatim. It had to
     // change: there is no "no circle" state any more. The badge is drawn at
     // rest now, grey and without a number ([1.178]'s rule, and the same three
     // states [1.250] gives the family's contact row), so a guide promising an
@@ -3033,11 +3101,11 @@ var TCH_COPY={
       // the 3 September batch (loose end 5). It is the fact the guide never
       // stated and the most likely reason a teacher opens it: a reply clears
       // the whole conversation, and Save for review is the only mark that
-      // survives one. TODO(copy): AC — the item TITLE is Claude's; the text
+      // survives one. The item TITLE was Claude's; the text
       // is his, verbatim.
       {t:'What a reply clears', d:'Use saved for review messages to help stay organized and ensure you don’t miss a message. When you reply to a message, your message queue is cleared, but messages saved for review are not. Messages saved for review stay that way until you clear them. Click the message checkbox to save and unsave.'},
-      // [1.233] — AC's guide line, verbatim. TODO(copy): AC — the item TITLE
-      // is Claude's, not his; he supplied the sentence only.
+      // [1.233] — AC's guide line, verbatim. The item TITLE was Claude's; he
+      // supplied the sentence only. APPROVED by AC, 4 September 2026 — he reviewed the eight placeholder strings, changed three, and said "everything else is approved".
       {t:'Clearing before closing', d:'Messages saved for review need to be cleared before closing a conversation.'},
       {t:'Mark seen', d:'Adds a quick generic message to the conversation thread letting the family know their message has been seen. Admin or teacher can mark a message as seen and this is visible to all parties. It is not a reply, and the timer keeps running until you send one. Use this when you don’t have time to respond but want the parent to know you have seen the message.'}
     ]},

@@ -285,6 +285,11 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
    colour is what carries urgency. */
 .due{font-size:11px;font-weight:600;color:var(--text4)}
 .due-line{font-size:12px;font-weight:700;color:var(--text3);margin:.1rem 0 .6rem}
+/* [1.320] — the deadline on the title line, and the one link under the header.
+   Stated identically in both portals so the two headers cannot drift. */
+.due-inline{font-size:12px;font-weight:600;color:#B32F2F;white-space:nowrap}
+.lnk-more{background:none;border:0;padding:0;margin-top:4px;font:inherit;font-size:11px;
+  color:var(--text4);text-decoration:underline;cursor:pointer}
 /* The close button in the resting slot — quiet, so a page of answered
    conversations does not read as a page of buttons. */
 .row-close{font-size:10.5px;padding:3px 9px;opacity:.75;white-space:nowrap;max-width:100%}
@@ -1477,6 +1482,7 @@ function rMessagingLocked(){
 // recorded here because it is his call and should not be "fixed" by someone
 // later reading the name literally.
 var CLOSED_OPEN = false;   // AC's browsing areas start collapsed — see below.
+var KIDS_OPEN = false;     // [1.320] — the header's detail, expanded in place
 
 // [1.231], AC: "Save optimistically and process on the back end... like with
 // all other buttons and saving functions in the tool."
@@ -2439,14 +2445,28 @@ function _kidLine(st){
              .filter(Boolean).join(' ');
   return [what, when].filter(Boolean).join(' \u00b7 ');
 }
+// [1.320] — the short form for the header. The same facts as _kidLine with the
+// long words taken out; _kidLine itself is what the expanded view shows.
+function _kidShort(st){
+  var day=String(st.day||'').trim().slice(0,3);
+  return [[st.duration?st.duration+' min':'', String(st.instrument||'').trim()].filter(Boolean).join(' '),
+          [day, String(st.time||'').trim()].filter(Boolean).join(' '),
+          String(st.room||'').trim()].filter(Boolean).join(' \u00b7 ');
+}
 function rThreadKids(students){
   var list=(students||[]).filter(function(st){ return st && st.studentName; });
   if(!list.length) return '';
+  // [1.320] — AC approved this shape on 4 September: three lines above the
+  // conversation instead of seven. The detail is not deleted; it is one click
+  // away and expands in place.
+  var full=!!KIDS_OPEN;
   return '<div class="thread-kids">'+list.map(function(st){
-    var rest=_kidLine(st);
-    return '<div class="thread-kid"><b>'+esc(st.studentName)+'</b>'+
+    var rest=full?_kidLine(st):_kidShort(st);
+    return '<div class="thread-kid"><b>'+esc(String(st.studentName).split(' ')[0])+'</b>'+
            (rest?' \u00b7 '+esc(rest):'')+'</div>';
-  }).join('')+'</div>';
+  }).join('')+'</div>'+
+  '<button type="button" class="lnk-more" onclick="KIDS_OPEN=!KIDS_OPEN;render()">'+
+  esc(full?TCH_COPY.kidsLess:TCH_COPY.kidsMore)+'</button>';
 }
 
 function rFamilyThread(){
@@ -2462,9 +2482,14 @@ function rFamilyThread(){
     '<div class="only-lg" style="display:flex;justify-content:flex-end;margin-bottom:.4rem">'+
     '<button class="btn btn-s" title="Close this conversation" '+
     'onclick="FAMILY_VIEW=\'list\';ACTIVE_THREAD=null;render()">\u2715</button></div>';
-  h+='<div style="display:flex;justify-content:space-between;align-items:center">'+
+  // [1.320] — name, deadline, refresh: one line. The deadline was a row of its
+  // own below the children; it is the same fact either way, and up here it is
+  // read with the name rather than after two other things.
+  h+='<div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap">'+
     '<div class="thread-hd" style="margin-bottom:0">'+esc(names)+'</div>'+
-    '<button type="button" class="lnk-btn"  onclick="refreshFamilyThread()">'+(t.refreshing?'<span class="spin">↻</span>':'↻ Refresh')+'</button></div>';
+    ((_cRow && !_cRow.closed && _cRow.replyDueBy)
+      ? '<span class="due-inline">'+esc(fmtDueFull(_cRow.replyDueBy))+'</span>' : '')+
+    '<button type="button" class="lnk-btn" style="margin-left:auto" onclick="refreshFamilyThread()">'+(t.refreshing?'<span class="spin">↻</span>':'↻ Refresh')+'</button></div>';
   h+=rThreadKids(t.students);
   if(t.loading){
     return h+'<div style="text-align:center;padding:2rem;color:var(--text3)"><span class="spin" style="font-size:20px">↻</span></div>';
@@ -2501,9 +2526,7 @@ function rFamilyThread(){
   // ([1.228]), which in a burst of three is the furthest up the thread and the
   // most likely to be scrolled past. Here it is in view whenever the
   // conversation is open.
-  if(_cRow && !_cRow.closed && _cRow.replyDueBy){
-    h+='<div class="due-line">'+esc(fmtDueFull(_cRow.replyDueBy))+'</div>';
-  }
+  // [1.320] — the deadline is on the title line now; see the note above.
   var sendBtn=(t.sending
     ?'<button class="btn btn-p" disabled><span class="spin">↻</span></button>'
     :'<button class="btn btn-p" onclick="sendFamilyMessage()">Send</button>')+
@@ -3292,6 +3315,10 @@ var TCH_COPY={
   // dropdown is the only place a family with no conversation now appears, and
   // it has its own "Nothing matches that." already.
   // searchPlaceholder below was Claude's. APPROVED by AC, 4 September 2026 — he reviewed the eight placeholder strings, changed three, and said "everything else is approved".
+  // [1.320] — the one link under the header. The same wording admin uses, so
+  // the two screens say it identically.
+  kidsMore:'Lesson details, phases and teacher',
+  kidsLess:'Hide details',
   sectionStaff:'Admin & staff',
   searchPlaceholder:'Search by student or parent, or type a name to start\u2026',
   guideTitle:'How to use Messages',

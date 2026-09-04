@@ -556,7 +556,50 @@ var _focusReview = false;
 // directly — 1.19, 18 Aug) | 'thread' (one open conversation — admin or
 // another staff member).
 var STAFF_VIEW = 'list';
-var STAFF_THREADS = {loading:false, list:[]};
+// ── [1.292] — ONE ROSTER ────────────────────────────────────────────────
+//
+// AC: "Shouldn't the teacher's portal just keep one list also?" It should. It
+// held two — families from one endpoint, staff from another — merged on screen
+// by _msgRows(). Two lists means two requests, two arrival times and two
+// snapshots of the sheet, and every question about a row was answered from
+// whichever list happened to hold it. The two could disagree, and did.
+//
+// THREADS is that one list, in the shape the screen draws, straight from the
+// server ([1.292]'s getTeacherThreads). FAMILY_THREADS and STAFF_THREADS
+// survive as VIEWS onto it — computed, never assigned — so the twenty-odd
+// places that read them keep working and cannot drift out of step with it,
+// because there is nothing left to drift from.
+var THREADS = {loading:false, list:[], _sig:'', locked:false};
+function _threadsOfKind(k){
+  return (THREADS.list||[]).filter(function(r){ return r.kind===k; });
+}
+// The two old names, as VIEWS. Reading either gives a slice of THREADS, so a
+// caller cannot be looking at an older answer than its neighbour.
+var FAMILY_THREADS = {};
+var STAFF_THREADS = {};
+Object.defineProperty(FAMILY_THREADS, 'list', { get: function(){
+  return _threadsOfKind('family').map(function(r){
+    return {familyId:r.id, parent1Name:r.parent1Name, parent2Name:r.parent2Name,
+            students:r.students, unread:r.unread, reviewCount:r.reviewCount,
+            waitingSince:r.waitingSince, replyDueBy:r.replyDueBy, closed:r.closed,
+            closedByName:r.closedByName, lastMessageAt:r.lastMessageAt,
+            lastMessageText:r.lastMessageText, lastSenderName:r.lastSenderName,
+            lastSenderIsTeacher:r.lastSenderIsTeacher,
+            sharedWithAdmin:r.sharedWithAdmin, hasMessages:r.hasMessages};
+  });
+} });
+Object.defineProperty(FAMILY_THREADS, 'loading', { get: function(){ return THREADS.loading; } });
+Object.defineProperty(STAFF_THREADS, 'list', { get: function(){
+  return (THREADS.list||[]).filter(function(r){ return r.kind!=='family'; }).map(function(r){
+    return {contactType:r.kind==='admin'?'admin':'staff', teacherId:r.id,
+            teacherName:r.name, unread:r.unread, reviewCount:r.reviewCount,
+            waitingSince:r.waitingSince, replyDueBy:r.replyDueBy, closed:r.closed,
+            closedByName:r.closedByName, lastMessageAt:r.lastMessageAt,
+            lastMessageText:r.lastMessageText, lastSenderName:r.lastSenderName,
+            hasMessages:r.hasMessages};
+  });
+} });
+Object.defineProperty(STAFF_THREADS, 'loading', { get: function(){ return THREADS.loading; } });
 var STAFF_PICKER = {loading:false, query:'', all:[]};
 var ACTIVE_STAFF_THREAD = null; // {contactType:'admin'|'staff', otherId, otherName, messages, draft, sending, loading}
 
@@ -575,7 +618,6 @@ var MSG_LOCK = { locked:false, msg:'' };
 // as either. The other two portals both carry an isTruthy() for this; this one
 // had no config flags until now and so had none.
 function _tIsTruthy(v){ return v===true||v==='TRUE'||v==='true'; }
-var FAMILY_THREADS = {loading:false, list:[], _sig:''};
 // Roster search (BACKLOG 1.161 #3). familyIds is what the server matched;
 // an empty query means show everything.
 // AC, 3 September: "Dropdown with all the teacher's families and students,
@@ -1058,8 +1100,7 @@ function doCompleteReset(){
       TOKEN=r.token; TEACHER_ID=r.teacherId; TEACHER_NAME=r.teacherName||'';
       _ktSaveSession(r.token, r.teacherId, r.teacherName);
       PAGE='home'; render();
-      loadFamilyThreads();
-      loadStaffThreads(true);   // both rosters, see above
+      loadThreads();
       _startMessagePolling();
       loadTeacherSettings();
     } else {
@@ -1425,36 +1466,20 @@ function _reviewCountFor(kind, id, serverN){
 
 // One shape for both kinds of conversation, so a section can hold either.
 function _msgRows(){
-  var out=[];
-  (FAMILY_THREADS.list||[]).forEach(function(t){
-    out.push({kind:'family', id:t.familyId, row:t,
-      unread:Number(t.unread)||0, review:_reviewCountFor('family',t.familyId,t.reviewCount),
+  // [1.292] — the server already returns this shape, so this is now a thin
+  // pass that adds only the two things the CLIENT knows and the server does
+  // not: the review count including ticks not yet confirmed, and the preview
+  // suppressed on a row with no messages.
+  return (THREADS.list||[]).map(function(t){
+    return {kind:t.kind, id:t.id, row:t, name:t.name||'',
+      unread:Number(t.unread)||0,
+      review:_reviewCountFor(t.kind, t.id, t.reviewCount),
       waitingSince:Number(t.waitingSince)||0, replyDueBy:Number(t.replyDueBy)||0,
       closed:!!t.closed, at:Number(t.lastMessageAt)||0,
       preview:t.hasMessages?(t.lastMessageText||''):'',
       sender:t.lastSenderName||'',
-      hasMessages:!!t.hasMessages});
+      hasMessages:!!t.hasMessages};
   });
-  var st=STAFF_THREADS.list||[];
-  var admin=(st.filter(function(x){return x.contactType==='admin';})[0])||{};
-  out.push({kind:'admin', id:'admin', row:admin, name:'Admin',
-    unread:Number(admin.unread)||0, review:_reviewCountFor('admin','admin',admin.reviewCount),
-    waitingSince:Number(admin.waitingSince)||0, replyDueBy:Number(admin.replyDueBy)||0,
-    // A staff conversation can be closed like any other — this said false
-    // unconditionally, so a closed one never left the working list.
-    closed:!!admin.closed, at:Number(admin.lastMessageAt)||0,
-    preview:admin.lastMessageText||'', sender:admin.lastSenderName||'',
-    hasMessages:!!admin.lastMessageAt});
-  st.forEach(function(x){
-    if(x.contactType==='admin') return;
-    out.push({kind:'staff', id:x.teacherId, row:x, name:x.teacherName,
-      unread:Number(x.unread)||0, review:_reviewCountFor('staff',x.teacherId,x.reviewCount),
-      waitingSince:Number(x.waitingSince)||0, replyDueBy:Number(x.replyDueBy)||0,
-      closed:!!x.closed, at:Number(x.lastMessageAt)||0,
-      preview:x.lastMessageText||'', sender:x.lastSenderName||'',
-      hasMessages:!!x.lastMessageAt});
-  });
-  return out;
 }
 
 // Which section a conversation belongs to. A conversation is in exactly one.
@@ -2070,37 +2095,43 @@ function rReviewMark(count){
   return '<div class="msg-circle p-review" title="Saved for review" aria-label="'+n+' saved for review">'+n+'</div>';
 }
 
-function loadFamilyThreads(silent){
-  if(!silent){ FAMILY_THREADS.loading=true; render(); }
-  api({action:'getTeacherFamilyThreads', data:{teacherToken:TOKEN}}, function(e,r){
-    FAMILY_THREADS.loading=false;
+// [1.292] — ONE loader, one request, one signature. It replaces
+// loadFamilyThreads and loadStaffThreads, which fetched two lists that could
+// arrive at different times from different snapshots of the sheet.
+function loadThreads(silent){
+  if(THREADS._inFlight) return;   // [1.293] — never two at once; see _pollTick
+  THREADS._inFlight=true;
+  if(!silent){ THREADS.loading=true; render(); }
+  api({action:'getTeacherThreads', data:{teacherToken:TOKEN}}, function(e,r){
+    THREADS._inFlight=false;
+    THREADS.loading=false;
     if(e||!r||!r.ok){ if(!silent) showMsg((r&&r.error)||'Could not load conversations.','e'); render(); return; }
     // [1.176], AC: "The browser reloads when navigating away to another tab and
-    // back." It was not a reload — every focus event re-rendered the whole
-    // page whether or not anything had changed, which looks identical. The
-    // roster is only reapplied when it actually differs, so a silent poll on
-    // an unchanged list now costs nothing on screen. Same rule admin's poll
-    // has had since 1.159.
+    // back." It was not a reload — every focus event re-rendered the whole page
+    // whether or not anything had changed, which looks identical. The roster is
+    // only reapplied when it actually differs, so a silent poll on an unchanged
+    // list costs nothing on screen.
     var _sig=_famSig(r.threads||[]);
-    var _changed=(_sig!==FAMILY_THREADS._sig);
-    FAMILY_THREADS._sig=_sig;
-    FAMILY_THREADS.list=r.threads||[];
+    var _changed=(_sig!==THREADS._sig);
+    THREADS._sig=_sig;
+    THREADS.list=r.threads||[];
     MSG_LOCK.locked = _tIsTruthy(r.messagingLocked);
     MSG_LOCK.msg = r.messagingLockedMsg||'';
     // The deep link from a notification email, spent the moment the roster
-    // arrives — and only once, so a later refresh doesn't drag the teacher
+    // arrives — and only once, so a later refresh does not drag the teacher
     // back out of whatever they moved on to.
     if(_pendingOpenFamilyId){
       var _want=_pendingOpenFamilyId;
       _pendingOpenFamilyId='';
-      var _row=FAMILY_THREADS.list.filter(function(t){return t.familyId===_want;})[0];
-      if(_row){ HOME_TAB='family'; openFamilyThread(_row.familyId, _row.parent1Name, _row.parent2Name); return; }
+      var _row=_threadsOfKind('family').filter(function(t){return t.id===_want;})[0];
+      if(_row){ HOME_TAB='family'; openFamilyThread(_row.id, _row.parent1Name, _row.parent2Name); return; }
     }
-    // A silent poll that found nothing new does not touch the screen (1.176).
-    // A visible load always renders, because the caller is waiting on it.
     if(!silent || _changed) render();
   });
 }
+// Kept as names so nothing that called them has to know they are now one call.
+function loadFamilyThreads(silent){ loadThreads(silent); }
+function loadStaffThreads(silent){ loadThreads(silent); }
 
 // What a roster row actually shows. If none of it moved, neither does the
 // screen — see the note in loadFamilyThreads().
@@ -2536,7 +2567,7 @@ function _threadKey(t, extra){
   Object.keys(extra||{}).forEach(function(k){ d[k]=extra[k]; });
   return d;
 }
-function _refreshRosters(){ loadFamilyThreads(true); loadStaffThreads(true); }
+function _refreshRosters(){ loadThreads(true); }   // [1.292] — one list, one call
 function _refreshOpenThread(){
   if(ACTIVE_STAFF_THREAD) refreshStaffThread(); else if(ACTIVE_THREAD) refreshFamilyThread();
 }
@@ -2622,15 +2653,6 @@ function sendFamilyMessage(){
   });
 }
 
-function loadStaffThreads(silent){
-  if(!silent){ STAFF_THREADS.loading=true; render(); }
-  api({action:'getTeacherStaffThreads', data:{teacherToken:TOKEN}}, function(e,r){
-    STAFF_THREADS.loading=false;
-    if(e||!r||!r.ok){ if(!silent) showMsg((r&&r.error)||'Could not load conversations.','e'); render(); return; }
-    STAFF_THREADS.list=r.threads||[];
-    render();
-  });
-}
 
 function loadStaffDirectory(){
   STAFF_PICKER.loading=true; render();
@@ -3603,6 +3625,21 @@ function _startMessagePolling(){
   });
   window.addEventListener('focus',_pollTick);
 }
+// ── [1.293] — the poll fits inside its own interval ─────────────────────
+//
+// It ran every five seconds and made up to THREE requests: the family roster,
+// the staff roster, and the open thread. At the ~2s fixed cost measured in
+// [1.263], three sequential requests do not fit in five seconds — so they
+// overlapped, and a slow answer could land on top of a newer one. Seven
+// teachers on the 22nd is four requests a second against one script with a
+// shared lock.
+//
+// [1.292] took the two rosters down to one. This adds the other half: a tick
+// that finds the previous request still in flight SKIPS rather than queueing
+// behind it — see THREADS._inFlight in loadThreads and _thrPollBusy below.
+// Skipping is right rather than merely cheap: the answer that is already on
+// its way is newer than the one this tick would have asked for.
+var _thrPollBusy=false;
 function _pollTick(){
   if(document.hidden || !TOKEN) return;
   if(HOME_TAB==='family'){
@@ -3611,10 +3648,12 @@ function _pollTick(){
     // both panes on screen: unread badges and previews froze for as long as a
     // conversation stayed open. Polled in both views now — the fetch is the
     // same one, and it is what also delivers the messaging lock flag.
-    loadFamilyThreads(true);
-    if(FAMILY_VIEW==='thread' && ACTIVE_THREAD && !ACTIVE_THREAD.loading && !ACTIVE_THREAD._sendInFlight){
+    loadThreads(true);   // [1.292] — one roster, and it guards itself
+    if(!_thrPollBusy && FAMILY_VIEW==='thread' && ACTIVE_THREAD && !ACTIVE_THREAD.loading && !ACTIVE_THREAD._sendInFlight){
       var ft=ACTIVE_THREAD;
+      _thrPollBusy=true;
       api({action:'getMessagesSince', data:{conversationType:'family_teacher', familyId:ft.familyId, teacherId:TEACHER_ID, teacherToken:TOKEN, sinceSentAt:String(_maxSentAt(ft.messages)||0)}}, function(e,r){
+        _thrPollBusy=false;
         if(!ACTIVE_THREAD||ACTIVE_THREAD.familyId!==ft.familyId) return;
         if(e||!r||!r.ok||!r.messages||!r.messages.length) return;
         // Second guard, independent of _sendInFlight: drop anything already
@@ -3635,14 +3674,16 @@ function _pollTick(){
       });
     }
   } else {
-    if(STAFF_VIEW==='list'){ loadStaffThreads(true); }
-    if(STAFF_VIEW==='thread' && ACTIVE_STAFF_THREAD && !ACTIVE_STAFF_THREAD.loading && !ACTIVE_STAFF_THREAD._sendInFlight){
+    loadThreads(true);   // [1.292] — the same one roster, in either view
+    if(!_thrPollBusy && STAFF_VIEW==='thread' && ACTIVE_STAFF_THREAD && !ACTIVE_STAFF_THREAD.loading && !ACTIVE_STAFF_THREAD._sendInFlight){
       var st=ACTIVE_STAFF_THREAD;
+      _thrPollBusy=true;
       var reqData=st.contactType==='admin'
         ? {conversationType:'teacher_admin', teacherId:TEACHER_ID, teacherToken:TOKEN}
         : {conversationType:'staff_staff', teacherId:TEACHER_ID, staffId2:st.otherId, teacherToken:TOKEN};
       reqData.sinceSentAt=String(_maxSentAt(st.messages)||0);
       api({action:'getMessagesSince', data:reqData}, function(e,r){
+        _thrPollBusy=false;
         if(!ACTIVE_STAFF_THREAD||ACTIVE_STAFF_THREAD.otherId!==st.otherId) return;
         if(e||!r||!r.ok||!r.messages||!r.messages.length) return;
         // Second guard, independent of _sendInFlight: drop anything already
@@ -3668,11 +3709,11 @@ function doSignOut(){
   LF={email:'', password:'', remember:true};
   HOME_TAB='family';
   STAFF_VIEW='list';
-  STAFF_THREADS={loading:false, list:[]};
+  THREADS={loading:false, list:[], _sig:'', locked:false};   // [1.292]
   STAFF_PICKER={loading:false, query:'', all:[]};
   ACTIVE_STAFF_THREAD=null;
   FAMILY_VIEW='list';
-  FAMILY_THREADS={loading:false, list:[]};
+
   ACTIVE_THREAD=null;
   PAGE='login'; render();
 }

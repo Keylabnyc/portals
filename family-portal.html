@@ -3112,12 +3112,58 @@ function _klLocLabel(raw){
   }).filter(Boolean).join(', ');
 }
 
+// [1.299]/[1.282] — the self-release record, rendered UNDER the policies for a
+// child who has one. AC gave the shape twice:
+//
+//   "get rid of 'what you agreed to' and add a 'Self-Release Authorized on
+//    [timestamp]' followed by the self-release agreement language. Tack this on
+//    to the end of the policies. Use the same conditional logic you're using
+//    for in-home families to filter and add the self-release copy to
+//    self-release families."
+//
+// THE SNAPSHOT IS NEVER REWRITTEN, and this is why it is rendered here rather
+// than appended to the stored policy text. tcPolicySnapshot is the record of
+// what a family agreed to ([1.270] and its predecessors turn on this); adding
+// to it afterwards would alter a record after the fact. The append happens at
+// DISPLAY time, from the live grant, exactly as the in-home split does.
+//
+// selfReleaseText is likewise the wording THEY agreed to ([1.107]), not the
+// current live wording — the same rule, one level down.
+function _rPolicySelfRelease(s){
+  if(!s || !s.selfReleaseGrantedAt) return '';
+  return '<div style="margin-top:1rem;border-top:1px solid var(--border);padding-top:1rem">'+
+    '<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:.4rem">'+
+    'Self-Release Authorized on '+esc(_fmtFamilyTs(s.selfReleaseGrantedAt))+' at '+
+    esc(_fmtFamilyTime(s.selfReleaseGrantedAt))+'</div>'+
+    '<div style="font-size:12px;color:var(--text2);line-height:1.55">'+
+    esc(s.selfReleaseText||_selfReleaseText())+'</div>'+
+    '</div>';
+}
+
 function _rHomeSelfRelease(s){
   // Collapsible section rendered INSIDE the dashboard card (no outer card wrapper)
   // Age is derived, never read straight off the row — see _klStudentAge().
   var age=parseInt(_klStudentAge(s),10);
   if(isNaN(age)||age<10) return '';
   var granted=!!s.selfReleaseGrantedAt;
+  // ── [1.299] — a granted self-release is a RECORD, and records live with
+  //    the policies ────────────────────────────────────────────────────────
+  //
+  // AC, 4 September 2026: "family page self release is not supposed to be in
+  // it's own isolated area. It should be included when the parent reviews
+  // enrollment policies, etc. so should appear under the accepted policies
+  // after the parent clicks the button, if the family has authorized
+  // self-release."
+  //
+  // So the two halves separate by what they ARE. Granting is an ACTION and
+  // stays here, in the child's own card, where a parent will look for it. What
+  // was granted is a RECORD of something agreed, and belongs with the other
+  // thing they agreed to — see _rPolicySelfRelease, under the policies.
+  //
+  // Nothing is lost by returning early: every granted child is enrolled, and
+  // an enrolled child's card carries the Review Policies button that reveals
+  // the record. A child with no grant still sees the button below.
+  if(granted) return '';
   var open=!!_srOpen[s.studentId];
   var _srFirst=(s.studentName||'').trim().split(' ')[0];
   var h='';
@@ -3983,9 +4029,13 @@ function rHomeOnePage(){
   // their child to arrive and leave unaccompanied. Sits down here with the
   // other occasional actions rather than up among the everyday information:
   // most families do this once, if ever.
+  // [1.299] — AC: "family page self release is not supposed to be in it's own
+  // isolated area." The card is gone. Granting still appears in each child's
+  // own card; the granted record appears under the policies, with the rest of
+  // what that family agreed to.
   var srRows='';
   _klEnrolled().forEach(function(s){ srRows+=_rHomeSelfRelease(s); });
-  if(srRows) h+='<div class="card"><h2>Self-Release</h2>'+srRows+'</div>';
+  if(srRows) h+='<div class="card">'+srRows+'</div>';
 
   // ── Keylab Support ──
   // All copy below already existed in the portal; AC approved reusing it
@@ -5738,6 +5788,9 @@ function rEnrollment(scopeStudentId){
           h+='<div style="margin-top:1rem;border-top:1px solid var(--border);padding-top:1rem">';
           h+='<div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:.5rem">Keylab Children\u2019s Lesson Policies</div>';
           h+=rPolicyText(isInHome);
+          // [1.299] — tacked on to the end of the policies, for a child who has
+          // one. Same conditional shape the in-home sections use.
+          h+=_rPolicySelfRelease(s);
           h+='</div>';
         }
         // 5. Tuition Details — always-visible when accepted but not yet enrolled

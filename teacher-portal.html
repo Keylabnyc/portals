@@ -187,7 +187,11 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
    The row had a coloured status dot, a numeric badge, a white review circle,
    a "Nudge" tag, an "Answered by you" tag, an "Unread" tag, a deadline and a
    student line, all at once. AC: "too much info and too messy overall." */
-.thread-row{display:flex;justify-content:space-between;align-items:center;gap:8px;background:rgba(255,255,255,.45);border:1px solid var(--border);border-left:3px solid var(--age-rest);border-radius:var(--r);padding:.7rem .85rem;cursor:pointer;transition:background .12s}
+/* [1.313], AC: "the close conversation button renders beyond the width of the
+   message card on the left." The row was a single non-wrapping line: a badge, a
+   sentence and a button, in a pane that can be 180px wide. It wraps now, and
+   the marks drop under the text rather than off the edge. */
+.thread-row{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:6px 8px;background:rgba(255,255,255,.45);border:1px solid var(--border);border-left:3px solid var(--age-rest);border-radius:var(--r);padding:.7rem .85rem;cursor:pointer;transition:background .12s}
 /* The ageing ladder — four stages, AC's own, cut from five and then given the
    nudge stage back. The two middle colours were tuned on screen over two
    passes (#D85A30→#E2703F→#E9865A and #E24B4A→#C93A39→#B32F2F): "go a little
@@ -271,7 +275,7 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 .r-student{font-size:11.5px;font-weight:600;color:var(--text3);line-height:1.35;margin-bottom:2px}
 .lbl{font-size:10px;font-weight:600;color:var(--text4);text-transform:uppercase;letter-spacing:.06em}
 .dir{font-size:11px;font-weight:400;color:var(--text4)}
-.row-marks{display:flex;align-items:center;gap:6px;flex:0 0 auto}
+.row-marks{display:flex;align-items:center;flex-wrap:wrap;gap:6px;flex:0 1 auto;max-width:100%}
 /* [1.294] — who owes the reply, in words. Quiet: it is context, not an alarm,
    and the left edge strip is the one place urgency is coloured. Identical to
    admin's rule, which is checked. */
@@ -283,7 +287,7 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 .due-line{font-size:12px;font-weight:700;color:var(--text3);margin:.1rem 0 .6rem}
 /* The close button in the resting slot — quiet, so a page of answered
    conversations does not read as a page of buttons. */
-.row-close{font-size:10.5px;padding:3px 9px;opacity:.75}
+.row-close{font-size:10.5px;padding:3px 9px;opacity:.75;white-space:nowrap;max-width:100%}
 .thread-row:hover .row-close{opacity:1}
 /* Admin, wherever it appears as a correspondent — a message from the studio
    should never look like one from a family. Deliberately the SOFT blue, not
@@ -2048,11 +2052,18 @@ function closeRow(kind, id){
   // in this file: move it locally, draw, write, put it back if the write
   // fails. The roster refresh still runs — the server decides what is really
   // closed — but behind the change rather than in front of it.
-  var _src=(kind==='family'
-    ? (FAMILY_THREADS.list||[]).filter(function(x){ return x.familyId===id; })[0]
-    : (STAFF_THREADS.list||[]).filter(function(x){
-        return kind==='admin' ? x.contactType==='admin' : x.teacherId===id;
-      })[0]);
+  // [1.311] — THE ROW ITSELF, out of THREADS.list.
+  //
+  // AC: "when closing the conversation, it takes up to 30 seconds to take
+  // effect." [1.279] made this optimistic in @713 and it worked. [1.292] then
+  // turned FAMILY_THREADS and STAFF_THREADS into read-only VIEWS that build a
+  // fresh object on every read — so the optimistic write went into a throwaway
+  // copy and vanished, and the row only moved when the server answered. **A
+  // regression Claude introduced with the one-roster refactor**, and the exact
+  // failure a computed view invites: it reads like an object you can write to.
+  var _src=(THREADS.list||[]).filter(function(x){
+    return x.kind===kind && (kind==='admin' ? true : x.id===id);
+  })[0];
   var _was=!!(_src&&_src.closed);
   var _go=function(){
     if(_src){ _src.closed=true; render(); }
@@ -2471,7 +2482,11 @@ function rFamilyThread(){
     // [1.287] — nothing sent yet, so there is nothing to close. AC: "a
     // conversation that is opened but never started should not need to be
     // closed. It should be as though it never existed."
-    (!(t.messages||[]).length
+    // [1.309]/[1.312] — nothing to close before a first message, and nothing
+    // to offer while a reply is owed: the server refuses it either way, and a
+    // button that fails is worse than no button. The teacher is told why by
+    // the row's own line, in AC's words.
+    (!(t.messages||[]).length || (_cRow&&Number(_cRow.waitingSince))
       ? ''
       : _cRow&&_cRow.closed
       ? '<span class="closed-tag">Closed</span>'

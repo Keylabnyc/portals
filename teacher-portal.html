@@ -209,7 +209,10 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 .thread-row.age-12h{border-left-color:var(--age-12h)}
 .thread-row.age-od{border-left-color:var(--age-od)}
 .thread-row:hover{background:rgba(255,255,255,.65)}
-.thread-row-main{min-width:0}
+/* [1.310] — the text column takes the space, and the marks column takes only
+   what it needs. Without the grow it stayed at its content width while the
+   right-hand column pushed it aside. */
+.thread-row-main{min-width:0;flex:1 1 auto}
 .thread-row-name{font-size:13px;font-weight:600;color:var(--text)}
 .thread-row-preview{font-size:12px;color:var(--text4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* The sender's name leading the preview, exactly as the admin roster draws it
@@ -272,7 +275,8 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 /* [1.294] — who owes the reply, in words. Quiet: it is context, not an alarm,
    and the left edge strip is the one place urgency is coloured. Identical to
    admin's rule, which is checked. */
-.wait-line{font-size:11px;color:var(--text3);white-space:nowrap}
+.wait-line{font-size:11px;color:var(--text3);white-space:nowrap;display:block;margin-top:2px;
+  overflow:hidden;text-overflow:ellipsis}
 /* The reply deadline. Quiet on the row — it is a fact, not an alarm; the
    colour is what carries urgency. */
 .due{font-size:11px;font-weight:600;color:var(--text4)}
@@ -383,7 +387,27 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
    .msg-tools here was whatever the browser chose. Stated now, matching
    admin's, so the two pages cannot drift again through an element nobody
    styled. */
-input[type=checkbox]{width:13px;height:13px;cursor:pointer;flex-shrink:0;accent-color:var(--acc)}
+/* ── [1.300] — THE reason the teacher's checkboxes were huge ─────────────
+   AC, twice: "teacher's save for review text and checkbox are quite large.
+   They should use the same general sizing of the admin page."
+   [1.285] compared every .msg-tools rule between the two files, found them
+   character-identical, and concluded there was nothing to fix. It was looking
+   one selector too low. THIS FILE HAS A PAGE-WIDE `input{}` RULE AND ADMIN HAS
+   NONE — line 39: padding 9px 10px, a border, width:100%, margin-top:4px, and
+   -webkit-appearance:none. A checkbox inherits all of it. Setting width and
+   height on top gives a 12px box inside 18px of padding with the native
+   rendering stripped off — which is the large empty rounded square in his
+   screenshot, and it was never going to look like admin's however carefully
+   the .msg-tools rules matched.
+   This is EXACTLY the trap [1.230] recorded for `label{}` in this same file:
+   "Anything scoped under a bare element selector has to out-specify all of it,
+   not just the parts that look wrong in isolation." The note was there and the
+   comparison still went one selector too shallow.
+   Every inherited property is undone here, so a checkbox anywhere in this file
+   is a checkbox. */
+input[type=checkbox]{width:13px;height:13px;padding:0;margin:0;border:0;border-radius:0;
+  background:none;cursor:pointer;flex-shrink:0;accent-color:var(--acc);
+  -webkit-appearance:checkbox;appearance:checkbox}
 .msg-tools{display:flex;flex-wrap:wrap;gap:2px 9px;align-items:center;margin-top:3px;padding-top:0;
   border-top:0;font-size:10.5px;line-height:1.2;color:var(--text3)}
 /* EVERY property the page-wide `label{}` rule at the top of this file sets is
@@ -398,7 +422,9 @@ input[type=checkbox]{width:13px;height:13px;cursor:pointer;flex-shrink:0;accent-
    not just the parts that look wrong in isolation. */
 .msg-tools label{display:inline-flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap;
   font-size:10.5px;color:var(--text2);text-transform:none;letter-spacing:normal;font-weight:600}
-.msg-tools input[type=checkbox]{width:12px;height:12px;margin:0;flex:0 0 auto;accent-color:var(--acc);cursor:pointer}
+.msg-tools input[type=checkbox]{width:12px;height:12px;padding:0;margin:0;border:0;border-radius:0;
+  background:none;flex:0 0 auto;accent-color:var(--acc);cursor:pointer;
+  -webkit-appearance:checkbox;appearance:checkbox}
 .msg-tools-sep{color:var(--text5)}
 .rev-check.on{font-weight:600;color:var(--acc)}
 .bubble.mine .msg-tools{color:rgba(255,255,255,.92);border-top-color:rgba(255,255,255,.3)}
@@ -419,11 +445,18 @@ input[type=checkbox]{width:13px;height:13px;cursor:pointer;flex-shrink:0;accent-
    pages. Out-specifies the page-wide label rule for the same reason above. */
 .opt-check{display:flex;align-items:center;gap:7px;margin-bottom:.5rem;cursor:pointer;
   font-size:12.5px;font-weight:500;color:var(--text2);text-transform:none;letter-spacing:normal;line-height:1.35}
-.opt-check input[type=checkbox]{width:15px;height:15px;margin:0;flex:0 0 auto;accent-color:var(--acc);cursor:pointer}
+.opt-check input[type=checkbox]{width:15px;height:15px;padding:0;margin:0;border:0;border-radius:0;
+  background:none;flex:0 0 auto;accent-color:var(--acc);cursor:pointer;
+  -webkit-appearance:checkbox;appearance:checkbox}
 /* [1.232] — a message saved for review looks saved, from across the thread.
    AC: "Otherwise, the person doesn't know which message they marked, and this
    will easily get lost." An outline plus a word, not a colour alone. */
-.bubble.saved{border-color:var(--acc);box-shadow:0 0 0 2px rgba(26,86,219,.18)}
+/* [1.303], AC: "A message saved for review should show a checked box and
+   should look slightly different css background of the message to show it's
+   saved." The tick was already there and was invisible for the same reason the
+   box was huge — see [1.300]. The background is new. */
+.bubble.saved{border-color:var(--acc);box-shadow:0 0 0 2px rgba(26,86,219,.18);
+  background:rgba(26,86,219,.07)}
 .bubble.mine.saved{box-shadow:0 0 0 2px rgba(255,255,255,.55)}
 .saved-tag{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.02em;
   color:var(--acc);margin-bottom:.3rem}
@@ -1477,6 +1510,10 @@ function _msgRows(){
   return (THREADS.list||[]).map(function(t){
     return {kind:t.kind, id:t.id, row:t, name:t.name||'',
       unread:Number(t.unread)||0,
+      // [1.304] — what the blue badge counts: messages still owed a reply.
+      // `unread` goes to zero the moment the thread is OPENED, which is
+      // exactly when a reply is still owed and the count matters most.
+      awaiting:Number(t.awaitingReply)||0,
       review:_reviewCountFor(t.kind, t.id, t.reviewCount),
       waitingSince:Number(t.waitingSince)||0, replyDueBy:Number(t.replyDueBy)||0,
       closed:!!t.closed, at:Number(t.lastMessageAt)||0,
@@ -1553,7 +1590,11 @@ function _sectionOf(r){
   //
   // It has its own bucket now, and Closed means closed.
   if(!r.hasMessages) return 'contacts';
-  if(r.review>0 && !r.unread && !r.waitingSince) return 'review';
+  // [1.306] — the review SECTION is gone from this portal (AC: "Teacher's
+  // don't need a marked for review section. They can just see the white circle
+  // with the blue number, right?"), so nothing is filed there any more. The
+  // mark itself and its badge are untouched; only the bucket is.
+
   return 'new';
 }
 
@@ -1598,7 +1639,15 @@ function rSectionedRoster(){
     all=all.filter(function(r){ return hits.indexOf(r.kind+':'+r.id)!==-1; });
   }
   var news=all.filter(function(r){return _sectionOf(r)==='new';}).sort(_sortNew);
-  var revs=all.filter(function(r){return _sectionOf(r)==='review';}).sort(function(a,b){return b.at-a.at;});
+  // [1.306], AC: "Teacher's don't need a marked for review section. They can
+  // just see the white circle with the blue number, right? The messages don't
+  // go down to that section when marked anyways, so we can just get rid of
+  // that section on the teacher portal." Right on both counts — a conversation
+  // with an unanswered message stays in Messages by design ([1.253]: anything
+  // owed is caught first), so the section only ever held answered threads with
+  // a mark on them, which the badge already says. The MARK itself is
+  // untouched: it is on the message, and the row's outline badge counts it.
+  var revs=[];
   // [1.244]/[1.260] — two different things that used to share one bucket.
   // "Contacts" is everybody you have never written to; "Closed" is a
   // conversation somebody deliberately finished. A browsing list has no
@@ -1623,9 +1672,8 @@ function rSectionedRoster(){
   // it is the same mistake in a different place: a heading that appears only
   // when something is wrong means the page you learn is never the page you
   // get. Empty is a state, and it says "nothing here" rather than not existing.
-  h+=rZone(TCH_COPY.sectionReview, revs.length)+
-     (revs.length?'<div class="thread-list">'+revs.map(function(r){ return rConvRow(r,true); }).join('')+'</div>'
-                 :'<div class="zone-empty">Nothing saved for review.</div>');
+  // [1.306] — no Marked for review section here. See _sectionOf.
+
   // [1.260] — AC's two browsing areas are out from under "Closed
   // Conversations" and are their own always-visible sections. They were nested
   // inside it because _sectionOf() filed anything with no messages as closed,
@@ -1857,11 +1905,17 @@ function rConvRow(r, focusReview){
   var age = (!r.closed && _agingMark(r.waitingSince, r.replyDueBy)) || {cls:'age-rest', label:''};
   return '<div class="thread-row '+age.cls+'" onclick="'+open+'"'+
     (age.label?' title="'+esc(age.label)+'"':'')+'>'+
+    // [1.310], AC: "the text is squashed". The wait line and the Close button
+    // were both in the RIGHT-hand column, which is flex:0 0 auto — so as they
+    // grew, the name and preview beside them were squeezed to nothing. The
+    // sentence belongs with the text it is about; only the badges and the one
+    // button stay on the right.
     '<div class="thread-row-main">'+
     '<div class="r-parent">'+head+when+'</div>'+
     '<div class="thread-row-preview">'+(r.hasMessages
       ? (r.sender?'<b>'+esc(r.sender)+':</b> ':'')+esc((r.preview||'').slice(0,80))
       : '<span style="opacity:.7">No messages yet</span>')+'</div>'+
+    _rowWaitLine(r)+
     '</div>'+
     '<div class="row-marks">'+rRowMarks(r)+'</div></div>';
 }
@@ -1884,6 +1938,24 @@ function rConvRow(r, focusReview){
 // badge rather than in place of it. Worth one word from AC if he wants only
 // one of the two there: the badge is a status and the button is an action, so
 // they are not the competing signals [1.245] was about, but it is his call.
+// [1.297] — the direction of the ONE saved message, in the grammar [1.275b]
+// settled: "From [sender] to [recipient]". Returns '' when there is not
+// exactly one saved (the server sends the sender only then), so the row falls
+// through to the wait line.
+function _rowReviewNames(r){
+  var t=String((r.row||{}).reviewSenderType||'');
+  if(!t) return '';
+  var sender=esc(String((r.row||{}).reviewSenderName||'').trim());
+  var them=r.kind==='family' ? esc(_rosterParentLine(r.row)||'them') : esc(r.name||'them');
+  var wrap=function(from,to){
+    return '<span class="wait-line"><span class="dir">From</span> '+from+
+           ' <span class="dir">to</span> '+to+'</span>';
+  };
+  // "you" rather than the teacher's own name: they are reading their own row.
+  if(t==='teacher') return wrap(sender||'you', them);
+  return wrap(sender||them, 'you');
+}
+
 // [1.294] — who owes the reply, in AC's words: "waiting for [recipient] to
 // reply and waiting for your reply." On this side the answer is simpler than
 // admin's, because a teacher is a party to every conversation on their own
@@ -1892,6 +1964,13 @@ function rConvRow(r, focusReview){
 // _buildTeacherFamilyThreads_), so a row that has one is theirs to answer.
 function _rowWaitLine(r){
   if(!r || r.closed) return '';
+  // [1.297], AC: "it still says 'waiting on your reply' but that is supposed
+  // to be swapped out for our agreed solution for message to/from." A row
+  // carrying ONE saved message stands in for that message — the reason it
+  // stands out is that message — so it names that message's direction instead
+  // of the conversation's state. Same rule, same words, as admin's.
+  var rn=_rowReviewNames(r);
+  if(rn) return rn;
   if(Number(r.waitingSince)) return '<span class="wait-line">Waiting for your reply</span>';
   // Nothing owed by them, but the teacher spoke last and nobody has answered:
   // the other side is the one being waited on.
@@ -1919,8 +1998,17 @@ function rRowMarks(r){
   // The badge is dropped with it. A grey zero on a conversation that does not
   // exist is [1.178] backwards — a resting state for something with no state.
   if(!r.hasMessages) return '';
-  var marks=_rowWaitLine(r)+rReadMark(r.unread)+rReviewMark(r.review);
-  if(Number(r.unread)||Number(r.review)) return marks;
+  // [1.305], AC: "Clicking close conversation doesn't do anything on the
+  // teacher side. That should be accessible from the message card in the left
+  // hand side." It was on the row already, but ONLY when nothing was unread or
+  // saved — so the rows he most wanted to close were the ones that hid it. It
+  // is offered on every open conversation now. The confirm still guards it,
+  // and a thread with saved marks still has to clear them first ([1.233]).
+  var marks=rReadMark(r.awaiting)+rReviewMark(r.review);
+  // [1.309] — a conversation waiting on this teacher cannot be closed, so it
+  // does not offer to be. The server refuses it too; this is so a teacher is
+  // told before they click rather than after.
+  if(Number(r.waitingSince)) return marks;
   return marks+'<button type="button" class="btn btn-s row-close" '+
     'onclick="event.stopPropagation();closeRow('+_rowArgs(r)+')">'+
     esc(TCH_COPY.closeConversation)+'</button>';
@@ -3396,9 +3484,16 @@ function rMessageBubble(m){
     '</div></div>';
 }
 // The one meta line every human message carries: who, then when.
+// [1.302], AC: "This is the format that should be included on every message —
+// 'Xavier · Friday, 9/4/26 5:59 PM'". It already was — but fmtMsgTime returns
+// '' for a timestamp it cannot parse, and the separator was printed before the
+// time rather than between the two, so such a message rendered as "Xavier
+// Tombstone ·" with a dot hanging off the end. That is what AC screenshotted.
+// The separator now belongs to the pair, so a missing half takes it with it.
 function _bubbleMeta(m){
   var who=String(m.senderName||'').trim();
-  return (who?esc(who)+' \u00b7 ':'')+esc(fmtMsgTime(m.sentAt));
+  var when=fmtMsgTime(m.sentAt);
+  return [who?esc(who):'', when?esc(when):''].filter(Boolean).join(' \u00b7 ');
 }
 
 // [1.237] — "a test parent received no email when a teacher sent them a

@@ -235,6 +235,9 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 .kl-cprev{font-size:11.5px;color:var(--text4);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .kl-cprev.b{color:var(--text);font-weight:600}
 .kl-cprev.q{color:var(--text5);font-style:italic}
+/* [1.307] — who wrote the last message, before the message itself. Quiet, and
+   it reads as a label rather than as part of the sentence. */
+.kl-cfrom{font-weight:600;color:var(--text2)}
 .kl-cchev{color:var(--text5);font-size:14px;flex:0 0 auto}
 /* ── Open thread (BACKLOG 1.40) — takes the block over rather than expanding
    inside the list, so it always opens on the newest message with nothing
@@ -2296,7 +2299,20 @@ function _klContactSub(c){
 // its own clear control, or a chevron.
 function rHomeContactRow(c){
   var sub=_klContactSub(c);
-  var prev = c.hasMessages ? esc((c.lastMessageText||'').slice(0,70)) : '<span class="kl-cprev q">No messages yet</span>';
+  // [1.307], AC: "resting state when a family logs in should define who sent
+  // the last message: 'From [sender]'." A parent opening the portal saw a name,
+  // a time and a line of text, with nothing saying whether the text was theirs
+  // or the teacher's — and their own last message reads exactly like a reply
+  // they have not had.
+  //
+  // FAMILY-FACING. "From" is the word AC used, and "you" rather than the
+  // parent's own name because they are reading their own row.
+  var from='';
+  if(c.hasMessages){
+    var who=c.lastSenderIsFamily ? 'you' : String(c.lastSenderName||c.teacherName||'').trim();
+    if(who) from='<span class="kl-cfrom">From '+esc(who)+'</span> ';
+  }
+  var prev = c.hasMessages ? from+esc((c.lastMessageText||'').slice(0,70)) : '<span class="kl-cprev q">No messages yet</span>';
   var right;
   if(c.unread){
     // AC, 3 Sept: read is automatic everywhere, including here. This badge

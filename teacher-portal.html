@@ -2923,7 +2923,15 @@ function refreshStaffThread(){
 
 function rStaffThread(){
   var t=ACTIVE_STAFF_THREAD;
-  var h='<div class="only-sm"><button class="btn btn-s" style="margin-bottom:1rem" onclick="STAFF_VIEW=\'list\';ACTIVE_STAFF_THREAD=null;loadStaffThreads()">← Back</button></div>';
+  // [1.322], AC: "the teacher should be able to close the composer window to
+  // see fresh message page with no conversation open." The family thread has
+  // had this ✕ since @650 put both panes on screen; the STAFF thread never got
+  // one, so an Admin or colleague conversation could be opened and not shut —
+  // the same omission as [1.298] and [1.321], in the same half of this file.
+  var h='<div class="only-sm"><button class="btn btn-s" style="margin-bottom:1rem" onclick="STAFF_VIEW=\'list\';ACTIVE_STAFF_THREAD=null;loadThreads()">← Back</button></div>'+
+    '<div class="only-lg" style="display:flex;justify-content:flex-end;margin-bottom:.4rem">'+
+    '<button class="btn btn-s" title="Close this conversation" '+
+    'onclick="STAFF_VIEW=\'list\';ACTIVE_STAFF_THREAD=null;render()">\u2715</button></div>';
   h+='<div style="display:flex;justify-content:space-between;align-items:center">'+
     '<div class="thread-hd" style="margin-bottom:0">'+esc(t.otherName)+'</div>'+
     '<button type="button" class="lnk-btn"  onclick="refreshStaffThread()">'+(t.refreshing?'<span class="spin">↻</span>':'↻ Refresh')+'</button></div>';

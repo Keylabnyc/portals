@@ -1977,21 +1977,31 @@ function _rowReviewNames(r){
 // _buildTeacherFamilyThreads_), so a row that has one is theirs to answer.
 function _rowWaitLine(r){
   if(!r || r.closed) return '';
-  // [1.297], AC: "it still says 'waiting on your reply' but that is supposed
-  // to be swapped out for our agreed solution for message to/from." A row
-  // carrying ONE saved message stands in for that message — the reason it
-  // stands out is that message — so it names that message's direction instead
-  // of the conversation's state. Same rule, same words, as admin's.
+  // [1.297] — a row carrying ONE saved message names THAT message instead.
   var rn=_rowReviewNames(r);
   if(rn) return rn;
-  if(Number(r.waitingSince)) return '<span class="wait-line">Waiting for your reply</span>';
-  // Nothing owed by them, but the teacher spoke last and nobody has answered:
-  // the other side is the one being waited on.
-  if(r.hasMessages && !r.unread && r.sender && r.row && r.row.lastSenderIsTeacher){
-    var who=r.kind==='family' ? (_rosterParentLine(r.row)||'them') : (r.name||'them');
-    return '<span class="wait-line">Waiting for '+esc(who)+' to reply</span>';
-  }
-  return '';
+  // ── [1.316] — one grammar, and "Waiting for..." is struck from the tool ──
+  //
+  // AC, 4 September 2026, third and final word on this: "the words waiting for
+  // your reply were to be struck from the tool."
+  //
+  // He gave "waiting for [recipient] to reply / waiting for your reply" that
+  // morning and it shipped in @719. He then twice said it should be the to/from
+  // grammar instead — first "that is supposed to be swapped out for our agreed
+  // solution for message to/from", then this. **The from/to sentence is the one
+  // he wants everywhere**, and it says the same thing in the same shape whether
+  // admin is a party to the conversation or only watching it, which is why he
+  // kept coming back to it.
+  //
+  // "you" rather than the reader's own name: they are reading their own row.
+  if(!r.hasMessages) return '';
+  var them=r.kind==='family' ? esc(_rosterParentLine(r.row)||'them') : esc(r.name||'them');
+  var sender=esc(String(r.sender||'').trim());
+  var wrap=function(from,to){
+    return '<span class="wait-line"><span class="dir">From</span> '+from+
+           ' <span class="dir">to</span> '+to+'</span>';
+  };
+  return (r.row||{}).lastSenderIsTeacher ? wrap('you', them) : wrap(sender||them, 'you');
 }
 
 function rRowMarks(r){
@@ -2590,7 +2600,38 @@ function toggleReview(messageId, on){
       (t.messages||[]).forEach(function(m){ if(m.messageId===messageId) m.reviewAt=was; });
       showMsg((r&&r.error)||'Could not save that for review.','e'); render(); return;
     }
+    // ── [1.315] — the ROW's count moves too, not only the thread's ─────────
+    //
+    // AC: "Saved for review badge on teacher card correctly shows no messages
+    // saved for review when message is opened, but reverts back to the state
+    // of the card when the messages were saved for review. It clears
+    // eventually in a few minutes."
+    //
+    // _reviewCountFor reads the OPEN thread's messages and is right while the
+    // thread is open — which is why the badge looks correct at first. Close the
+    // thread and it falls back to the roster's number, which is whatever the
+    // server last said, and that is the old count until a roster fetch lands.
+    // So the badge was correct, then wrong, then correct again.
+    //
+    // The fix is the lesson [1.311] cost: **when the truth changes, move every
+    // copy of it, not only the one on screen.** The write has landed; the
+    // roster row is a copy of what the server now holds, so it is updated to
+    // match rather than left to be corrected later.
+    _setRowReviewCount(t, _openReviewMarks(t));
     _refreshRosters();
+  });
+}
+
+// [1.315] — the roster row for an open thread, so a confirmed change to its
+// review count is written where the row will read it after the thread closes.
+// Writes into THREADS.list, never into FAMILY_THREADS/STAFF_THREADS: those are
+// computed views and a write to one goes into an object nobody keeps ([1.311]).
+function _setRowReviewCount(t, n){
+  if(!t) return;
+  var kind = t.familyId ? 'family' : (t.contactType==='admin' ? 'admin' : 'staff');
+  var id = t.familyId || (kind==='admin' ? 'admin' : t.otherId);
+  (THREADS.list||[]).forEach(function(row){
+    if(row.kind===kind && (kind==='admin' || row.id===id)) row.reviewCount=n;
   });
 }
 

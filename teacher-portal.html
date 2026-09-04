@@ -269,6 +269,10 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 .lbl{font-size:10px;font-weight:600;color:var(--text4);text-transform:uppercase;letter-spacing:.06em}
 .dir{font-size:11px;font-weight:400;color:var(--text4)}
 .row-marks{display:flex;align-items:center;gap:6px;flex:0 0 auto}
+/* [1.294] — who owes the reply, in words. Quiet: it is context, not an alarm,
+   and the left edge strip is the one place urgency is coloured. Identical to
+   admin's rule, which is checked. */
+.wait-line{font-size:11px;color:var(--text3);white-space:nowrap}
 /* The reply deadline. Quiet on the row — it is a fact, not an alarm; the
    colour is what carries urgency. */
 .due{font-size:11px;font-weight:600;color:var(--text4)}
@@ -1880,6 +1884,24 @@ function rConvRow(r, focusReview){
 // badge rather than in place of it. Worth one word from AC if he wants only
 // one of the two there: the badge is a status and the button is an action, so
 // they are not the competing signals [1.245] was about, but it is his call.
+// [1.294] — who owes the reply, in AC's words: "waiting for [recipient] to
+// reply and waiting for your reply." On this side the answer is simpler than
+// admin's, because a teacher is a party to every conversation on their own
+// roster: either they owe it or the other person does. waitingSince is set
+// only while somebody is waiting on THIS teacher (see the server's
+// _buildTeacherFamilyThreads_), so a row that has one is theirs to answer.
+function _rowWaitLine(r){
+  if(!r || r.closed) return '';
+  if(Number(r.waitingSince)) return '<span class="wait-line">Waiting for your reply</span>';
+  // Nothing owed by them, but the teacher spoke last and nobody has answered:
+  // the other side is the one being waited on.
+  if(r.hasMessages && !r.unread && r.sender && r.row && r.row.lastSenderIsTeacher){
+    var who=r.kind==='family' ? (_rosterParentLine(r.row)||'them') : (r.name||'them');
+    return '<span class="wait-line">Waiting for '+esc(who)+' to reply</span>';
+  }
+  return '';
+}
+
 function rRowMarks(r){
   if(r.closed) return '<span class="closed-tag">Closed</span>';
   // ── [1.287] — nothing to close, so nothing offers to close it ───────────
@@ -1897,7 +1919,7 @@ function rRowMarks(r){
   // The badge is dropped with it. A grey zero on a conversation that does not
   // exist is [1.178] backwards — a resting state for something with no state.
   if(!r.hasMessages) return '';
-  var marks=rReadMark(r.unread)+rReviewMark(r.review);
+  var marks=_rowWaitLine(r)+rReadMark(r.unread)+rReviewMark(r.review);
   if(Number(r.unread)||Number(r.review)) return marks;
   return marks+'<button type="button" class="btn btn-s row-close" '+
     'onclick="event.stopPropagation();closeRow('+_rowArgs(r)+')">'+
@@ -2074,10 +2096,14 @@ function _agingMark(waitingSince, dueBy){
 // The "0" in the grey badge is a transparent spacer, hidden from screen
 // readers, so the two states are the same size and the row does not shift as
 // it changes. The aria-label carries the meaning.
+// [1.295], AC: "there are no outstanding messages for me to read so there
+// should be no blue circle. It should be the close conversation button,
+// right?" Yes — a badge saying zero is a number about nothing. The resting
+// state [1.178] asks for is still there; it is the Close button beside it and
+// the sentence before it, which say more than a grey nought did.
 function rReadMark(unread){
   var n = Number(unread) || 0;
-  if (!n) return '<div class="msg-circle p-rest" role="img" aria-label="Read — nothing waiting on you">'+
-    '<span aria-hidden="true">0</span></div>';
+  if (!n) return '';
   return '<div class="msg-circle p-new" aria-label="'+n+' waiting for a reply">'+n+'</div>';
 }
 

@@ -106,13 +106,18 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 .c-warn{background:#FDECD6;color:#7C3A00}
 .c-danger{background:var(--rbg);color:var(--rt)}
 .unread-badge{background:var(--red);color:#fff;font-size:11px;font-weight:700;border-radius:10px;padding:1px 7px;flex:0 0 auto;cursor:pointer}
-/* [1.250] — the SAME badge, greyed and without a number: "Message bubble
-   turns grey without message count when there are no outstanding messages to
-   reply to" (AC, 3 September). One shape in three states rather than three
-   different controls, so a parent learns one thing. The width is pinned to
-   the filled badge's own so the row does not shift as it changes state.
-   min-width covers the one-digit case, which is nearly every case. */
-.unread-badge.rest{background:var(--bg3);color:transparent;min-width:20px;cursor:default}
+/* [1.262] — the grey "read, no reply sent" badge that was here lasted one
+   day, and both halves of that are AC's. [1.250]: "Message bubble turns grey
+   without message count when there are no outstanding messages to reply to."
+   Then, the next evening: "The family doesn't need insight on whether the
+   message is outstanding or not, just me and the teachers... a badge for new
+   messages, with the count if they have multiple unread messages in the
+   thread."
+   So the family row has TWO states, not three: a filled badge with a count
+   when something new has arrived for them, and a chevron otherwise. Nothing
+   on this screen tells a family whether the studio owes them a reply.
+   Recorded rather than quietly deleted, because the rule reversed in a day
+   and the next person to read [1.250] needs to find this. */
 /* The "seen" note (3 Sept): two lines, no bubble. A note about the
    conversation rather than a turn in it, so it is quieter than a message and
    cannot be mistaken for an answer. */
@@ -1103,7 +1108,42 @@ function _renderChips(chips){
 // ============================================================
 // RENDER ROOT
 // ============================================================
+// ── [1.259] — render() cannot re-enter itself ───────────────────────────
+// AC's report was "teacher portal text entry is backwards" — typing "this is
+// broken" into the message search produced "nekorb si siht". The cause is not
+// the caret; it is that render() calls itself, from inside its own focus
+// restore:
+//
+//   1. oninput -> render(). The caret position is captured correctly, then
+//      the container's innerHTML is replaced.
+//   2. The restore block focuses the NEW input, which fires its onfocus
+//      handler, which calls render() AGAIN — re-entrantly, from inside step 2.
+//   3. That nested render captures selectionStart on an input it has just
+//      focused and not yet positioned: 0. It rebuilds and sets the caret to 0.
+//   4. The outer render then positions the element it captured, which the
+//      nested render has already detached. Nothing happens on screen.
+//
+// So every keystroke lands in front of the last one.
+//
+// THE FIX IS THE RE-ENTRANCY, NOT THE CARET, and that distinction is the whole
+// point of [1.265]. Removing the offending onfocus fixes the search box and
+// leaves the trap armed for the next handler that calls render() — which is
+// how [1.32], [1.193], [1.221] and [1.239] each fixed one call site of one
+// bug, four times, and this became the fifth instance.
+//
+// A render requested while a render is running is DROPPED, not queued. The
+// one already in progress reads the same state and will draw it: every
+// handler that triggers this mutates state first and renders second, so the
+// in-flight render has already seen the change or is about to. Queueing would
+// re-run the same draw for no reason and reintroduce the caret problem one
+// tick later.
+var _rendering = false;
 function render(){
+  if(_rendering) return;
+  _rendering=true;
+  try{ _renderBody(); } finally { _rendering=false; }
+}
+function _renderBody(){
   var el=document.getElementById('app');
   if(!el) return;
   // Preserve composer focus/cursor and message-list scroll position across
@@ -2265,25 +2305,6 @@ function rHomeContactRow(c){
     // opened, so the button was a hand override on top of behaviour that was
     // already right. It is now purely a count.
     right='<div class="unread-badge" aria-label="'+c.unread+' unread">'+c.unread+'</div>';
-  } else if(c.needsResponse){
-    // [1.250], AC: "remove the x. It is not needed." — then, asked what should
-    // stand in its place: "We don't need an x or anything. Message bubble
-    // turns grey without message count when there are no outstanding messages
-    // to reply to."
-    //
-    // The ✕ that was here was NOT a dismiss control, which is how it read and
-    // why it was reported: it was clearHomeThread(), the only way to clear
-    // [1.7b]'s greyed "read, no reply sent" marker. So removing it on its own
-    // would have removed a working feature and stranded the marker until a
-    // new message arrived. AC's replacement removes the clearing PROBLEM
-    // instead: a grey, numberless badge needs no clearing, and a new message
-    // turns it filled and numbered again by itself.
-    // The "0" is a spacer, not information: it is transparent, hidden from
-    // screen readers, and there only so the grey badge is exactly the size of
-    // the filled one and the row does not shift when the state changes. The
-    // aria-label carries the actual meaning.
-    right='<div class="unread-badge rest" role="img" aria-label="Read — no reply sent yet" '+
-      'title="Read — no reply sent yet"><span aria-hidden="true">0</span></div>';
   } else {
     right='<span class="kl-cchev">›</span>';
   }

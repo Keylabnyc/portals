@@ -347,8 +347,26 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
       and this row inherited var(--text3) — dark grey text and a black hairline
       on dark blue. That is the half of AC's screenshot that reads as an
       accident, and it had no override at all. */
-.msg-tools{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;margin-top:9px;padding-top:7px;
-  border-top:1px solid rgba(0,0,0,.12);font-size:12.5px;line-height:1.3;color:var(--text3)}
+/* AC, 3 September, after seeing it live: "the text bubbles are still pretty
+   big with an entire separate area just for the saved for review button...
+   Make the text and button smaller for the saved for review function on the
+   message bubble, reduce the height of that subsection of the message bubble,
+   or get rid of it."
+
+   He offered three ways out and this takes the first two rather than the
+   third. Dropping the words and leaving a bare checkbox saves the most space
+   and costs the most: an unlabelled checkbox on a message is exactly the
+   unexplained control that made him report the family portal's "✕" as a
+   remove button ([1.250]). So: the divider goes, the row tightens, and the
+   type comes down.
+
+   NOTE, because it partly reverses [1.230]: that item made this control
+   BIGGER, from an inherited 10px grey small-caps to a legible 12.5px. What
+   was wrong there was the inheritance, not the size — the label was
+   unreadable navy-on-navy small caps, and it still spells out every property
+   the page-wide label{} rule sets. 11.5px deliberately, not back to 10px. */
+.msg-tools{display:flex;flex-wrap:wrap;gap:2px 10px;align-items:center;margin-top:4px;padding-top:0;
+  border-top:0;font-size:11.5px;line-height:1.2;color:var(--text3)}
 /* EVERY property the page-wide `label{}` rule at the top of this file sets is
    re-set here, and that is the point. That rule is
    `label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:.08em;display:block}`
@@ -359,9 +377,9 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
    bubble: unreadable, which is exactly what AC reported the second time.
    Anything scoped under a bare element selector has to out-specify all of it,
    not just the parts that look wrong in isolation. */
-.msg-tools label{display:inline-flex;align-items:center;gap:6px;cursor:pointer;white-space:nowrap;
-  font-size:12.5px;color:var(--text2);text-transform:none;letter-spacing:normal;font-weight:600}
-.msg-tools input[type=checkbox]{width:15px;height:15px;margin:0;flex:0 0 auto;accent-color:var(--acc);cursor:pointer}
+.msg-tools label{display:inline-flex;align-items:center;gap:5px;cursor:pointer;white-space:nowrap;
+  font-size:11.5px;color:var(--text2);text-transform:none;letter-spacing:normal;font-weight:600}
+.msg-tools input[type=checkbox]{width:13px;height:13px;margin:0;flex:0 0 auto;accent-color:var(--acc);cursor:pointer}
 .msg-tools-sep{color:var(--text5)}
 .rev-check.on{font-weight:600;color:var(--acc)}
 .bubble.mine .msg-tools{color:rgba(255,255,255,.92);border-top-color:rgba(255,255,255,.3)}
@@ -372,6 +390,10 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 .bubble.mine .msg-tools input[type=checkbox]{accent-color:#fff}
 .bubble.mine .msg-tools-sep{color:rgba(255,255,255,.55)}
 .bubble.mine .rev-check.on{color:#fff}
+/* Mark seen shares this row, so it comes down with the rest of it — a
+   full-size button beside an 11.5px label would just move the height problem
+   from the label to the button. */
+.msg-tools .lnk-btn{padding:2px 8px;font-size:11.5px;line-height:1.2}
 .bubble.mine .lnk-btn{background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.38);color:#fff}
 .bubble.mine .lnk-btn:hover{background:rgba(255,255,255,.28);color:#fff}
 /* An inline checkbox with a sentence beside it, anywhere in the messaging
@@ -524,7 +546,8 @@ var STAFF_PICKER = {loading:false, query:'', all:[]};
 var ACTIVE_STAFF_THREAD = null; // {contactType:'admin'|'staff', otherId, otherName, messages, draft, sending, loading}
 
 // Family Messages state. FAMILY_VIEW: 'list' (existing conversations) |
-// 'picker' (start a new one — any family, confirmed 18 Aug §7 item 4) |
+// 'picker' is retired ([1.261]) — the roster lists everybody, so there is
+// nothing a separate start-a-conversation view would add |
 // 'thread' (one open conversation).
 var FAMILY_VIEW = 'list';
 
@@ -547,7 +570,10 @@ var FAMILY_THREADS = {loading:false, list:[], _sig:''};
 // search, which is what made it feel laggy. `matches` is only ever what is
 // currently typed; nothing is cached across keystrokes.
 var MSG_SEARCH = {query:'', open:false};
-var FAMILY_PICKER = {loading:false, query:'', all:[]};
+// [1.261] — FAMILY_PICKER and its six functions were here. The picker screen
+// is gone: the roster contains every family this teacher teaches ([1.172]) and
+// every staff contact including Admin ([1.260]), so the search on the roster
+// finds anybody and clicking them opens the thread. One screen.
 var ACTIVE_THREAD = null; // {familyId, parent1Name, parent2Name, messages, draft, sending, loading, notifyP1, notifyP2}
 
 // Login form state — single-screen email+password (not the family portal's
@@ -685,7 +711,42 @@ var BOOT_OFFLINE=false;
 // ============================================================
 // RENDER ROOT
 // ============================================================
+// ── [1.259] — render() cannot re-enter itself ───────────────────────────
+// AC's report was "teacher portal text entry is backwards" — typing "this is
+// broken" into the message search produced "nekorb si siht". The cause is not
+// the caret; it is that render() calls itself, from inside its own focus
+// restore:
+//
+//   1. oninput -> render(). The caret position is captured correctly, then
+//      the container's innerHTML is replaced.
+//   2. The restore block focuses the NEW input, which fires its onfocus
+//      handler, which calls render() AGAIN — re-entrantly, from inside step 2.
+//   3. That nested render captures selectionStart on an input it has just
+//      focused and not yet positioned: 0. It rebuilds and sets the caret to 0.
+//   4. The outer render then positions the element it captured, which the
+//      nested render has already detached. Nothing happens on screen.
+//
+// So every keystroke lands in front of the last one.
+//
+// THE FIX IS THE RE-ENTRANCY, NOT THE CARET, and that distinction is the whole
+// point of [1.265]. Removing the offending onfocus fixes the search box and
+// leaves the trap armed for the next handler that calls render() — which is
+// how [1.32], [1.193], [1.221] and [1.239] each fixed one call site of one
+// bug, four times, and this became the fifth instance.
+//
+// A render requested while a render is running is DROPPED, not queued. The
+// one already in progress reads the same state and will draw it: every
+// handler that triggers this mutates state first and renders second, so the
+// in-flight render has already seen the change or is about to. Queueing would
+// re-run the same draw for no reason and reintroduce the caret problem one
+// tick later.
+var _rendering = false;
 function render(){
+  if(_rendering) return;
+  _rendering=true;
+  try{ _renderBody(); } finally { _rendering=false; }
+}
+function _renderBody(){
   var el=document.getElementById('app');
   if(!el) return;
   var h='';
@@ -1404,9 +1465,18 @@ function _sectionOf(r){
   // answered-but-open conversations were filed under a heading that said they
   // were closed. Now only closed ones are, and the heading is true again.
   if(r.closed) return 'closed';
-  // A family on the roster you have never written to is not a conversation at
-  // all — it belongs in the browsing list, not in the day's work ([1.172]).
-  if(!r.hasMessages) return 'closed';
+  // [1.244]/[1.260] — a contact you have never written to is not a conversation
+  // at all, and it is not a CLOSED one either. It used to return 'closed' here,
+  // which put a teacher's entire browsable roster — every family they had never
+  // messaged, and every staff contact — under a heading reading "Closed
+  // Conversations". [1.244] logged that on 3 September ("Fourteen families the
+  // teacher has never written to are being described as closed conversations")
+  // and it was skipped; AC then hit it from the other direction: "Options to
+  // see a staff list has disappeared... There is no way for a teacher to
+  // message admin."
+  //
+  // It has its own bucket now, and Closed means closed.
+  if(!r.hasMessages) return 'contacts';
   if(r.review>0 && !r.unread && !r.waitingSince) return 'review';
   return 'new';
 }
@@ -1423,7 +1493,6 @@ function _sortNew(a,b){
 
 function rMessagesPage(){
   if(MSG_LOCK.locked) return rMessagingLocked();
-  if(FAMILY_VIEW==='picker') return rFamilyPicker();
   var showThread = FAMILY_VIEW==='thread' || STAFF_VIEW==='thread';
   var thread = STAFF_VIEW==='thread' ? rStaffThread()
              : FAMILY_VIEW==='thread' ? rFamilyThread()
@@ -1435,8 +1504,13 @@ function rMessagesPage(){
 }
 
 function rSectionedRoster(){
-  var h='<button class="btn btn-p" style="margin-bottom:.75rem" onclick="openFamilyPicker()">+ New Conversation</button>';
-  h+=rMsgSearch();
+  // [1.261] — the "+ New Conversation" button that was here is gone. AC on
+  // admin's copy of it: "a waste of time. Click and it takes several seconds
+  // to load a list that can easily be accessed via search on the main message
+  // page." The same is true here, and more so: this roster already lists every
+  // family the teacher teaches ([1.172]) and now every staff contact and Admin
+  // ([1.260]), so a second screen offered nothing the search below does not.
+  var h=rMsgSearch();
   if(FAMILY_THREADS.loading && !FAMILY_THREADS.list.length){
     return h+'<div style="text-align:center;padding:2rem;color:var(--text3)"><span class="spin" style="font-size:20px">↻</span></div>';
   }
@@ -1449,30 +1523,58 @@ function rSectionedRoster(){
   }
   var news=all.filter(function(r){return _sectionOf(r)==='new';}).sort(_sortNew);
   var revs=all.filter(function(r){return _sectionOf(r)==='review';}).sort(function(a,b){return b.at-a.at;});
-  var rest=all.filter(function(r){return _sectionOf(r)==='closed';}).sort(function(a,b){return b.at-a.at;});
-  var fams=rest.filter(function(r){return r.kind==='family';});
-  var staff=rest.filter(function(r){return r.kind!=='family';});
+  // [1.244]/[1.260] — two different things that used to share one bucket.
+  // "Contacts" is everybody you have never written to; "Closed" is a
+  // conversation somebody deliberately finished. A browsing list has no
+  // urgency to sort by, so contacts go alphabetically and closed by recency.
+  var mates=all.filter(function(r){return _sectionOf(r)==='contacts';})
+    .sort(function(a,b){ return String(a.name||'').localeCompare(String(b.name||'')); });
+  var shut=all.filter(function(r){return _sectionOf(r)==='closed';}).sort(function(a,b){return b.at-a.at;});
+  var fams=mates.filter(function(r){return r.kind==='family';});
+  var staff=mates.filter(function(r){return r.kind!=='family';});
 
   h+=rZone(TCH_COPY.sectionNew, news.length)+
      (news.length?'<div class="thread-list">'+news.map(rConvRow).join('')+'</div>'
                  :'<div class="zone-empty">Nothing waiting on you.</div>');
-  if(revs.length){
-    h+=rZone(TCH_COPY.sectionReview, revs.length)+
-       '<div class="thread-list">'+revs.map(function(r){ return rConvRow(r,true); }).join('')+'</div>';
-  }
-  // AC's two browsing areas, kept exactly as they were and put under one
-  // separator. Collapsed to start: a teacher with twenty-four families should
-  // not scroll past all of them to reach the four things that need doing.
-  // Collapsed it still carries its counts, so it says what it holds rather
-  // than looking empty.
+  // AC, 3 September (after seeing it live): "i don't like hidden areas that
+  // only appear when they have a message in them like messages for review.
+  // Show all areas all the time. Messages, parent / teacher conversations,
+  // saved for review, closed conversations. Otherwise, it's confusing and
+  // changes all the time."
+  //
+  // This is [1.178]'s rule applied to a SECTION rather than to a marker, and
+  // it is the same mistake in a different place: a heading that appears only
+  // when something is wrong means the page you learn is never the page you
+  // get. Empty is a state, and it says "nothing here" rather than not existing.
+  h+=rZone(TCH_COPY.sectionReview, revs.length)+
+     (revs.length?'<div class="thread-list">'+revs.map(function(r){ return rConvRow(r,true); }).join('')+'</div>'
+                 :'<div class="zone-empty">Nothing saved for review.</div>');
+  // [1.260] — AC's two browsing areas are out from under "Closed
+  // Conversations" and are their own always-visible sections. They were nested
+  // inside it because _sectionOf() filed anything with no messages as closed,
+  // so "Admin & staff" only existed if a teacher expanded a heading that said
+  // those conversations were finished. AC: "Options to see a staff list has
+  // disappeared in teacher portal. There is no way for a teacher to message
+  // admin."
+  //
+  // Admin & staff comes FIRST of the two: it is short, it is the same for
+  // every teacher, and it holds the one contact a teacher needs when they do
+  // not know who else to ask. Families can be twenty-four rows.
+  h+=rZone(TCH_COPY.sectionStaff, staff.length)+
+     (staff.length?'<div class="thread-list">'+staff.map(rConvRow).join('')+'</div>'
+                  :'<div class="zone-empty">Nobody to show.</div>');
+  h+=rZone(TCH_COPY.sectionFamilies, fams.length)+
+     (fams.length?'<div class="thread-list">'+fams.map(rConvRow).join('')+'</div>'
+                 :'<div class="zone-empty">Every family has a conversation already.</div>');
+  // Closed now holds only what is actually closed, so the heading is true.
+  // Still collapsed to start and still carrying its count while collapsed —
+  // it says what it holds rather than looking empty ([1.178]).
   h+='<div class="sep" onclick="CLOSED_OPEN=!CLOSED_OPEN;render()">'+
      '<span class="caret">'+(CLOSED_OPEN?'▾':'▸')+'</span>'+esc(TCH_COPY.sectionClosed)+
-     '<span class="sepc">Families '+fams.length+' · Admin &amp; staff '+staff.length+'</span></div>';
+     '<span class="sepc">'+shut.length+'</span></div>';
   if(CLOSED_OPEN){
-    h+=rZone(TCH_COPY.sectionFamilies, fams.length)+
-       (fams.length?'<div class="thread-list">'+fams.map(rConvRow).join('')+'</div>':'<div class="zone-empty">Nothing here.</div>');
-    h+=rZone(TCH_COPY.sectionStaff, staff.length)+
-       (staff.length?'<div class="thread-list">'+staff.map(rConvRow).join('')+'</div>':'<div class="zone-empty">Nothing here.</div>');
+    h+=(shut.length?'<div class="thread-list">'+shut.map(rConvRow).join('')+'</div>'
+                   :'<div class="zone-empty">Nothing closed.</div>');
   }
   return h;
 }
@@ -1891,64 +1993,11 @@ function _famSig(list){
   }).join('|');
 }
 
-function openFamilyPicker(){
-  FAMILY_VIEW='picker';
-  FAMILY_PICKER.query='';
-  render();
-  if(!FAMILY_PICKER.all.length) loadFamiliesDirectory();
-}
 
-function loadFamiliesDirectory(){
-  FAMILY_PICKER.loading=true; render();
-  api({action:'getFamiliesDirectory', data:{teacherToken:TOKEN}}, function(e,r){
-    FAMILY_PICKER.loading=false;
-    if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not load families.','e'); render(); return; }
-    FAMILY_PICKER.all=r.families||[];
-    render();
-  });
-}
 
-function rFamilyPickerResults(query){
-  if(FAMILY_PICKER.loading){
-    return '<div style="text-align:center;padding:2rem;color:var(--text3)"><span class="spin" style="font-size:20px">↻</span></div>';
-  }
-  var q=String(query||'').trim().toLowerCase();
-  var results=FAMILY_PICKER.all.filter(function(f){
-    if(!q) return true;
-    var hay=[f.parent1Name,f.parent2Name].concat(f.studentNames||[]).join(' ').toLowerCase();
-    return hay.indexOf(q)!==-1;
-  });
-  if(!results.length) return '<div class="empty-state">No families found.</div>';
-  return '<div class="thread-list">'+results.map(function(f){
-    var names=[f.parent1Name,f.parent2Name].filter(Boolean).join(' & ')||'Family';
-    var kids=(f.studentNames||[]).join(', ');
-    // Same apostrophe hazard as the roster row above — id only.
-    return '<div class="thread-row" onclick="openPickedFamily(\''+esc(f.familyId)+'\')">'+
-      '<div class="thread-row-main">'+
-      '<div class="thread-row-name">'+esc(names)+'</div>'+
-      (kids?'<div class="thread-row-preview">'+esc(kids)+'</div>':'')+
-      '</div></div>';
-  }).join('')+'</div>';
-}
-function familyPickerInput(val){
-  FAMILY_PICKER.query=val;
-  var listEl=document.getElementById('family-picker-results');
-  if(listEl) listEl.innerHTML=rFamilyPickerResults(val);
-}
-function rFamilyPicker(){
-  var h='<button class="btn btn-s" style="margin-bottom:1rem" onclick="FAMILY_VIEW=\'list\';render()">← Back</button>';
-  h+='<div class="field"><input type="text" placeholder="Search by family or student name" value="'+esc(FAMILY_PICKER.query)+'" oninput="familyPickerInput(this.value)"></div>';
-  h+='<div id="family-picker-results">'+rFamilyPickerResults(FAMILY_PICKER.query)+'</div>';
-  return h;
-}
 
 // Resolves the row, then opens it — so no name is ever interpolated into an
 // inline handler. Two entry points, two lists: the roster and the picker.
-function openPickedFamily(familyId){
-  var f=FAMILY_PICKER.all.filter(function(x){return x.familyId===familyId;})[0];
-  if(!f) return;
-  openFamilyThread(f.familyId, f.parent1Name, f.parent2Name);
-}
 function openFamilyRow(familyId, focusReview){
   var t=FAMILY_THREADS.list.filter(function(x){return x.familyId===familyId;})[0];
   if(!t) return;
@@ -3402,7 +3451,6 @@ function doSignOut(){
   ACTIVE_STAFF_THREAD=null;
   FAMILY_VIEW='list';
   FAMILY_THREADS={loading:false, list:[]};
-  FAMILY_PICKER={loading:false, query:'', all:[]};
   ACTIVE_THREAD=null;
   PAGE='login'; render();
 }

@@ -218,7 +218,7 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 /* [1.310] — the text column takes the space, and the marks column takes only
    what it needs. Without the grow it stayed at its content width while the
    right-hand column pushed it aside. */
-.thread-row-main{min-width:0;flex:1 1 auto}
+.thread-row-main{min-width:0;flex:1 1 160px}
 .thread-row-name{font-size:13px;font-weight:600;color:var(--text)}
 .thread-row-preview{font-size:12px;color:var(--text4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* The sender's name leading the preview, exactly as the admin roster draws it
@@ -277,7 +277,19 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 .r-student{font-size:11.5px;font-weight:600;color:var(--text3);line-height:1.35;margin-bottom:2px}
 .lbl{font-size:10px;font-weight:600;color:var(--text4);text-transform:uppercase;letter-spacing:.06em}
 .dir{font-size:11px;font-weight:400;color:var(--text4)}
-.row-marks{display:flex;align-items:center;flex-wrap:wrap;gap:6px;flex:0 1 auto;max-width:100%}
+/* ── [1.284] — the row stops squeezing its own text ─────────────────────
+   AC, 4 September: "There is also too much information squashed together on
+   the message cards on the left in the teacher view", and again on the 5th.
+   [1.310] and [1.314] took four things OFF this row; what was left still
+   squashed, because the two columns competed for the same width — the marks
+   column took what it needed and the name and the From/to line lived on
+   whatever remained, which in a 180px pane is a few characters.
+   The text column now has a floor (160px). Below that the marks wrap onto
+   their own line and sit right, instead of crushing the sentence beside them.
+   Nothing is removed here: WHICH of the remaining things should come off is
+   AC's eye, not a rule, and it is asked rather than guessed. */
+.row-marks{display:flex;align-items:center;flex-wrap:wrap;gap:6px;flex:0 1 auto;max-width:100%;
+  margin-left:auto}
 /* [1.294] — who owes the reply, in words. Quiet: it is context, not an alarm,
    and the left edge strip is the one place urgency is coloured. Identical to
    admin's rule, which is checked. */
@@ -1070,7 +1082,7 @@ function rForgotPassword(){
     '<div class="field"><label>Email<span class="req">*</span></label>'+
     '<input id="fpe" type="email" autocomplete="username" inputmode="email" value="'+esc(FP.email)+'" oninput="FP.email=this.value" onkeydown="if(event.keyCode===13)doBeginReset()"></div>'+
     btn+
-    '<p class="linkline"><button type="button" class="lnk-btn" onclick="PAGE=&apos;login&apos;;render()">Back to Sign In</button></p></div>';
+    '<p class="linkline">'+rBackBtn('Back to Sign In','PAGE=&apos;login&apos;;render()')+'</p></div>';
 }
 
 function doBeginReset(){
@@ -2071,9 +2083,13 @@ function closeRow(kind, id){
   // refuse — is a worse answer to "close this row".
   var _r=_msgRows().filter(function(x){ return x.kind===kind && x.id===id; })[0];
   var _marks=_r?Number(_r.review)||0:0;
-  if(_marks){
-    if(!confirm(TCH_COPY.closeNeedsReview)) return;
-  } else if(!confirm(TCH_COPY.closeConfirm)) return;
+  // [1.327] — one dialog, and only when there is something to lose. Ending a
+  // conversation with no saved marks now happens on the click, because the
+  // server already refuses to end one that owes a reply and the row already
+  // hides the button in that case ([1.309]) — so the confirm was guarding
+  // against nothing. A thread with review marks still asks, because ending it
+  // CLEARS them and that cannot be undone.
+  if(_marks && !confirm(TCH_COPY.closeNeedsReview)) return;
   var d={teacherToken:TOKEN, teacherId:TEACHER_ID, closed:true};
   if(kind==='family'){ d.conversationType='family_teacher'; d.familyId=id; }
   else if(kind==='admin'){ d.conversationType='teacher_admin'; }
@@ -2279,6 +2295,10 @@ function loadThreads(silent){
     var _changed=(_sig!==THREADS._sig);
     THREADS._sig=_sig;
     THREADS.list=r.threads||[];
+    // [1.333] — warm the link library here, minutes before anyone presses
+    // Link, rather than making the first press pay for it. Guarded inside
+    // loadSavedLinks(), so the poll running every few seconds costs one call.
+    loadSavedLinks();
     MSG_LOCK.locked = _tIsTruthy(r.messagingLocked);
     MSG_LOCK.msg = r.messagingLockedMsg||'';
     // The deep link from a notification email, spent the moment the roster
@@ -2480,7 +2500,7 @@ function rFamilyThread(){
   // desktop." The Back button was phone-only, because on desktop the roster is
   // already beside the thread — but the thread still had no way to be put
   // down, so the pane kept whatever was last opened.
-  var h='<div class="only-sm"><button class="btn btn-s" style="margin-bottom:1rem" onclick="FAMILY_VIEW=\'list\';ACTIVE_THREAD=null;loadFamilyThreads()">← Back</button></div>'+
+  var h='<div class="only-sm" style="margin-bottom:1rem">'+rBackBtn('Back',"FAMILY_VIEW='list';ACTIVE_THREAD=null;loadFamilyThreads()")+'</div>'+
     '<div class="only-lg" style="display:flex;justify-content:flex-end;margin-bottom:.4rem">'+
     '<button class="btn btn-s" title="Close this conversation" '+
     'onclick="FAMILY_VIEW=\'list\';ACTIVE_THREAD=null;render()">\u2715</button></div>';
@@ -2672,6 +2692,50 @@ function _setRowReviewCount(t, n){
   });
 }
 
+// ── [1.325] — THE ROW ANSWERS THE MOMENT YOU SEND ───────────────────────
+//
+// AC, 5 September, timing it: "When I click close conversation on the message
+// after sending a reply and no reply is due any longer, it takes up to 20
+// seconds for the 'close conversation' button to show in place of the blue
+// message numbered badge. This should be instant, and process in the
+// background."
+//
+// This is NOT [1.279], which made the close ACTION optimistic. It happens one
+// step earlier: the badge and the End Conversation button are decided by
+// `awaitingReply` and `waitingSince`, which are SERVER fields — so the row
+// went on saying a reply was owed until a roster fetch came back and said
+// otherwise. A poll tick plus [1.263]'s ~2s per request is his twenty seconds.
+//
+// Sending a reply is the one event where this client knows the answer before
+// the server does: nothing can still be owed by a teacher who has just
+// answered. So the row is updated from the send, and the roster fetch that
+// follows confirms it rather than being waited on.
+//
+// Written into THREADS.list and nowhere else — FAMILY_THREADS/STAFF_THREADS are
+// computed views and a write to one lands in an object nobody keeps ([1.311]).
+// Returns what it overwrote so a failed send can put it back.
+function _setRowAnswered(t){
+  if(!t) return null;
+  var kind = t.familyId ? 'family' : (t.contactType==='admin' ? 'admin' : 'staff');
+  var id = t.familyId || (kind==='admin' ? 'admin' : t.otherId);
+  var undo=[];
+  (THREADS.list||[]).forEach(function(row){
+    if(row.kind!==kind) return;
+    if(kind!=='admin' && row.id!==id) return;
+    undo.push({row:row, awaitingReply:row.awaitingReply, waitingSince:row.waitingSince,
+               unread:row.unread, replyDueBy:row.replyDueBy});
+    row.awaitingReply=0; row.waitingSince=0; row.unread=0; row.replyDueBy=0;
+  });
+  return undo.length?undo:null;
+}
+function _undoRowAnswered(undo){
+  if(!undo) return;
+  undo.forEach(function(u){
+    u.row.awaitingReply=u.awaitingReply; u.row.waitingSince=u.waitingSince;
+    u.row.unread=u.unread; u.row.replyDueBy=u.replyDueBy;
+  });
+}
+
 // Re-applies whatever this client has ticked and the server has not yet
 // confirmed, after a fetch that replaced the thread wholesale.
 function _applyPendingReviews(t){
@@ -2729,8 +2793,10 @@ function markSeen(){
 // He then replaced the greyed-out button with a dialog, and it is the better
 // of the two: the button stays live and EXPLAINS ITSELF at the moment it is
 // pressed, rather than being disabled with the reason somewhere else on the
-// page. A conversation with no marks still gets the plain confirm — two
-// dialogs, each saying the one thing that matters at that moment.
+// page.
+// [1.327], AC 5 September — a conversation with no marks used to get a plain
+// "Close conversation?" confirm as well. That one is gone: there is nothing to
+// warn about, and it stood between him and the one action he takes most.
 function _openReviewMarks(t){
   var n=0;
   (t&&t.messages||[]).forEach(function(m){ if(m.reviewAt) n++; });
@@ -2740,7 +2806,7 @@ function closeConversation(){
   var t=ACTIVE_THREAD||ACTIVE_STAFF_THREAD;
   if(!t||t.closing) return;
   if(_openReviewMarks(t)){ t.closeReviewOpen=true; render(); return; }
-  if(!confirm(TCH_COPY.closeConfirm)) return;
+  // [1.327] — no confirm. See closeRow() above for why it guarded nothing.
   _doCloseConversation(t);
 }
 // Clear & close: one action, in that order. Closing first and clearing after
@@ -2843,6 +2909,7 @@ function sendFamilyMessage(){
   // confirmed it, which would show it twice.
   t._sendInFlight=true;
   _shouldScrollMsgList=true;
+  var _rowUndo=_setRowAnswered(t);   // [1.325] — the row stops owing a reply now
   render();
 
   api({action:'sendMessage', data:{conversationType:'family_teacher', familyId:t.familyId, teacherId:TEACHER_ID, teacherToken:TOKEN, messageText:text, messageHtml:html, studentId:_stuId, notifyParents:notifyParents, clientMsgId:clientMsgId}}, function(e,r){
@@ -2853,6 +2920,7 @@ function sendFamilyMessage(){
       // words they watched "send".
       t.messages=t.messages.filter(function(m){ return m!==pending; });
       t.draft=html;
+      _undoRowAnswered(_rowUndo);    // [1.325] — nothing was sent, so nothing was answered
       showMsg((r&&r.error)||'Could not send message.','e');
       render();
       return;
@@ -2930,7 +2998,7 @@ function rStaffThread(){
   // had this ✕ since @650 put both panes on screen; the STAFF thread never got
   // one, so an Admin or colleague conversation could be opened and not shut —
   // the same omission as [1.298] and [1.321], in the same half of this file.
-  var h='<div class="only-sm"><button class="btn btn-s" style="margin-bottom:1rem" onclick="STAFF_VIEW=\'list\';ACTIVE_STAFF_THREAD=null;loadThreads()">← Back</button></div>'+
+  var h='<div class="only-sm" style="margin-bottom:1rem">'+rBackBtn('Back',"STAFF_VIEW='list';ACTIVE_STAFF_THREAD=null;loadThreads()")+'</div>'+
     '<div class="only-lg" style="display:flex;justify-content:flex-end;margin-bottom:.4rem">'+
     '<button class="btn btn-s" title="Close this conversation" '+
     'onclick="STAFF_VIEW=\'list\';ACTIVE_STAFF_THREAD=null;render()">\u2715</button></div>';
@@ -3184,10 +3252,33 @@ var _cmpLink={};
 // the label is usually right and occasionally is not, and the sentence it lands
 // in is the sender's. One more click sends it; nothing is inserted behind
 // their back.
+//
+// [1.333] — THE LIBRARY IS FETCHED BEFORE IT IS ASKED FOR, not when.
+//
+// AC, 5 September: "the links show up around 5-10 seconds after selecting
+// 'link' in the message composer" — teacher and admin both.
+//
+// It was fetched on the first Link press, so the first press paid [1.263]'s
+// ~2s round trip plus the sheet read, in front of a box the sender is already
+// looking at. The links are a short list that changes when AC edits Settings;
+// there is no reason for the sender to wait for it. It is fetched once when
+// the roster loads, which is minutes before anyone presses Link.
+//
+// The flag matters and the old `if(SAVED_LINKS.length)` guard is why: an EMPTY
+// library has no length, so a studio with no links re-fetched on every single
+// Link press forever. An empty answer is an answer ([1.290] said the same
+// thing about THREAD_CACHE).
 var SAVED_LINKS = [];
+var _savedLinksLoaded = false;
+var _savedLinksInFlight = false;
 function loadSavedLinks(){
-  if(SAVED_LINKS.length) return;
-  _linkApi(function(list){ SAVED_LINKS = list || []; render(); });
+  if(_savedLinksLoaded || _savedLinksInFlight) return;
+  _savedLinksInFlight = true;
+  _linkApi(function(list){
+    _savedLinksInFlight = false; _savedLinksLoaded = true;
+    SAVED_LINKS = list || [];
+    render();
+  });
 }
 function rSavedLinks(id){
   if(!SAVED_LINKS.length) return '';
@@ -3213,6 +3304,16 @@ function _composerUseSaved(id, linkId){
   st.bad=false;
 }
 function _linkApi(cb){ api({action:'getMessageLinks', data:{teacherToken:TOKEN}}, function(e,r){ cb(e||!r||!r.ok?[]:(r.links||[])); }); }
+// [1.328] — the same one back control the family portal builds, for the same
+// reason. AC, 5 September: "Back link on every portal should be a button, not
+// text link." This file's two thread Backs were already buttons and its "Back
+// to Sign In" was a .lnk-btn pill; they are one thing now, so the next one
+// written cannot be a third shape.
+function rBackBtn(label, onclick){
+  return '<button type="button" class="btn btn-s kl-backbtn" onclick="'+onclick+'">'+
+    '\u2190 '+esc(label)+'</button>';
+}
+
 function _cmpLinkState(id){
   if(!_cmpLink[id]) _cmpLink[id]={open:false,url:'',text:'',bad:false};
   return _cmpLink[id];
@@ -3220,7 +3321,7 @@ function _cmpLinkState(id){
 
 function _composerLinkOpen(id){
   var row=document.getElementById(id+'-linkrow'); if(!row) return;
-  loadSavedLinks();   // [1.324] — fetched once, on the first Link press
+  loadSavedLinks();   // [1.333] — already warm; this is the fallback, not the fetch
   var sel=window.getSelection();
   var el=document.getElementById(id);
   _cmpLinkSel[id]=(sel && sel.rangeCount && el && el.contains(sel.anchorNode))
@@ -3361,7 +3462,7 @@ var TCH_COPY={
   // them, not only new ones, and the name now says so.
   sectionNew:'Messages',
   sectionReview:'Marked for review',
-  sectionClosed:'Closed Conversations',
+  sectionClosed:'Archived Conversations',
   // [1.273], AC 4 September 2026: "Teachers may not know the name of the
   // parent, but getting rid of the full list is good there also. A teacher
   // should be able to search by student or parent, and either parent if two
@@ -3427,13 +3528,13 @@ var TCH_COPY={
     // states [1.250] gives the family's contact row), so a guide promising an
     // absent circle would be describing something a teacher will never see.
     // The sentence under it is unchanged and is still true.
-    {h:'Grey badge with no number, “Close conversation” button visible', items:[
-      {t:'What it means', d:'Nothing is waiting on you in that conversation. Close the conversation if no response is due and the conversation is resolved.'}
+    {h:'Grey badge with no number, “End Conversation” button visible', items:[
+      {t:'What it means', d:'Nothing is waiting on you in that conversation. End the conversation if no response is due and the conversation is resolved.'}
     ]},
     {h:'Message sections', items:[
-      {t:'Messages', d:'Messages stay here until you mark a conversation closed.'},
+      {t:'Messages', d:'Messages stay here until you end a conversation.'},
       {t:'Marked for review', d:'Threads with individual messages marked for review. If a family sends a new message, the conversation moves back up to Messages, but you’ll still see the review count in the white circle with the blue number. Unclick the checkbox to revert messages marked for review to normal/read status.'},
-      {t:'Closed Conversations', d:'Messages that have been formally closed (see below). Families and staff/admin are kept separate. Click the heading to expand to see all closed conversations.'},
+      {t:'Archived Conversations', d:'Messages that have been formally ended (see below). Families and staff/admin are kept separate. Click the heading to expand to see all archived conversations.'},
       {t:'Search', d:'Finds any of your currently enrolled students and their families.'}
     ]},
     {h:'Reading a message', items:[
@@ -3459,13 +3560,13 @@ var TCH_COPY={
       {t:'What a reply clears', d:'Use saved for review messages to help stay organized and ensure you don’t miss a message. When you reply to a message, your message queue is cleared, but messages saved for review are not. Messages saved for review stay that way until you clear them. Click the message checkbox to save and unsave.'},
       // [1.233] — AC's guide line, verbatim. The item TITLE was Claude's; he
       // supplied the sentence only. APPROVED by AC, 4 September 2026 — he reviewed the eight placeholder strings, changed three, and said "everything else is approved".
-      {t:'Clearing before closing', d:'Messages saved for review need to be cleared before closing a conversation.'},
+      {t:'Clearing before ending', d:'Messages saved for review need to be cleared before ending a conversation.'},
       {t:'Mark seen', d:'Adds a quick generic message to the conversation thread letting the family know their message has been seen. Admin or teacher can mark a message as seen and this is visible to all parties. It is not a reply, and the timer keeps running until you send one. Use this when you don’t have time to respond but want the parent to know you have seen the message.'}
     ]},
-    {h:'Send, Ask Admin, and Close Conversation', items:[
+    {h:'Send, Ask Admin, and End Conversation', items:[
       {t:'Send', d:'Sends your reply to the sender (family or admin or other staff member). Visible to the recipient and admin.'},
-      {t:'Ask Admin', d:'Shares the conversation with admin. Teachers need to add a required note to give admin context on what they need help with. This is a private message between admin and teacher and will not be seen by family. The message response countdown continues until the message has been responded to — by either you or admin — or the conversation is marked as closed.'},
-      {t:'Close conversation', d:'Conversations can be marked closed by teacher or admin. When marking a conversation as closed, the conversation has reached its natural conclusion and can be archived to the closed conversation area. If the family sends another message, it moves back to Messages so you’ll always have full context on message history with your families, other staff, and admin.'}
+      {t:'Ask Admin', d:'Shares the conversation with admin. Teachers need to add a required note to give admin context on what they need help with. This is a private message between admin and teacher and will not be seen by family. The message response countdown continues until the message has been responded to — by either you or admin — or the conversation is ended.'},
+      {t:'End conversation', d:'Conversations can be ended by teacher or admin. When ending a conversation, the conversation has reached its natural conclusion and can be archived to the Archived Conversations area. If the family sends another message, it moves back to Messages so you’ll always have full context on message history with your families, other staff, and admin.'}
     ]}
   ],
   saveForReview:'Save for review',
@@ -3476,13 +3577,32 @@ var TCH_COPY={
   // rendered under this and is not copy.
   notSent:'Message did not send',
   markSeen:'Mark seen',
-  closeConversation:'Close conversation',
-  closeConfirm:'Close conversation?',
+  // [1.326] — AC, 5 September: the ✕ and this button were both called
+  // "close". "Hovering over the x in teacher portal says 'close this
+  // conversation' which argues with existing nomenclature. Close this
+  // conversation is correct here, so we'll need to change the naming of the
+  // 'close conversation' function that marks a conversation as closed. Say
+  // 'End Conversation' to mark as complete and move to Archived Conversations
+  // area."
+  //
+  // So the ✕ keeps its words and THIS one changes. The stored field is still
+  // closedAt: renaming data to match a label is how a migration gets invented
+  // for a word.
+  closeConversation:'End Conversation',
+  // [1.327] — the plain confirm is GONE. AC: "There is no need for a confirm
+  // screen when ending a conversation. It's archived, and can't be archived if
+  // a reply is due, so this doesn't really serve a purpose any longer." The
+  // review warning below is the one that stayed, and it moved to his wording.
   // [1.233], AC's words. He replaced the greyed-out-button plan with this:
   // the button stays live and explains itself, rather than being disabled
   // with the reason somewhere else on the page.
-  closeNeedsReview:'There are messages still marked for review in this thread. Click to clear all and close the conversation.',
-  clearAndClose:'Clear & close',
+  // [1.327] — AC's own sentence, verbatim, and he placed it as well as wrote
+  // it: "Add 'This will clear all messages saved for review. Proceed?' warning
+  // when ending a conversation if any messages are saved for review in the
+  // thread. That's where the warning needs to go, not when they save for
+  // review, which they clearly want to do and requires no warning."
+  closeNeedsReview:'This will clear all messages saved for review. Proceed?',
+  clearAndClose:'Proceed',
   cancel:'Cancel'
 };
 
@@ -3866,6 +3986,7 @@ function sendStaffMessage(){
   t.emailToo=false;
   t._sendInFlight=true;
   _shouldScrollMsgList=true;
+  var _rowUndo=_setRowAnswered(t);   // [1.325] — same rule on a staff row
   render();
 
   api({action:'sendMessage', data:reqData}, function(e,r){
@@ -3874,6 +3995,7 @@ function sendStaffMessage(){
     if(e||!r||!r.ok){
       t.messages=t.messages.filter(function(m){ return m!==pending; });
       t.draft=html;
+      _undoRowAnswered(_rowUndo);    // [1.325]
       showMsg((r&&r.error)||'Could not send message.','e');
       render();
       return;

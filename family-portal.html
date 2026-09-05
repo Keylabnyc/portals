@@ -243,8 +243,10 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
    inside the list, so it always opens on the newest message with nothing
    above it to scroll past. ── */
 .kl-tbar{display:flex;align-items:center;justify-content:space-between;gap:8px;padding-bottom:.5rem;border-bottom:1px solid var(--border);margin-bottom:.6rem}
-.kl-back{font-size:12px;font-weight:600;color:var(--acc);cursor:pointer;display:inline-flex;align-items:center;gap:4px}
-.kl-back:hover{text-decoration:underline}
+/* [1.328] — .kl-back was a <span> styled to look like a link and was the last
+   real text link on this page. Its replacement is an ordinary button; the
+   class survives only to carry the spacing the toolbar row needs. */
+.kl-backbtn{font-size:12px}
 .kl-thead{display:flex;align-items:center;gap:9px;margin-bottom:.7rem}
 .kl-tname{font-size:14px;font-weight:700;color:var(--text);line-height:1.2}
 .kl-tsub{font-size:11px;color:var(--text4)}
@@ -1286,7 +1288,7 @@ function rLogin(){
 
   // Step 2, account has no password yet: only the setup prompt, never a
   // password field for a password that doesn't exist.
-  var backLink='<p style="font-size:13px;color:var(--text3)"><button type="button" class="lnk-btn" onclick="doBackToEmailStep()">\u2190 Use a different email</button></p>';
+  var backLink='<p style="font-size:13px;color:var(--text3)">'+rBackBtn('Use a different email','doBackToEmailStep()')+'</p>';
   if(LF.needsSetup){
     var setupBtnInner = LF.settingUp
       ? '<button class="btn btn-p btn-sm" disabled><span class="spin">\u21bb</span> Sending...</button>'
@@ -1403,7 +1405,7 @@ function rForgotPassword(){
     '<div class="field"><label>Your email address<span class="req">*</span></label>'+
     '<input id="fpe" type="email" autocomplete="username" inputmode="email" value="'+esc(FP.email)+'" oninput="FP.email=this.value" onkeydown="if(event.keyCode===13)doBeginReset()"></div>'+
     btn+'</div>'+
-    '<p style="font-size:13px;color:var(--text3)"><button type="button" class="lnk-btn" onclick="PAGE=&apos;login&apos;;render()">Back to Sign In</button></p>';
+    '<p style="font-size:13px;color:var(--text3)">'+rBackBtn('Back to Sign In','PAGE=&apos;login&apos;;render()')+'</p>';
 }
 
 function doBeginReset(){
@@ -1461,7 +1463,7 @@ function rSetPassword(){
     '<div class="field"><label>Confirm password<span class="req">*</span></label>'+
     '<input id="spw2" type="password" autocomplete="new-password" value="'+esc(SPW.pw2)+'" oninput="SPW.pw2=this.value" onkeydown="if(event.keyCode===13)doCompleteReset()"></div>'+
     btn+'</div>'+
-    '<p style="font-size:13px;color:var(--text3)"><button type="button" class="lnk-btn" onclick="PAGE=&apos;login&apos;;render()">Back to Sign In</button></p>';
+    '<p style="font-size:13px;color:var(--text3)">'+rBackBtn('Back to Sign In','PAGE=&apos;login&apos;;render()')+'</p>';
 }
 
 function doCompleteReset(){
@@ -1756,7 +1758,7 @@ function rRegisterChildren(){
   var h='<div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:.5rem">Step 2 of 2 \u00b7 '+stepLbl+'</div>';
   h+='<h1>'+(addingAnother?'Add Another Child':'Tell Us About Your Child')+'</h1>';
   h+='<p>Add your child\'s info and when your family is available for their lessons this school year.</p>';
-  h+='<p style="font-size:13px;color:var(--text3)"><button type="button" class="lnk-btn" onclick="RF.step=&apos;parent&apos;;render()">\u2190 Back to your info</button></p>';
+  h+='<p style="font-size:13px;color:var(--text3)">'+rBackBtn('Back to your info','RF.step=&apos;parent&apos;;render()')+'</p>';
 
   // Every child the family has reached, in order: the one being filled in
   // renders as a full card, the rest as summaries. This used to render
@@ -2222,7 +2224,7 @@ function rApp(){
     // bar here to navigate with.
     if(_onePageSub && _onePageSub.tab===TAB){
       var _backBar='<p style="font-size:13px;color:var(--text3);margin-bottom:1rem">'+
-        '<button type="button" class="lnk-btn"  onclick="_klGoHome()">← Back to home</button></p>';
+        rBackBtn('Back to home','_klGoHome()')+'</p>';
       var _subContent=(TAB==='enrollment')?rEnrollment(_onePageSub.studentId):rScheduling();
       return _signOut+_backBar+_subContent;
     }
@@ -2259,6 +2261,27 @@ function rApp(){
 // to write to, which is the point: every misrouted message costs admin a
 // forward. This is the ONLY place the routing advice appears; it was briefly
 // duplicated in the support section and AC moved it here.
+// ── [1.328] — ONE back control, and it is a button ──────────────────────
+//
+// AC, 5 September 2026: "Back link on every portal should be a button, not
+// text link. I've asked for this before, but these broad frequently used
+// features should be buttons, not text links."
+//
+// He HAS asked before — 1.190, "NO HYPERLINK TEXT! Buttons only. For
+// everyone." — and the reason it is still open is that it was answered one
+// call site at a time: the thread's Back stayed a <span class="kl-back">, and
+// four more became .lnk-btn, which is a low-emphasis pill rather than the
+// button every other action on the page uses. Fixing the five instances again
+// would leave the sixth to be written as a link tomorrow.
+//
+// So this is the mechanism, not the instances. Every back control in this file
+// is built here, in the portal's ordinary button style, and check.js asserts
+// that no back control anywhere renders as a span or a .lnk-btn.
+function rBackBtn(label, onclick){
+  return '<button type="button" class="btn btn-s kl-backbtn" onclick="'+onclick+'">'+
+    '\u2190 '+esc(label)+'</button>';
+}
+
 function rHomeMsgGuide(){
   return '<div class="kl-guide"><ul>'+
     '<li>We will respond to your message as soon as possible, and within 1 business day maximum.</li>'+
@@ -2410,7 +2433,7 @@ function rHomeThreadView(){
   var sub=_klContactSub(c);
   var h='<h2>Messages</h2>';
   h+='<div class="kl-tbar" id="kl-thread-top">'+
-    '<span class="kl-back" onclick="closeHomeThread()">← Back</span>'+
+    rBackBtn('Back','closeHomeThread()')+
     '<span>'+
       // Mark-unread was here until 3 September 2026. AC retired it in all
       // three portals: it marked a whole thread and said something untrue
@@ -3354,6 +3377,18 @@ function _rChildStatusSummary(s, opts){
 // New Proposal" button.
 var KL_ACTIONABLE_PHASES={'Leads':1,'Pending':1,'Holding':1,'Trial Booked':1,'Proposal':1,'Confirmed to Enroll':1,'Enrollment Change':1};
 
+// [1.329] — is anything on this page still asking the parent to do something?
+// KL_ACTIONABLE_PHASES is the answer and 'Enrolled' is deliberately not in it,
+// which is the fact this rests on and is checked separately. The first version
+// of this function also tested phase!=='Enrolled', which read as a safeguard
+// and was dead code — and a mutation proved it: breaking it changed nothing.
+function _klHasActionable(){
+  for(var i=0;i<students.length;i++){
+    if(KL_ACTIONABLE_PHASES[students[i].phase||'']) return true;
+  }
+  return false;
+}
+
 function _familyUsesOnePage(){
   if(!students.length) return false;
   for(var i=0;i<students.length;i++){
@@ -4021,18 +4056,45 @@ function rHomeOnePage(){
   // to do next, the enrolled ones for status/processed date/amount, per
   // AC's original ask: "dates, amounts, and status clearly on home page
   // without having to click anywhere."
+  var _cards='';
   students.forEach(function(s){
-    if(s.phase==='Enrolled' || KL_ACTIONABLE_PHASES[s.phase||'']) h+=_rHomeChildActionCard(s);
+    if(s.phase==='Enrolled' || KL_ACTIONABLE_PHASES[s.phase||'']) _cards+=_rHomeChildActionCard(s);
   });
 
-  // ── Schedule: next lessons + important dates, one block, first on the page ──
+  // ── [1.329] — the settled family's page, in AC's order ──────────────────
+  //
+  // AC, 5 September 2026: "Once a family is enrolled, move the schedule
+  // segment to the top, then the messaging segment, then the enrollment cards,
+  // then keylab support section."
+  //
+  // Applied only when the family has NOTHING LEFT TO ACT ON, which he
+  // confirmed when asked: "reorder applies to families with nothing left to
+  // act on, and is for enrolled families, not confirmed to enroll or other
+  // statuses."
+  //
+  // The distinction is not a nicety. A card in an actionable phase is asking
+  // the parent to review a proposal or submit availability, and AC put those
+  // at the top himself on 20 August for that reason — a sibling mid-enrollment
+  // is the most important thing on the page. So a mixed family keeps today's
+  // order and a settled one gets his.
+  //
+  // His second clause — "the messaging feature shouldn't open up before
+  // enrollment phase" — needed no change and was verified rather than assumed:
+  // this function is the ONLY caller of rHomeMessages(), and it runs only for
+  // families with a student in Enrolled (_familyUsesOnePage). A family with no
+  // enrolled child is on the old tabbed Home, which has no messaging block at
+  // all. There is a check on that, so it stays true.
+  var _settled=!_klHasActionable();
+
+  // ── Schedule: next lessons + important dates, one block ──
   // Merged on AC's call (BACKLOG 1.50): they answer the same question — when
   // are the lessons, and when aren't there any — and used to sit apart with
   // Messages between them.
-  h+=rHomeSchedule();
+  var _schedule=rHomeSchedule();
+  var _messages='<div class="card">'+rHomeMessages()+'</div>';
 
-  // ── Messages ──
-  h+='<div class="card">'+rHomeMessages()+'</div>';
+  h+= _settled ? (_schedule+_messages+_cards)
+               : (_cards+_schedule+_messages);
 
   // Monthly Tuition was removed entirely here (BACKLOG 1.51, AC's call). The
   // Billing & invoices button it carried is not lost — Keylab Support's
@@ -4423,7 +4485,7 @@ function rScheduling(){
     var _scName='';
     var _scInstr='';
     for(var _ni=0;_ni<students.length;_ni++){ if(students[_ni].studentId===SC.studentId){_scName=students[_ni].studentName;_scInstr=students[_ni].instrument||'';break;} }
-    if(_scName) h+='<div style="font-size:13px;color:var(--text3);margin-bottom:1rem">Submitting for: <strong style="color:var(--text)">'+esc(_scName)+(_scInstr?' \u2014 '+esc(_scInstr):'')+'</strong> \u00b7 <button type="button" class="lnk-btn" onclick="_klGoHome();return false" >Back to home</button></div>';
+    if(_scName) h+='<div style="font-size:13px;color:var(--text3);margin-bottom:1rem">Submitting for: <strong style="color:var(--text)">'+esc(_scName)+(_scInstr?' \u2014 '+esc(_scInstr):'')+'</strong> \u00b7 '+rBackBtn('Back to home','_klGoHome()')+'</div>';
   }
 
   if(!SC.studentId){

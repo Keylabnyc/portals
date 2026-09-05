@@ -528,6 +528,12 @@ input[type=checkbox]{width:13px;height:13px;padding:0;margin:0;border:0;border-r
 .btn-ask{background:#fff;border:1px solid var(--acc);color:var(--acc)}
 .closed-tag{font-size:11px;font-weight:600;color:var(--text4);padding:3px 9px;
   border:1px solid var(--border);border-radius:4px;background:var(--bg4)}
+/* [1.335] — ended while a reply was still owed. AC: "Make this text blue so
+   it's clear the reply may need review." Blue, not red: this is not an error
+   and the teacher has not done anything wrong — it is a thing admin may want
+   to look at. Stated in both staff portals identically. */
+.closed-tag.unanswered{color:var(--acc);border-color:var(--acc);background:transparent}
+.note-body .unanswered-note{color:var(--acc);font-weight:600}
 .read-toggle{flex:0 0 auto;font-size:14px;color:var(--text5);text-decoration:none;padding:0 4px}
 .read-toggle:hover{color:var(--acc);text-decoration:none}
 .recipient-row{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:.6rem;font-size:12px;color:var(--text3)}
@@ -668,6 +674,39 @@ var ACTIVE_STAFF_THREAD = null; // {contactType:'admin'|'staff', otherId, otherN
 // nothing a separate start-a-conversation view would add |
 // 'thread' (one open conversation).
 var FAMILY_VIEW = 'list';
+
+// ── [1.336] — ONE pane, so ONE thing can be open in it ───────────────────
+//
+// AC, 5 September 2026, twice: "teacher can't click a message to view it in
+// the message list while another message is open... Any message clicked on the
+// left should open instantly."
+//
+// **Found by reading what the pane actually chooses, not by guessing.** There
+// are two view flags for one pane and rMessagesPage picks between them:
+//
+//     var thread = STAFF_VIEW==='thread' ? rStaffThread()
+//                : FAMILY_VIEW==='thread' ? rFamilyThread() : ...
+//
+// STAFF wins. So with a staff thread open, clicking a FAMILY row set
+// FAMILY_VIEW='thread' — and nothing changed on screen, because STAFF_VIEW was
+// still 'thread' and got there first. The click worked perfectly and had no
+// visible effect, which is exactly what AC described. The other direction
+// happened to work, which is why it looked intermittent.
+//
+// **This is [1.292]'s fault in a second place: two copies of one truth.** The
+// portal held two rosters and they could disagree; it holds two view flags for
+// one pane and they can disagree too. The fix is the same shape — one place
+// decides, and the flags are only ever set together.
+//
+// Every assignment to either flag goes through here, and check.js asserts that
+// no other line in this file assigns one, so a third caller cannot reintroduce
+// the state where both say 'thread'.
+function _openPane(kind){
+  FAMILY_VIEW = (kind==='family') ? 'thread' : 'list';
+  STAFF_VIEW  = (kind==='staff')  ? 'thread' : 'list';
+  if(kind!=='family') ACTIVE_THREAD=null;
+  if(kind!=='staff')  ACTIVE_STAFF_THREAD=null;
+}
 
 // BACKLOG 1.136. Delivered on the roster payload rather than a config call --
 // this portal has no getPublicConfig, and the roster is fetched on load and
@@ -2037,7 +2076,10 @@ function _rowWaitLine(r){
 }
 
 function rRowMarks(r){
-  if(r.closed) return '<span class="closed-tag">Closed</span>';
+  // [1.335] — the row says HOW it ended when it ended without a reply.
+  if(r.closed) return r.closedUnanswered
+    ? '<span class="closed-tag unanswered" title="Ended without a reply">'+esc(TCH_COPY.endedUnanswered)+'</span>'
+    : '<span class="closed-tag">Closed</span>';
   // ── [1.287] — nothing to close, so nothing offers to close it ───────────
   //
   // AC, 4 September: "a conversation that is opened but never started should
@@ -2060,10 +2102,15 @@ function rRowMarks(r){
   // is offered on every open conversation now. The confirm still guards it,
   // and a thread with saved marks still has to clear them first ([1.233]).
   var marks=rReadMark(r.awaiting)+rReviewMark(r.review);
-  // [1.309] — a conversation waiting on this teacher cannot be closed, so it
-  // does not offer to be. The server refuses it too; this is so a teacher is
-  // told before they click rather than after.
-  if(Number(r.waitingSince)) return marks;
+  // [1.335], AC 5 September: "Teacher needs to be able to 'End conversation
+  // without responding' for conversations that don't require a response."
+  //
+  // [1.309] hid this button whenever a reply was owed, because the server
+  // refused the write and inviting a click that fails is worse than not
+  // offering it. The server no longer refuses — it RECORDS — so the button is
+  // offered on every open conversation again. The two halves have to move
+  // together: a button the server refuses, or a refusal with no button, are
+  // both worse than either state.
   return marks+'<button type="button" class="btn btn-s row-close" '+
     'onclick="event.stopPropagation();closeRow('+_rowArgs(r)+')">'+
     esc(TCH_COPY.closeConversation)+'</button>';
@@ -2403,10 +2450,13 @@ function openFamilyThread(familyId, p1, p2, focusReview){
 // conversation has to keep showing that it is still loading, because the only
 // honest thing to say about it is that we do not know yet.
   var _had=_cachedMessages(_req);
-  ACTIVE_THREAD = {familyId:familyId, parent1Name:p1, parent2Name:p2, messages:_had||[], draft:'', sending:false,
+  // [1.336] — the draft comes back with the conversation. This line is the
+  // whole fix for the data loss: it used to read draft:''.
+  ACTIVE_THREAD = {familyId:familyId, parent1Name:p1, parent2Name:p2, messages:_had||[],
+                   draft:_draftGet('family', familyId), sending:false,
                    loading:!_had, refreshing:!!_had, notifyP1:true, notifyP2:true,
                    students:_row.students||[]};
-  FAMILY_VIEW='thread';
+  _openPane('family');   // [1.336] — one pane, one open thing
   _shouldScrollMsgList=true;
   render();
   api({action:'getConversation', data:_req}, function(e,r){
@@ -2500,10 +2550,10 @@ function rFamilyThread(){
   // desktop." The Back button was phone-only, because on desktop the roster is
   // already beside the thread — but the thread still had no way to be put
   // down, so the pane kept whatever was last opened.
-  var h='<div class="only-sm" style="margin-bottom:1rem">'+rBackBtn('Back',"FAMILY_VIEW='list';ACTIVE_THREAD=null;loadFamilyThreads()")+'</div>'+
+  var h='<div class="only-sm" style="margin-bottom:1rem">'+rBackBtn('Back',"_openPane('');loadFamilyThreads()")+'</div>'+
     '<div class="only-lg" style="display:flex;justify-content:flex-end;margin-bottom:.4rem">'+
     '<button class="btn btn-s" title="Close this conversation" '+
-    'onclick="FAMILY_VIEW=\'list\';ACTIVE_THREAD=null;render()">\u2715</button></div>';
+    'onclick="_openPane(&apos;&apos;);render()">\u2715</button></div>';
   // [1.320] — name, deadline, refresh: one line. The deadline was a row of its
   // own below the children; it is the same fact either way, and up here it is
   // read with the name rather than after two other things.
@@ -2521,7 +2571,7 @@ function rFamilyThread(){
   } else {
     var _r=_convRow(t.familyId);
     h+='<div class="msg-list">'+t.messages.map(rMessageBubble).join('')+
-       (_r?rClosedLine(_r.closedAt,_r.closedByName):'')+'</div>';
+       (_r?rClosedLine(_r.closedAt,_r.closedByName,_r.closedUnanswered):'')+'</div>';
   }
   // Recipient choice only matters when there are two distinct parents on
   // file — mirrors admin Comms' recipient picker (confirmed 18 Aug, SPEC §7
@@ -2565,7 +2615,8 @@ function rFamilyThread(){
     (!(t.messages||[]).length || (_cRow&&Number(_cRow.waitingSince))
       ? ''
       : _cRow&&_cRow.closed
-      ? '<span class="closed-tag">Closed</span>'
+      ? '<span class="closed-tag'+(_r&&_r.closedUnanswered?' unanswered':'')+'">'+
+        esc(_r&&_r.closedUnanswered?TCH_COPY.endedUnanswered:'Closed')+'</span>'
       : '<button type="button" class="btn btn-s" onclick="closeConversation()">'+esc(TCH_COPY.closeConversation)+'</button>');
   // BACKLOG 1.161 #4 — which child, asked only when a teacher has more than
   // one child in this family. One child and it is set automatically with
@@ -2581,7 +2632,7 @@ function rFamilyThread(){
       '<span class="about-pill'+(_sel?'':' on')+'" onclick="ACTIVE_THREAD.studentId=\'\';render()">Something else</span>'+
       '</div>';
   }
-  h+=rComposer('family-composer',t.draft,'ACTIVE_THREAD.draft=_composerInput(this)',sendBtn);
+  h+=rComposer('family-composer',t.draft,'_composerSync(\'family-composer\')',sendBtn);
   // BACKLOG 1.135 — ask the office for help with a family question. Sharing,
   // not handing over: the conversation still ages against this teacher until
   // one of them answers, and a note saying what is needed is required, so a
@@ -2823,13 +2874,47 @@ function cancelCloseReview(){
   if(!t) return;
   t.closeReviewOpen=false; t.closing=false; render();
 }
+// ── [1.337] — ending from inside the thread moves the row too ───────────
+//
+// AC, 5 September 2026: "after replying and ending a conversation, the teacher
+// still sees the message in the new messages area, but it should be archived.
+// This makes the teacher end the conversation twice."
+//
+// **Established by comparing the two paths rather than guessing at one.**
+// There are two ways to end a conversation and they were not the same:
+//
+//   closeRow()          patches the roster row optimistically ([1.279]/[1.311])
+//                       and the row moves on the click.
+//   closeConversation() patched NOTHING. It wrote, then asked for a fresh
+//                       roster, and the row sat under Messages until that
+//                       round trip came back — [1.263]'s ~2s plus a rebuild,
+//                       on top of a reply that had just made the same trip.
+//
+// So the conversation AC had just ended went on looking un-ended, and ending
+// it again is the obvious thing to do. **Same fault as [1.325] and the same
+// answer: the client knows the outcome, so it draws it.**
+//
+// The pane is cleared with it. An ended conversation left open on the right,
+// beside a list that has filed it away, is the two halves of the screen
+// disagreeing again ([1.283]) — and there is nothing more to do in it.
 function _doCloseConversation(t){
   t.closing=true; t.closeReviewOpen=false; render();
+  var _w=_draftWhere(t);
+  var _src=_w ? (THREADS.list||[]).filter(function(x){
+    return x.kind===(_w[0]==='family'?'family':(_w[0]==='admin'?'admin':'staff')) &&
+           (_w[0]==='admin' || x.id===_w[1]);
+  })[0] : null;
+  var _was=!!(_src&&_src.closed);
+  if(_src) _src.closed=true;
+  _openPane('');            // [1.336]'s setter — nothing is open, and both flags say so
+  render();
   api({action:'setConversationClosed', data:_threadKey(t,{closed:true})}, function(e,r){
     t.closing=false;
-    if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not close that.','e'); render(); return; }
+    if(e||!r||!r.ok){
+      if(_src) _src.closed=_was;
+      showMsg((r&&r.error)||'Could not end that.','e'); render(); return;
+    }
     _refreshRosters();
-    _refreshOpenThread();
   });
 }
 
@@ -2905,6 +2990,7 @@ function sendFamilyMessage(){
   };
   t.messages=t.messages.concat([pending]);
   t.draft='';
+  _draftKeep(t, '');   // [1.336] — sent is not a draft any more
   // Stops the 5s poll delivering this same message back before the server has
   // confirmed it, which would show it twice.
   t._sendInFlight=true;
@@ -2920,6 +3006,7 @@ function sendFamilyMessage(){
       // words they watched "send".
       t.messages=t.messages.filter(function(m){ return m!==pending; });
       t.draft=html;
+      _draftKeep(t, html);   // [1.336] — it never left, so it is a draft again
       _undoRowAnswered(_rowUndo);    // [1.325] — nothing was sent, so nothing was answered
       showMsg((r&&r.error)||'Could not send message.','e');
       render();
@@ -2954,9 +3041,11 @@ function openStaffThread(contactType, otherId, otherName, focusReview){
     ? {conversationType:'teacher_admin', teacherId:TEACHER_ID, teacherToken:TOKEN}
     : {conversationType:'staff_staff', teacherId:TEACHER_ID, staffId2:otherId, teacherToken:TOKEN};
   var _had=_cachedMessages(reqData);   // [1.291]
-  ACTIVE_STAFF_THREAD = {contactType:contactType, otherId:otherId, otherName:otherName, messages:_had||[], draft:'', sending:false,
+  // [1.336] — same rule on the staff side; it used to read draft:''.
+  ACTIVE_STAFF_THREAD = {contactType:contactType, otherId:otherId, otherName:otherName, messages:_had||[],
+                         draft:_draftGet(contactType==='admin'?'admin':'staff', contactType==='admin'?'admin':otherId), sending:false,
                          loading:!_had, refreshing:!!_had};
-  STAFF_VIEW='thread';
+  _openPane('staff');    // [1.336] — one pane, one open thing
   _shouldScrollMsgList=true;
   render();
   api({action:'getConversation', data:reqData}, function(e,r){
@@ -2998,10 +3087,10 @@ function rStaffThread(){
   // had this ✕ since @650 put both panes on screen; the STAFF thread never got
   // one, so an Admin or colleague conversation could be opened and not shut —
   // the same omission as [1.298] and [1.321], in the same half of this file.
-  var h='<div class="only-sm" style="margin-bottom:1rem">'+rBackBtn('Back',"STAFF_VIEW='list';ACTIVE_STAFF_THREAD=null;loadThreads()")+'</div>'+
+  var h='<div class="only-sm" style="margin-bottom:1rem">'+rBackBtn('Back',"_openPane('');loadThreads()")+'</div>'+
     '<div class="only-lg" style="display:flex;justify-content:flex-end;margin-bottom:.4rem">'+
     '<button class="btn btn-s" title="Close this conversation" '+
-    'onclick="STAFF_VIEW=\'list\';ACTIVE_STAFF_THREAD=null;render()">\u2715</button></div>';
+    'onclick="_openPane(&apos;&apos;);render()">\u2715</button></div>';
   h+='<div style="display:flex;justify-content:space-between;align-items:center">'+
     '<div class="thread-hd" style="margin-bottom:0">'+esc(t.otherName)+'</div>'+
     '<button type="button" class="lnk-btn"  onclick="refreshStaffThread()">'+(t.refreshing?'<span class="spin">↻</span>':'↻ Refresh')+'</button></div>';
@@ -3035,7 +3124,7 @@ function rStaffThread(){
   h+='<label class="opt-check">'+
      '<input type="checkbox" '+(t.emailToo?'checked':'')+' onchange="ACTIVE_STAFF_THREAD.emailToo=this.checked"> '+
      'Also send by email (for something that can\'t wait for the portal)</label>';
-  h+=rComposer('staff-composer',t.draft,'ACTIVE_STAFF_THREAD.draft=_composerInput(this)',sendBtn);
+  h+=rComposer('staff-composer',t.draft,'_composerSync(\'staff-composer\')',sendBtn);
   // [1.233] — the same dialog as the family thread. A staff conversation can
   // hold review marks too, and closing one with marks outstanding is the same
   // mistake wherever it happens.
@@ -3142,6 +3231,58 @@ function _composerPlain(html){
     .replace(/&amp;/g,'&').replace(/\s+/g,' ').trim();
 }
 
+// ── [1.336] — the draft belongs to the CONVERSATION, not to the pane ─────
+//
+// AC, 5 September 2026: "Save the message being written as a draft message, or
+// allow teacher to click save as draft so they don't lose changes. The solution
+// here needs to be the most efficient, clear, quick, and stable option. Use
+// industry standards to guide your decision."
+//
+// **The tool was worse than he thought, and this is the part worth recording.**
+// He assumed switching was BLOCKED to protect a half-written message. It was
+// not blocked (see [1.336] in _openPane) and nothing was protected:
+// openFamilyThread() built a fresh ACTIVE_THREAD with draft:'' every single
+// time, so switching conversations discarded what you were typing, silently,
+// with no way back. There was no guard — there was a data loss.
+//
+// **The standard is autosave per thread, not a Save-as-draft button.** Every
+// mail client has worked this way for fifteen years: the draft belongs to the
+// conversation, it is kept as it is typed, it comes back when you return, and
+// nobody presses anything. A button to press is a button to forget, and it is
+// forgotten exactly when it matters — which is the case AC is describing.
+//
+// Keyed by the same conversation key THREAD_CACHE uses, so a draft and the
+// messages it belongs with can never be filed under different names. Held in
+// localStorage as well as memory, so a reload, a crash or a closed tab does
+// not lose it either — the same wrapper "remember me" uses, equally
+// unavailable-safe.
+var DRAFTS = {};
+function _draftKey(kind, id){
+  return kind==='family' ? 'ft_'+id : (kind==='admin' ? 'ta_admin' : 'ss_'+id);
+}
+function _draftsLoad(){
+  try{ DRAFTS = JSON.parse(localStorage.getItem('kl_teacher_drafts')||'{}') || {}; }
+  catch(e){ DRAFTS = {}; }
+}
+function _draftsSave(){
+  try{ localStorage.setItem('kl_teacher_drafts', JSON.stringify(DRAFTS)); }catch(e){}
+}
+function _draftGet(kind, id){ return DRAFTS[_draftKey(kind,id)] || ''; }
+function _draftSet(kind, id, html){
+  var k=_draftKey(kind,id);
+  // An empty draft is deleted rather than stored as '': a store full of empty
+  // strings is a store that grows forever and answers every question "yes".
+  if(html && html.replace(/<[^>]*>/g,'').trim()) DRAFTS[k]=html;
+  else delete DRAFTS[k];
+  _draftsSave();
+}
+// Which conversation the open thread is, in the two words the key needs.
+function _draftWhere(t){
+  if(!t) return null;
+  if(t.familyId) return ['family', t.familyId];
+  return t.contactType==='admin' ? ['admin','admin'] : ['staff', t.otherId];
+}
+
 function _composerInput(el){
   // Browsers leave a stray line-break wrapper behind when the box is emptied,
   // which defeats the :empty placeholder rule. Clear it only when there is
@@ -3153,9 +3294,20 @@ function _composerInput(el){
 
 function _composerSync(id){
   var el=document.getElementById(id); if(!el) return;
-  var v=_composerClean(el);
-  if(id==='family-composer' && ACTIVE_THREAD) ACTIVE_THREAD.draft=v;
-  if(id==='staff-composer' && ACTIVE_STAFF_THREAD) ACTIVE_STAFF_THREAD.draft=v;
+  // _composerInput rather than _composerClean: it also clears the stray
+  // line-break wrapper browsers leave behind in an emptied box, which is what
+  // the :empty placeholder rule depends on. [1.336] routed both composers'
+  // oninput through here, so that cleanup has to happen here too or the
+  // placeholder stops coming back.
+  var v=_composerInput(el);
+  if(id==='family-composer' && ACTIVE_THREAD){ ACTIVE_THREAD.draft=v; _draftKeep(ACTIVE_THREAD, v); }
+  if(id==='staff-composer' && ACTIVE_STAFF_THREAD){ ACTIVE_STAFF_THREAD.draft=v; _draftKeep(ACTIVE_STAFF_THREAD, v); }
+}
+// [1.336] — one place the draft is written from, so the two composers cannot
+// end up keeping it differently.
+function _draftKeep(t, v){
+  var w=_draftWhere(t);
+  if(w) _draftSet(w[0], w[1], v);
 }
 
 function _composerCmd(id,cmd){
@@ -3589,6 +3741,9 @@ var TCH_COPY={
   // closedAt: renaming data to match a label is how a migration gets invented
   // for a word.
   closeConversation:'End Conversation',
+  // [1.335] — PLACEHOLDER COPY, flagged for AC. He named the colour and the
+  // reason ("so it's clear the reply may need review"), not the words.
+  endedUnanswered:'Ended without a reply',
   // [1.327] — the plain confirm is GONE. AC: "There is no need for a confirm
   // screen when ending a conversation. It's archived, and can't be archived if
   // a reply is due, so this doesn't really serve a purpose any longer." The
@@ -3853,10 +4008,11 @@ function _rNote(label, at, text){
 // closed in the message thread: one line like read receipt." Drawn from the
 // row's own closedAt/closedByName rather than written as a message, so closing
 // never adds anything to what a family is sent — this line is staff-only.
-function rClosedLine(closedAt, closedByName){
+function rClosedLine(closedAt, closedByName, unanswered){
   if(!closedAt) return '';
   return '<div class="note-line">'+
-    '<div class="note-body">'+esc(closedByName||'Someone')+' closed this conversation'+
+    '<div class="note-body">'+esc(closedByName||'Someone')+' ended this conversation'+
+      (unanswered?' <span class="unanswered-note">'+esc(TCH_COPY.endedUnanswered)+'</span>':'')+
       ' <span class="note-when">· '+esc(fmtMsgTime(closedAt))+'</span></div>'+
     '</div>';
 }
@@ -3983,6 +4139,7 @@ function sendStaffMessage(){
   };
   t.messages=t.messages.concat([pending]);
   t.draft='';
+  _draftKeep(t, '');   // [1.336]
   t.emailToo=false;
   t._sendInFlight=true;
   _shouldScrollMsgList=true;
@@ -3995,6 +4152,7 @@ function sendStaffMessage(){
     if(e||!r||!r.ok){
       t.messages=t.messages.filter(function(m){ return m!==pending; });
       t.draft=html;
+      _draftKeep(t, html);   // [1.336]
       _undoRowAnswered(_rowUndo);    // [1.325]
       showMsg((r&&r.error)||'Could not send message.','e');
       render();
@@ -4107,17 +4265,15 @@ function _pollTick(){
 
 function doSignOut(){
   _ktClearSession();
+  // [1.336] — drafts are this teacher's unsent words on a shared machine.
+  DRAFTS={}; try{ localStorage.removeItem('kl_teacher_drafts'); }catch(e){}
   if(_pollTimer){ clearInterval(_pollTimer); _pollTimer=null; }
   TOKEN=''; TEACHER_ID=''; TEACHER_NAME='';
   LF={email:'', password:'', remember:true};
   HOME_TAB='family';
-  STAFF_VIEW='list';
+  _openPane('');   // [1.336] — both flags, both threads, one call
   THREADS={loading:false, list:[], _sig:'', locked:false};   // [1.292]
   STAFF_PICKER={loading:false, query:'', all:[]};
-  ACTIVE_STAFF_THREAD=null;
-  FAMILY_VIEW='list';
-
-  ACTIVE_THREAD=null;
   PAGE='login'; render();
 }
 
@@ -4125,6 +4281,7 @@ function doSignOut(){
 // INIT
 // ============================================================
 function boot(){
+  _draftsLoad();   // [1.336] — anything unsent from last time is back before the first render
   var resetTokenFromUrl = '';
   var loginTokenFromUrl = '';
   try {

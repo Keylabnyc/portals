@@ -3377,18 +3377,10 @@ function _rChildStatusSummary(s, opts){
 // New Proposal" button.
 var KL_ACTIONABLE_PHASES={'Leads':1,'Pending':1,'Holding':1,'Trial Booked':1,'Proposal':1,'Confirmed to Enroll':1,'Enrollment Change':1};
 
-// [1.329] — is anything on this page still asking the parent to do something?
-// KL_ACTIONABLE_PHASES is the answer and 'Enrolled' is deliberately not in it,
-// which is the fact this rests on and is checked separately. The first version
-// of this function also tested phase!=='Enrolled', which read as a safeguard
-// and was dead code — and a mutation proved it: breaking it changed nothing.
-function _klHasActionable(){
-  for(var i=0;i<students.length;i++){
-    if(KL_ACTIONABLE_PHASES[students[i].phase||'']) return true;
-  }
-  return false;
-}
-
+// [1.334] — _klHasActionable() was here and went with the family-level
+// question it answered. The split is per child now and is made in the loop
+// itself: KL_ACTIONABLE_PHASES decides which pile each card goes in, and
+// asking the same question of the whole family is what produced the bug.
 function _familyUsesOnePage(){
   if(!students.length) return false;
   for(var i=0;i<students.length;i++){
@@ -4056,9 +4048,11 @@ function rHomeOnePage(){
   // to do next, the enrolled ones for status/processed date/amount, per
   // AC's original ask: "dates, amounts, and status clearly on home page
   // without having to click anywhere."
-  var _cards='';
+  // [1.334] — the cards split by CHILD, not by family. See the note below.
+  var _todo='', _settledCards='';
   students.forEach(function(s){
-    if(s.phase==='Enrolled' || KL_ACTIONABLE_PHASES[s.phase||'']) _cards+=_rHomeChildActionCard(s);
+    if(KL_ACTIONABLE_PHASES[s.phase||'']) _todo+=_rHomeChildActionCard(s);
+    else if(s.phase==='Enrolled')         _settledCards+=_rHomeChildActionCard(s);
   });
 
   // ── [1.329] — the settled family's page, in AC's order ──────────────────
@@ -4084,17 +4078,38 @@ function rHomeOnePage(){
   // families with a student in Enrolled (_familyUsesOnePage). A family with no
   // enrolled child is on the old tabbed Home, which has no messaging block at
   // all. There is a check on that, so it stays true.
-  var _settled=!_klHasActionable();
-
-  // ── Schedule: next lessons + important dates, one block ──
-  // Merged on AC's call (BACKLOG 1.50): they answer the same question — when
-  // are the lessons, and when aren't there any — and used to sit apart with
-  // Messages between them.
+  // ── [1.334] — the split is per CHILD, and that is the correction ────────
+  //
+  // AC, 5 September, on a screenshot of a two-child family that did not
+  // reorder: "you didn't account for the two conflicting states: one child
+  // enrolled, while one child still has no availability submitted."
+  //
+  // **The page did exactly what he had approved that morning.** Asked whether
+  // the reorder should apply to a family with a sibling mid-enrollment, he
+  // answered "reorder applies to families with nothing left to act on", and
+  // this family has a child owing availability — so [1.329] left the order
+  // alone. The screenshot was the rule working.
+  //
+  // **The fault was in the question.** "Nothing left to act on" reads as a
+  // property of a FAMILY and is really a property of a CHILD: in a two-child
+  // family it is true of one and false of the other, and asking it of the
+  // family forces one child's answer onto the other. AC: "family page solution
+  // accepted."
+  //
+  // So both of his instructions hold at once, which is why this is a split
+  // rather than a choice between them:
+  //
+  //   a child with something to DO   -> card first, where he put it on 20 Aug
+  //   everything settled             -> schedule, messages, then that card
+  //
+  // A family where every child is settled is UNCHANGED from what shipped in
+  // @729, and a family where every child is mid-enrollment is unchanged from
+  // before [1.329] — the two ends stay where they were and only the mixed
+  // family, which had no correct answer before, gets one.
   var _schedule=rHomeSchedule();
   var _messages='<div class="card">'+rHomeMessages()+'</div>';
 
-  h+= _settled ? (_schedule+_messages+_cards)
-               : (_cards+_schedule+_messages);
+  h+= _todo + _schedule + _messages + _settledCards;
 
   // Monthly Tuition was removed entirely here (BACKLOG 1.51, AC's call). The
   // Billing & invoices button it carried is not lost — Keylab Support's

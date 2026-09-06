@@ -165,6 +165,43 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 .cmp-linkrow.open{display:flex}
 .cmp-linkrow input{flex:1;min-width:130px;margin-top:0;padding:7px 9px;font-size:13px}
 .cmp-linkrow input.bad{border-color:var(--red)}
+/* [1.338] — the link library's list. AC, 6 September: "use a professional
+   design with logical button placement", then "there is no need for update
+   link library. Simply save the link to save it. Click delete on the link to
+   delete it. Click edit to edit it." So each row is its own unit of work: Edit
+   and Delete sit on the row, Save closes it, and there is no page-level commit
+   to remember. Identical in both portals on purpose: one shape for one thing. */
+.lnk-list{border:1px solid var(--border);border-radius:var(--r);overflow:hidden;background:var(--bg4)}
+.lnk-item+.lnk-item{border-top:1px solid var(--border)}
+.lnk-hd{display:flex;align-items:center;gap:6px;padding:8px 10px}
+.lnk-open{flex:1;min-width:0;text-align:left;background:none;border:0;padding:2px 0;cursor:pointer;font-family:inherit;color:var(--text)}
+.lnk-nm,.lnk-ur{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lnk-nm{font-size:13px;font-weight:600;line-height:1.35}
+.lnk-ur{font-size:11.5px;color:var(--text4);line-height:1.35}
+.lnk-ph{font-weight:600;color:var(--text5)}
+.lnk-a{background:none;border:0;font-size:12px;font-weight:600;cursor:pointer;padding:3px 4px;font-family:inherit;color:var(--link);flex:0 0 auto}
+.lnk-a:hover{text-decoration:underline}
+.lnk-x{background:none;border:0;font-size:12px;font-weight:600;cursor:pointer;padding:3px 4px;font-family:inherit;color:var(--red);flex:0 0 auto}
+.lnk-x:hover{text-decoration:underline}
+.lnk-form{padding:10px 11px 11px;background:var(--bg5);border-top:1px solid var(--border)}
+.lnk-lb{font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--text5);margin-bottom:3px;font-weight:600}
+.lnk-form input{width:100%;margin:0 0 9px;padding:7px 9px;font-size:13px}
+.lnk-frow{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.lnk-frow .btn,.lnk-foot .btn{width:auto;flex:0 0 auto}
+.lnk-ask{font-size:12px;color:var(--rt);margin-right:auto;font-weight:600}
+/* The confirm gets its own strip under the row rather than squeezing three
+   more controls onto the name line, which truncated the name — seen by
+   opening it ([1.332]). */
+.lnk-confirm{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--rbg);border-top:1px solid var(--red)}
+.lnk-confirm .btn{width:auto;flex:0 0 auto}
+.lnk-foot{display:flex;justify-content:flex-start;align-items:center;gap:8px;margin-top:.7rem}
+.btn-x{background:var(--red);color:#fff;border-color:var(--red)}
+.btn-x:hover{background:var(--rt);border-color:var(--rt)}
+.lnk-ask{font-size:12px;color:var(--rt);margin-right:auto}
+.lnk-foot{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:.7rem}
+.lnk-foot .btn{width:auto;flex:0 0 auto}
+.lnk-frow .btn{width:auto;flex:0 0 auto}
+.lnk-actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:.5rem}
 .cmp-mini{background:rgba(0,0,0,.12);border:1px solid var(--border2);color:var(--text2);border-radius:var(--r);padding:7px 11px;font-size:12px;font-weight:600;font-family:"Inter",sans-serif;cursor:pointer;flex:0 0 auto}
 .cmp-mini:hover{background:rgba(0,0,0,.2);color:var(--text)}
 .cmp-guide{flex:0 0 100%;font-size:11px;color:var(--text4);line-height:1.5}
@@ -607,7 +644,14 @@ var HOME_TAB = 'family'; // 'family' | 'staff' | 'settings'
 var TSET = {loading:false, saving:false, loaded:false,
             awayEnabled:false, awayMessage:'', afterHoursMessage:'', awayDefaultCopy:'',
             notifyOpen:9, notifyClose:17, notifyDerived:false,
-            draftAway:'', draftAfter:''};
+            draftAway:'', draftAfter:'',
+            // [1.338] — the teacher's OWN link library, edited here and drawn in
+            // their composer. null means "not fetched yet", which is not the same
+            // as [] — an empty library is a real state and must not re-fetch.
+            links:null, linksSaved:false, linksErr:'',
+            // Which row is open for editing, and which is asking to be deleted.
+            // -1 is "none", and only one row is ever in either state.
+            linkEdit:-1, linkDel:-1, linkBackup:null};
 var MSG = {m:'', t:''};
 var busy = false;
 var RESET_TOKEN = '';
@@ -1425,7 +1469,168 @@ function rTeacherSettings(){
      esc(TSET_COPY.hoursNote)+'</div>';
   h+='<div style="margin-top:.6rem"><button class="btn btn-s" onclick="saveTeacherSettings()">Save</button></div>';
   h+='</div>';
+  h+=rTeacherLinks();   // [1.338]
   return h;
+}
+
+// ── [1.338] — the teacher's own link library ────────────────────────────
+// AC, 5 September 2026: "teachers do not keep my links. Admin keeps admin
+// links. Teachers keep teacher links."
+//
+// The same panel AC has in his Settings, and deliberately so: one shape for
+// "a list of links you edit and save as a block", so the next person to touch
+// either does not have to learn two.
+// AC's copy, 6 September 2026 — every line below is his, asked one at a time.
+// His blurb describes the COMPOSER's behaviour rather than this panel's, and
+// that is deliberate: a teacher reading it here learns what the link is for.
+var TLINK_COPY={
+  heading:'My links',
+  blurb:'Add a url to create a custom link button in the message composer. Click the link button to add it when composing a message. Add as many links as you like.',
+  add:'Add link', save:'Update link library',
+  namePh:'Cool Music Education Site', urlPh:'CoolMusicEdSiteLink.com',
+  empty:'Add frequently used links to your library here',
+  edit:'Edit', del:'Delete', save:'Save', cancel:'Cancel',
+  delAsk:'Delete this link?', delYes:'Delete', delNo:'Cancel',
+  nameLbl:'Link name', urlLbl:'Web address',
+  // Shown on a row that has nothing in it yet, in place of the name.
+  blank:'ADD A LINK HERE'
+};
+function rTeacherLinks(){
+  var h='<div class="card" style="margin-top:.75rem">';
+  h+='<div class="thread-hd">'+esc(TLINK_COPY.heading)+'</div>';
+  h+='<div style="font-size:12px;color:var(--text3);margin-bottom:.6rem">'+esc(TLINK_COPY.blurb)+'</div>';
+  var rows=TSET.links||[];
+  if(!rows.length){
+    h+='<p style="font-size:12px;color:var(--text4);margin:0">'+esc(TLINK_COPY.empty)+'</p>';
+  } else {
+    h+='<div class="lnk-list">'+rows.map(function(l,i){ return rTlinksItem(i,l); }).join('')+'</div>';
+  }
+  h+='<div class="lnk-foot">'+
+     '<button class="btn btn-s" style="font-size:12px" onclick="tlinksAdd()">'+esc(TLINK_COPY.add)+'</button>'+
+     '</div>';
+  if(TSET.linksSaved) h+='<div style="color:var(--gt);font-size:12px;margin-top:.4rem">\u2713 Saved</div>';
+  if(TSET.linksErr) h+='<div style="color:var(--red);font-size:12px;margin-top:.4rem">'+esc(TSET.linksErr)+'</div>';
+  h+='</div>';
+  return h;
+}
+// One row, and it is its own unit of work. AC, 6 September: "there is no need
+// for update link library. Simply save the link to save it. Click delete on
+// the link to delete it. Click edit to edit it." So Edit and Delete sit on the
+// row at rest, the boxes exist only while that row is open, and Save closes it
+// — there is no page-level commit left to forget.
+function rTlinksItem(i,l){
+  var open=(i===TSET.linkEdit);
+  var nm=String(l.label||''), ur=String(l.url||'');
+  // A row with nothing in it yet says so, in AC's words, and draws ONE line
+  // rather than a greyed example that reads like a link somebody saved.
+  var blank=(!nm&&!ur);
+  var h='<div class="lnk-item"><div class="lnk-hd">'+
+    '<button type="button" class="lnk-open" aria-expanded="'+(open?'true':'false')+'"'+
+      ' aria-label="Edit '+esc(nm||TLINK_COPY.blank)+'"'+
+      ' onclick="'+(open?'tlinksCancel()':'tlinksEdit('+i+')')+'">'+
+      '<span class="lnk-nm'+(nm?'':' lnk-ph')+'">'+esc(nm||TLINK_COPY.blank)+'</span>'+
+      (blank?'':'<span class="lnk-ur">'+esc(ur)+'</span>')+
+    '</button>';
+  var asking=(i===TSET.linkDel);
+  if(!asking && !open){
+    h+='<button type="button" class="lnk-a" onclick="tlinksEdit('+i+')">'+esc(TLINK_COPY.edit)+'</button>'+
+       '<button type="button" class="lnk-x" onclick="tlinksDelAsk('+i+')">'+esc(TLINK_COPY.del)+'</button>';
+  }
+  h+='</div>';
+  if(asking){
+    // AC, 6 September: "always a confirm step to delete". Its own strip under
+    // the row, not three more controls on the name line — and inline rather
+    // than a browser confirm(), for [1.34]'s reason: a native dialog cannot be
+    // styled, cannot be corrected, and drops the sender out of the page.
+    h+='<div class="lnk-confirm">'+
+       '<span class="lnk-ask">'+esc(TLINK_COPY.delAsk)+'</span>'+
+       '<button type="button" class="btn btn-s" style="font-size:12px" onclick="tlinksDelCancel()">'+esc(TLINK_COPY.delNo)+'</button>'+
+       '<button type="button" class="btn btn-x" style="font-size:12px" onclick="tlinksDelDo('+i+')">'+esc(TLINK_COPY.delYes)+'</button>'+
+       '</div>';
+  }
+  if(open) h+=rTlinksForm(i,l);
+  return h+'</div>';
+}
+// The open row. Stacked and labelled rather than two boxes side by side: the
+// teacher portal's column is 420px wide, and three controls on one line was
+// three cramped controls ([1.332] — found by opening it, not reading it).
+function rTlinksForm(i,l){
+  var h='<div class="lnk-form">';
+  // [1.193]'s rule — every field a re-render can rebuild needs an id, or the
+  // caret is lost mid-word and reads as a timeout.
+  h+='<div class="lnk-lb">'+esc(TLINK_COPY.nameLbl)+'</div>'+
+     '<input id="tlink-n'+i+'" type="text" value="'+esc(l.label||'')+'" placeholder="'+esc(TLINK_COPY.namePh)+'"'+
+     ' aria-label="'+esc(TLINK_COPY.nameLbl)+'" oninput="TSET.links['+i+'].label=this.value">';
+  h+='<div class="lnk-lb">'+esc(TLINK_COPY.urlLbl)+'</div>'+
+     '<input id="tlink-u'+i+'" type="text" value="'+esc(l.url||'')+'" placeholder="'+esc(TLINK_COPY.urlPh)+'"'+
+     ' aria-label="'+esc(TLINK_COPY.urlLbl)+'" oninput="TSET.links['+i+'].url=this.value">';
+  h+='<div class="lnk-frow">'+
+     '<button type="button" class="btn btn-s" style="font-size:12px" onclick="tlinksCancel()">'+esc(TLINK_COPY.cancel)+'</button>'+
+     '<button type="button" class="btn btn-p" style="font-size:12px" onclick="tlinksSave()">'+esc(TLINK_COPY.save)+'</button>'+
+     '</div></div>';
+  return h;
+}
+// Opening a row takes a copy of what is stored, so Cancel is a real way back
+// rather than a word for "stop typing" — the boxes write straight into the
+// list as they are typed.
+function tlinksEdit(i){
+  var l=(TSET.links||[])[i]||{};
+  TSET.linkBackup={label:l.label||'', url:l.url||''};
+  TSET.linkEdit=i; TSET.linkDel=-1; TSET.linksSaved=false; TSET.linksErr=''; render();
+}
+function tlinksCancel(){
+  var i=TSET.linkEdit, rows=(TSET.links||[]).slice();
+  if(i>=0 && rows[i]){
+    var b=TSET.linkBackup;
+    // A row that was never anything comes out entirely; one that existed goes
+    // back to what was stored.
+    if(!b || (!b.label && !b.url)) rows.splice(i,1);
+    else { rows[i].label=b.label; rows[i].url=b.url; }
+    TSET.links=rows;
+  }
+  TSET.linkEdit=-1; TSET.linkDel=-1; TSET.linkBackup=null; render();
+}
+function tlinksDelAsk(i){
+  TSET.linkDel=i; TSET.linkEdit=-1; render();
+}
+function tlinksDelCancel(){
+  TSET.linkDel=-1; render();
+}
+// The confirm IS the save: a row that vanished from the screen but is still in
+// the sheet until a second button is found is the worse of the two answers.
+function tlinksDelDo(i){
+  var rows=(TSET.links||[]).slice();
+  rows.splice(i,1);
+  TSET.links=rows; TSET.linkDel=-1; TSET.linkEdit=-1; TSET.linkBackup=null;
+  tlinksSave();
+}
+function tlinksAdd(){
+  TSET.links=(TSET.links||[]).concat([{linkId:'',label:'',url:''}]);
+  TSET.linkEdit=TSET.links.length-1; TSET.linkDel=-1; TSET.linkBackup={label:'',url:''};
+  TSET.linksSaved=false; TSET.linksErr=''; render();
+}
+function tlinksLoad(){
+  // [] is a real answer and a truthy guard, so an empty library is fetched
+  // once and not on every visit to Settings ([1.333]'s lesson, same trap).
+  if(TSET.links) return;
+  TSET.links=[];
+  _linkApi(function(list){ TSET.links=list||[]; render(); });
+}
+function tlinksSave(){
+  TSET.linksErr='';
+  api({action:'saveTeacherLinks', data:{teacherToken:TOKEN, links:JSON.stringify(TSET.links||[])}}, function(e,r){
+    if(e||!r||!r.ok){ TSET.linksErr=(r&&r.error)||'Could not save.'; render(); return; }
+    // Re-read rather than trusting what was typed: the server normalises an
+    // address ("keylab.nyc" becomes "https://keylab.nyc") and drops the rows
+    // that were cleared, and the list on screen should be what was stored.
+    TSET.links=null; TSET.linkEdit=-1; TSET.linkDel=-1; TSET.linkBackup=null; tlinksLoad();
+    // And the COMPOSER's copy is stale the moment this saves — it was warmed
+    // when the roster loaded ([1.333]) and would otherwise offer yesterday's
+    // list until the next sign-in.
+    SAVED_LINKS=[]; _savedLinksLoaded=false; _savedLinksInFlight=false; loadSavedLinks();
+    TSET.linksSaved=true; render();
+    setTimeout(function(){ TSET.linksSaved=false; render(); },3000);
+  });
 }
 function loadTeacherSettings(){
   TSET.loading=true;
@@ -1497,6 +1702,7 @@ function switchTab(tab){
   HOME_TAB=tab;
   render();
   if(tab==='settings' && !TSET.loaded && !TSET.loading) loadTeacherSettings();
+  if(tab==='settings') tlinksLoad();   // [1.338]
   if(tab==='staff' && STAFF_VIEW==='list'){
     if(!STAFF_PICKER.all.length && !STAFF_PICKER.loading) loadStaffDirectory();
     if(!STAFF_THREADS.list.length && !STAFF_THREADS.loading) loadStaffThreads();
@@ -3557,7 +3763,12 @@ function _composerUseSaved(id, linkId){
   if(t) t.value=st.text;
   st.bad=false;
 }
-function _linkApi(cb){ api({action:'getMessageLinks', data:{teacherToken:TOKEN}}, function(e,r){ cb(e||!r||!r.ok?[]:(r.links||[])); }); }
+// [1.338] — the teacher's own library, NOT AC's. This line is the reversal:
+// [1.324] pointed it at getMessageLinks two days ago, and AC settled it on
+// 5 September — "teachers do not keep my links. Admin keeps admin links.
+// Teachers keep teacher links." getMessageLinks is admin-only now and would
+// refuse this token anyway.
+function _linkApi(cb){ api({action:'getTeacherLinks', data:{teacherToken:TOKEN}}, function(e,r){ cb(e||!r||!r.ok?[]:(r.links||[])); }); }
 // [1.328] — the same one back control the family portal builds, for the same
 // reason. AC, 5 September: "Back link on every portal should be a button, not
 // text link." This file's two thread Backs were already buttons and its "Back

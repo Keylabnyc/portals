@@ -914,12 +914,22 @@ function _renderBody(){
   else                       h+=rHome();
   // render() replaces #app wholesale, so a message arriving mid-poll would
   // otherwise yank the teacher's cursor out of a half-typed message — the
-  // teacher-side twin of the family bug fixed in 1.32. Caret goes to the end
-  // rather than its exact offset: a composer is written at the end, and exact
-  // offset restoration across a full innerHTML rebuild isn't reliable.
+  // teacher-side twin of the family bug fixed in 1.32.
+  //
+  // [1.332] — and it goes back WHERE IT WAS, not to the end. The old comment
+  // here said exact restoration "isn't reliable" and sent the caret to the
+  // bottom of the message every five seconds instead; measured in a browser,
+  // a text offset survives the rebuild perfectly well, because the box is
+  // rebuilt from its own cleaned HTML. Editing a word mid-message was
+  // impossible if you paused, which is a fair share of "the composer is
+  // unreliable".
   var _focusedComposer='';
+  var _composerOff=null;
   var _ae=document.activeElement;
-  if(_ae && _ae.classList && _ae.classList.contains('cmp-rich')) _focusedComposer=_ae.id;
+  if(_ae && _ae.classList && _ae.classList.contains('cmp-rich')){
+    _focusedComposer=_ae.id;
+    _composerOff=_cmpOffsets(_ae);
+  }
   // The link row's two inputs need the same protection as the composer itself:
   // they are plain inputs, so caret position CAN be restored exactly, unlike
   // the contenteditable below.
@@ -962,10 +972,11 @@ function _renderBody(){
     var _ce=document.getElementById(_focusedComposer);
     if(_ce){
       _focusNoScroll(_ce);
-      try{
-        var _r=document.createRange(); _r.selectNodeContents(_ce); _r.collapse(false);
-        var _s=window.getSelection(); _s.removeAllRanges(); _s.addRange(_r);
-      }catch(e){}
+      _cmpRestore(_ce,_composerOff);
+      // [1.332] — and the toolbar lights are re-read. They are rebuilt with
+      // the rest of #app, so without this Bold looks OFF while bold is still
+      // on, every five seconds.
+      _composerState(_focusedComposer);
     }
   }
   // Scroll to the newest message, not the oldest (1.27, 18 Aug) — only at
@@ -3204,6 +3215,13 @@ function _composerClean(node){
     }
     var flags=_styleFlags(n);
     var keep=CMP_KEEP[tag];
+    // [1.332] — a list nested by indenting comes out of the browser as a UL
+    // sitting directly inside a UL, which is not valid and renders differently
+    // in different mail clients. It belongs inside an item, so it is given one.
+    if((tag==='UL'||tag==='OL')&&(node.nodeName==='UL'||node.nodeName==='OL')){
+      if(inner) out+='<li><'+keep+'>'+inner+'</'+keep+'></li>';
+      continue;
+    }
     // An explicit font-weight:normal cancels a bold tag. Google Docs wraps its
     // ENTIRE clipboard payload in <b style="font-weight:normal">, so honouring
     // the tag over the style would make every message pasted from Docs bold.
@@ -3349,18 +3367,54 @@ function _composerPaste(ev){
   if(clean) document.execCommand('insertHTML',false,clean);
 }
 
-// Quote toggles rather than only applying, so a teacher can get back out of a
-// blockquote with the same button they used to enter one. formatBlock('div')
-// is the standard way to undo it.
-function _composerQuote(id){
+// ── [1.332] ─ Tab indents a list item; it does not leave the box ───────
+//
+// AC, 5 September 2026: "Allow teachers to tab to indent a bullet or list item.
+// Currently when teacher's or admin tabs messages, it takes them out of the
+// compose window."
+//
+// Nothing listened for Tab at all, so it did what Tab does in a browser and
+// moved the focus to Send. There was no way to nest a bullet by any means.
+//
+// **Only inside a list.** Tab on a plain line still moves the focus on, which
+// is what keeps the box from being a keyboard trap: a person who reaches the
+// composer by keyboard has to be able to leave it the same way. It is also
+// the only honest scope for the word "indent" here — outside a list the
+// browser's indent emits a blockquote, which is exactly the confusion [1.332]
+// removed the buttons over.
+function _composerKey(ev,id){
+  if(ev.key!=='Tab'||ev.altKey||ev.ctrlKey||ev.metaKey) return;
+  if(!_composerSelIn(id,'li')) return;
+  ev.preventDefault();
+  _composerCmd(id, ev.shiftKey?'outdent':'indent');
+}
+
+// ── [1.332] ─ Clear formatting clears the formatting ─────────────────
+//
+// removeFormat is INLINE-ONLY: it takes off bold, italic and underline and
+// leaves lists, quotes and links exactly where they were. So the one button
+// labelled "get me out of this" did nothing to the two states a person most
+// wants out of — a list they entered by accident, and a quote they cannot see.
+// Found by running it, not by reading it.
+//
+// The loops are guarded rather than trusted: each execCommand unwraps ONE
+// level, a list can be nested several deep now that Tab indents, and a
+// selection that stops moving must not spin forever.
+function _composerClearFmt(id){
   var el=document.getElementById(id); if(!el) return;
   el.focus();
   try{ document.execCommand('styleWithCSS',false,false); }catch(e){}
-  // Angle-bracket form: Chrome and Safari accept either, Firefox only this one.
-  // Built from a variable rather than written as a bracketed literal, so the
-  // tag-balance check in scripts/check.js doesn't read it as a real open tag.
-  var _blk=_composerInQuote(id)?'div':'blockquote';
-  document.execCommand('formatBlock',false,'<'+_blk+'>');
+  document.execCommand('removeFormat',false,null);
+  document.execCommand('unlink',false,null);
+  var g=0;
+  while(_composerSelIn(id,'ul')&&g++<12) document.execCommand('insertUnorderedList',false,null);
+  g=0;
+  while(_composerSelIn(id,'ol')&&g++<12) document.execCommand('insertOrderedList',false,null);
+  g=0;
+  // Angle-bracket form built from a variable, so the tag-balance check in
+  // scripts/check.js doesn't read it as a real open tag.
+  var _div='div';
+  while(_composerSelIn(id,'blockquote')&&g++<12) document.execCommand('formatBlock',false,'<'+_div+'>');
   _composerSync(id);
   _composerState(id);
 }
@@ -3374,7 +3428,55 @@ function _composerSelIn(id,selector){
   var e=(n.nodeType===1)?n:n.parentElement;
   return !!(e && el.contains(e) && e.closest && e.closest(selector));
 }
-function _composerInQuote(id){ return _composerSelIn(id,'blockquote'); }
+
+// ── [1.332] ─ the caret survives the poll where it actually was ────────
+//
+// The re-render used to put the caret at the END of the message, on the
+// reasoning that "a composer is written at the end". That is true of a first
+// draft and false of every correction: pause for five seconds while fixing a
+// word in the middle and the next keystroke landed at the bottom instead.
+//
+// Offsets are counted in TEXT, not in nodes, so they survive the box being
+// rebuilt from cleaned HTML — which is what actually happens on a poll tick.
+function _cmpOffsetOf(el,node,off){
+  var r=document.createRange();
+  r.selectNodeContents(el);
+  try{ r.setEnd(node,off); }catch(e){ return 0; }
+  return r.toString().length;
+}
+function _cmpOffsets(el){
+  if(!el) return null;
+  var s=window.getSelection();
+  if(!s||!s.rangeCount) return null;
+  var r=s.getRangeAt(0);
+  if(!el.contains(r.startContainer)||!el.contains(r.endContainer)) return null;
+  return {start:_cmpOffsetOf(el,r.startContainer,r.startOffset),
+          end:_cmpOffsetOf(el,r.endContainer,r.endOffset)};
+}
+function _cmpNodeAt(el,pos){
+  var w=document.createTreeWalker(el,NodeFilter.SHOW_TEXT,null,false),n,seen=0;
+  while((n=w.nextNode())){
+    var len=(n.nodeValue||'').length;
+    if(seen+len>=pos) return {node:n,off:pos-seen};
+    seen+=len;
+  }
+  return null;
+}
+// Falls back to the end of the box rather than to nothing: a caret that lands
+// one character out is a nuisance, a caret that lands nowhere loses the next
+// thing typed.
+function _cmpRestore(el,off){
+  if(!el) return false;
+  var r=document.createRange();
+  try{
+    var a=off?_cmpNodeAt(el,off.start):null;
+    var b=off?_cmpNodeAt(el,off.end):null;
+    if(a) r.setStart(a.node,a.off); else { r.selectNodeContents(el); r.collapse(false); }
+    if(b) r.setEnd(b.node,b.off); else r.collapse(true);
+    var s=window.getSelection(); s.removeAllRanges(); s.addRange(r);
+    return true;
+  }catch(e){ return false; }
+}
 
 // ── Link row ───────────────────────────────────────────────────────────────
 // The selection is saved on open because clicking into the URL input collapses
@@ -3476,8 +3578,12 @@ function _composerLinkOpen(id){
   loadSavedLinks();   // [1.333] — already warm; this is the fallback, not the fetch
   var sel=window.getSelection();
   var el=document.getElementById(id);
-  _cmpLinkSel[id]=(sel && sel.rangeCount && el && el.contains(sel.anchorNode))
-    ? sel.getRangeAt(0).cloneRange() : null;
+  // [1.332] — TEXT OFFSETS, not a Range. A Range points at nodes, and the 5s
+  // poll rebuilds the box, so the highlight was silently lost whenever a tick
+  // landed between pressing Link and pressing Add link: the link then landed
+  // at the end of the message instead of over the highlighted words. Sixth
+  // instance of [1.32]'s trap, and the last one that stores a live node.
+  _cmpLinkSel[id]=el?_cmpOffsets(el):null;
   var st=_cmpLinkState(id);
   st.open=true; st.url=''; st.bad=false;
   // Pre-fill the link text with whatever is selected, so highlighting a phrase
@@ -3542,12 +3648,7 @@ function _composerLinkInsert(id){
   var label=(tIn && tIn.value.trim()) || url.replace(/^https?:\/\//i,'');
   el.focus();
   var saved=_cmpLinkSel[id];
-  if(saved){
-    try{
-      var sel=window.getSelection();
-      sel.removeAllRanges(); sel.addRange(saved);
-    }catch(e){}
-  }
+  if(saved) _cmpRestore(el,saved);
   try{ document.execCommand('styleWithCSS',false,false); }catch(e){}
   document.execCommand('insertHTML',false,'<a href="'+esc(url)+'">'+esc(label)+'</a>&nbsp;');
   _composerLinkClose(id);
@@ -3581,8 +3682,6 @@ function _composerState(id){
     if(c==='underline' && on && _composerSelIn(id,'a')) on=_composerSelIn(id,'u');
     b.classList.toggle('on',!!on);
   });
-  var q=wrap.querySelector('[data-quote]');
-  if(q) q.classList.toggle('on',_composerInQuote(id));
 }
 
 function _composerStateClear(id){
@@ -3741,8 +3840,8 @@ var TCH_COPY={
   // closedAt: renaming data to match a label is how a migration gets invented
   // for a word.
   closeConversation:'End Conversation',
-  // [1.335] — PLACEHOLDER COPY, flagged for AC. He named the colour and the
-  // reason ("so it's clear the reply may need review"), not the words.
+  // [1.335] — AC APPROVED THIS WORDING on 5 September, asked directly. No
+  // longer placeholder copy; there is none left in the tool again.
   endedUnanswered:'Ended without a reply',
   // [1.327] — the plain confirm is GONE. AC: "There is no need for a confirm
   // screen when ending a conversation. It's archived, and can't be archived if
@@ -3783,8 +3882,10 @@ var CMP_COPY={
   linkRejected:'That doesn’t look like a web address. Try something like keylab.nyc/lessons.',
   linkSharing:'Set sharing to “Anyone with the link” before you send, or ask admin for the parent’s email to share it privately.',
   bold:'Bold', italic:'Italic', underline:'Underline',
-  bullet:'Bullet list', number:'Numbered list', quote:'Quote',
-  indent:'Indent', outdent:'Outdent', link:'Link', clear:'Clear formatting'
+  // [1.332] — quote, indent and outdent went with their buttons. Tab and
+  // Shift+Tab do the indenting now, inside a list.
+  bullet:'Bullet list', number:'Numbered list',
+  link:'Link', clear:'Clear formatting'
 };
 
 function _tbBtn(id,cmd,label,title){
@@ -3807,8 +3908,20 @@ function _tbBtn(id,cmd,label,title){
 // admin's colour, font-size, alignment, image and divider buttons are absent
 // and must stay absent: every one of them is dropped server-side.
 //
-// Grouped with dividers -- emphasis, structure, nesting, link, reset -- so the
-// row reads as five decisions rather than ten buttons.
+// Grouped with dividers -- emphasis, structure, link, reset -- so the row reads
+// as four decisions rather than ten buttons.
+//
+// [1.332], AC 5 September 2026: "there are some functions like a ❝ button that
+// doesn't seem to do anything but indent. The teacher doesn't need that."
+// **He was describing three buttons, not one.** Driven in a real browser, ❝
+// Quote and ⇥ Indent turn out to be the SAME action on a plain line -- both
+// emit a blockquote -- and Chromium draws that block as a bare 40px margin with
+// no bar, while the family receives a real quote bar once the inline style is
+// stripped on the way out. So the sender could not see what the family read.
+// ❝, ⇥ and ⇤ all came off. Indenting is now Tab and Shift+Tab, inside a
+// list, which is the only indenting this tool has ever needed and is what every
+// mail client does. blockquote stays on the allowlist: a pasted quote still
+// keeps its bar, and the server still accepts one.
 function rComposerToolbar(id){
   return '<div class="cmp-tb">'+
     _tbBtn(id,'bold','<b>B</b>',CMP_COPY.bold)+
@@ -3817,15 +3930,11 @@ function rComposerToolbar(id){
     '<span class="cmp-div"></span>'+
     _tbBtn(id,'insertUnorderedList','• List',CMP_COPY.bullet)+
     _tbBtn(id,'insertOrderedList','1. List',CMP_COPY.number)+
-    '<button type="button" class="cmp-tb-btn" data-quote="1" title="'+esc(CMP_COPY.quote)+'" onmousedown="event.preventDefault()"'+
-      ' onclick="_composerQuote(\''+id+'\')">❝</button>'+
-    '<span class="cmp-div"></span>'+
-    _tbBtn(id,'indent','⇥',CMP_COPY.indent)+
-    _tbBtn(id,'outdent','⇤',CMP_COPY.outdent)+
     '<span class="cmp-div"></span>'+
     '<button type="button" class="cmp-tb-btn" title="'+esc(CMP_COPY.link)+'" onmousedown="event.preventDefault()"'+
       ' onclick="_composerLinkOpen(\''+id+'\')">'+esc(CMP_COPY.link)+'</button>'+
-    _tbBtn(id,'removeFormat','✕',CMP_COPY.clear)+
+    '<button type="button" class="cmp-tb-btn" title="'+esc(CMP_COPY.clear)+'" onmousedown="event.preventDefault()"'+
+      ' onclick="_composerClearFmt(\''+id+'\')">✕</button>'+
   '</div>';
 }
 
@@ -3859,6 +3968,7 @@ function rComposer(id,draft,onInput,sendBtn){
       '<div id="'+id+'" class="cmp-rich" contenteditable="true" role="textbox" aria-multiline="true"'+
         ' aria-label="Message" data-ph="'+esc(CMP_COPY.placeholder)+'"'+
         ' oninput="'+onInput+';_composerState(\''+id+'\')"'+
+        ' onkeydown="_composerKey(event,\''+id+'\')"'+
         ' onkeyup="_composerState(\''+id+'\')" onmouseup="_composerState(\''+id+'\')"'+
         ' onblur="_composerStateClear(\''+id+'\')"'+
         ' onpaste="_composerPaste(event)">'+(draft||'')+'</div>'+

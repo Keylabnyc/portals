@@ -433,6 +433,32 @@ function _klReadSession(){
 function _klClearSession(){
   try{ localStorage.removeItem('kl_family_session'); }catch(e){}
 }
+// ── [1.332] — a half-written message survives a reload. FAMILY-FACING. ────
+//
+// AC, 5 September 2026, on being told the teacher's draft was kept and the
+// parent's was not: "Sure, fix for parents also."
+//
+// Same shape as the teacher portal's [1.336] and deliberately not a new one:
+// the draft belongs to the CONVERSATION, it is kept as it is typed, it comes
+// back when the parent returns, and nobody presses a button. Closing the
+// thread and opening it again already kept nothing; a reload, a phone
+// locking, or a tab dropped by iOS lost it too.
+//
+// Keyed by family AND teacher, so a shared computer cannot hand one family's
+// half-written message to another. Wrapped in try/catch like every other
+// storage call here — private browsing throws rather than returning null.
+function _famDraftKey(teacherId){ return 'kl_family_drafts_'+(FAMILY_ID||'')+'_'+(teacherId||''); }
+function _famDraftGet(teacherId){
+  try{ return localStorage.getItem(_famDraftKey(teacherId))||''; }catch(e){ return ''; }
+}
+// An empty draft is REMOVED rather than stored as '': a store full of empty
+// strings grows forever and answers every question "yes".
+function _famDraftSet(teacherId, text){
+  try{
+    if(text && text.trim()) localStorage.setItem(_famDraftKey(teacherId), text);
+    else localStorage.removeItem(_famDraftKey(teacherId));
+  }catch(e){}
+}
 // [1.181] — keep the login, say what is happening, and retry with a backoff
 // that never gives up. A parent walking into a lift should not have to sign in
 // again afterwards.
@@ -2475,7 +2501,7 @@ function rHomeThreadView(){
   // family has no reason to care about (1.43).
   var sendBtn='<button class="btn btn-p" onclick="sendHomeMessage()">Send</button>';
   h+='<div class="composer">'+
-    '<textarea id="home-composer" placeholder="Type your message here..." oninput="HOME_EXPANDED.draft=this.value">'+esc(t.draft)+'</textarea>'+
+    '<textarea id="home-composer" placeholder="Type your message here..." oninput="HOME_EXPANDED.draft=this.value;_famDraftSet(HOME_EXPANDED.teacherId,this.value)">'+esc(t.draft)+'</textarea>'+
     sendBtn+
     '</div>';
   // [1.247] / C1 — BELOW the composer's send button. FAMILY-FACING.
@@ -2609,7 +2635,8 @@ function toggleHomeThread(teacherId, teacherName){
   // saying it is still loading, because that is the only honest thing to say.
   var _cached=KL_THREAD_CACHE[teacherId];
   var _had=(_cached && _cached.length) ? _cached : null;
-  HOME_EXPANDED={teacherId:teacherId, teacherName:teacherName, messages:_had||[], draft:'', loading:!_had, refreshing:!!_had, lastSentAt:_maxSentAt(_had||[]), _sendInFlight:false};
+  // [1.332] — the draft comes back with the conversation it belongs to.
+  HOME_EXPANDED={teacherId:teacherId, teacherName:teacherName, messages:_had||[], draft:_famDraftGet(teacherId), loading:!_had, refreshing:!!_had, lastSentAt:_maxSentAt(_had||[]), _sendInFlight:false};
   // The thread replaces the contact list in a block that may be halfway down
   // a long page, so opening it has to move the page too — otherwise a family
   // clicks a contact and nothing appears to happen (1.40).
@@ -2705,6 +2732,7 @@ function sendHomeMessage(){
   };
   t.messages=t.messages.concat([pending]);
   t.draft='';
+  _famDraftSet(t.teacherId,'');   // [1.332] — sent is not a draft any more
   // Blocks the 5s poll from touching this thread until the server has
   // confirmed. Without it a tick landing mid-flight would fetch the very
   // message sitting here unconfirmed and append it a second time.
@@ -2728,6 +2756,9 @@ function sendHomeMessage(){
     if(e||!r||!r.ok){
       t.messages=t.messages.filter(function(m){ return m!==pending; });
       t.draft=text;
+      // [1.332] — a send that failed puts the words back in the box AND back
+      // in storage, or a reload after a failed send loses them for good.
+      _famDraftSet(t.teacherId,text);
       showMsg((r&&r.error)||'Could not send message.','e');
       render();
       return;
@@ -3840,7 +3871,42 @@ function _klEnrollmentFactsHtml(s){
   // standing monthly price when s.isProrated is set \u2014 never one number
   // alone for a family who paid a prorated first month (AC, 26 Aug).
   h+=_fmtPriceBox(s,false);
+  h+=_klAdjustmentsHtml(s);
   return h;
+}
+
+// ── [1.339] — what the family was told about their pricing, kept ─────────
+//
+// AC, 5 September 2026: "the info is provided in the email BEFORE acceptance,
+// but after that the family only sees this info on the family portal in the
+// upcoming dates area, so it's effectively lost."
+//
+// The teacher absences and the discounts were explained in the proposal email
+// and then existed nowhere the family could look. This is that block, frozen
+// at acceptance and never rewritten — the same rule as the policy snapshot and
+// the self-release text above it.
+//
+// **It sits WITH the pricing, which is AC's placement:** "You can add the
+// adjustments and discounts details and language as a separate summary
+// included with the pricing." Directly under the price box, not in a section
+// of its own, because it is the explanation of the number above it.
+//
+// Rendered ESCAPED and line-by-line: the stored text is plain, and it is a
+// record — nothing about it should be able to introduce markup into this page.
+function _klAdjustmentsHtml(s){
+  var txt=String((s&&s.acceptedAdjustmentsText)||'').trim();
+  if(!txt) return '';
+  var lines=txt.split('\n').filter(function(l){ return l.trim(); });
+  if(!lines.length) return '';
+  var head=lines[0], rest=lines.slice(1);
+  return '<div style="margin-top:.55rem;padding-top:.5rem;border-top:1px dashed var(--border)">'+
+    '<div style="font-size:12px;color:var(--text3);margin-bottom:.3rem">'+esc(head)+'</div>'+
+    (rest.length
+      ? '<ul style="margin:0;padding-left:16px;font-size:12px;color:var(--text3)">'+
+        rest.map(function(l){ return '<li style="margin-bottom:.2rem">'+esc(l.trim())+'</li>'; }).join('')+
+        '</ul>'
+      : '')+
+    '</div>';
 }
 
 // rHomeEnrollmentRecord(), rHomePolicyRecords() and

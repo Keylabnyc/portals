@@ -175,6 +175,48 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 .pdf-detail-lbl{color:#525252}
 .pdf-detail-val{font-weight:600;color:#0A0A0A}
 .pdf-policy-text{font-size:11px;color:#2E2E2E;line-height:1.6}
+/* ══ [1.427] — THE PHONE ══════════════════════════════════════════════════
+   AC, 8 September 2026: "on the computer everything looks relatively good
+   size-wise, but the phone experience is where the size and contrast really
+   affect the ux ... Family page buttons are also very small and hard to
+   select."
+
+   So this is a PHONE-ONLY block. The desktop view he is happy with is not
+   touched by any of it — which is the difference between this and "make the
+   fonts bigger", the fix he would have got if the clarification had not come.
+
+   Three things, and the third is not cosmetic:
+
+   1. TYPE UP. The base was 14px with 13px body copy and 12px buttons — fine on
+      a monitor, small in a hand.
+
+   2. TAP TARGETS. A button was ~28px tall. 44px is the size a finger actually
+      hits, and "hard to select" is precisely what that number exists to stop.
+
+   3. INPUTS AT 16px, AND THIS IS WHY THE PAGE JUMPS. iOS zooms the whole page
+      when you focus an input whose text is under 16px, then leaves it zoomed.
+      That is a real part of AC's "a lot of screen jumping and repositioning",
+      and no amount of scroll handling fixes it — only the font size does. */
+@media(max-width:560px){
+  body{font-size:16px}
+  p{font-size:15px}
+  .msg{font-size:15px}
+  h1{font-size:22px}
+  h2{font-size:13px}
+  /* 16px exactly: below it, iOS zooms on focus. */
+  input,select,textarea{font-size:16px;padding:11px 12px}
+  .btn{font-size:15px;padding:11px 18px;min-height:44px}
+  .btn-sm{font-size:14px;padding:9px 14px;min-height:40px}
+  .lnk-btn{min-height:44px;padding:10px 14px;font-size:14px}
+  /* The contact rows and message tiles are the things a parent presses most. */
+  .kl-crow{min-height:56px}
+  .att-tile{min-height:56px}
+  .att-x{min-width:44px;min-height:44px}
+  /* Contrast: the two lightest tokens are readable indoors on a monitor and
+     not outdoors on a phone. Darkened here only. */
+  .kl-cprev,.kl-tsub,.bubble-time{color:var(--text3)}
+  .hint{color:var(--text3);font-size:14px}
+}
 @media print{
   body.printing-policy-pdf > *:not(#policy-pdf-print-block){display:none!important}
   body.printing-policy-pdf{background:#fff}

@@ -564,6 +564,23 @@ input[type=checkbox]{width:13px;height:13px;padding:0;margin:0;border:0;border-r
 /* The sentence that stops a teacher believing a scheduled reply is a reply. */
 .sched-note{font-size:11px;color:var(--text3);margin-top:.35rem;font-style:italic}
 .bubble.sched .msg-tools{color:var(--text3);border-top-color:var(--border)}
+/* ── [1.432] — the four controls on a scheduled message must be READABLE ──
+   AC, 8 September 2026: "the message itself has buttons with unreadable text
+   due to contrast issues."
+
+   A scheduled message sits in the sender's own column, so it takes
+   .bubble-row.mine — and .bubble.mine .lnk-btn paints buttons white for a
+   dark navy bubble. But .bubble.sched is deliberately TRANSPARENT ([1.371]:
+   "a solid navy bubble identical to every sent message is exactly the
+   impression this feature must not give"), so those white buttons landed on
+   the page background.
+
+   Restated for the scheduled case: dark text, real border, on white. The
+   outlined bubble stays outlined. */
+.bubble.mine .bubble.sched .lnk-btn,
+.bubble.sched .lnk-btn{background:rgba(255,255,255,.85);border-color:var(--border2);color:var(--text)}
+.bubble.sched .lnk-btn:hover{background:#fff;color:var(--acc);border-color:var(--acc)}
+.bubble.sched .msg-tools-sep{color:var(--text4)}
 /* The confirm, in the bubble rather than over the page: what is being
    confirmed is right there and must stay visible while it is answered. */
 .sched-confirm{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:.4rem;
@@ -630,7 +647,19 @@ input[type=checkbox]{width:13px;height:13px;padding:0;margin:0;border:0;border-r
    box was huge — see [1.300]. The background is new. */
 .bubble.saved{border-color:var(--acc);box-shadow:0 0 0 2px rgba(26,86,219,.18);
   background:rgba(26,86,219,.07)}
-.bubble.mine.saved{box-shadow:0 0 0 2px rgba(255,255,255,.55)}
+/* ── [1.431] — a saved message on YOUR OWN side keeps its dark bubble ────
+   AC, 8 September 2026: "When saving a message for review, the message
+   contrast is lost and it's very hard to read."
+
+   .bubble.mine is white text on the dark accent. .bubble.saved then replaced
+   the BACKGROUND with a pale tint and left the text white — so a saved
+   message of your own was white on very pale blue, which is what he saw.
+
+   The ring is the marker; the background is not. Restated here rather than
+   removed from .saved, because the pale tint is right for the OTHER side,
+   where the text is dark. */
+.bubble.mine.saved{background:var(--acc);border-color:var(--acc);color:#fff;
+  box-shadow:0 0 0 2px rgba(255,255,255,.55)}
 .saved-tag{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.02em;
   color:var(--acc);margin-bottom:.3rem}
 .bubble.mine .saved-tag{color:#fff}
@@ -678,6 +707,16 @@ input[type=checkbox]{width:13px;height:13px;padding:0;margin:0;border:0;border-r
 /* [1.404] — a status message that lives beside its control. NEVER grey: grey
    is what this tool uses for absent, finished and disabled, so a grey status
    reads as "nothing is happening", which is the opposite of what it says. */
+/* [1.434] — the merge-tag pills, distinct from the formatting buttons beside
+   them: they insert words rather than change them. */
+.cmp-tag{font-family:"Inter",sans-serif;font-size:11.5px;font-weight:600;
+  color:var(--acc);border-style:dashed}
+/* [1.436] — the way through from a nudge. On its own line under the sentence,
+   because it is an action and the sentence around it is not. */
+.note-goto{display:inline-block;margin-top:.4rem;padding:4px 10px;border-radius:var(--r);
+  border:1px solid var(--acc);background:rgba(255,255,255,.7);color:var(--acc);
+  font-family:"Inter",sans-serif;font-size:12px;font-weight:600;cursor:pointer}
+.note-goto:hover{background:var(--acc);color:#fff}
 .act-note{display:flex;align-items:center;gap:6px;margin-top:6px;padding:6px 10px;
   border-radius:var(--r);font-size:12.5px;font-weight:600;line-height:1.35}
 .act-working{border:1px solid var(--blue);background:var(--bbg);color:var(--bt)}
@@ -798,6 +837,29 @@ input[type=checkbox]{width:13px;height:13px;padding:0;margin:0;border:0;border-r
    are correct on their own and only the join is wrong. So the layout lives
    HERE, where the media query can still hide it. */
 .only-lg-row{justify-content:flex-end;margin-bottom:.4rem}
+/* ══ [1.427] — THE PHONE, teacher side ═══════════════════════════════════
+   The family portal's twin, and for the same reason: AC's complaint was about
+   the phone, and teachers read messages on phones between lessons more than
+   they read them at a desk. The 900px layout above is untouched.
+
+   The third rule is the one that is not cosmetic: iOS zooms the whole page
+   when an input under 16px is focused and leaves it zoomed, which is a real
+   part of the "screen jumping" reported on both portals. */
+@media(max-width:560px){
+  body{font-size:16px}
+  p{font-size:15px}
+  .msg{font-size:15px}
+  input,select,textarea{font-size:16px;padding:11px 12px}
+  .cmp-rich{font-size:16px;min-height:96px}
+  .btn{font-size:15px;padding:11px 18px;min-height:44px}
+  .btn-s,.btn-sm{font-size:14px;padding:9px 14px;min-height:40px}
+  .lnk-btn{min-height:44px;padding:10px 14px;font-size:14px}
+  .cmp-tb-btn{min-height:40px;min-width:40px}
+  .thread-row{min-height:56px}
+  .att-tile{min-height:56px}
+  .att-x{min-width:44px;min-height:44px}
+  .bubble-time{font-size:12.5px;color:var(--text3)}
+}
 @media (min-width:900px){
   .wrap{max-width:1120px;padding:2rem 2rem 2.5rem}
   .only-lg{display:block}
@@ -1974,8 +2036,9 @@ function rTtplForm(i,t){
   // nobody opens. Tapping one puts it in the box at the cursor — typing
   // [studentFirst] correctly from memory is not a thing to ask of anybody.
   h+='<div class="lnk-lb tpl-lb">'+esc(TTPL_COPY.tagsLbl)+'</div>'+
-     '<div class="tpl-tags">'+TPL_TAGS.map(function(tag){
+     '<div class="tpl-tags">'+TPL_TAGS_OFFERED.map(function(tag){
        return '<button type="button" class="tpl-tag" onmousedown="event.preventDefault()"'+
+         ' title="'+esc(TPL_TAG_LABELS[tag]||tag)+'"'+
          ' onclick="ttplInsertTag('+i+',\''+tag+'\')">['+esc(tag)+']</button>';
      }).join('')+'</div>';
   h+='<div class="lnk-frow">'+
@@ -4998,7 +5061,22 @@ function _tplWorthSaving(id){
 // The allowlist is not tidiness either: without it the lookup reaches
 // Object.prototype, so a template containing [toString] would paste the source
 // of a JavaScript function into somebody's message.
+// The full set the SUBSTITUTION understands. It stays complete even though a
+// teacher is offered only two below: a template written by admin can carry any
+// of these, and a teacher using one must have it filled in rather than sent to
+// a family with [instrument] still in it.
 var TPL_TAGS = ['studentFirst','parentFirst','instrument','day','time','teacher'];
+// ── [1.434] — the two a TEACHER is offered ───────────────────────────────
+//
+// AC, asked directly on 8 September 2026: student first name and parent first
+// name. Not instrument, day, time or teacher — those are facts a teacher
+// already knows and would be writing ABOUT, while the two names are what make
+// a message read as written for that family. Admin keeps all six.
+var TPL_TAGS_OFFERED = ['studentFirst','parentFirst'];
+// What a person sees on the pill. "[studentFirst]" is what goes IN the text,
+// and it is what the substitution matches, so it is shown as well — a teacher
+// who has seen the pill can then type it.
+var TPL_TAG_LABELS = {studentFirst:'Student first name', parentFirst:'Parent first name'};
 function _tplFirstName(n){ return String(n||'').trim().split(/\s+/)[0]||''; }
 // What this conversation actually knows. A staff thread knows almost nothing,
 // and says so by resolving almost nothing.
@@ -5505,6 +5583,9 @@ var TCH_COPY={
   // ── [1.404] — the working/done/failed wording. PLACEHOLDERS, flagged. ──
   // ── AC's wording, 8 September 2026. FINAL, not placeholders. ─────────
   savingSettings:'Saving\u2026',
+  // [1.436] — PLACEHOLDER, flagged. The way through from a nudge to the
+  // conversation it names.
+  nudgeGoto:'Open that conversation',
   // AC's own wording, 8 September 2026, for the gated Send.
   sendBlockedUploading:'File must finish uploading before sending',
   awayOnDone:'You\u2019re set to away. Families will see the away message',
@@ -5694,7 +5775,40 @@ function rComposerToolbar(id){
       ' onclick="_composerLinkOpen(\''+id+'\')">'+esc(CMP_COPY.link)+'</button>'+
     '<button type="button" class="cmp-tb-btn" title="'+esc(CMP_COPY.clear)+'" onmousedown="event.preventDefault()"'+
       ' onclick="_composerClearFmt(\''+id+'\')">✕</button>'+
+    // ── [1.434] — the merge tags, on the toolbar where a message is WRITTEN ──
+    //
+    // AC, 8 September 2026: "merge tags need to be typed in and can't be
+    // selected. Merge tags pills are already in the code and should be
+    // available for teachers too."
+    //
+    // They were in the template editor and nowhere else, so writing an
+    // ordinary message meant typing [studentFirst] from memory — which is not
+    // a thing to ask of anybody, and is the same reasoning the template
+    // editor's own pills were added for.
+    //
+    // Only in a FAMILY thread: there is no student and no parent in a staff
+    // conversation, so the tags would insert something that can never fill in.
+    (HOME_TAB==='family' && id==='family-composer'
+      ? '<span class="cmp-div"></span>'+TPL_TAGS_OFFERED.map(function(tag){
+          return '<button type="button" class="cmp-tb-btn cmp-tag" onmousedown="event.preventDefault()"'+
+            ' title="'+esc(TPL_TAG_LABELS[tag]||tag)+'"'+
+            ' onclick="_composerInsertTag(\''+id+'\',\''+tag+'\')">['+esc(tag)+']</button>';
+        }).join('')
+      : '')+
   '</div>';
+}
+// Plain text at the cursor, never insertHTML: a merge tag must carry none of
+// the formatting active where it lands, or it is markup-wrapped from the
+// moment it is inserted and the substitution can no longer find it — the same
+// trap [1.412] closed on the admin side.
+function _composerInsertTag(id, tag){
+  var el=document.getElementById(id); if(!el) return;
+  el.focus();
+  var txt='['+tag+']';
+  var placed=false;
+  try{ placed=document.execCommand('insertText', false, txt); }catch(e){ placed=false; }
+  if(!placed) el.appendChild(document.createTextNode(txt));
+  _composerSync(id);
 }
 
 // Replaces window.prompt() (BACKLOG 1.34, and AC again on 28 Aug). The prompt
@@ -6859,11 +6973,29 @@ var NOTE_LABEL_AUTO='auto-reply:';
 function rNoteLine(m){
   return _rNote(NOTE_LABEL_SEEN, m.sentAt, m.messageText);
 }
-function _rNote(label, at, text){
+function _rNote(label, at, text, refFamilyId){
   return '<div class="note-line">'+
     '<div class="note-head">'+esc(fmtMsgTime(at))+'</div>'+
     '<div class="note-body"><span class="note-label">'+esc(label)+'</span>'+
-      esc(text||'')+'</div>'+
+      esc(text||'')+
+      // ── [1.436] — a nudge goes THROUGH to the conversation it names ────
+      //
+      // AC, 8 September 2026: "nudges work, but it's confusing to see the
+      // nudge in the admin-teacher conversation when it's about another
+      // conversation. Not a big deal but it might be nice to link directly to
+      // the message being referred to so the teacher can get right to it
+      // without having to search or lose their place when trying to find the
+      // message. This aspect is important for teacher satisfaction using the
+      // tool. They need to love using this."
+      //
+      // The email has deep-linked since [1.21]; the row a teacher actually
+      // reads in the portal never could, so being told you owe somebody a
+      // reply ended in going to look for them.
+      (refFamilyId
+        ? '<button type="button" class="note-goto" onclick="openFamilyRow(\''+esc(refFamilyId)+'\')">'+
+            esc(TCH_COPY.nudgeGoto)+'</button>'
+        : '')+
+    '</div>'+
     '</div>';
 }
 
@@ -6971,7 +7103,7 @@ function rMsgTools(m, mine){
 // machinery for a problem the release already removes. If they still stack
 // afterwards it is a real item then, raised on evidence.
 function rAutoBubble(m,mine){
-  return _rNote(NOTE_LABEL_AUTO, m.sentAt, m.messageText);
+  return _rNote(NOTE_LABEL_AUTO, m.sentAt, m.messageText, m.refFamilyId||'');
 }
 
 // [1.249] — _bubbleAbout() was here and is gone. It put the child's name on

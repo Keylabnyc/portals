@@ -675,6 +675,14 @@ input[type=checkbox]{width:13px;height:13px;padding:0;margin:0;border:0;border-r
 .att-chip{display:inline-flex;align-items:center;gap:6px;padding:3px 4px 3px 9px;
   border:1px solid var(--border2);border-radius:999px;background:var(--bg5);font-size:11.5px}
 .att-chip.up{opacity:.65}
+/* [1.404] — a status message that lives beside its control. NEVER grey: grey
+   is what this tool uses for absent, finished and disabled, so a grey status
+   reads as "nothing is happening", which is the opposite of what it says. */
+.act-note{display:flex;align-items:center;gap:6px;margin-top:6px;padding:6px 10px;
+  border-radius:var(--r);font-size:12.5px;font-weight:600;line-height:1.35}
+.act-working{border:1px solid var(--blue);background:var(--bbg);color:var(--bt)}
+.act-done{border:1px solid var(--green);background:rgba(22,163,74,.10);color:var(--gt)}
+.act-failed{border:1px solid var(--red);background:rgba(220,38,38,.08);color:var(--red)}
 /* [1.403] — the two attachment states. The FINISHED one is the loud one:
    a file successfully attached used to be the quietest thing on screen. */
 .att-banner{display:flex;align-items:center;gap:7px;margin-top:7px;padding:7px 10px;
@@ -1018,6 +1026,64 @@ function esc(s){
 function showMsg(m, t){
   MSG={m:m, t:t||'s'}; render();
   setTimeout(function(){ MSG={m:'',t:''}; render(); }, 7000);
+}
+
+// ── [1.404] — ONE status mechanism, and it lives BESIDE THE CONTROL ───────
+//
+// AC, 8 September 2026, for the third time: *"put status banners by the
+// function buttons, not at the top of the screen whenever possible and don't
+// make the gray. Status banners should be clear and visible, not subtle and
+// hidden."* And, on the same pass: *"success messages ... are still showing up
+// in the right corner of the screen instead of at the button the action takes
+// place ... it's very easy to miss these throughout the tool."*
+//
+// **Four of his findings are this one fault** — saving a template, turning Away
+// on, scheduling a message, attaching a file: each does the thing and says
+// nothing, or says it somewhere nobody is looking.
+//
+// **showMsg() is why it keeps happening.** It is the easy call and it is always
+// a corner toast, so reaching for it is how a state ends up hidden. This is the
+// alternative, and the question to ask before using either is *"which control
+// is this about, and can the message live there instead?"*
+//
+// Three states, deliberately no more: WORKING, DONE, FAILED. Keyed by the
+// control, so two actions cannot fight over one line, and rendered by whoever
+// draws that control — which is what puts it in the right place without this
+// module knowing anything about layout.
+var ACT = {};   // key -> {state:'working'|'done'|'failed', text:''}
+var _actTimers = {};
+function actStart(key, text){
+  ACT[key] = {state:'working', text:text||''};
+  if(_actTimers[key]){ clearTimeout(_actTimers[key]); delete _actTimers[key]; }
+  render();
+}
+// Done clears itself. A confirmation that stays for ever stops being a
+// confirmation and becomes furniture — but it stays long enough to be READ,
+// which is the half the old toast got wrong by being somewhere else entirely.
+function actDone(key, text){
+  ACT[key] = {state:'done', text:text||''};
+  if(_actTimers[key]) clearTimeout(_actTimers[key]);
+  _actTimers[key] = setTimeout(function(){ delete ACT[key]; delete _actTimers[key]; render(); }, 4000);
+  render();
+}
+// A failure does NOT clear itself. It is the one state a person has to act on.
+function actFail(key, text){
+  ACT[key] = {state:'failed', text:text||''};
+  if(_actTimers[key]){ clearTimeout(_actTimers[key]); delete _actTimers[key]; }
+  render();
+}
+function actClear(key){
+  if(_actTimers[key]){ clearTimeout(_actTimers[key]); delete _actTimers[key]; }
+  if(ACT[key]){ delete ACT[key]; render(); }
+}
+function actBusy(key){ return !!(ACT[key] && ACT[key].state==='working'); }
+// Drawn by whatever draws the control. Empty when there is nothing to say, so
+// a caller can put it anywhere unconditionally.
+function rAct(key){
+  var a=ACT[key]; if(!a) return '';
+  var icon = a.state==='working' ? '<span class="spin">\u21bb</span> '
+           : a.state==='done'    ? '\u2713 ' : '\u0021 ';
+  return '<div class="act-note act-'+a.state+'">'+icon+esc(a.text||'')+'</div>';
 }
 
 // Formats an epoch-ms timestamp as "Thursday, 9/3/26 2:12 AM" — see BACKLOG
@@ -1716,7 +1782,8 @@ function rTeacherSettings(){
        ? '<button class="btn btn-s" onclick="setAway(false)">Turn off away</button>'
        : '<button class="btn btn-p" onclick="setAway(true)">Turn on away</button>')+
      (TSET.saving?'<span class="spin">↻</span>':'')+
-     '</div>';
+     '</div>'+
+     rAct('away');   // [1.404] — beside the control, not in the corner
   h+='</div>';
 
   h+='<div class="card" style="margin-top:.75rem">';
@@ -1819,7 +1886,10 @@ function rTeacherTemplates(){
   } else {
     h+='<div class="lnk-list" id="ttpl-list">'+rows.map(function(t,i){ return rTtplItem(i,t); }).join('')+'</div>';
   }
-  if(TSET.tplsSaved) h+='<div style="color:var(--gt);font-size:12px;margin-top:.4rem">✓ Saved</div>';
+  // [1.404] — replaced by the shared note, which names the template back and
+  // carries the failure case too. The old line said "✓ Saved" and nothing else,
+  // which is what AC meant by "no banner ... confirming the name etc."
+  h+=rAct('tpl');
   if(TSET.tplsErr) h+='<div style="color:var(--red);font-size:12px;margin-top:.4rem">'+esc(TSET.tplsErr)+'</div>';
   return h+'</div>';
 }
@@ -2039,19 +2109,46 @@ function ttplCancel(){
 function ttplDelAsk(i){ TSET.tplDel=i; TSET.tplEdit=-1; render(); }
 function ttplDelCancel(){ TSET.tplDel=-1; render(); }
 function ttplDelDo(i){ TSET.tpls.splice(i,1); TSET.tplDel=-1; ttplSave(); }
+// ── [1.404] + [1.429] — saving a template says so, and names it ──────────
+//
+// AC: "Templates work, but I can rename several the exact same name. Button
+// behaviors don't tell me anything about progress, and there is no banner for
+// successfully adding a new template confirming the name etc."
+//
+// Both halves are here: the duplicate-name refusal, and a status that names
+// the template back so a teacher knows WHICH one was saved.
 function ttplSave(){
   TSET.tplsErr='';
+  // [1.429] — two templates with one name is a picker where a teacher cannot
+  // tell their own work apart. Refused here rather than server-side because
+  // the teacher is looking at the box they typed it into; the server refuses
+  // an empty name already and this is the same courtesy one level up.
+  var seen={}, dup='';
+  (TSET.tpls||[]).forEach(function(t){
+    var k=String(t.label||'').trim().toLowerCase();
+    if(!k) return;
+    if(seen[k]) dup=String(t.label||'').trim(); else seen[k]=true;
+  });
+  if(dup){
+    actFail('tpl', TCH_COPY.tplDuplicate.replace('{name}', dup));
+    render();
+    return;
+  }
   var payload=(TSET.tpls||[]).map(function(t){
     return {templateId:t.templateId, label:t.label,
             body: t._txt ? esc(_ttplToText(t.body)).replace(/\n/g,'<br>') : t.body};
   });
+  var _named=(TSET.tpls||[])[TSET.tplEdit];
+  var _name=_named ? String(_named.label||'').trim() : '';
+  actStart('tpl', TCH_COPY.savingTemplate);
+  render();
   api({action:'saveTeacherTemplates', data:{teacherToken:TOKEN, templates:payload}}, function(e,r){
-    if(e||!r||!r.ok){ TSET.tplsErr=(r&&r.error)||'Could not save.'; render(); return; }
+    if(e||!r||!r.ok){ TSET.tplsErr=(r&&r.error)||'Could not save.'; actFail('tpl',(r&&r.error)||'Could not save.'); render(); return; }
     TSET.tpls=null; TSET.tplEdit=-1; TSET.tplDel=-1; TSET.tplBackup=null; ttplLoad();
     // The COMPOSER's copy is stale the moment this saves.
     SAVED_TPLS=[]; _savedTplsLoaded=false; _savedTplsInFlight=false; loadSavedTpls();
-    TSET.tplsSaved=true; render();
-    setTimeout(function(){ TSET.tplsSaved=false; render(); },3000);
+    actDone('tpl', _name ? TCH_COPY.savedTemplateNamed.replace('{name}', _name) : TCH_COPY.savedTemplate);
+    render();
   });
 }
 
@@ -2230,12 +2327,17 @@ function saveTeacherSettings(){
   });
 }
 function _saveSettings(fields){
-  TSET.saving=true; render();
+  TSET.saving=true;
+  // [1.404] — AC: turning Away on and off "works, but again, no feedback
+  // progress or success message on button". The status now sits on the
+  // control, not in the corner.
+  actStart('away', TCH_COPY.savingSettings);
+  render();
   var d={teacherToken:TOKEN};
   for(var k in fields) if(fields[k]!==undefined) d[k]=fields[k];
   api({action:'teacherSaveSettings', data:d}, function(e,r){
     TSET.saving=false;
-    if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not save.','e'); render(); return; }
+    if(e||!r||!r.ok){ actFail('away',(r&&r.error)||'Could not save.'); render(); return; }
     var st=r.settings||{};
     TSET.awayEnabled=!!st.awayEnabled;
     TSET.awayMessage=st.awayMessage||'';
@@ -2244,7 +2346,7 @@ function _saveSettings(fields){
     TSET.draftAway=TSET.awayMessage;
     TSET.draftAfter=TSET.afterHoursMessage;
     TSET.loaded=true;
-    showMsg(TSET.awayEnabled?'You\'re set to away.':'Saved.','s');
+    actDone('away', TSET.awayEnabled?TCH_COPY.awayOnDone:TCH_COPY.awayOffDone);
     render();
   });
 }
@@ -3696,9 +3798,25 @@ function rFamilyThread(){
   // most likely to be scrolled past. Here it is in view whenever the
   // conversation is open.
   // [1.320] — the deadline is on the title line now; see the note above.
-  var sendBtn=AMEND.kind==='edit' ? rEditActions() : (t.sending
+  // ── [1.428] — Send is DISABLED while a file is still going up ─────────
+  //
+  // AC, 8 September 2026: "The send button should be greyed out until the file
+  // has been added, seeing as the user can't send until the file is added. The
+  // user CAN click on send and it will send as soon as the file loads, but this
+  // creates confusion: did the message send? What's happening while the file is
+  // loading and the family clicks send?"
+  //
+  // **This REVERSES [1.402]'s held press**, which was built to his earlier
+  // instruction that Send should wait and say so. He has now used it and
+  // prefers the button plainly unavailable with a reason. His current word
+  // wins, and the reason is rendered beside the button rather than as a toast.
+  var _upBusy=_attAnyUploading();
+  var sendBtn=AMEND.kind==='edit' ? rEditActions() : (t.sending || actBusy('send')
     ?'<button class="btn btn-p" disabled><span class="spin">↻</span></button>'
-    :rAttachButton()+'<button class="btn btn-p" onclick="sendFamilyMessage()">Send</button>'+
+    :rAttachButton()+
+      (_upBusy
+        ? '<button class="btn btn-p" disabled title="'+esc(TCH_COPY.sendBlockedUploading)+'">Send</button>'
+        : '<button class="btn btn-p" onclick="sendFamilyMessage()">Send</button>')+
       // [1.371] — beside Send, not inside a menu. It is one of two ways to
       // finish the message that is already written.
       '<button type="button" class="btn btn-s" onclick="openSendLater()">'+esc(TCH_COPY.sendLater)+'</button>')+
@@ -4074,14 +4192,13 @@ function sendFamilyMessage(sendAt){
   if(!text && !_att.length) return;
   // A file still going up is the one thing worth waiting for. Sending now
   // would send the message without it and leave the upload orphaned.
-  // [1.402] — the press is HELD, not thrown away with a toast. See the note
-  // on _flushQueuedSend. A failed file stops it in AC's words rather than
-  // letting the message go without the attachment it was written about.
-  // sendAt travels WITH the press: a scheduled send replayed without its time
-  // is a message sent now, which is the opposite of what was asked for.
-  if(_attAnyFailed()){ _sendQueued=null; showMsg(TCH_COPY.sendBlocked,'e'); render(); return; }
-  if(_attAnyUploading()){ _sendQueued={which:'family', at:sendAt||''}; showMsg(TCH_COPY.sendWaiting,'i'); render(); return; }
-  _sendQueued=null;
+  // [1.428] — the button is disabled while an upload is in flight, so this is
+  // now a backstop rather than the mechanism: a keyboard send, or a race
+  // between the click and the upload finishing. It refuses plainly instead of
+  // holding a press the teacher can no longer see.
+  if(_attAnyFailed()){ actFail('send', TCH_COPY.sendBlocked); render(); return; }
+  if(_attAnyUploading()){ actFail('send', TCH_COPY.sendBlockedUploading); render(); return; }
+  actClear('send');
   var notifyParents=[];
   if(!t.parent1Name || !t.parent2Name){
     // Only one parent on file — nothing to choose, notify whichever exists.
@@ -4162,7 +4279,13 @@ function sendFamilyMessage(sendAt){
     // [1.371] — the Scheduled count changed, and it is on the screen behind
     // this thread. Refreshed here rather than on a poll, because the teacher
     // has just this moment created the thing it counts.
-    if(sendAt){ _schedInvalidate(); render(); return; }
+    if(sendAt){
+      // [1.404] — the act is confirmed here, on the server's answer, not when
+      // the button was pressed. A confirmation shown before the round trip is
+      // a promise rather than a fact.
+      actDone('send', TCH_COPY.scheduledDone.replace('{when}', fmtMsgTime(Number(sendAt)||_schedJustSetAt)));
+      _schedInvalidate(); render(); return;
+    }
     // [1.276] — ONE exception to the no-render rule above, and it is the whole
     // reason the window is usable. Unsend cannot be drawn until the message has
     // an id, and the id arrives here; without this the two words would not
@@ -5379,6 +5502,20 @@ var TCH_COPY={
   linkClaimed:'This link has already been used on another device. Please log in.',
   linkExpired:'This link has expired. Please log in.',
   attachTooMany:'You can add 10 files to one message.',
+  // ── [1.404] — the working/done/failed wording. PLACEHOLDERS, flagged. ──
+  savingSettings:'Saving\u2026',
+  // AC's own wording, 8 September 2026, for the gated Send.
+  sendBlockedUploading:'File must finish uploading before sending',
+  awayOnDone:'You\u2019re set to away. Families will see your notice.',
+  awayOffDone:'You\u2019re available again.',
+  savingTemplate:'Saving your template\u2026',
+  savedTemplate:'Template saved.',
+  savedTemplateNamed:'Saved \u201c{name}\u201d.',
+  tplDuplicate:'You already have a template called \u201c{name}\u201d. Give this one a different name.',
+  schedulingMsg:'Scheduling\u2026',
+  scheduledDone:'Scheduled. It will send on {when}.',
+  sendingMsg:'Sending\u2026',
+  sentDone:'Sent.',
   // ── [1.404] — the working/done/failed vocabulary, teacher side ────────
   // The family portal's KL_STATE_COPY twin. Kept in TCH_COPY rather than a
   // second object so this portal still has ONE place its wording lives.
@@ -5631,6 +5768,10 @@ function rComposer(id,draft,onInput,sendBtn){
       // [1.277] — the chips sit between what is being written and the button
       // that sends it, which is where a file being added belongs.
       rAttachRow()+
+      // [1.404]/[1.428] — the status for this composer, beside its buttons.
+      (_attAnyUploading()?'<div class="act-note act-working"><span class="spin">\u21bb</span> '+
+        esc(TCH_COPY.sendBlockedUploading)+'</div>':'')+
+      rAct('send')+
       '<div class="composer-actions">'+sendBtn+'</div>'+
       // [1.371] — the picker, under the buttons, only while it is open. Inline
       // rather than a dialog: it belongs to the message in the box above it.
@@ -5785,7 +5926,6 @@ function attachUpload(file){
       rec.attachmentId=r.attachment.attachmentId;
       rec.fileName=r.attachment.fileName;   // the server cleans the name; show what it stored
       ATT_BUSY--; render();
-      _flushQueuedSend();   // [1.402] — the press that was waiting on this
     });
   };
   reader.readAsDataURL(file);
@@ -5798,31 +5938,16 @@ function _attFail(rec, msg){
   rec.failed=true;
   rec.error=msg||TCH_COPY.attachFailed;
   ATT_BUSY--; showMsg(msg,'e'); render();
-  _flushQueuedSend();
 }
 function _attAnyUploading(){ return ATT_PENDING.some(function(x){ return x.uploading; }); }
 function _attAnyFailed(){ return ATT_PENDING.some(function(x){ return x.failed; }); }
-// [1.402] — a Send pressed while a file was still going up. Held, not lost.
-//
-// THE sendAt IS PART OF THE PRESS AND MUST BE HELD WITH IT. Found in review the
-// same day this was written, and it was a real fault: confirmSendLater() clears
-// SCHED and calls sendFamilyMessage(at), so a scheduled send queued behind an
-// upload was replayed as sendFamilyMessage() with no time — the message went
-// out IMMEDIATELY, at the one moment its sender had just said "not yet", with
-// SCHED already cleared and no way back.
-//
-// One holder for both composers: only one thread is open at a time, and the
-// send functions re-ask both questions themselves.
-var _sendQueued=null;   // {which:'family'|'staff', at:<ms or ''>} | null
-function _flushQueuedSend(){
-  if(!_sendQueued) return;
-  if(_attAnyUploading()) return;
-  var q=_sendQueued;
-  var live=(q.which==='family') ? ACTIVE_THREAD : ACTIVE_STAFF_THREAD;
-  if(!live){ _sendQueued=null; return; }
-  if(q.which==='family') sendFamilyMessage(q.at||undefined);
-  else sendStaffMessage(q.at||undefined);
-}
+// [1.402]'s held press was REMOVED on 8 September 2026, the same evening it
+// shipped. It queued a Send pressed during an upload and replayed it when the
+// upload landed. AC used it and preferred the button plainly unavailable with
+// a reason on screen — see [1.428] at the Send button. A held press and a
+// disabled button are two answers to one question, and keeping both would
+// leave a queued send firing from a control the teacher can no longer see.
+
 function attachRemove(tempId){
   // Only from the composer. The upload itself is left alone: an id that is
   // never sent is never bound to a message, and the server's sweep removes it
@@ -6126,8 +6251,14 @@ function confirmSendLater(){
   // Almost always a typo in the year. A question, not a refusal.
   if(at > Date.now()+14*24*60*60*1000 && !confirm(TCH_COPY.scheduleFar)) return;
   SCHED={mode:'', messageId:'', at:''};
+  // [1.404] — AC: scheduling "works, but no success banner 'message
+  // scheduled'". The bubble says what it IS; this says the act SUCCEEDED,
+  // which is a different thing and the one that was missing.
+  actStart('send', TCH_COPY.schedulingMsg);
+  _schedJustSetAt=at;
   if(HOME_TAB==='family') sendFamilyMessage(at); else sendStaffMessage(at);
 }
+var _schedJustSetAt=0;
 
 // ── The scheduled bubble ───────────────────────────────────────────────
 // Drawn after the thread's real messages, because that is where it will
@@ -6857,9 +6988,10 @@ function sendStaffMessage(sendAt){
   var _att=_attTakeIds();   // [1.277]
   if(!text && !_att.length) return;
   // [1.402] — as in sendFamilyMessage above, sendAt included.
-  if(_attAnyFailed()){ _sendQueued=null; showMsg(TCH_COPY.sendBlocked,'e'); render(); return; }
-  if(_attAnyUploading()){ _sendQueued={which:'staff', at:sendAt||''}; showMsg(TCH_COPY.sendWaiting,'i'); render(); return; }
-  _sendQueued=null;
+  // [1.428] — as in sendFamilyMessage above.
+  if(_attAnyFailed()){ actFail('send', TCH_COPY.sendBlocked); render(); return; }
+  if(_attAnyUploading()){ actFail('send', TCH_COPY.sendBlockedUploading); render(); return; }
+  actClear('send');
   var reqData = t.contactType==='admin'
     ? {conversationType:'teacher_admin', teacherId:TEACHER_ID, teacherToken:TOKEN, messageText:text, messageHtml:html}
     : {conversationType:'staff_staff', teacherId:TEACHER_ID, staffId2:t.otherId, teacherToken:TOKEN, messageText:text, messageHtml:html};
@@ -6918,7 +7050,13 @@ function sendStaffMessage(sendAt){
       if(r.message.sendAt) pending.sendAt=r.message.sendAt;   // [1.371]
       if(r.message.attachments) pending.attachments=r.message.attachments;   // [1.277]
     }
-    if(sendAt){ _schedInvalidate(); render(); return; }   // [1.371]
+    if(sendAt){
+      // [1.404] — the act is confirmed here, on the server's answer, not when
+      // the button was pressed. A confirmation shown before the round trip is
+      // a promise rather than a fact.
+      actDone('send', TCH_COPY.scheduledDone.replace('{when}', fmtMsgTime(Number(sendAt)||_schedJustSetAt)));
+      _schedInvalidate(); render(); return;
+    }   // [1.371]
     if(_canAmendMsg(pending)) render();   // [1.276] — see sendFamilyMessage
   });
 }

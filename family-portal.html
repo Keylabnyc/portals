@@ -2825,6 +2825,8 @@ var KL_STATE_COPY = {
   attachMany:     'Adding your files\u2026',           // AC's words, pluralised
   attachedHead:   'Attached files',                     // AC's words
   attachFailed:   'That file could not be attached.',
+  // AC's wording, 8 September 2026, for the gated Send.
+  sendBlockedUploading:'File must finish uploading before sending',
   sendWaiting:    'Waiting for your file to finish uploading \u2014 your message will send as soon as it\u2019s ready.',
   // AC's words, 8 September, and final. It commits the composer to KEEPING a
   // failed file on screen — "remove file" has to have something to remove.
@@ -2876,6 +2878,20 @@ function toggleHomeThread(teacherId, teacherName){
   var _had=(_cached && _cached.length) ? _cached : null;
   // [1.332] — the draft comes back with the conversation it belongs to.
   HOME_EXPANDED={teacherId:teacherId, teacherName:teacherName, messages:_had||[], draft:_famDraftGet(teacherId), loading:!_had, refreshing:!!_had, lastSentAt:_maxSentAt(_had||[]), _sendInFlight:false};
+  // ── [1.430] — a thread OPENS at its newest message ────────────────────
+  //
+  // AC, 8 September 2026: "when opening a message, it starts at the very 1st
+  // message in the thread, and then after 5 seconds jumps to the latest
+  // message. This should start directly on the latest message."
+  //
+  // [1.27] settled that a thread opens at the newest message, and it did — but
+  // only when the FETCH landed, because that is the only place the flag was
+  // set. The first paint, drawn from cache, started at the top and sat there
+  // until the round trip corrected it. So a parent read the oldest message in
+  // the thread for five seconds and was then thrown to the bottom.
+  //
+  // Set on the OPEN as well, so the very first paint is already at the newest.
+  _shouldScrollMsgList=true;
   // The thread replaces the contact list in a block that may be halfway down
   // a long page, so opening it has to move the page too — otherwise a family
   // clicks a contact and nothing appears to happen (1.40).
@@ -2987,19 +3003,10 @@ function sendHomeMessage(){
   // without. It stops here with AC's wording, because a message that arrives
   // without the attachment it was written about is worse than one that has not
   // been sent yet.
-  if(_klAttAnyFailed()){
-    _klSendQueued=false;
-    showMsg(KL_STATE_COPY.sendBlocked,'e');
-    render();
-    return;
-  }
-  if(_klAttAnyUploading()){
-    _klSendQueued=true;
-    showMsg(KL_STATE_COPY.sendWaiting,'i');
-    render();
-    return;
-  }
-  _klSendQueued=false;
+  // [1.428] — the button is disabled while an upload is in flight; this is the
+  // backstop for a keyboard send or a race, and it refuses plainly.
+  if(_klAttAnyFailed()){ showMsg(KL_STATE_COPY.sendBlocked,'e'); render(); return; }
+  if(_klAttAnyUploading()){ showMsg(KL_STATE_COPY.sendBlockedUploading,'e'); render(); return; }
 
   var clientMsgId=_klNewClientMsgId();
   var pending={
@@ -3176,7 +3183,6 @@ function klAttachUpload(file){
       rec.attachmentId=r.attachment.attachmentId;
       rec.fileName=r.attachment.fileName;   // the server cleans the name; show what it stored
       KL_ATT_BUSY--; render();
-      _klFlushQueuedSend();   // [1.402] — the press that was waiting on this
     });
   };
   reader.readAsDataURL(file);
@@ -3196,19 +3202,10 @@ function _klAttFail(rec, msg){
   rec.failed=true;
   rec.error=msg||KL_STATE_COPY.attachFailed;
   KL_ATT_BUSY--; showMsg(msg,'e'); render();
-  _klFlushQueuedSend();   // [1.402] — which will refuse, in AC's words
 }
-// [1.402] — a Send pressed while a file was still going up. Held, not lost.
-var _klSendQueued=false;
-function _klFlushQueuedSend(){
-  if(!_klSendQueued) return;
-  if(_klAttAnyUploading()) return;    // still more to wait for
-  if(!HOME_EXPANDED) { _klSendQueued=false; return; }
-  // sendHomeMessage() re-asks both questions itself, so a failure that landed
-  // while waiting is refused there in AC's words rather than being handled
-  // twice in two places.
-  sendHomeMessage();
-}
+// [1.402]'s held press was REMOVED on 8 September 2026 — see [1.428]. AC used
+// it and preferred the button plainly unavailable with a reason on screen.
+
 function klAttachRemove(tempId){
   // Only from the composer. An id that is never sent is never bound to a
   // message, and the server's sweep clears it a day later.

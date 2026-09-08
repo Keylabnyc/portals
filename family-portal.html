@@ -286,6 +286,45 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
    to a web page is not that, and AC said so when raising this. */
 .bubble-text a{color:var(--link);text-decoration:underline;word-break:break-word}
 .bubble.mine .bubble-text a{color:#fff}
+/* [1.277] — attachments. Receive and open only: there is no picker on this
+   page and no upload, by AC's decision on 5 September. A tile, not a link —
+   there is no URL to give anybody, which is the whole of the design. */
+.att-strip{display:flex;flex-wrap:wrap;gap:6px;margin:.45rem 0 .1rem}
+.att-tile{display:flex;align-items:center;gap:8px;max-width:100%;padding:5px 9px 5px 5px;
+  border:1px solid var(--border2);border-radius:var(--rl);background:rgba(255,255,255,.75);
+  cursor:pointer;font-family:inherit;text-align:left;color:var(--text)}
+.att-tile:hover{background:#fff}
+.bubble.mine .att-tile{background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.45);color:#fff}
+.bubble.mine .att-tile:hover{background:rgba(255,255,255,.28)}
+.att-thumb{width:46px;height:46px;object-fit:cover;border-radius:var(--r);flex:0 0 auto;background:var(--bg4)}
+.att-glyph{width:46px;height:46px;display:flex;align-items:center;justify-content:center;
+  border-radius:var(--r);background:var(--bg4);color:var(--text4);font-size:11px;font-weight:700;flex:0 0 auto}
+.bubble.mine .att-glyph{background:rgba(255,255,255,.2);color:#fff}
+.att-meta{display:flex;flex-direction:column;min-width:0}
+/* The name is how a parent tells one file from another, so it wraps to two
+   lines rather than being cut off at eight characters on a phone. */
+.att-name{font-size:12px;font-weight:600;line-height:1.25;overflow-wrap:anywhere;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.att-size{font-size:10.5px;color:var(--text5)}
+/* [1.361] — the family's own picker, its rules and its chips. Character-for-
+   character the teacher portal's rules: a parent and the teacher they are
+   writing to should not be shown two different treatments of one control. */
+.att-input{display:none}
+.att-guide{font-size:11px;line-height:1.45;color:var(--text4);padding:6px 0 0}
+.att-formats{background:none;border:0;padding:0;font:inherit;font-weight:600;
+  color:var(--link);text-decoration:underline;cursor:pointer}
+.att-formats-list{display:block;font-weight:600;color:var(--text3);padding-top:2px;
+  letter-spacing:.02em}
+.att-chips{display:flex;flex-wrap:wrap;gap:6px;padding:6px 0 0}
+.att-chip{display:inline-flex;align-items:center;gap:6px;padding:3px 4px 3px 9px;
+  border:1px solid var(--border2);border-radius:999px;background:var(--bg5);font-size:11.5px}
+.att-chip.up{opacity:.65}
+.att-chip-name{max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+.att-x{background:none;border:0;font-size:14px;line-height:1;cursor:pointer;padding:2px 5px;
+  color:var(--text4);font-family:inherit}
+.att-x:hover{color:var(--red)}
+.btn-attach{white-space:nowrap}
+.bubble.mine .att-size{color:rgba(255,255,255,.7)}
 .bubble-time{font-size:11.5px;font-weight:500;color:var(--text4);margin-top:.35rem}
 .bubble.mine .bubble-time{color:rgba(255,255,255,.88)}
 /* The two notices above the composer (BACKLOG 1.125, 1.132). Away is the
@@ -302,10 +341,17 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 .kl-about-pill.on{background:var(--acc,#1747C0);border-color:var(--acc,#1747C0);color:#fff}
 .kl-afterhours{background:var(--bg2,#F6F6F4);border:1px solid var(--border,#E3E3DE);color:var(--text3,#5A5A55);
   border-radius:8px;padding:9px 11px;font-size:11.5px;line-height:1.45;margin-bottom:.6rem;white-space:pre-wrap}
-.composer{display:flex;gap:8px;align-items:flex-end}
+/* [1.361] — the composer STACKS now. It was a horizontal row of textarea and
+   Send, which is right for a box and a button and wrong the moment there is
+   anything else in it: adding the file rules and the chips to a side-by-side
+   flex squeezed the textarea to a sliver and set the instruction one word per
+   line. The box, then the rules, then the chips, then the action row. */
+.composer{display:flex;flex-direction:column;gap:0;align-items:stretch}
 .composer textarea{background:rgba(255,255,255,.45);border:1px solid var(--border2);color:var(--text);border-radius:var(--r);padding:9px 10px;font-family:"Inter",sans-serif;font-size:14px;width:100%;outline:none;resize:none;min-height:44px;max-height:120px}
 .composer textarea:focus{border-color:var(--acc);background:rgba(255,255,255,.65)}
 .composer .btn{width:auto;flex:0 0 auto}
+/* The one horizontal row left: Add file and Send, together, under the box. */
+.kl-send-row{display:flex;gap:8px;align-items:center;padding-top:8px}
 .teacher-pick-row{background:rgba(255,255,255,.45);border:1px solid var(--border);border-radius:var(--r);padding:.7rem .85rem;cursor:pointer;margin-bottom:6px;transition:background .12s}
 .teacher-pick-row:hover{background:rgba(255,255,255,.65)}
 </style>
@@ -2344,8 +2390,15 @@ function _klContactSub(c){
 
 // One row per person. The whole row opens the conversation — there is no
 // second control competing with it. The right-hand end shows exactly one
-// thing: an unread count, or the greyed "read but not answered" marker with
-// its own clear control, or a chevron.
+// thing: an unread count, or a chevron.
+//
+// [1.384] — this used to describe a third state, "the greyed 'read but not
+// answered' marker with its own clear control". That control went with the ✕
+// in [1.250] and the marker went with it; the sentence stayed and was the only
+// thing in the file still claiming either existed. The server still computes
+// `needsResponse` on every conversation and nothing here has read it since —
+// left in place deliberately rather than removed, because it costs nothing and
+// is the field any future "waiting on you" indicator would use.
 function rHomeContactRow(c){
   var sub=_klContactSub(c);
   // [1.307], AC: "resting state when a family logs in should define who sent
@@ -2359,7 +2412,10 @@ function rHomeContactRow(c){
   var from='';
   if(c.hasMessages){
     var who=c.lastSenderIsFamily ? 'you' : String(c.lastSenderName||c.teacherName||'').trim();
-    if(who) from='<span class="kl-cfrom">From '+esc(who)+'</span> ';
+    // [1.364] — a colon. "From Dana Reed Mia did really well today" reads as
+    // one sentence and the eye has to work out where the name stops; the two
+    // staff portals have always written "Name: message" on their own rows.
+    if(who) from='<span class="kl-cfrom">From '+esc(who)+':</span> ';
   }
   var prev = c.hasMessages ? from+esc((c.lastMessageText||'').slice(0,70)) : '<span class="kl-cprev q">No messages yet</span>';
   var right;
@@ -2502,7 +2558,9 @@ function rHomeThreadView(){
   var sendBtn='<button class="btn btn-p" onclick="sendHomeMessage()">Send</button>';
   h+='<div class="composer">'+
     '<textarea id="home-composer" placeholder="Type your message here..." oninput="HOME_EXPANDED.draft=this.value;_famDraftSet(HOME_EXPANDED.teacherId,this.value)">'+esc(t.draft)+'</textarea>'+
-    sendBtn+
+    // [1.361] — the rules, then the picker beside Send, then the chips.
+    rKlAttachRow()+
+    '<div class="kl-send-row">'+rKlAttachButton()+sendBtn+'</div>'+
     '</div>';
   // [1.247] / C1 — BELOW the composer's send button. FAMILY-FACING.
   //
@@ -2543,6 +2601,7 @@ function _homeStudentId(t,kids){
 }
 
 function closeHomeThread(){
+  _klAttClear();   // [1.361] — a file picked for one teacher does not follow you
   HOME_EXPANDED=null;
   loadHomeConversations(true);
   render();
@@ -2627,6 +2686,9 @@ function _klMarkThreadRead(teacherId){
 }
 
 function toggleHomeThread(teacherId, teacherName){
+  // [1.361] — same rule as the staff portals: a file picked in one
+  // conversation must not travel into another.
+  _klAttClear();
   if(HOME_EXPANDED && HOME_EXPANDED.teacherId===teacherId){ HOME_EXPANDED=null; render(); return; }
   // [1.291] — an EMPTY answer is not an answer. [1.263] cached an empty list
   // the same way it cached a full one, and an empty array is truthy, so a
@@ -2674,6 +2736,13 @@ function refreshHomeThread(){
   });
 }
 
+// [1.383] — the amendment watermark, one per portal. It is the server clock
+// from the last poll that was actually applied, sent straight back so the
+// server can tell "has anything happened to a row this client already holds"
+// apart from "is there a newer message". Without it a read receipt could never
+// reach an open thread, and one edit put the client on a full sheet read
+// forever. Advanced ONLY on a poll whose answer was used.
+var _klPollAmendAt = 0;
 function _maxSentAt(msgs){
   var max=0;
   (msgs||[]).forEach(function(m){ var n=Number(m.sentAt)||0; if(n>max) max=n; });
@@ -2723,13 +2792,25 @@ function sendHomeMessage(){
   var t=HOME_EXPANDED;
   var text=(document.getElementById('home-composer')||{}).value||t.draft;
   text=(text||'').trim();
-  if(!text) return;
+  // [1.361] — a message can be a file with nothing written on it, which is
+  // most of the point for a parent: a photo of a page of music.
+  var _att=_klAttTakeIds();
+  if(!text && !_att.length) return;
+  // A file still going up is the one thing worth waiting for. Sending now
+  // would send the message without it and leave the upload orphaned.
+  if(KL_ATT_BUSY>0){ showMsg('One moment — still adding your file.','i'); return; }
 
   var clientMsgId=_klNewClientMsgId();
   var pending={
     messageId:'', senderId:FAMILY_ID, senderName:'',
-    messageText:text, sentAt:Date.now(), _pending:true
+    messageText:text, sentAt:Date.now(), _pending:true,
+    // Drawn from the chips so the parent sees what they sent immediately,
+    // then replaced by the server's own copy on the way back.
+    attachments:KL_ATT_PENDING.filter(function(x){ return x.attachmentId; })
+      .map(function(x){ return {attachmentId:x.attachmentId, fileName:x.fileName,
+                                mimeType:x.mimeType, sizeBytes:x.sizeBytes}; })
   };
+  _klAttClear();
   t.messages=t.messages.concat([pending]);
   t.draft='';
   _famDraftSet(t.teacherId,'');   // [1.332] — sent is not a draft any more
@@ -2746,7 +2827,7 @@ function sendHomeMessage(){
   var _kidsNow=((HOME_CONVOS.list||[]).filter(function(x){return x.teacherId===t.teacherId;})[0]||{}).students||[];
   var _stuId=_homeStudentId(t,_kidsNow);
   pending.studentId=_stuId;
-  fapiTracked('sendMessage', {conversationType:'family_teacher', familyId:FAMILY_ID, teacherId:t.teacherId, messageText:text, studentId:_stuId, senderParentSlot:MY_PARENT_SLOT, clientMsgId:clientMsgId}, function(e,r){
+  fapiTracked('sendMessage', {conversationType:'family_teacher', familyId:FAMILY_ID, teacherId:t.teacherId, messageText:text, studentId:_stuId, senderParentSlot:MY_PARENT_SLOT, clientMsgId:clientMsgId, attachmentIds:_att}, function(e,r){
     // The send itself is unaffected by the thread being closed — the request
     // is already on its way and the server writes it regardless. Only the
     // local reconciliation is skipped, since there's no longer a thread on
@@ -2759,6 +2840,16 @@ function sendHomeMessage(){
       // [1.332] — a send that failed puts the words back in the box AND back
       // in storage, or a reload after a failed send loses them for good.
       _famDraftSet(t.teacherId,text);
+      // [1.384] — and the FILES come back with the words, which is what the
+      // teacher portal has always done. They are still uploaded and still
+      // unbound, so the ids are good and a retry sends them; without this a
+      // parent who hit a failed send got their sentence back and silently lost
+      // the photo, with no way to reach it again.
+      KL_ATT_PENDING=(pending.attachments||[]).map(function(a){
+        return {tempId:'k'+a.attachmentId, fileName:a.fileName, mimeType:a.mimeType,
+                sizeBytes:a.sizeBytes, uploading:false, attachmentId:a.attachmentId};
+      });
+      KL_ATT_BUSY=0;
       showMsg((r&&r.error)||'Could not send message.','e');
       render();
       return;
@@ -2797,6 +2888,246 @@ function _startMessagePolling(){
   });
   window.addEventListener('focus',_pollTick);
 }
+// ── [1.277] — attachments, family side ──────────────────────────────────
+// RECEIVE AND OPEN, never send. AC, 5 September: "Teachers and admin only."
+// So there is no picker here, no upload and no composer control — only the
+// tiles, and the one request that fetches a file.
+//
+// Nothing here ever sees a Drive link, and that is the answer to the question
+// [1.277] was logged with. A share-link would be a permanent credential
+// sitting outside this portal's token: forwarded once, it works for anyone,
+// for as long as the file exists, and signing out does not take it back. So
+// nothing is shared. A tile asks the server for an attachment id and the
+// server decides, from the conversation the file was sent to, whether to
+// answer at all.
+//
+// A thread draws THUMBNAILS — a few kilobytes, cached by id for the life of
+// the page — and the file itself is fetched only when the parent taps it. The
+// 5-second poll rebuilds this page, so anything fetched per render would be
+// fetched every five seconds; the cache is what makes the tiles free after the
+// first time.
+var KL_ATT_THUMBS = {};
+// The label on a non-image tile, taken from the FILE'S OWN NAME.
+//
+// It was the literal string 'PDF' until AC asked for text formats on
+// 6 September, at which point every Word document in the tool would have been
+// drawn as a PDF — a tile that lies about what it is holding, on the one
+// screen where a parent decides whether to bother opening it. Derived, it
+// cannot be wrong: the server has already forced the extension to agree with
+// the bytes it verified (_attachSafeName_), so the name is trustworthy here in
+// a way a client-supplied name normally would not be.
+// ── [1.361] — a family can send a file too ───────────────────────────────
+//
+// AC, 7 September, reversing his own ruling of the 5th once the case was put:
+// "It may be helpful for a family to be able to send sheet music or a photo to
+// a teacher. Let's build that in, but limit to 5 files, 10MB max."
+//
+// FIVE, his number. The size limit is the same 10MB staff have, because that
+// limit was never about who was sending — it is what travels to a phone.
+//
+// This is deliberately the same shape as the teacher portal's: the file goes
+// up while the parent is still typing, Send carries the ids, and the server
+// applies the real cap when it binds them. Refusing here as well is the
+// courtesy — a parent finds out when they pick the sixth file, not when it
+// silently fails to arrive.
+var KL_ATT_PENDING = [];      // uploaded but not yet sent — the chips under the composer
+var KL_ATT_BUSY = 0;          // uploads in flight, so Send can wait for them
+var KL_ATT_MAX_BYTES = 10*1024*1024;
+var KL_ATT_MAX_FILES = 5;
+// The accepted types, and the ONE place this page lists them. The mime half is
+// pinned against the server's own allowlist by scripts/check.js, so this
+// cannot drift from what is really accepted.
+var KL_ATT_TYPES = [
+  {m:'image/jpeg',l:'JPG'}, {m:'image/png',l:'PNG'}, {m:'image/gif',l:'GIF'},
+  {m:'image/webp',l:'WEBP'}, {m:'image/heic',l:'HEIC'},
+  {m:'application/pdf',l:'PDF'}, {m:'text/plain',l:'TXT'}, {m:'application/rtf',l:'RTF'},
+  {m:'application/msword',l:'DOC'},
+  {m:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',l:'DOCX'},
+  {m:'audio/mpeg',l:'MP3'}, {m:'audio/mp4',l:'M4A'}, {m:'audio/wav',l:'WAV'},
+  {m:'audio/aac',l:'AAC'}, {m:'audio/ogg',l:'OGG'}
+];
+function _klAttAccept(){ return KL_ATT_TYPES.map(function(t){ return t.m; }).join(','); }
+function _klAttFormatList(){ return KL_ATT_TYPES.map(function(t){ return t.l; }).join(', ')+'.'; }
+var KL_ATT_FORMATS_OPEN=false;
+function klAttToggleFormats(){ KL_ATT_FORMATS_OPEN=!KL_ATT_FORMATS_OPEN; render(); }
+function klAttachPick(){ var el=document.getElementById('kl-att-file'); if(el) el.click(); }
+function klAttachChosen(input){
+  var files=input && input.files ? Array.prototype.slice.call(input.files) : [];
+  input.value='';   // so choosing the same file twice in a row still fires
+  files.forEach(klAttachUpload);
+}
+function klAttachUpload(file){
+  if(KL_ATT_PENDING.length >= KL_ATT_MAX_FILES){ showMsg(KL_ATT_TOO_MANY,'e'); return; }
+  if(file.size > KL_ATT_MAX_BYTES){ showMsg(KL_ATT_TOO_BIG,'e'); return; }
+  var rec={tempId:'k'+Date.now()+Math.random(), fileName:file.name, mimeType:file.type,
+           sizeBytes:file.size, uploading:true, attachmentId:''};
+  KL_ATT_PENDING.push(rec); KL_ATT_BUSY++; render();
+  var reader=new FileReader();
+  reader.onerror=function(){ _klAttFail(rec,'That file could not be read.'); };
+  reader.onload=function(){
+    var b64=String(reader.result||'');
+    b64=b64.slice(b64.indexOf(',')+1);   // strip the data: prefix
+    fapi('uploadAttachment', {fileName:file.name, mimeType:file.type, dataBase64:b64,
+         conversationType:'family_teacher', familyId:FAMILY_ID,
+         teacherId:HOME_EXPANDED?HOME_EXPANDED.teacherId:''}, function(e,r){
+      if(e||!r||!r.ok||!r.attachment){ _klAttFail(rec,(r&&r.error)||'That file could not be attached.'); return; }
+      rec.uploading=false;
+      rec.attachmentId=r.attachment.attachmentId;
+      rec.fileName=r.attachment.fileName;   // the server cleans the name; show what it stored
+      KL_ATT_BUSY--; render();
+    });
+  };
+  reader.readAsDataURL(file);
+}
+function _klAttFail(rec, msg){
+  KL_ATT_PENDING=KL_ATT_PENDING.filter(function(x){ return x!==rec; });
+  KL_ATT_BUSY--; showMsg(msg,'e'); render();
+}
+function klAttachRemove(tempId){
+  // Only from the composer. An id that is never sent is never bound to a
+  // message, and the server's sweep clears it a day later.
+  KL_ATT_PENDING=KL_ATT_PENDING.filter(function(x){ return x.tempId!==tempId; });
+  KL_ATT_BUSY=KL_ATT_PENDING.filter(function(x){ return x.uploading; }).length;
+  render();
+}
+function _klAttTakeIds(){
+  return KL_ATT_PENDING.filter(function(x){ return x.attachmentId; })
+                       .map(function(x){ return x.attachmentId; });
+}
+function _klAttClear(){ KL_ATT_PENDING=[]; KL_ATT_BUSY=0; }
+// The picker, its rules and the chips. The rules are ON SCREEN rather than in
+// a tooltip — AC's ruling for the staff side on 6 September, and a parent has
+// less reason than a teacher to go looking for them.
+function rKlAttachRow(){
+  var h='<input type="file" id="kl-att-file" class="att-input" multiple '+
+        'accept="'+_klAttAccept()+'" onchange="klAttachChosen(this)">'+
+        '<div class="att-guide">'+esc(KL_ATT_HINT)+
+          ' <button type="button" class="att-formats" onclick="klAttToggleFormats()">'+
+          esc(KL_ATT_FORMATS)+'</button>'+
+          (KL_ATT_FORMATS_OPEN?'<span class="att-formats-list">'+esc(_klAttFormatList())+'</span>':'')+
+        '</div>';
+  if(!KL_ATT_PENDING.length) return h;
+  return h+'<div class="att-chips">'+KL_ATT_PENDING.map(function(a){
+    return '<span class="att-chip'+(a.uploading?' up':'')+'">'+
+      (a.uploading?'<span class="spin">&#8635;</span>':'')+
+      '<span class="att-chip-name">'+esc(a.fileName)+'</span>'+
+      '<span class="att-size">'+esc(_klAttSize(a.sizeBytes))+'</span>'+
+      '<button type="button" class="att-x" aria-label="'+esc(KL_ATT_REMOVE)+'"'+
+        ' onclick="klAttachRemove(\''+esc(a.tempId)+'\')">&#215;</button></span>';
+  }).join('')+'</div>';
+}
+function rKlAttachButton(){
+  return '<button type="button" class="btn btn-s btn-attach" title="'+esc(KL_ATT_TIP)+'"'+
+    ' onclick="klAttachPick()">'+esc(KL_ATT_ADD)+'</button>';
+}
+function _klAttKind(name){
+  var ext=String(name||'').split('.').pop().toUpperCase();
+  return (ext && ext.length<=4) ? ext : 'FILE';
+}
+function _klAttSize(n){
+  n=Number(n)||0;
+  if(n < 1024) return n+' B';
+  if(n < 1024*1024) return Math.round(n/1024)+' KB';
+  return (Math.round(n/104857.6)/10)+' MB';
+}
+function _klAttThumb(id){
+  if(KL_ATT_THUMBS.hasOwnProperty(id)) return KL_ATT_THUMBS[id];
+  KL_ATT_THUMBS[id]='';
+  fapi('getAttachment', {attachmentId:id, thumb:true}, function(e,r){
+    if(!e && r && r.ok && r.dataBase64){
+      KL_ATT_THUMBS[id]='data:'+(r.mimeType||'image/png')+';base64,'+r.dataBase64;
+      render(); return;
+    }
+    // [1.384] — tell "there is no thumbnail for this file" apart from "that
+    // request failed". Drive genuinely makes no thumbnail for some types and
+    // says so with none:true; caching a FAILURE as though it were that answer
+    // meant one bad round trip left a plain tile for the life of the page,
+    // with a reload the only way back. A failure forgets, so the next render
+    // asks again.
+    if(!e && r && r.ok){ KL_ATT_THUMBS[id]=false; render(); return; }
+    delete KL_ATT_THUMBS[id];
+  });
+  return '';
+}
+function rKlAttachments(m){
+  var list=m.attachments||[];
+  if(!list.length) return '';
+  return '<div class="att-strip">'+list.map(function(a){
+    var thumb=_klAttThumb(a.attachmentId);
+    var art = thumb
+      ? '<img class="att-thumb" src="'+esc(thumb)+'" alt="">'
+      : '<span class="att-glyph">'+esc(_klAttKind(a.fileName))+'</span>';
+    return '<button type="button" class="att-tile" title="'+esc(a.fileName)+'"'+
+      ' onclick="event.stopPropagation();klOpenAttachment(\''+esc(a.attachmentId)+'\')">'+
+      art+
+      '<span class="att-meta"><span class="att-name">'+esc(a.fileName)+'</span>'+
+      '<span class="att-size">'+esc(_klAttSize(a.sizeBytes))+'</span></span></button>';
+  }).join('')+'</div>';
+}
+// The slow path, and a deliberate act: the whole file, base64, through the
+// same authenticated request everything else on this page uses.
+function klOpenAttachment(id){
+  showMsg(KL_ATT_OPENING,'i');
+  fapi('getAttachment', {attachmentId:id}, function(e,r){
+    if(e||!r||!r.ok||!r.dataBase64){ showMsg((r&&r.error)||'Could not open that file.','e'); return; }
+    try{
+      // Decoded by index rather than by spreading a ten-million-character
+      // string, which is what makes a phone drop the tab.
+      var bin=atob(r.dataBase64), len=bin.length, bytes=new Uint8Array(len);
+      for(var i=0;i<len;i++) bytes[i]=bin.charCodeAt(i);
+      var url=URL.createObjectURL(new Blob([bytes],{type:r.mimeType||'application/octet-stream'}));
+      var w=window.open(url,'_blank');
+      // A blocked pop-up is the COMMON case on a phone, which is where most
+      // parents read this. A file that silently does not open is worse than
+      // one that downloads, so this falls back to a real click on a real
+      // anchor — a user gesture the browser allows.
+      if(!w){
+        var a=document.createElement('a');
+        a.href=url; a.target='_blank'; a.rel='noopener'; a.download=r.fileName||'attachment';
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      }
+      setTimeout(function(){ try{ URL.revokeObjectURL(url); }catch(e){} }, 60000);
+    }catch(err){ showMsg('Could not open that file.','e'); }
+  });
+}
+
+// ── [1.276] — what a poll can now bring back ────────────────────────────
+// Three things, not one: messages that arrived, a message that was EDITED
+// (same id, same sentAt, different words) and a message that was UNSENT (an id
+// in r.retracted and nothing else — never the words, which is the whole point
+// of taking it back). Families neither edit nor unsend — that is staff only,
+// AC's decision on 6 September — so everything here is about receiving.
+function _applyPoll(list, r){
+  var gone={};
+  ((r&&r.retracted)||[]).forEach(function(id){ if(id) gone[id]=true; });
+  var out=[], at={}, added=0, changed=false;
+  (list||[]).forEach(function(m){
+    if(m.messageId && gone[m.messageId]){ changed=true; return; }
+    if(m.messageId) at[m.messageId]=out.length;
+    out.push(m);
+  });
+  ((r&&r.messages)||[]).forEach(function(m){
+    if(m.messageId && gone[m.messageId]) return;
+    if(m.messageId && at.hasOwnProperty(m.messageId)){
+      var cur=out[at[m.messageId]];
+      // [1.383] — the two STAFF portals also compare the receipt stamps here,
+      // because a message can come back solely because it has been read and
+      // they draw a mark for that. This one deliberately does not: [1.367] is
+      // that a family is never told anything about reading, so such a message
+      // carries nothing new for this screen and comparing the words is the
+      // whole of it. The field is not read anywhere in this file, and a check
+      // in scripts/check.js holds that.
+      if(String(cur.messageText||'')!==String(m.messageText||'') ||
+         String(cur.messageHtml||'')!==String(m.messageHtml||'')){
+        out[at[m.messageId]]=m; changed=true;
+      }
+      return;
+    }
+    if(m.messageId) at[m.messageId]=out.length;
+    out.push(m); added++; changed=true;
+  });
+  return {list:out, added:added, changed:changed};
+}
 function _pollTick(){
   if(document.hidden) return;
   if(!TOKEN) return;
@@ -2806,21 +3137,35 @@ function _pollTick(){
   // message back and show it twice.
   if(HOME_EXPANDED && !HOME_EXPANDED.loading && !HOME_EXPANDED._sendInFlight){
     (function(teacherId){
-      fapi('getMessagesSince', {conversationType:'family_teacher', familyId:FAMILY_ID, teacherId:teacherId, sinceSentAt:String(HOME_EXPANDED.lastSentAt||0)}, function(e,r){
+      fapi('getMessagesSince', {conversationType:'family_teacher', familyId:FAMILY_ID, teacherId:teacherId, sinceSentAt:String(HOME_EXPANDED.lastSentAt||0), sinceAmendAt:String(_klPollAmendAt||0)}, function(e,r){
         if(!HOME_EXPANDED||HOME_EXPANDED.teacherId!==teacherId) return;
-        if(e||!r||!r.ok||!r.messages||!r.messages.length) return;
-        // Second guard, independent of _sendInFlight: drop anything already
-        // in the thread by id. Duplicated messages are the failure mode this
-        // whole path has to avoid, and one cheap filter covers every route
-        // to it, including a retry or a reconnect.
-        var have={};
-        HOME_EXPANDED.messages.forEach(function(m){ if(m.messageId) have[m.messageId]=true; });
-        var fresh=r.messages.filter(function(m){ return !m.messageId || !have[m.messageId]; });
-        if(!fresh.length) return;
-        HOME_EXPANDED.messages=HOME_EXPANDED.messages.concat(fresh);
+        if(e||!r||!r.ok) return;
+        if(r.now) _klPollAmendAt=Number(r.now)||_klPollAmendAt;   // [1.383]
+        // [1.276] — the duplication guard this path has always had (drop
+        // anything whose id is already in the thread, which covers a retry and
+        // a reconnect as well as a resend) now lives in _applyPoll, together
+        // with the two cases it could not express: a message the sender EDITED
+        // inside their two-minute window, which comes back with the same id and
+        // the same sentAt, and one they UNSENT, which comes back as an id in
+        // r.retracted and nothing else.
+        //
+        // In practice a family almost never sees a message disappear: opening
+        // the thread stamps readAt, and the server refuses to unsend anything
+        // that has been read. This is the race — a teacher pressing Unsend in
+        // the same second a parent opens the thread — and it is here so that
+        // the parent's screen and the stored conversation cannot disagree.
+        var res=_applyPoll(HOME_EXPANDED.messages, r);
+        if(!res.changed) return;
+        HOME_EXPANDED.messages=res.list;
         KL_THREAD_CACHE[teacherId]=HOME_EXPANDED.messages;
-        HOME_EXPANDED.lastSentAt=_maxSentAt(HOME_EXPANDED.messages);
-        _shouldScrollMsgList=true; render();
+        // Never backwards. A message leaving the thread must not lower the
+        // watermark and make the next poll re-ask for everything after it.
+        HOME_EXPANDED.lastSentAt=Math.max(Number(HOME_EXPANDED.lastSentAt)||0, _maxSentAt(HOME_EXPANDED.messages)||0);
+        // Only an arrival scrolls. A message vanishing must not also throw the
+        // parent to the bottom of the thread.
+        if(res.added) _shouldScrollMsgList=true;
+        render();
+        if(!res.added) return;
         // [1.263] — a message that ARRIVES while the thread is open has been
         // read as surely as one that was there when it opened. The old shape
         // stamped only on open, so anything the poll delivered stayed unread.
@@ -2866,6 +3211,7 @@ function rMsgBubble(m){
   return '<div class="bubble-row'+(mine?' mine':'')+'">'+
     '<div class="bubble'+(mine?' mine':'')+'">'+
     '<div class="bubble-text">'+body+'</div>'+
+    rKlAttachments(m)+
     '<div class="bubble-time">'+_klBubbleMeta(m)+'</div>'+
     '</div></div>';
 }
@@ -2890,6 +3236,32 @@ function _klBubbleMeta(m){
 // italic, side-ruled, labelled note it no longer does, and a collapsed row
 // that shows a label and a timestamp but not the sentence is worse for a
 // parent than two short lines. FAMILY-FACING.
+// [1.277] — AC's wording, 6 September. The only family-facing string either
+// of these two items added, and it earns its place: fetching a 10MB PDF takes
+// a few seconds, and a tap that looks like it did nothing gets tapped again.
+var KL_ATT_OPENING='Getting your file...';
+// [1.361] — the family side of attachments. AC's own staff wording, with his
+// five-file number in place of ten: one control, one set of words, and a
+// parent should not be told a different rule from the teacher they are
+// writing to.
+var KL_ATT_ADD='Add file';
+var KL_ATT_TIP='Add a file';
+var KL_ATT_HINT='Send a file. 10 MB limit. Maximum 5 files.';
+var KL_ATT_FORMATS='Accepted file types';
+var KL_ATT_REMOVE='Remove';
+var KL_ATT_TOO_MANY='You can add 5 files to one message.';
+var KL_ATT_TOO_BIG='That file is over the 10 MB limit.';
+// [1.137] — AC's wording, 6 September. What a parent is told when the link
+// they clicked belongs to another device, or has expired. Both land on the
+// ordinary login screen, which is the recoverable place AC asked for on
+// 28 August — "can that take them to the portal for login instead of being
+// dead?"
+//
+// TWO sentences rather than one, and he chose to keep them apart: "already
+// used on another device" tells a parent their link worked and somebody else
+// has it, which is a different thing to know than "expired".
+var KL_LINK_CLAIMED='This link has already been used on another device. Please log in.';
+var KL_LINK_EXPIRED='This link has expired. Please log in.';
 var KL_NOTE_LABEL_SEEN='System Message:';
 var KL_NOTE_LABEL_AUTO='auto-reply:';
 function _rKlNote(label, at, text){
@@ -6412,6 +6784,29 @@ function doSubmitTC(studentId){
 // ============================================================
 // INIT
 // ============================================================
+// [1.137] — this browser's own id, made once and kept. It IDENTIFIES, it does
+// not authenticate: all it ever says is "the same device that claimed this
+// link is asking again". It is not in the email, so forwarding the email does
+// not carry it.
+//
+// A browser with storage switched off gets no id and cannot claim. The server
+// lets that click through rather than refusing it — being unable to bind is
+// not a reason to lock a real parent out of their own portal.
+function _klDeviceId(){
+  try{
+    var id=localStorage.getItem('kl_device');
+    if(!id){
+      id=(Date.now().toString(36)+Math.random().toString(36).slice(2,10));
+      localStorage.setItem('kl_device', id);
+    }
+    return id;
+  }catch(e){ return ''; }
+}
+// Set once boot() has settled the emailed link, so re-entering boot() below
+// does not try to claim it a second time. _magicRefused blanks the token on
+// that second pass — a link belonging to somebody else's device has to be
+// treated as if it were never in the URL at all.
+var _magicSettled=false, _magicRefused=false;
 function boot(){
   var resetTokenFromUrl = '';
   var loginTokenFromUrl = '';
@@ -6465,6 +6860,39 @@ function boot(){
       render();
     }
   });
+
+  // ── [1.137] — settle the emailed link before anything else ────────────
+  // An emailed link is a working key, and until now a year-long reusable one:
+  // a forwarded email handed over a year of portal access. The first device to
+  // use a link now claims it; a different device finds it claimed and gets the
+  // ordinary login screen, which is exactly what AC asked a second click
+  // should do on 28 August.
+  //
+  // Run BEFORE the token is used, and boot() is re-entered once it answers, so
+  // everything downstream is the code that was already there rather than a
+  // second copy of it.
+  if(loginTokenFromUrl && !_magicSettled){
+    // THE SESSION THIS BROWSER ALREADY HAS WINS. It is what keeps a parent
+    // re-opening the same email untouched, and it stops a perfectly good link
+    // being spent by a device that did not need it.
+    var _sess=null;
+    try{ _sess=_klReadSession(); }catch(e){ _sess=null; }
+    if(_sess && _sess.token){
+      _magicSettled=true; _magicRefused=true;   // ignore the link entirely
+    } else {
+      _magicSettled=true;
+      api({action:'claimMagicLink', data:{kind:'family', token:loginTokenFromUrl,
+                                          deviceId:_klDeviceId()}}, function(ce,cr){
+        if(ce||!cr||!cr.ok){
+          _magicRefused=true;
+          showMsg((cr&&cr.reason==='claimed') ? KL_LINK_CLAIMED : KL_LINK_EXPIRED, 'e');
+        }
+        boot();
+      });
+      return;
+    }
+  }
+  if(_magicRefused) loginTokenFromUrl='';
 
   if(loginTokenFromUrl){
     // A magic-login link from an emailed [portalLink] button. This token is

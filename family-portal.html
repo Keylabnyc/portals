@@ -2836,7 +2836,29 @@ var KL_STATE_COPY = {
 var KL_THREAD_CACHE = {};
 // Fire and forget. A failure costs a receipt that lands the next time the
 // thread is opened; nothing here is worth making a parent wait for.
+// ── [1.418] case 4 — the badge clears when the message is READ ───────────
+//
+// AC, 8 September 2026: "this includes reading a message and seeing it marked
+// as read or the badge disappearing in the family portal."
+//
+// The receipt is fire-and-forget, deliberately ([1.263]: nothing should make a
+// parent wait for one) — but it never touched the local list, and the badge is
+// drawn from c.unread on HOME_CONVOS.list, which only ever comes from the
+// server. So it sat there until the receipt landed, the server recomposed the
+// roster, and the NEXT five-second poll brought it back. The nav-level total on
+// Home reads the same field, so that lingered too, on the screen the parent was
+// reading at the time.
+//
+// Cleared locally now, before the request goes. **Self-healing, which is what
+// makes it safe:** the roster is authoritative and arrives every five seconds,
+// so if the receipt fails the badge simply comes back. A badge that flickers
+// off and returns is a far better failure than one that sits there for seconds
+// after the parent has plainly read the message.
 function _klMarkThreadRead(teacherId){
+  (HOME_CONVOS.list||[]).forEach(function(c){
+    if(c && c.teacherId===teacherId) c.unread=0;
+  });
+  render();
   fapi('markConversationRead', {conversationType:'family_teacher', familyId:FAMILY_ID, teacherId:teacherId}, function(){});
 }
 

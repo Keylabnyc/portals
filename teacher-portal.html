@@ -3355,6 +3355,7 @@ function loadThreads(silent){
       if(_row){ HOME_TAB='family'; openFamilyThread(_row.id, _row.parent1Name, _row.parent2Name); return; }
     }
     if(!silent || _changed) render();
+    _prefetchThreads();   // [1.418] case 1 — the ids are known now, and only now
   });
 }
 // Kept as names so nothing that called them has to know they are now one call.
@@ -3421,6 +3422,71 @@ function _threadCacheKey(d){
 function _cachedMessages(d){
   var m=THREAD_CACHE[_threadCacheKey(d)];
   return (m && m.length) ? m : null;
+}
+
+// ── [1.418] case 1 — the conversation is already there when it is opened ──
+//
+// AC, over and over, and it is the most-repeated complaint of the day:
+// *"Clicking on conversations takes sometimes up to 10 seconds to load, very
+// frustrating for users."*
+//
+// The shell draws at once; what a teacher waits on is the message area, which
+// pays [1.263]'s ~2s round trip in full on a first open — more when the script
+// is busy. Making the request faster is not available. **Making it already
+// done is.**
+//
+// [1.398] did exactly this for the family portal at @735 and it works. It was
+// deliberately NOT extended here, and the reason still stands: a teacher's
+// roster is forty rows, not three, and reading all of it would be the overlap
+// [1.293] exists to prevent.
+//
+// **So this is bounded, and every bound has a reason:**
+//   - THE FEW MOST RECENT ONLY. The thread a teacher opens is almost always
+//     one of the newest; four covers it, forty would be a burst.
+//   - ONCE per sign-in, never on the poll. A second pass is a poll wearing a
+//     different name, and the 5s tick already keeps an OPEN thread current.
+//   - ONE REQUEST AT A TIME, chained. [1.293] again: parallel requests against
+//     one Apps Script project overlap and land out of order.
+//   - NEVER while a thread is open, a send is in flight, or the roster is
+//     loading — it must never compete with something a teacher is waiting for.
+//   - SILENT on failure. The thread then opens the way it does today.
+//   - NEVER caches an empty answer — [1.291]'s rule, which is what stops a
+//     conversation being drawn as "loaded, and empty" for the rest of the day.
+var PREFETCH_MAX=4;
+var _prefetchDone=false, _prefetchBusy=false;
+function _prefetchThreads(){
+  if(_prefetchDone||_prefetchBusy) return;
+  if(FAMILY_VIEW==='thread'||STAFF_VIEW==='thread') return;
+  if(THREADS._inFlight) return;
+  var rows=(THREADS.list||[]).filter(function(t){
+    return t && t.hasMessages && t.lastMessageAt;
+  }).sort(function(a,b){ return (Number(b.lastMessageAt)||0)-(Number(a.lastMessageAt)||0); });
+  var queue=[];
+  for(var i=0;i<rows.length && queue.length<PREFETCH_MAX;i++){
+    var r=rows[i];
+    var d=(r.kind==='family')
+      ? {conversationType:'family_teacher', familyId:r.id, teacherId:TEACHER_ID, teacherToken:TOKEN}
+      : (r.kind==='admin'
+          ? {conversationType:'teacher_admin', teacherId:TEACHER_ID, teacherToken:TOKEN}
+          : {conversationType:'staff_staff', teacherId:TEACHER_ID, staffId2:r.id, teacherToken:TOKEN});
+    if(!_cachedMessages(d)) queue.push(d);
+  }
+  if(!queue.length){ _prefetchDone=true; return; }
+  _prefetchBusy=true;
+  (function next(){
+    if(!queue.length){ _prefetchBusy=false; _prefetchDone=true; return; }
+    // A teacher who has opened something is now waiting on it. Stand down.
+    if(FAMILY_VIEW==='thread'||STAFF_VIEW==='thread'){ _prefetchBusy=false; return; }
+    var d=queue.shift();
+    api({action:'getConversation', data:d}, function(e,r){
+      if(!e && r && r.ok && (r.messages||[]).length){
+        THREAD_CACHE[_threadCacheKey(d)]=r.messages;
+      }
+      // No render(): nothing on screen changed, and this must never be a
+      // reason the page moves under someone reading it.
+      next();
+    });
+  })();
 }
 // Fire and forget. A failure costs an unread badge that clears the next time
 // the thread is opened, so there is nothing here worth interrupting anyone
@@ -6351,6 +6417,13 @@ function _amendFind(id){
 }
 function cancelAmend(){
   var c=_amendCtx();
+  // [1.424] — a scheduled message held open by this edit is released now
+  // rather than waiting out the expiry. A teacher who opened Edit and thought
+  // better of it changed nothing, and their message should go at the time they
+  // picked. Fired and forgotten: if it never lands, the expiry catches it.
+  if(c && AMEND.kind==='edit' && AMEND.messageId){
+    api({action:'cancelMessageEdit', data:Object.assign({}, c.req, {messageId:AMEND.messageId})}, function(){});
+  }
   // Editing borrowed the composer; give the teacher back whatever was in it.
   if(c && AMEND.kind==='edit'){ c.t.draft=AMEND.stash||''; _draftKeep(c.t, c.t.draft); }
   AMEND={messageId:'', kind:'', stash:''};

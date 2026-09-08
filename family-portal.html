@@ -259,7 +259,9 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
   font-family:"Inter",sans-serif;font-size:12.5px;font-weight:600;cursor:pointer;line-height:1.25;
   text-align:left}
 .lnk-btn:hover{background:rgba(255,255,255,.85);color:var(--text)}
-.bubble-row{display:flex}
+/* [1.413] — Messages-format runs, identical in all three portals. */
+.bubble-row{display:flex;margin-top:2px}
+.bubble-row.run-start{margin-top:.6rem}
 .bubble-row.mine{justify-content:flex-end}
 .bubble{max-width:80%;background:rgba(255,255,255,.55);border:1px solid var(--border);border-radius:var(--rl);padding:.6rem .8rem}
 .bubble.mine{background:var(--acc);border-color:var(--acc);color:#fff}
@@ -297,6 +299,12 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 .bubble.mine .att-tile{background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.45);color:#fff}
 .bubble.mine .att-tile:hover{background:rgba(255,255,255,.28)}
 .att-thumb{width:46px;height:46px;object-fit:cover;border-radius:var(--r);flex:0 0 auto;background:var(--bg4)}
+/* [1.401] — a tile whose picture is still coming says so. AC: "the message
+   text/body should load instantly, with a clear indication with spinners or
+   whatever that the attachments are loading." An empty string means the
+   request is in flight; false means Drive has no thumbnail for this type.
+   Those are different facts and used to look identical. */
+.att-glyph.loading{color:var(--text4);font-size:16px}
 .att-glyph{width:46px;height:46px;display:flex;align-items:center;justify-content:center;
   border-radius:var(--r);background:var(--bg4);color:var(--text4);font-size:11px;font-weight:700;flex:0 0 auto}
 .bubble.mine .att-glyph{background:rgba(255,255,255,.2);color:#fff}
@@ -319,6 +327,21 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 .att-chip{display:inline-flex;align-items:center;gap:6px;padding:3px 4px 3px 9px;
   border:1px solid var(--border2);border-radius:999px;background:var(--bg5);font-size:11.5px}
 .att-chip.up{opacity:.65}
+/* [1.403] — the two attachment states, drawn so the FINISHED one is the
+   loud one. A file successfully attached used to be the quietest thing on
+   the screen, which is why AC could not tell it had worked. */
+.att-banner{display:flex;align-items:center;gap:7px;margin-top:7px;padding:7px 10px;
+  border:1px solid var(--blue);background:var(--bbg);color:var(--bt);
+  border-radius:var(--r);font-size:12.5px;font-weight:600}
+.att-done{margin-top:7px;padding:8px 10px;border:1px solid var(--green);
+  background:rgba(22,163,74,.07);border-radius:var(--r)}
+.att-done-hd{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;
+  color:var(--text2);margin-bottom:5px}
+.att-done-row{display:flex;align-items:center;gap:7px;font-size:12.5px;padding:2px 0}
+.att-tick{color:var(--green);font-weight:700;font-size:13px}
+.att-done-row.bad{color:var(--red)}
+.att-done-row.bad .att-tick{color:var(--red)}
+.att-err{font-size:11.5px;color:var(--red)}
 .att-chip-name{max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
 .att-x{background:none;border:0;font-size:14px;line-height:1;cursor:pointer;padding:2px 5px;
   color:var(--text4);font-family:inherit}
@@ -1266,10 +1289,40 @@ function _renderBody(){
   // (open, refresh, poll update, after send), never blanket-on-every-render,
   // so it doesn't fight someone who's deliberately scrolled up to read
   // earlier history while, say, just typing in the composer.
+  // ── [1.405] — opening a conversation must not throw the page ─────────
+  //
+  // AC, 8 September 2026: "Family portal: screen jumps when family clicks
+  // teacher and the message composer appears. Screen should stay stable and in
+  // position so the message composer is centered."
+  //
+  // This was an unconditional scrollIntoView({block:'start'}) — an instant
+  // jump, fired on every open whether the page needed moving or not. A parent
+  // pressing a contact that is already on screen had the page yanked under
+  // their finger for no gain, which is the "jumps" in his sentence.
+  //
+  // Two rules, and the first does most of the work:
+  //   1. DON'T MOVE IF IT IS ALREADY THERE. Silence is the correct behaviour
+  //      when the thread is already in view, and it is the common case: the
+  //      contact list is short and the block sits mid-page.
+  //   2. When it does have to move, move SMOOTHLY, so it reads as the page
+  //      following the press rather than a cut. Honoured against
+  //      prefers-reduced-motion, where an instant move is the accessible
+  //      behaviour and a smooth one is not.
   if(_shouldScrollToThread){
     _shouldScrollToThread=false;
     var top=document.getElementById('kl-thread-top');
-    if(top&&top.scrollIntoView) top.scrollIntoView({block:'start'});
+    if(top&&top.scrollIntoView){
+      var _r=top.getBoundingClientRect ? top.getBoundingClientRect() : null;
+      var _vh=window.innerHeight||document.documentElement.clientHeight||0;
+      // Fully visible, with room below it to be worth reading: leave it alone.
+      var _visible=_r && _r.top>=0 && _r.top<=_vh*0.5;
+      if(!_visible){
+        var _reduce=false;
+        try{ _reduce=window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches; }catch(e){}
+        try{ top.scrollIntoView({block:'start', behavior:_reduce?'auto':'smooth'}); }
+        catch(e){ top.scrollIntoView(true); }
+      }
+    }
   }
   // BACKLOG 1.80 — starting another child should start at the top of that
   // child's form. The "+ Add Another Child" button sits at the BOTTOM of the
@@ -2531,11 +2584,19 @@ function rHomeThreadView(){
     (sub?'<div class="kl-tsub">'+esc(sub)+'</div>':'')+'</div></div>';
 
   if(t.loading){
-    h+='<div style="text-align:center;padding:1.5rem;color:var(--text3)"><span class="spin" style="font-size:18px">↻</span></div>';
+    // [1.404] — a named wait, not a bare spinner. AC: "saving, loading,
+    // waiting, all need a more human touch to help users understand what is
+    // happening." A spinner alone says something is happening; it does not
+    // say what, and on a slow connection it is the only thing on screen.
+    h+='<div style="text-align:center;padding:1.5rem;color:var(--text3)">'+
+       '<span class="spin" style="font-size:18px">↻</span>'+
+       '<div style="font-size:13px;margin-top:.4rem">'+esc(KL_STATE_COPY.loadingThread)+'</div></div>';
   } else if(!t.messages.length){
     h+='<p class="hint">No messages yet — send a message to get started.</p>';
   } else {
-    h+='<div class="msg-list">'+t.messages.map(rMsgBubble).join('')+'</div>';
+    h+='<div class="msg-list">'+t.messages.map(function(_m,_i,_all){
+      return rMsgBubble(_m,_all[_i-1],_all[_i+1]);   // [1.413]
+    }).join('')+'</div>';
   }
   // BACKLOG 1.161 #4 — which child is this about? Asked only when the answer
   // is not obvious: one child with this teacher and it is set automatically,
@@ -2664,7 +2725,69 @@ function loadHomeConversations(silent){
     var changed=JSON.stringify(next)!==JSON.stringify(HOME_CONVOS.list);
     HOME_CONVOS.list=next;
     if(!silent||changed) render();
+    _klPrefetchThreads();   // [1.398]
   });
+}
+
+// ── [1.398] — a conversation is already there when it is opened ──────────
+//
+// AC, 8 September 2026: "when anyone in any portal clicks a message, it takes
+// around 5 seconds to load for a simple text message with no attachment. This
+// should be closer to instant."
+//
+// The shell was never the problem — the header and the composer draw at once.
+// What a parent waits on is the message area, which shows a bare spinner while
+// a first-ever open pays [1.263]'s ~2s round trip in full.
+//
+// Making the request faster is not available. Making it ALREADY DONE is: a
+// family has one, two, occasionally three contacts, and the roster that names
+// them has just landed. Reading those conversations now, while the parent is
+// still looking at the list deciding which to press, means the press itself
+// costs nothing — KL_THREAD_CACHE already holds the answer and the existing
+// cache path draws it immediately.
+//
+// Why this is affordable HERE and would not be in the teacher portal: this is
+// a handful of threads once per page load, not a roster of forty on a five-
+// second tick. It is deliberately not a poll.
+//
+// Rules, and each one exists to keep it off the critical path:
+//   - ONE request at a time, chained, never a burst. [1.293] is the precedent:
+//     parallel requests against one Apps Script project overlap and land out
+//     of order.
+//   - Only conversations with messages to fetch, and only ones not already
+//     cached.
+//   - Only once per page load. A second pass would be a poll wearing a
+//     different name; the 5s poll already keeps an OPEN thread current.
+//   - Never while a thread is open or a send is in flight, so it cannot
+//     compete with something the parent is actually waiting for.
+//   - A failure is silent and simply leaves the old behaviour in place: the
+//     thread opens with its spinner, exactly as it does today.
+var _klPrefetchDone=false;
+var _klPrefetchBusy=false;
+function _klPrefetchThreads(){
+  if(_klPrefetchDone||_klPrefetchBusy) return;
+  if(HOME_EXPANDED) return;
+  var queue=(HOME_CONVOS.list||[]).filter(function(c){
+    return c && c.teacherId && c.hasMessages && !KL_THREAD_CACHE[c.teacherId];
+  }).map(function(c){ return c.teacherId; });
+  if(!queue.length){ _klPrefetchDone=true; return; }
+  _klPrefetchBusy=true;
+  (function next(){
+    if(!queue.length){ _klPrefetchBusy=false; _klPrefetchDone=true; return; }
+    // A parent who opened a thread while this was running is now waiting on
+    // something real. Stand down rather than compete with it.
+    if(HOME_EXPANDED){ _klPrefetchBusy=false; return; }
+    var id=queue.shift();
+    fapi('getConversation', {conversationType:'family_teacher', familyId:FAMILY_ID, teacherId:id}, function(e,r){
+      // Deliberately NOT cached when empty — [1.291]'s rule: an empty answer
+      // is not an answer, and caching one draws a thread as "loaded, and
+      // empty" with no spinner for the rest of the session.
+      if(!e && r && r.ok && (r.messages||[]).length) KL_THREAD_CACHE[id]=r.messages;
+      // No render(): nothing on screen changed, and this must never be a
+      // reason the page moves under someone reading it.
+      next();
+    });
+  })();
 }
 
 // ── [1.263] — opening a conversation is one fast read ───────────────────
@@ -2678,6 +2801,38 @@ function loadHomeConversations(silent){
 // KL_THREAD_CACHE holds what this page already loaded per teacher, so
 // reopening a contact draws immediately and the fetch fills in behind it. The
 // spinner is only for a thread that has genuinely never been opened.
+// ── [1.404] — one vocabulary for working, done and failed ────────────────
+//
+// AC, 8 September 2026: "family and teacher portal: generally, saving,
+// loading, waiting, all need a more human touch to help users understand what
+// is happening when clicking things, saving templates, adding attachments, and
+// opening messages."
+//
+// The fault was never a missing spinner in one place. It was that every action
+// answered the question "is anything happening?" differently, and several
+// answered it with nothing at all. So the strings live together, in one object
+// per portal, and every wait in this file draws from it — a new wait that
+// invents its own wording is then visibly out of place rather than merely
+// inconsistent.
+//
+// PLACEHOLDER COPY, flagged. AC writes family-facing wording; these ship so
+// nothing is silent in the meantime and are replaced the moment he sends his.
+// The two attachment strings are HIS, from 8 September, and are not
+// placeholders: "Adding your file…" and "Attached files".
+var KL_STATE_COPY = {
+  loadingThread:  'Loading your conversation\u2026',
+  attachOne:      'Adding your file\u2026',            // AC's words
+  attachMany:     'Adding your files\u2026',           // AC's words, pluralised
+  attachedHead:   'Attached files',                     // AC's words
+  attachFailed:   'That file could not be attached.',
+  sendWaiting:    'Waiting for your file to finish uploading \u2014 your message will send as soon as it\u2019s ready.',
+  // AC's words, 8 September, and final. It commits the composer to KEEPING a
+  // failed file on screen — "remove file" has to have something to remove.
+  sendBlocked:    'Message send failed. Try again, or remove file and reattach to send message',
+  loadingFile:    'Loading attachment\u2026',
+  fileFailed:     'This file couldn\u2019t be loaded. Press to try again.'
+};
+
 var KL_THREAD_CACHE = {};
 // Fire and forget. A failure costs a receipt that lands the next time the
 // thread is opened; nothing here is worth making a parent wait for.
@@ -2796,9 +2951,33 @@ function sendHomeMessage(){
   // most of the point for a parent: a photo of a page of music.
   var _att=_klAttTakeIds();
   if(!text && !_att.length) return;
-  // A file still going up is the one thing worth waiting for. Sending now
-  // would send the message without it and leave the upload orphaned.
-  if(KL_ATT_BUSY>0){ showMsg('One moment — still adding your file.','i'); return; }
+  // ── [1.402] — Send WAITS for the upload, and says it is waiting ───────
+  //
+  // AC, 8 September 2026: "send should wait for the upload and indicate that
+  // to the sender so they understand."
+  //
+  // This used to show a toast and RETURN — the press was thrown away, so a
+  // parent who attached a photo and pressed Send immediately had to notice the
+  // toast, wait, and press again. The press is now remembered and fires itself
+  // the moment the last upload lands.
+  //
+  // A file that FAILED is not something to wait for and not something to send
+  // without. It stops here with AC's wording, because a message that arrives
+  // without the attachment it was written about is worse than one that has not
+  // been sent yet.
+  if(_klAttAnyFailed()){
+    _klSendQueued=false;
+    showMsg(KL_STATE_COPY.sendBlocked,'e');
+    render();
+    return;
+  }
+  if(_klAttAnyUploading()){
+    _klSendQueued=true;
+    showMsg(KL_STATE_COPY.sendWaiting,'i');
+    render();
+    return;
+  }
+  _klSendQueued=false;
 
   var clientMsgId=_klNewClientMsgId();
   var pending={
@@ -2975,13 +3154,38 @@ function klAttachUpload(file){
       rec.attachmentId=r.attachment.attachmentId;
       rec.fileName=r.attachment.fileName;   // the server cleans the name; show what it stored
       KL_ATT_BUSY--; render();
+      _klFlushQueuedSend();   // [1.402] — the press that was waiting on this
     });
   };
   reader.readAsDataURL(file);
 }
+// ── [1.402] — a file that failed STAYS on screen ─────────────────────────
+//
+// It used to remove itself from the composer. AC's copy for the blocked send
+// is "Message send failed. Try again, or remove file and reattach to send
+// message" — which tells the sender to remove a file that is no longer there.
+//
+// So the record is kept and marked failed. Three things follow from that and
+// all three are the point: there is something to remove; a sender with several
+// files can see WHICH one failed; and Try again has a target. A file that
+// removes itself is the same silent state this whole group exists to remove.
 function _klAttFail(rec, msg){
-  KL_ATT_PENDING=KL_ATT_PENDING.filter(function(x){ return x!==rec; });
+  rec.uploading=false;
+  rec.failed=true;
+  rec.error=msg||KL_STATE_COPY.attachFailed;
   KL_ATT_BUSY--; showMsg(msg,'e'); render();
+  _klFlushQueuedSend();   // [1.402] — which will refuse, in AC's words
+}
+// [1.402] — a Send pressed while a file was still going up. Held, not lost.
+var _klSendQueued=false;
+function _klFlushQueuedSend(){
+  if(!_klSendQueued) return;
+  if(_klAttAnyUploading()) return;    // still more to wait for
+  if(!HOME_EXPANDED) { _klSendQueued=false; return; }
+  // sendHomeMessage() re-asks both questions itself, so a failure that landed
+  // while waiting is refused there in AC's words rather than being handled
+  // twice in two places.
+  sendHomeMessage();
 }
 function klAttachRemove(tempId){
   // Only from the composer. An id that is never sent is never bound to a
@@ -2993,6 +3197,15 @@ function klAttachRemove(tempId){
 function _klAttTakeIds(){
   return KL_ATT_PENDING.filter(function(x){ return x.attachmentId; })
                        .map(function(x){ return x.attachmentId; });
+}
+// [1.402] — a failed file is not "still working", so it must never make Send
+// wait; but it IS unfinished business, so it must block a silent send that
+// would drop it. The two questions are asked separately for that reason.
+function _klAttAnyUploading(){
+  return KL_ATT_PENDING.some(function(x){ return x.uploading; });
+}
+function _klAttAnyFailed(){
+  return KL_ATT_PENDING.some(function(x){ return x.failed; });
 }
 function _klAttClear(){ KL_ATT_PENDING=[]; KL_ATT_BUSY=0; }
 // The picker, its rules and the chips. The rules are ON SCREEN rather than in
@@ -3007,14 +3220,39 @@ function rKlAttachRow(){
           (KL_ATT_FORMATS_OPEN?'<span class="att-formats-list">'+esc(_klAttFormatList())+'</span>':'')+
         '</div>';
   if(!KL_ATT_PENDING.length) return h;
-  return h+'<div class="att-chips">'+KL_ATT_PENDING.map(function(a){
-    return '<span class="att-chip'+(a.uploading?' up':'')+'">'+
-      (a.uploading?'<span class="spin">&#8635;</span>':'')+
-      '<span class="att-chip-name">'+esc(a.fileName)+'</span>'+
-      '<span class="att-size">'+esc(_klAttSize(a.sizeBytes))+'</span>'+
-      '<button type="button" class="att-x" aria-label="'+esc(KL_ATT_REMOVE)+'"'+
-        ' onclick="klAttachRemove(\''+esc(a.tempId)+'\')">&#215;</button></span>';
-  }).join('')+'</div>';
+  // ── [1.403] — the two states, said out loud ──────────────────────────
+  //
+  // AC: "The spinner … is very subtle and may not be noticeable. There should
+  // be a small banner saying 'adding your file…' while prepping the
+  // attachment. The way the attached file is displayed after attaching it does
+  // not clearly indicate the attachment has been added … The tool needs to
+  // clearly say 'Attached files' with a list of the file name and size, with a
+  // green checkmark or something to indicate the file is attached."
+  //
+  // Both wordings are his. The finished state is the one that was drawn most
+  // quietly — a chip with an × reads as an input control, not as confirmation
+  // — which is [[lesson_resting_states]] exactly: the resting state looked
+  // like nothing had happened.
+  var _up=KL_ATT_PENDING.filter(function(a){ return a.uploading; });
+  if(_up.length){
+    h+='<div class="att-banner"><span class="spin">&#8635;</span> '+
+       esc(_up.length>1?KL_STATE_COPY.attachMany:KL_STATE_COPY.attachOne)+'</div>';
+  }
+  var _done=KL_ATT_PENDING.filter(function(a){ return !a.uploading; });
+  if(_done.length){
+    h+='<div class="att-done">'+
+       '<div class="att-done-hd">'+esc(KL_STATE_COPY.attachedHead)+'</div>'+
+       _done.map(function(a){
+         return '<div class="att-done-row'+(a.failed?' bad':'')+'">'+
+           '<span class="att-tick">'+(a.failed?'&#33;':'&#10003;')+'</span>'+
+           '<span class="att-chip-name">'+esc(a.fileName)+'</span>'+
+           '<span class="att-size">'+esc(_klAttSize(a.sizeBytes))+'</span>'+
+           (a.failed?'<span class="att-err">'+esc(a.error||KL_STATE_COPY.attachFailed)+'</span>':'')+
+           '<button type="button" class="att-x" aria-label="'+esc(KL_ATT_REMOVE)+'"'+
+             ' onclick="klAttachRemove(\''+esc(a.tempId)+'\')">&#215;</button></div>';
+       }).join('')+'</div>';
+  }
+  return h;
 }
 function rKlAttachButton(){
   return '<button type="button" class="btn btn-s btn-attach" title="'+esc(KL_ATT_TIP)+'"'+
@@ -3056,7 +3294,10 @@ function rKlAttachments(m){
     var thumb=_klAttThumb(a.attachmentId);
     var art = thumb
       ? '<img class="att-thumb" src="'+esc(thumb)+'" alt="">'
-      : '<span class="att-glyph">'+esc(_klAttKind(a.fileName))+'</span>';
+      : (KL_ATT_THUMBS.hasOwnProperty(a.attachmentId) && KL_ATT_THUMBS[a.attachmentId]===''
+          // [1.401] — in flight, not "there isn't one".
+          ? '<span class="att-glyph loading"><span class="spin">&#8635;</span></span>'
+          : '<span class="att-glyph">'+esc(_klAttKind(a.fileName))+'</span>');
     return '<button type="button" class="att-tile" title="'+esc(a.fileName)+'"'+
       ' onclick="event.stopPropagation();klOpenAttachment(\''+esc(a.attachmentId)+'\')">'+
       art+
@@ -3175,8 +3416,32 @@ function _pollTick(){
   }
 }
 
-function rMsgBubble(m){
+// [1.413] — the same runs as the two staff portals. AC approved grouping
+// ("Good call on the grouping idea") and it is applied in all three at once:
+// one conversation read three different ways is the fault, not the fix.
+// Deliberately identical logic to _admSideRight's companion in
+// EnrollmentAdmin.html — see the long note there.
+// [1.413] — senderName is part of the identity, not decoration.
+//
+// Found in review the day this was written. A family's messages all carry
+// senderId = familyId — the ROW does not know which parent typed it; [1.24]
+// records that in senderName, and [1.249] put the name on every bubble
+// precisely because "a family thread can carry two parents and admin".
+//
+// So a run keyed on senderId alone merges two DIFFERENT PEOPLE into one turn,
+// and because only the last message of a run carries the meta line, the whole
+// run is then labelled with whichever parent happened to speak last. The
+// other parent disappears from the conversation.
+function _klRunSame(a,b){
+  return !!a && !!b && String(a.senderId||'')===String(b.senderId||'') &&
+         String(a.senderName||'')===String(b.senderName||'') &&
+         !isTruthy(a.isAuto) && !isTruthy(b.isAuto) &&
+         a.noteKind!=='seen' && b.noteKind!=='seen';
+}
+function rMsgBubble(m, prev, next){
   var mine = m.senderId===FAMILY_ID;
+  var _runStart=!_klRunSame(prev,m);
+  var _runEnd=!_klRunSame(m,next);
   // messageHtml is set only when a teacher used the formatting toolbar
   // (BACKLOG 1.33), and has already been through _sanitizeMessageHtml_()
   // server-side — the family reply box stays plain text and never sets it.
@@ -3208,11 +3473,12 @@ function rMsgBubble(m){
   // kept for one pass: "Child's name doesn't need to be on the message bubble.
   // The parent and teacher know who they are talking about and can ask if they
   // need clarification from the other party." One rule, three portals.
-  return '<div class="bubble-row'+(mine?' mine':'')+'">'+
+  return '<div class="bubble-row'+(mine?' mine':'')+(_runStart?' run-start':'')+(_runEnd?' run-end':'')+'">'+
     '<div class="bubble'+(mine?' mine':'')+'">'+
     '<div class="bubble-text">'+body+'</div>'+
     rKlAttachments(m)+
-    '<div class="bubble-time">'+_klBubbleMeta(m)+'</div>'+
+    // [1.413] — one timestamp per run, on its last message.
+    (_runEnd?'<div class="bubble-time">'+_klBubbleMeta(m)+'</div>':'')+
     '</div></div>';
 }
 // The one meta line every human message carries: who, then when.
@@ -4222,6 +4488,26 @@ function _klEnrollmentFactsHtml(s){
       (s.tcAcceptedAt?' on '+esc(_fmtFamilyTs(s.tcAcceptedAt))+' at '+esc(_fmtFamilyTime(s.tcAcceptedAt)):'')+'.</div>';
     h+=_klAckCheckboxHtml(s);
   }
+  // ── [1.397] — the self-release record sits WITH the acceptance record ──
+  //
+  // AC, 8 September 2026: "the self release acceptance banner with timestamp
+  // and agreement language are not showing for students who have accepted.
+  // This was supposed to appear with the policies, not as a separate thing,
+  // when a parent clicks 'show details' on the policies in the family page."
+  //
+  // It was showing — under the OTHER disclosure. [1.299] put it under Review
+  // Policies, beside the policy text; this is the Show Details block, beside
+  // the acceptance record, and that is the one AC opened looking for it.
+  //
+  // It is rendered in ONE place, not both: an enrolled child's card carries
+  // both toggles and they can be open at the same time, so calling it from
+  // each would draw the same record twice on one screen. Placement supersedes
+  // [1.299]; the record it draws is unchanged.
+  //
+  // Outside the acceptance guard on purpose — self-release is a fact about the
+  // child, not about one enrollment, and a granted child whose acceptance was
+  // cleared by a new proposal still granted it.
+  h+=_rPolicySelfRelease(s);
   var locMap={studio:'at Keylab','in-home':'In-home',virtual:'Virtual'};
   var rows=[
     // Repeated here even though the card above already names the child --
@@ -6319,9 +6605,10 @@ function rEnrollment(scopeStudentId){
           h+='<div style="margin-top:1rem;border-top:1px solid var(--border);padding-top:1rem">';
           h+='<div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:.5rem">Keylab Children\u2019s Lesson Policies</div>';
           h+=rPolicyText(isInHome);
-          // [1.299] — tacked on to the end of the policies, for a child who has
-          // one. Same conditional shape the in-home sections use.
-          h+=_rPolicySelfRelease(s);
+          // [1.397] — the self-release record MOVED from here to
+          // _klEnrollmentFactsHtml, where the acceptance record is, on AC's
+          // 8 September instruction. It is not rendered in both: this card can
+          // have both disclosures open at once. See the note there.
           h+='</div>';
         }
         // 5. Tuition Details — always-visible when accepted but not yet enrolled

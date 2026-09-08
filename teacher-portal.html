@@ -118,7 +118,9 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
   font-family:"Inter",sans-serif;font-size:12.5px;font-weight:600;cursor:pointer;line-height:1.25;
   text-align:left}
 .lnk-btn:hover{background:rgba(255,255,255,.85);color:var(--text)}
-.bubble-row{display:flex}
+/* [1.413] — Messages-format runs, identical in all three portals. */
+.bubble-row{display:flex;margin-top:2px}
+.bubble-row.run-start{margin-top:.6rem}
 .bubble-row.mine{justify-content:flex-end}
 .bubble{max-width:80%;background:rgba(255,255,255,.55);border:1px solid var(--border);border-radius:var(--rl);padding:.6rem .8rem}
 .bubble.mine{background:var(--acc);border-color:var(--acc);color:#fff}
@@ -569,11 +571,14 @@ input[type=checkbox]{width:13px;height:13px;padding:0;margin:0;border:0;border-r
 .sched-confirm .btn{padding:.25rem .6rem;font-size:12px}
 /* The composer's picker. */
 .sched-panel{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:.5rem;
-  padding:.55rem .6rem;border:1px solid var(--border);border-radius:var(--rs);
+  padding:.55rem .6rem;border:1px solid var(--border);border-radius:var(--r);
   background:rgba(255,255,255,.5)}
 .sched-lbl{font-size:12px;color:var(--text2)}
+/* [1.415] — AC's preview line. The Schedule Message button below answers the
+   question it asks; it is deliberately not a second confirm step. */
+.sched-preview{font-size:12.5px;font-weight:600;color:var(--text);margin:.5rem 0 .1rem}
 .sched-input{font:inherit;font-size:13px;padding:.3rem .4rem;border:1px solid var(--border);
-  border-radius:var(--rs);background:#fff;color:var(--text)}
+  border-radius:var(--r);background:#fff;color:var(--text)}
 .sched-acts{display:flex;gap:6px;margin-left:auto}
 /* ── [1.373] — the Scheduled line and its list ── */
 .sched-line{display:flex;align-items:center;gap:6px;width:100%;text-align:left;
@@ -582,7 +587,7 @@ input[type=checkbox]{width:13px;height:13px;padding:0;margin:0;border:0;border-r
 .sched-caret{color:var(--text3);font-size:11px}
 .sched-list{display:flex;flex-direction:column;gap:4px;margin:0 0 .75rem}
 .sched-item{display:block;width:100%;text-align:left;background:rgba(255,255,255,.5);
-  border:1px solid var(--border);border-radius:var(--rs);padding:.45rem .6rem;
+  border:1px solid var(--border);border-radius:var(--r);padding:.45rem .6rem;
   font:inherit;cursor:pointer}
 .sched-item-hd{font-size:13px;font-weight:600;color:var(--text)}
 .sched-item-at{font-weight:400;color:var(--text3);font-size:12px}
@@ -649,6 +654,12 @@ input[type=checkbox]{width:13px;height:13px;padding:0;margin:0;border:0;border-r
 .bubble.mine .att-tile{background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.45);color:#fff}
 .bubble.mine .att-tile:hover{background:rgba(255,255,255,.28)}
 .att-thumb{width:46px;height:46px;object-fit:cover;border-radius:var(--r);flex:0 0 auto;background:var(--bg4)}
+/* [1.401] — a tile whose picture is still coming says so. AC: "the message
+   text/body should load instantly, with a clear indication with spinners or
+   whatever that the attachments are loading." An empty string means the
+   request is in flight; false means Drive has no thumbnail for this type.
+   Those are different facts and used to look identical. */
+.att-glyph.loading{color:var(--text4);font-size:16px}
 .att-glyph{width:46px;height:46px;display:flex;align-items:center;justify-content:center;
   border-radius:var(--r);background:var(--bg4);color:var(--text4);font-size:11px;font-weight:700;flex:0 0 auto}
 .bubble.mine .att-glyph{background:rgba(255,255,255,.2);color:#fff}
@@ -664,6 +675,20 @@ input[type=checkbox]{width:13px;height:13px;padding:0;margin:0;border:0;border-r
 .att-chip{display:inline-flex;align-items:center;gap:6px;padding:3px 4px 3px 9px;
   border:1px solid var(--border2);border-radius:999px;background:var(--bg5);font-size:11.5px}
 .att-chip.up{opacity:.65}
+/* [1.403] — the two attachment states. The FINISHED one is the loud one:
+   a file successfully attached used to be the quietest thing on screen. */
+.att-banner{display:flex;align-items:center;gap:7px;margin-top:7px;padding:7px 10px;
+  border:1px solid var(--blue);background:var(--bbg);color:var(--bt);
+  border-radius:var(--r);font-size:12.5px;font-weight:600}
+.att-done{margin-top:7px;padding:8px 10px;border:1px solid var(--green);
+  background:rgba(22,163,74,.07);border-radius:var(--r)}
+.att-done-hd{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;
+  color:var(--text2);margin-bottom:5px}
+.att-done-row{display:flex;align-items:center;gap:7px;font-size:12.5px;padding:2px 0}
+.att-tick{color:var(--green);font-weight:700;font-size:13px}
+.att-done-row.bad{color:var(--red)}
+.att-done-row.bad .att-tick{color:var(--red)}
+.att-err{font-size:11.5px;color:var(--red)}
 .att-chip-name{max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
 .att-x{background:none;border:0;font-size:14px;line-height:1;cursor:pointer;padding:2px 5px;
   color:var(--text4);font-family:inherit}
@@ -1594,14 +1619,41 @@ function rHome(){
 // it is not. On every screen of the teacher's own portal, and nowhere on the
 // family side — a parent shown a green Available badge would read it as a
 // promise of an immediate reply.
+// ── [1.406] — the banner's button WORKS, and it is the one teachers use ──
+//
+// AC, 8 September 2026: "When teacher clicks to set their status as Away, it
+// brings them to the settings panel and doesn't change the away state. When in
+// the settings panel and clicking 'set away' nothing happens." And: "Teachers
+// should be able to turn on and off from here … the main page simple control
+// is the thing they will use the most."
+//
+// He read it exactly right. This button was switchTab('settings') — it
+// navigated and nothing else, so pressing it changed no state; and because the
+// banner shows on EVERY tab, on the Settings tab it sat directly above the
+// control that does work, doing nothing at all when pressed.
+//
+// Claude's first recommendation was to delete this button and keep one control
+// in Settings. AC reversed it, and he is right about which one gets used: this
+// is the screen a teacher is already looking at.
+//
+// So both toggles stay and both are real. They cannot disagree — each reads
+// TSET.awayEnabled and calls the same setAway(), which is the actual fault the
+// item started as, rather than the fact that there were two.
+//
+// The label follows the STATE, never naming the state it is in: a button
+// reading "Set away" while away is on is the trap this began as. Same two
+// words as the Settings pair, so the tool has one vocabulary for one act.
 function rStatusBanner(){
   if(!TSET.loaded) return '';
+  // Disabled mid-save so a second press cannot queue a second write of a
+  // setting whose whole meaning is which of two states it is in.
+  var busy=TSET.saving;
   if(TSET.awayEnabled){
     return '<div class="status-banner away"><span>Away/Busy</span>'+
-      '<button type="button" class="lnk-btn" onclick="setAway(false)">Turn off</button></div>';
+      '<button type="button" class="lnk-btn"'+(busy?' disabled':'')+' onclick="setAway(false)">Turn off away</button></div>';
   }
   return '<div class="status-banner avail"><span>Status: Available</span>'+
-    '<button type="button" class="lnk-btn" onclick="switchTab(\'settings\')">Set away</button></div>';
+    '<button type="button" class="lnk-btn"'+(busy?' disabled':'')+' onclick="setAway(true)">Turn on away</button></div>';
 }
 
 // ============================================================
@@ -2260,7 +2312,11 @@ function rMessagingLocked(){
 // recorded here because it is his call and should not be "fixed" by someone
 // later reading the name literally.
 var CLOSED_OPEN = false;   // AC's browsing areas start collapsed — see below.
-var KIDS_OPEN = false;     // [1.320] — the header's detail, expanded in place
+// KIDS_OPEN was removed by [1.409], 8 September 2026 — AC: "Remove the 'lesson
+// phases and details' from the teacher portal … Just list everything." There is
+// no collapsed state left to hold. Admin keeps its own; his instruction named
+// this portal.
+
 
 // [1.231], AC: "Save optimistically and process on the back end... like with
 // all other buttons and saving functions in the tool."
@@ -2651,16 +2707,47 @@ function _searchNames(q){
   var needle=String(q||'').toLowerCase().trim();
   if(!needle) return [];
   var out=[];
+  // ── [1.408] — ONE result per student, carrying its parents ─────────────
+  //
+  // AC, 8 September 2026: "Teacher search results reads a bit messy. It doesn't
+  // need to have the student and the parent separately. If possible, the
+  // results should return the student and parent as one result."
+  //
+  // It emitted up to TWO rows for the same family — one for the parents,
+  // matched on their name, and one per student, matched on theirs — and both
+  // opened the identical conversation. Searching "j" gave AC five rows for
+  // three families, with the same two people facing each other twice.
+  //
+  // One row per STUDENT now, whichever half of the family the query matched:
+  // the student is what a teacher thinks in, and the parents belong on it as
+  // the people they will actually be writing to. A family with no student on
+  // file still gets a row — it is a real conversation, and losing it to a tidy
+  // is worse than the mess this fixes.
+  //
+  // A student is pushed at most once per family, so a query matching BOTH the
+  // parent and the child ("Walton") emits one row rather than two.
+  //
+  // Each row carries its familyId, which is what [1.348]'s merge below dedupes
+  // on. That used to key on the PARENT LABEL — the label this change removed —
+  // so without this a family found by name AND by message content would come
+  // back twice, once as its student and once as its parents. Found in review.
   (FAMILY_THREADS.list||[]).forEach(function(t){
     var parents=_rosterParentLine(t)||'Family';
     var open='openFamilyRow(\''+esc(t.familyId)+'\');clearMsgSearch()';
-    if(parents.toLowerCase().indexOf(needle)!==-1){
-      out.push({label:parents, sub:_rosterStudentLine(t), open:open});
-    }
-    (t.students||[]).forEach(function(st){
-      if(String(st.studentName||'').toLowerCase().indexOf(needle)===-1) return;
-      out.push({label:st.studentName, sub:parents, open:open});
+    var parentHit=parents.toLowerCase().indexOf(needle)!==-1;
+    var kids=(t.students||[]);
+    var pushed=false;
+    kids.forEach(function(st){
+      var nm=String(st.studentName||'');
+      if(!parentHit && nm.toLowerCase().indexOf(needle)===-1) return;
+      out.push({label:nm||parents, sub:parents, open:open, _fid:t.familyId});
+      pushed=true;
     });
+    // A family that matched on the parents but has no students on file, or one
+    // whose only match was the parents and who has no children listed.
+    if(!pushed && parentHit){
+      out.push({label:parents, sub:_rosterStudentLine(t), open:open, _fid:t.familyId});
+    }
   });
   (STAFF_THREADS.list||[]).forEach(function(x){
     var nm=x.contactType==='admin'?'Admin':(x.teacherName||'');
@@ -2675,8 +2762,12 @@ function _searchNames(q){
   // while the box itself still said "Nothing matches that", which is the two
   // halves of one screen disagreeing about what exists.
   if(needle===MSG_SEARCH.hitsFor){
+    // Keyed on familyId, not on the label. [1.408] relabelled these rows by
+    // STUDENT, and a guard reading the parent label stopped matching them —
+    // which would have put a family found by name AND by message content on
+    // screen twice. The id cannot drift with the wording.
     var already={};
-    out.forEach(function(o){ already[o.label]=true; });
+    out.forEach(function(o){ if(o._fid) already[o._fid]=true; });
     Object.keys(MSG_SEARCH.hits||{}).forEach(function(fid){
       var t=null;
       // `fam`, not `x`: `x` is the staff row everywhere else in this
@@ -2685,10 +2776,11 @@ function _searchNames(q){
       (FAMILY_THREADS.list||[]).forEach(function(fam){ if(fam.familyId===fid) t=fam; });
       if(!t) return;
       var parents=_rosterParentLine(t)||'Family';
-      if(already[parents]) return;
+      if(already[fid]) return;
       // Labelled by the words that matched, not by the name: the teacher typed
       // "recital", and a bare name in the list would not say why it is there.
-      out.push({label:parents, sub:(MSG_SEARCH.hits[fid].extract||'').replace(/\s+/g,' ').slice(0,60),
+      out.push({label:parents, _fid:fid,
+                sub:(MSG_SEARCH.hits[fid].extract||'').replace(/\s+/g,' ').slice(0,60),
                 open:'openFamilyRow(\''+esc(fid)+'\');clearMsgSearch()'});
     });
   }
@@ -3200,9 +3292,38 @@ function rReviewMark(count){
 // [1.292] — ONE loader, one request, one signature. It replaces
 // loadFamilyThreads and loadStaffThreads, which fetched two lists that could
 // arrive at different times from different snapshots of the sheet.
+// ── [1.400] — a guard that can never be released stops the poll for good ──
+//
+// AC, 8 September 2026: "Teacher email notifications are firing quickly, but
+// messages are not updating automatically … Clicking refresh loads the
+// message, but the new message should show up sooner. Check the code to see
+// what's happening."
+//
+// This is the mechanism, and it explains the shape of what he saw exactly.
+// [1.293] added _inFlight so a tick finding the previous request still running
+// SKIPS rather than queueing behind it — which is right. What it has never had
+// is a way to be wrong: the flag is cleared in the response callback and
+// NOWHERE ELSE, so a request whose callback never arrives — a dropped Apps
+// Script response, a request killed by a phone suspending the tab, a network
+// blip — leaves _inFlight true for the life of the page. **The roster then
+// never polls again.** _thrPollBusy has the identical shape.
+//
+// And it matches AC's own observation, which a guess would not: Refresh keeps
+// working, because Refresh is a different path that does not consult this flag.
+// The poll is the only thing that stops.
+//
+// A guard that cannot expire is not a guard, it is a latch. Every one of them
+// now carries the time it was set, and a guard older than the longest a real
+// round trip can take is treated as gone rather than as running. The cost of
+// being wrong is one duplicate request; the cost of the latch is a portal that
+// silently stops updating until it is reloaded.
+var POLL_GUARD_MAX_MS=45000;
+function _guardStale(setAt){ return !setAt || (Date.now()-setAt)>POLL_GUARD_MAX_MS; }
 function loadThreads(silent){
-  if(THREADS._inFlight) return;   // [1.293] — never two at once; see _pollTick
+  // [1.400] — held only while a request could still plausibly be alive.
+  if(THREADS._inFlight && !_guardStale(THREADS._inFlightAt)) return;
   THREADS._inFlight=true;
+  THREADS._inFlightAt=Date.now();
   if(!silent){ THREADS.loading=true; render(); }
   api({action:'getTeacherThreads', data:{teacherToken:TOKEN}}, function(e,r){
     THREADS._inFlight=false;
@@ -3401,35 +3522,39 @@ function refreshFamilyThread(){
 // The list is already scoped to this teacher's own students by the server
 // (_teacherStudentLines_ filters on the teacher's name), so "only list that
 // child" needs nothing here.
+// ── [1.409] — one line per child, with everything on it ──────────────────
+//
+// AC, 8 September 2026: "Remove the 'lesson phases and details' from the
+// teacher portal. This is not really doing anything. Just list everything."
+//
+// **This supersedes [1.320]**, which AC approved on 4 September: a short line
+// with the rest a click away. Having used it, he wants the click gone. His
+// call, and the reasoning holds — a disclosure hiding one line of facts a
+// teacher wants anyway is a control that costs a press and saves nothing.
+//
+// "Everything" is the UNION of the two old lines, not either one of them. The
+// collapsed form carried the room and the expanded form did not, so keeping
+// only the expanded line would have quietly dropped a fact from the screen
+// while claiming to list everything.
+//
+// The room is a staff fact and stays a staff fact — standing rule 6, never
+// shown to a family — which is why this is safe here and would not be in
+// EnrollmentFamily.html.
 function _kidLine(st){
   var day=String(st.day||'').trim();
   var when=[day?day+'s':'', String(st.time||'').trim()].filter(Boolean).join(' ');
   var what=[st.duration?st.duration+' min':'', String(st.instrument||'').trim().toLowerCase()]
              .filter(Boolean).join(' ');
-  return [what, when].filter(Boolean).join(' \u00b7 ');
-}
-// [1.320] — the short form for the header. The same facts as _kidLine with the
-// long words taken out; _kidLine itself is what the expanded view shows.
-function _kidShort(st){
-  var day=String(st.day||'').trim().slice(0,3);
-  return [[st.duration?st.duration+' min':'', String(st.instrument||'').trim()].filter(Boolean).join(' '),
-          [day, String(st.time||'').trim()].filter(Boolean).join(' '),
-          String(st.room||'').trim()].filter(Boolean).join(' \u00b7 ');
+  return [what, when, String(st.room||'').trim()].filter(Boolean).join(' \u00b7 ');
 }
 function rThreadKids(students){
   var list=(students||[]).filter(function(st){ return st && st.studentName; });
   if(!list.length) return '';
-  // [1.320] — AC approved this shape on 4 September: three lines above the
-  // conversation instead of seven. The detail is not deleted; it is one click
-  // away and expands in place.
-  var full=!!KIDS_OPEN;
   return '<div class="thread-kids">'+list.map(function(st){
-    var rest=full?_kidLine(st):_kidShort(st);
+    var rest=_kidLine(st);
     return '<div class="thread-kid"><b>'+esc(String(st.studentName).split(' ')[0])+'</b>'+
            (rest?' \u00b7 '+esc(rest):'')+'</div>';
-  }).join('')+'</div>'+
-  '<button type="button" class="lnk-more" onclick="KIDS_OPEN=!KIDS_OPEN;render()">'+
-  esc(full?TCH_COPY.kidsLess:TCH_COPY.kidsMore)+'</button>';
+  }).join('')+'</div>';
 }
 
 function rFamilyThread(){
@@ -3473,7 +3598,9 @@ function rFamilyThread(){
     h+='<div class="empty-state">No messages yet — send a message to get started.</div>';
   } else {
     var _r=_convRow(t.familyId);
-    h+='<div class="msg-list">'+t.messages.map(rMessageBubble).join('')+
+    h+='<div class="msg-list">'+t.messages.map(function(_m,_i,_all){
+      return rMessageBubble(_m,_all[_i-1],_all[_i+1]);   // [1.413]
+    }).join('')+
        (_r?rClosedLine(_r.closedAt,_r.closedByName,_r.closedUnanswered):'')+
        _sched.map(rScheduledBubble).join('')+'</div>';
   }
@@ -3881,7 +4008,14 @@ function sendFamilyMessage(sendAt){
   if(!text && !_att.length) return;
   // A file still going up is the one thing worth waiting for. Sending now
   // would send the message without it and leave the upload orphaned.
-  if(ATT_BUSY){ showMsg(TCH_COPY.attachWait,'i'); return; }
+  // [1.402] — the press is HELD, not thrown away with a toast. See the note
+  // on _flushQueuedSend. A failed file stops it in AC's words rather than
+  // letting the message go without the attachment it was written about.
+  // sendAt travels WITH the press: a scheduled send replayed without its time
+  // is a message sent now, which is the opposite of what was asked for.
+  if(_attAnyFailed()){ _sendQueued=null; showMsg(TCH_COPY.sendBlocked,'e'); render(); return; }
+  if(_attAnyUploading()){ _sendQueued={which:'family', at:sendAt||''}; showMsg(TCH_COPY.sendWaiting,'i'); render(); return; }
+  _sendQueued=null;
   var notifyParents=[];
   if(!t.parent1Name || !t.parent2Name){
     // Only one parent on file — nothing to choose, notify whichever exists.
@@ -4060,7 +4194,9 @@ function rStaffThread(){
   if(!t.messages.length && !_sched.length){
     h+='<div class="empty-state">No messages yet — send a message to get started.</div>';
   } else {
-    h+='<div class="msg-list">'+t.messages.map(rMessageBubble).join('')+
+    h+='<div class="msg-list">'+t.messages.map(function(_m,_i,_all){
+      return rMessageBubble(_m,_all[_i-1],_all[_i+1]);   // [1.413]
+    }).join('')+
        _sched.map(rScheduledBubble).join('')+'</div>';
   }
   var sendBtn=AMEND.kind==='edit' ? rEditActions() : (t.sending
@@ -4981,8 +5117,6 @@ var TCH_COPY={
   // searchPlaceholder below was Claude's. APPROVED by AC, 4 September 2026 — he reviewed the eight placeholder strings, changed three, and said "everything else is approved".
   // [1.320] — the one link under the header. The same wording admin uses, so
   // the two screens say it identically.
-  kidsMore:'Lesson details, phases and teacher',
-  kidsLess:'Hide details',
   sectionStaff:'Admin & staff',
   searchPlaceholder:'Search by student or parent, or type a name to start\u2026',
   guideTitle:'How to use Messages',
@@ -5126,6 +5260,21 @@ var TCH_COPY={
   linkClaimed:'This link has already been used on another device. Please log in.',
   linkExpired:'This link has expired. Please log in.',
   attachTooMany:'You can add 10 files to one message.',
+  // ── [1.404] — the working/done/failed vocabulary, teacher side ────────
+  // The family portal's KL_STATE_COPY twin. Kept in TCH_COPY rather than a
+  // second object so this portal still has ONE place its wording lives.
+  // PLACEHOLDERS, flagged — except the three marked as AC's.
+  loadingThread:  'Loading this conversation\u2026',
+  attachOne:      'Adding your file\u2026',            // AC's words, 8 Sept
+  attachMany:     'Adding your files\u2026',           // AC's words, pluralised
+  attachedHead:   'Attached files',                     // AC's words, 8 Sept
+  attachFailed:   'That file could not be attached.',
+  sendWaiting:    'Waiting for your file to finish uploading \u2014 your message will send as soon as it\u2019s ready.',
+  // AC's words, 8 Sept, final. Commits the composer to KEEPING a failed file.
+  sendBlocked:    'Message send failed. Try again, or remove file and reattach to send message',
+  savingTemplate: 'Saving your template\u2026',
+  savedTemplate:  'Template saved.',
+  savingSettings: 'Saving\u2026',
   attachTooBig:'File limit 10 MB',
   attachRemove:'Remove',
   attachWait:'One moment - the file is still uploading.',
@@ -5140,7 +5289,17 @@ var TCH_COPY={
   // options"), and "Send later" is the name he approved in the plan.
   sendLater:'Schedule Send',
   schedulePick:'Choose a date and time',
-  scheduleGo:'Save',
+  // [1.415] — AC, 8 September 2026, final. "Save" was wrong twice over: it did
+  // not save, and it is the word every other panel in this tool uses for
+  // something that is not this.
+  scheduleGo:'Schedule Message',
+  // AC's two strings, final, one for each moment. The question sits in the
+  // panel and the Schedule Message button ANSWERS it — deliberately not a
+  // second confirm step, which would break [1.371]'s settled rule that only
+  // the controls that cannot be undone ask, and scheduling can be undone three
+  // ways (Edit, Cancel Send, Delete).
+  schedulePreview:'Schedule message to send on',
+  scheduledConfirm:'Message scheduled to be sent',
   scheduleCancel:'Cancel',
   schedulePast:'Choose a time in the future.',
   scheduleFar:'That is more than two weeks away. Schedule it anyway?',
@@ -5427,7 +5586,10 @@ function rAttachments(m){
     var thumb=_attThumb(a.attachmentId);
     var art = thumb
       ? '<img class="att-thumb" src="'+esc(thumb)+'" alt="">'
-      : '<span class="att-glyph">'+esc(_attKind(a.fileName))+'</span>';
+      : (ATT_THUMBS.hasOwnProperty(a.attachmentId) && ATT_THUMBS[a.attachmentId]===''
+          // [1.401] — in flight, not "there isn't one".
+          ? '<span class="att-glyph loading"><span class="spin">&#8635;</span></span>'
+          : '<span class="att-glyph">'+esc(_attKind(a.fileName))+'</span>');
     return '<button type="button" class="att-tile" title="'+esc(a.fileName)+'"'+
       ' onclick="event.stopPropagation();openAttachment(\''+esc(a.attachmentId)+'\')">'+
       art+
@@ -5504,13 +5666,43 @@ function attachUpload(file){
       rec.attachmentId=r.attachment.attachmentId;
       rec.fileName=r.attachment.fileName;   // the server cleans the name; show what it stored
       ATT_BUSY--; render();
+      _flushQueuedSend();   // [1.402] — the press that was waiting on this
     });
   };
   reader.readAsDataURL(file);
 }
+// [1.402] — a failed file STAYS, marked. AC's blocked-send copy says "remove
+// file and reattach", which needs something to remove; and a teacher with
+// several files needs to see WHICH one failed. See the family portal's twin.
 function _attFail(rec, msg){
-  ATT_PENDING=ATT_PENDING.filter(function(x){ return x!==rec; });
+  rec.uploading=false;
+  rec.failed=true;
+  rec.error=msg||TCH_COPY.attachFailed;
   ATT_BUSY--; showMsg(msg,'e'); render();
+  _flushQueuedSend();
+}
+function _attAnyUploading(){ return ATT_PENDING.some(function(x){ return x.uploading; }); }
+function _attAnyFailed(){ return ATT_PENDING.some(function(x){ return x.failed; }); }
+// [1.402] — a Send pressed while a file was still going up. Held, not lost.
+//
+// THE sendAt IS PART OF THE PRESS AND MUST BE HELD WITH IT. Found in review the
+// same day this was written, and it was a real fault: confirmSendLater() clears
+// SCHED and calls sendFamilyMessage(at), so a scheduled send queued behind an
+// upload was replayed as sendFamilyMessage() with no time — the message went
+// out IMMEDIATELY, at the one moment its sender had just said "not yet", with
+// SCHED already cleared and no way back.
+//
+// One holder for both composers: only one thread is open at a time, and the
+// send functions re-ask both questions themselves.
+var _sendQueued=null;   // {which:'family'|'staff', at:<ms or ''>} | null
+function _flushQueuedSend(){
+  if(!_sendQueued) return;
+  if(_attAnyUploading()) return;
+  var q=_sendQueued;
+  var live=(q.which==='family') ? ACTIVE_THREAD : ACTIVE_STAFF_THREAD;
+  if(!live){ _sendQueued=null; return; }
+  if(q.which==='family') sendFamilyMessage(q.at||undefined);
+  else sendStaffMessage(q.at||undefined);
 }
 function attachRemove(tempId){
   // Only from the composer. The upload itself is left alone: an id that is
@@ -5572,14 +5764,29 @@ function rAttachRow(){
           (ATT_FORMATS_OPEN?'<span class="att-formats-list">'+esc(_attFormatList())+'</span>':'')+
         '</div>';
   if(!ATT_PENDING.length) return h;
-  return h+'<div class="att-chips">'+ATT_PENDING.map(function(a){
-    return '<span class="att-chip'+(a.uploading?' up':'')+'">'+
-      (a.uploading?'<span class="spin">&#8635;</span>':'')+
-      '<span class="att-chip-name">'+esc(a.fileName)+'</span>'+
-      '<span class="att-size">'+esc(_attSize(a.sizeBytes))+'</span>'+
-      '<button type="button" class="att-x" aria-label="'+esc(TCH_COPY.attachRemove)+'"'+
-        ' onclick="attachRemove(\''+esc(a.tempId)+'\')">&#215;</button></span>';
-  }).join('')+'</div>';
+  // [1.403] — the family portal's twin, same two states, same wording. The
+  // finished state is the loud one: a chip with an × reads as an input
+  // control, not as confirmation that the file is attached.
+  var _up=ATT_PENDING.filter(function(a){ return a.uploading; });
+  if(_up.length){
+    h+='<div class="att-banner"><span class="spin">&#8635;</span> '+
+       esc(_up.length>1?TCH_COPY.attachMany:TCH_COPY.attachOne)+'</div>';
+  }
+  var _done=ATT_PENDING.filter(function(a){ return !a.uploading; });
+  if(_done.length){
+    h+='<div class="att-done">'+
+       '<div class="att-done-hd">'+esc(TCH_COPY.attachedHead)+'</div>'+
+       _done.map(function(a){
+         return '<div class="att-done-row'+(a.failed?' bad':'')+'">'+
+           '<span class="att-tick">'+(a.failed?'&#33;':'&#10003;')+'</span>'+
+           '<span class="att-chip-name">'+esc(a.fileName)+'</span>'+
+           '<span class="att-size">'+esc(_attSize(a.sizeBytes))+'</span>'+
+           (a.failed?'<span class="att-err">'+esc(a.error||TCH_COPY.attachFailed)+'</span>':'')+
+           '<button type="button" class="att-x" aria-label="'+esc(TCH_COPY.attachRemove)+'"'+
+             ' onclick="attachRemove(\''+esc(a.tempId)+'\')">&#215;</button></div>';
+       }).join('')+'</div>';
+  }
+  return h;
 }
 function rAttachButton(){
   // Beside Send, in "the row where the things you do with a message already
@@ -5756,7 +5963,10 @@ function _schedDefault(){
 function _schedMin(){ return _schedMsToLocalInput(Date.now()+60*1000); }
 // "Sending Monday, 9/14/26 9:00 AM" — fmtMsgTime is what every other time in
 // this portal is drawn with, so a scheduled time reads the same as a sent one.
-function _schedWhen(ms){ return TCH_COPY.scheduledAt+' '+fmtMsgTime(ms); }
+// [1.415] — AC's confirmation wording replaces "Scheduled for". It is the
+// second of his two strings: this one is what a waiting message says about
+// itself, after the fact.
+function _schedWhen(ms){ return TCH_COPY.scheduledConfirm+' '+fmtMsgTime(ms); }
 
 // ── The composer control ───────────────────────────────────────────────
 function openSendLater(){
@@ -5777,6 +5987,10 @@ function rSendLaterPanel(){
     '<input type="datetime-local" class="sched-input" id="sched-at"'+
       ' min="'+esc(_schedMin())+'" value="'+esc(SCHED.at||'')+'"'+
       ' oninput="_schedSetAt(this.value)">'+
+    // [1.415] — AC's preview line, which the button below answers. Absent
+    // until a time is picked: a question naming no time is not a question.
+    (SCHED.at?'<div class="sched-preview">'+esc(TCH_COPY.schedulePreview)+' '+
+       esc(fmtMsgTime(_schedLocalInputToMs(SCHED.at)))+'?</div>':'')+
     '<div class="sched-acts">'+
       '<button type="button" class="btn btn-p" onclick="confirmSendLater()">'+esc(TCH_COPY.scheduleGo)+'</button>'+
       '<button type="button" class="btn btn-s" onclick="closeSchedule()">'+esc(TCH_COPY.scheduleCancel)+'</button>'+
@@ -5969,6 +6183,45 @@ function deleteScheduled(id){
 // the one place they are all visible; pressing one opens its conversation,
 // where the three controls already are.
 function _schedInvalidate(){ SCHED_LIST.loaded=false; loadScheduled(); }
+// ── [1.410] — a message that has GONE leaves the Scheduled list ──────────
+//
+// AC, 8 September 2026: "Schedule send messages are being saved in a scheduled
+// message area after the message has been sent, which is not correct … Only
+// messages that have scheduled but not yet been sent out via schedule send
+// show here."
+//
+// The cause is that this list only ever hears from ITSELF. _schedInvalidate()
+// is called when this client schedules, edits, sends now or cancels — every
+// one of them an action taken here. **The every-minute trigger releasing a
+// message is a server-side event no client is told about**, so the row sat in
+// the list, past its own time, until the page was reloaded.
+//
+// The cure is not another timer. A row whose time has passed is the only
+// evidence needed that the server may have released it, and that evidence is
+// already on this client — so the list re-reads itself only when it is holding
+// something due. A list with nothing due makes no request, which is what keeps
+// this off [1.293]'s five-second budget.
+var _schedDueCheckedAt=0;
+var SCHED_DUE_RECHECK_MS=30000;
+function _schedAnyDue(){
+  var now=Date.now();
+  for(var i=0;i<SCHED_LIST.rows.length;i++){
+    var at=Number(SCHED_LIST.rows[i] && SCHED_LIST.rows[i].sendAt)||0;
+    if(at && at<=now) return true;
+  }
+  return false;
+}
+// Called from the poll tick. Deliberately rate-limited rather than fired on
+// every tick: the trigger runs once a minute, so a message can legitimately be
+// up to a minute past its time and still be waiting. Asking every five seconds
+// would be five requests to learn something that cannot have changed.
+function _schedSweepDue(){
+  if(!_schedAnyDue()) return;
+  var now=Date.now();
+  if(now-_schedDueCheckedAt < SCHED_DUE_RECHECK_MS) return;
+  _schedDueCheckedAt=now;
+  _schedInvalidate();
+}
 function loadScheduled(){
   if(SCHED_LIST.loading) return;
   SCHED_LIST.loading=true;
@@ -6147,8 +6400,31 @@ function _threadCacheWrite(c){
   try{ THREAD_CACHE[_threadCacheKey(c.req)]=c.t.messages; }catch(e){}
 }
 
-function rMessageBubble(m){
+// [1.413] — the same runs as the other two portals; see the long note in
+// EnrollmentAdmin.html. Grouping was approved by AC on 8 September and is
+// applied in all three at once, because one conversation reading three
+// different ways is the fault this is meant to remove.
+// [1.413] — senderName is part of the identity, not decoration.
+//
+// Found in review the day this was written. A family's messages all carry
+// senderId = familyId — the ROW does not know which parent typed it; [1.24]
+// records that in senderName, and [1.249] put the name on every bubble
+// precisely because "a family thread can carry two parents and admin".
+//
+// So a run keyed on senderId alone merges two DIFFERENT PEOPLE into one turn,
+// and because only the last message of a run carries the meta line, the whole
+// run is then labelled with whichever parent happened to speak last. The
+// other parent disappears from the conversation.
+function _tchRunSame(a,b){
+  return !!a && !!b && String(a.senderId||'')===String(b.senderId||'') &&
+         String(a.senderName||'')===String(b.senderName||'') &&
+         !_tIsTruthy(a.isAuto) && !_tIsTruthy(b.isAuto) &&
+         a.noteKind!=='seen' && b.noteKind!=='seen';
+}
+function rMessageBubble(m, prev, next){
   var mine = m.senderId===TEACHER_ID;
+  var _runStart=!_tchRunSame(prev,m);
+  var _runEnd=!_tchRunSame(m,next);
   // messageHtml is set only when the sender used the formatting toolbar, and
   // has already been through _sanitizeMessageHtml_() server-side. Plain
   // messages (and everything sent before 1.33) keep the escaped path.
@@ -6186,12 +6462,13 @@ function rMessageBubble(m){
   // teacher is typing into a box with no visible connection to the bubble it
   // is going to overwrite, which is the second-screen problem in miniature.
   var editing = AMEND.kind==='edit' && AMEND.messageId===m.messageId;
-  return '<div class="bubble-row'+(mine?' mine':'')+'" id="msg-'+esc(m.messageId||'')+'">'+
+  return '<div class="bubble-row'+(mine?' mine':'')+(_runStart?' run-start':'')+(_runEnd?' run-end':'')+'" id="msg-'+esc(m.messageId||'')+'">'+
     '<div class="bubble'+(mine?' mine':'')+(saved?' saved':'')+(editing?' editing':'')+'">'+
     (saved?'<div class="saved-tag">'+esc(TCH_COPY.savedForReview)+'</div>':'')+
     '<div class="bubble-text">'+body+'</div>'+
     rAttachments(m)+
-    '<div class="bubble-time">'+_bubbleMeta(m)+_readMark(m, mine)+'</div>'+
+    // [1.413] — one timestamp per run, on its last message.
+    (_runEnd?'<div class="bubble-time">'+_bubbleMeta(m)+_readMark(m, mine)+'</div>':'')+
     rNotifyWarn(m)+
     rMsgTools(m,mine)+
     '</div></div>';
@@ -6437,7 +6714,10 @@ function sendStaffMessage(sendAt){
   var text=_composerPlain(html);
   var _att=_attTakeIds();   // [1.277]
   if(!text && !_att.length) return;
-  if(ATT_BUSY){ showMsg(TCH_COPY.attachWait,'i'); return; }
+  // [1.402] — as in sendFamilyMessage above, sendAt included.
+  if(_attAnyFailed()){ _sendQueued=null; showMsg(TCH_COPY.sendBlocked,'e'); render(); return; }
+  if(_attAnyUploading()){ _sendQueued={which:'staff', at:sendAt||''}; showMsg(TCH_COPY.sendWaiting,'i'); render(); return; }
+  _sendQueued=null;
   var reqData = t.contactType==='admin'
     ? {conversationType:'teacher_admin', teacherId:TEACHER_ID, teacherToken:TOKEN, messageText:text, messageHtml:html}
     : {conversationType:'staff_staff', teacherId:TEACHER_ID, staffId2:t.otherId, teacherToken:TOKEN, messageText:text, messageHtml:html};
@@ -6542,8 +6822,10 @@ function _startMessagePolling(){
 // forever. Advanced ONLY on a poll whose answer was used.
 var _ktPollAmendAt=0;
 var _thrPollBusy=false;
+var _thrPollBusyAt=0;   // [1.400] — when, so the guard can expire
 function _pollTick(){
   if(document.hidden || !TOKEN) return;
+  _schedSweepDue();   // [1.410] — no request unless something is actually due
   if(HOME_TAB==='family'){
     // BACKLOG 1.124 #1. This was gated on FAMILY_VIEW==='list', which was
     // right while a thread REPLACED the roster and wrong the moment @650 put
@@ -6551,9 +6833,9 @@ function _pollTick(){
     // conversation stayed open. Polled in both views now — the fetch is the
     // same one, and it is what also delivers the messaging lock flag.
     loadThreads(true);   // [1.292] — one roster, and it guards itself
-    if(!_thrPollBusy && FAMILY_VIEW==='thread' && ACTIVE_THREAD && !ACTIVE_THREAD.loading && !ACTIVE_THREAD._sendInFlight){
+    if((!_thrPollBusy || _guardStale(_thrPollBusyAt)) && FAMILY_VIEW==='thread' && ACTIVE_THREAD && !ACTIVE_THREAD.loading && !ACTIVE_THREAD._sendInFlight){
       var ft=ACTIVE_THREAD;
-      _thrPollBusy=true;
+      _thrPollBusy=true; _thrPollBusyAt=Date.now();   // [1.400]
       api({action:'getMessagesSince', data:{conversationType:'family_teacher', familyId:ft.familyId, teacherId:TEACHER_ID, teacherToken:TOKEN, sinceSentAt:String(_maxSentAt(ft.messages)||0), sinceAmendAt:String(_ktPollAmendAt||0)}}, function(e,r){
         _thrPollBusy=false;
         if(!ACTIVE_THREAD||ACTIVE_THREAD.familyId!==ft.familyId) return;
@@ -6585,9 +6867,9 @@ function _pollTick(){
     }
   } else {
     loadThreads(true);   // [1.292] — the same one roster, in either view
-    if(!_thrPollBusy && STAFF_VIEW==='thread' && ACTIVE_STAFF_THREAD && !ACTIVE_STAFF_THREAD.loading && !ACTIVE_STAFF_THREAD._sendInFlight){
+    if((!_thrPollBusy || _guardStale(_thrPollBusyAt)) && STAFF_VIEW==='thread' && ACTIVE_STAFF_THREAD && !ACTIVE_STAFF_THREAD.loading && !ACTIVE_STAFF_THREAD._sendInFlight){
       var st=ACTIVE_STAFF_THREAD;
-      _thrPollBusy=true;
+      _thrPollBusy=true; _thrPollBusyAt=Date.now();   // [1.400]
       var reqData=st.contactType==='admin'
         ? {conversationType:'teacher_admin', teacherId:TEACHER_ID, teacherToken:TOKEN}
         : {conversationType:'staff_staff', teacherId:TEACHER_ID, staffId2:st.otherId, teacherToken:TOKEN};

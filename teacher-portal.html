@@ -5656,9 +5656,22 @@ function rAttachments(m){
 function openAttachment(id){
   showMsg(TCH_COPY.attachOpening,'i');
   api({action:'getAttachment', data:{attachmentId:id, teacherId:TEACHER_ID, teacherToken:TOKEN}}, function(e,r){
-    if(e||!r||!r.ok||!r.dataBase64){ showMsg((r&&r.error)||'Could not open that file.','e'); return; }
+    if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not open that file.','e'); return; }
+    // [1.419] — a link when the server could give one; the blob path below
+    // still runs whenever sharing was refused. See the family portal's twin.
+    if(r.viewUrl){ _attOpenUrl(r.viewUrl); return; }
+    if(!r.dataBase64){ showMsg((r&&r.error)||'Could not open that file.','e'); return; }
     _attOpenBlob(r.dataBase64, r.mimeType, r.fileName);
   });
+}
+// The same window.open plus pop-up fallback the blob path uses — a phone
+// blocks both equally, so both need the anchor.
+function _attOpenUrl(url){
+  var w=window.open(url,'_blank','noopener');
+  if(w) return;
+  var a=document.createElement('a');
+  a.href=url; a.target='_blank'; a.rel='noopener';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
 }
 // Shared by all three portals, and the base64 is decoded in chunks: a single
 // atob over ten megabytes builds a ten-million-character string and then a

@@ -3310,27 +3310,7 @@ function rKlAttachments(m){
 function klOpenAttachment(id){
   showMsg(KL_ATT_OPENING,'i');
   fapi('getAttachment', {attachmentId:id}, function(e,r){
-    if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not open that file.','e'); return; }
-    // ── [1.419] — a link, when the server could give one ────────────────
-    //
-    // The server still decides whether this reader may have the file; what
-    // changed is that the answer is an address rather than the bytes. Google
-    // serves it from there, which removes [1.418]'s largest single wait, and
-    // Google's viewer opens types this portal never could.
-    //
-    // Opened through the SAME window.open the blob path uses, and the same
-    // pop-up fallback below it, so a phone behaves the way it already did.
-    if(r.viewUrl){
-      var w=window.open(r.viewUrl,'_blank','noopener');
-      if(!w){
-        var a=document.createElement('a');
-        a.href=r.viewUrl; a.target='_blank'; a.rel='noopener';
-        document.body.appendChild(a); a.click(); document.body.removeChild(a);
-      }
-      return;
-    }
-    // The old path, still here and still reached whenever sharing was refused.
-    if(!r.dataBase64){ showMsg((r&&r.error)||'Could not open that file.','e'); return; }
+    if(e||!r||!r.ok||!r.dataBase64){ showMsg((r&&r.error)||'Could not open that file.','e'); return; }
     try{
       // Decoded by index rather than by spreading a ten-million-character
       // string, which is what makes a phone drop the tab.
@@ -3498,7 +3478,23 @@ function rMsgBubble(m, prev, next){
     '<div class="bubble-text">'+body+'</div>'+
     rKlAttachments(m)+
     // [1.413] — one timestamp per run, on its last message.
-    (_runEnd?'<div class="bubble-time">'+_klBubbleMeta(m)+'</div>':'')+
+    // ── [1.413] — EVERY message carries its time again ──────────────────
+    //
+    // AC, 8 September 2026, looking at a thread of his own: "No timestamps on
+    // messages any longer … everything is messy."
+    //
+    // Grouping was Claude's suggestion and he approved it in the abstract
+    // ("Good call on the grouping idea"). Seeing it, it is wrong for THIS
+    // tool. Messages here are not rapid chat turns — they are studio
+    // correspondence with a response clock running on them, and [1.249] put
+    // the name and time on every bubble deliberately, because a family thread
+    // can carry two parents and admin.
+    //
+    // So the timestamp suppression is withdrawn. **The runs themselves stay** —
+    // consecutive messages still sit closer together with the gap between
+    // turns, which was the readable half — and admin's sides ([1.413]'s other
+    // half, which AC asked for by name) are untouched.
+    '<div class="bubble-time">'+_klBubbleMeta(m)+'</div>'+
     '</div></div>';
 }
 // The one meta line every human message carries: who, then when.

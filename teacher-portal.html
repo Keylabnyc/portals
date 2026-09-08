@@ -5656,22 +5656,9 @@ function rAttachments(m){
 function openAttachment(id){
   showMsg(TCH_COPY.attachOpening,'i');
   api({action:'getAttachment', data:{attachmentId:id, teacherId:TEACHER_ID, teacherToken:TOKEN}}, function(e,r){
-    if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not open that file.','e'); return; }
-    // [1.419] — a link when the server could give one; the blob path below
-    // still runs whenever sharing was refused. See the family portal's twin.
-    if(r.viewUrl){ _attOpenUrl(r.viewUrl); return; }
-    if(!r.dataBase64){ showMsg((r&&r.error)||'Could not open that file.','e'); return; }
+    if(e||!r||!r.ok||!r.dataBase64){ showMsg((r&&r.error)||'Could not open that file.','e'); return; }
     _attOpenBlob(r.dataBase64, r.mimeType, r.fileName);
   });
-}
-// The same window.open plus pop-up fallback the blob path uses — a phone
-// blocks both equally, so both need the anchor.
-function _attOpenUrl(url){
-  var w=window.open(url,'_blank','noopener');
-  if(w) return;
-  var a=document.createElement('a');
-  a.href=url; a.target='_blank'; a.rel='noopener';
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
 }
 // Shared by all three portals, and the base64 is decoded in chunks: a single
 // atob over ten megabytes builds a ten-million-character string and then a
@@ -6534,7 +6521,23 @@ function rMessageBubble(m, prev, next){
     '<div class="bubble-text">'+body+'</div>'+
     rAttachments(m)+
     // [1.413] — one timestamp per run, on its last message.
-    (_runEnd?'<div class="bubble-time">'+_bubbleMeta(m)+_readMark(m, mine)+'</div>':'')+
+    // ── [1.413] — EVERY message carries its time again ──────────────────
+    //
+    // AC, 8 September 2026, looking at a thread of his own: "No timestamps on
+    // messages any longer … everything is messy."
+    //
+    // Grouping was Claude's suggestion and he approved it in the abstract
+    // ("Good call on the grouping idea"). Seeing it, it is wrong for THIS
+    // tool. Messages here are not rapid chat turns — they are studio
+    // correspondence with a response clock running on them, and [1.249] put
+    // the name and time on every bubble deliberately, because a family thread
+    // can carry two parents and admin.
+    //
+    // So the timestamp suppression is withdrawn. **The runs themselves stay** —
+    // consecutive messages still sit closer together with the gap between
+    // turns, which was the readable half — and admin's sides ([1.413]'s other
+    // half, which AC asked for by name) are untouched.
+    '<div class="bubble-time">'+_bubbleMeta(m)+_readMark(m, mine)+'</div>'+
     rNotifyWarn(m)+
     rMsgTools(m,mine)+
     '</div></div>';

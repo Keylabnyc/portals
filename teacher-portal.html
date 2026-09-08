@@ -4541,14 +4541,67 @@ function _cmpOffsets(el){
   return {start:_cmpOffsetOf(el,r.startContainer,r.startOffset),
           end:_cmpOffsetOf(el,r.endContainer,r.endOffset)};
 }
-function _cmpNodeAt(el,pos){
-  var w=document.createTreeWalker(el,NodeFilter.SHOW_TEXT,null,false),n,seen=0;
-  while((n=w.nextNode())){
-    var len=(n.nodeValue||'').length;
-    if(seen+len>=pos) return {node:n,off:pos-seen};
-    seen+=len;
+// ── [1.416] — a caret at the start of a bullet, not the end of the one above ──
+//
+// AC, 8 September 2026: "when adding bullet point links, the links are always
+// placed at the end of the previous line, not after the bullet."
+//
+// The offsets [1.332] stores are a count of TEXT CHARACTERS, with nothing
+// between blocks — so <li>first</li><li>second</li> is "firstsecond", and
+// position 5 is BOTH the end of the first bullet and the start of the second.
+// This walker took the first node that could hold the position, which is
+// always the earlier one. Every restore into the start of a block landed at
+// the end of the block before it; the link is just where it shows.
+//
+// Resolved by asking which BLOCK each candidate is in. On an exact boundary
+// between two text nodes in DIFFERENT blocks, the later one wins — a caret
+// there belongs to the block it is at the start of.
+//
+// Deliberately NOT applied to a boundary INSIDE one block. "<b>bo</b>ld" is
+// two text nodes at one position, and the end of the first is where typing
+// inherits the bold; moving it to the start of the second would silently
+// change what the next character looks like.
+function _cmpBlockOf(node){
+  var BLOCKS={LI:1,P:1,DIV:1,BLOCKQUOTE:1,UL:1,OL:1,TD:1,TH:1,H1:1,H2:1,H3:1,H4:1,H5:1,H6:1};
+  var n=node&&node.parentNode;
+  while(n){
+    if(n.nodeType===1&&BLOCKS[n.tagName]) return n;
+    n=n.parentNode;
   }
   return null;
+}
+// The choice itself, kept pure so it can be run by a check rather than read.
+// `items` is one entry per text node, in document order: {len, block}, where
+// block is any value that is equal for two nodes in the same block and
+// different otherwise.
+function _cmpPickIndex(items,pos){
+  if(!items||!items.length) return null;
+  var seen=0;
+  for(var i=0;i<items.length;i++){
+    var len=items[i].len;
+    if(seen+len>pos) return {index:i, off:pos-seen};
+    if(seen+len===pos){
+      // Exactly on the boundary. Stay here unless the very next node starts a
+      // DIFFERENT block, in which case the caret belongs to that block.
+      var nx=items[i+1];
+      if(nx && nx.block!==items[i].block) return {index:i+1, off:0};
+      return {index:i, off:pos-seen};
+    }
+    seen+=len;
+  }
+  var last=items.length-1;
+  return {index:last, off:items[last].len};
+}
+function _cmpNodeAt(el,pos){
+  var w=document.createTreeWalker(el,NodeFilter.SHOW_TEXT,null,false),n;
+  var nodes=[],items=[];
+  while((n=w.nextNode())){
+    nodes.push(n);
+    items.push({len:(n.nodeValue||'').length, block:_cmpBlockOf(n)});
+  }
+  var pick=_cmpPickIndex(items,pos);
+  if(!pick) return null;
+  return {node:nodes[pick.index], off:pick.off};
 }
 // Falls back to the end of the box rather than to nothing: a caret that lands
 // one character out is a nuisance, a caret that lands nowhere loses the next

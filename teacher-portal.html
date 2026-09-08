@@ -3937,6 +3937,19 @@ function rFamilyThread(){
            : '<button class="btn btn-p" onclick="clearAndClose()">'+esc(TCH_COPY.clearAndClose)+'</button>')+
        '</div></div>';
   }
+  // [1.438] — the same inline shape, for the case AC named: ending a
+  // conversation a family is still waiting on. In the thread, where the
+  // messages that are unanswered are on screen behind it.
+  if(t.closeUnansweredAsk){
+    h+='<div class="fwd-box">'+
+       '<div style="margin-bottom:.55rem">'+esc(TCH_COPY.closeUnansweredAsk)+'</div>'+
+       '<div style="display:flex;gap:8px;justify-content:flex-end">'+
+         '<button class="btn btn-s" onclick="cancelCloseUnanswered()">'+esc(TCH_COPY.closeUnansweredBack)+'</button>'+
+         (t.closing
+           ? '<button class="btn btn-p" disabled><span class="spin">↻</span></button>'
+           : '<button class="btn btn-p" onclick="confirmCloseUnanswered()">'+esc(TCH_COPY.closeUnansweredGo)+'</button>')+
+       '</div></div>';
+  }
   // [1.359] — the forward panel is gone. Ask Admin opens the teacher's own
   // thread with the office; there is nothing to fill in here first.
   return h;
@@ -4123,11 +4136,45 @@ function _openReviewMarks(t){
   (t&&t.messages||[]).forEach(function(m){ if(m.reviewAt) n++; });
   return n;
 }
+// ── [1.438] — ending WITHOUT a reply asks first ──────────────────────────
+//
+// AC, 8 September 2026: "teacher can end a conversation without a reply, but is
+// not prompted to confirm this step 'End conversation without a reply?'"
+//
+// **This is not the confirm [1.327] withdrew.** That one asked before every
+// close, and AC took it out because it guarded nothing: *"It's archived, and
+// can't be archived if a reply is due, so this doesn't really serve a
+// purpose."* The second half of that sentence stopped being true later the
+// same day — [1.335] removed the refusal, so a conversation CAN now be ended
+// with a family still waiting. **The confirm he withdrew guarded a case that
+// could not happen; this one guards the case that now can.**
+//
+// So it asks ONLY when a reply is genuinely owed. Ending an answered
+// conversation is still one press, which is the common case and the one his
+// withdrawal was about.
+function _owesFamilyReply(t){
+  if(!t) return false;
+  var row=_convRow(t.familyId);
+  return !!(row && Number(row.awaitingReply)>0);
+}
 function closeConversation(){
   var t=ACTIVE_THREAD||ACTIVE_STAFF_THREAD;
   if(!t||t.closing) return;
   if(_openReviewMarks(t)){ t.closeReviewOpen=true; render(); return; }
-  // [1.327] — no confirm. See closeRow() above for why it guarded nothing.
+  if(t===ACTIVE_THREAD && _owesFamilyReply(t) && !t.closeUnansweredOk){
+    t.closeUnansweredAsk=true; render(); return;
+  }
+  _doCloseConversation(t);
+}
+function cancelCloseUnanswered(){
+  var t=ACTIVE_THREAD||ACTIVE_STAFF_THREAD;
+  if(!t) return;
+  t.closeUnansweredAsk=false; render();
+}
+function confirmCloseUnanswered(){
+  var t=ACTIVE_THREAD||ACTIVE_STAFF_THREAD;
+  if(!t) return;
+  t.closeUnansweredAsk=false; t.closeUnansweredOk=true;
   _doCloseConversation(t);
 }
 // Clear & close: one action, in that order. Closing first and clearing after
@@ -5586,6 +5633,10 @@ var TCH_COPY={
   // [1.436] — PLACEHOLDER, flagged. The way through from a nudge to the
   // conversation it names.
   nudgeGoto:'Open that conversation',
+  // [1.438] — AC's question, verbatim, with placeholder buttons under it.
+  closeUnansweredAsk:'End conversation without a reply?',
+  closeUnansweredGo:'End it',
+  closeUnansweredBack:'Go back',
   // AC's own wording, 8 September 2026, for the gated Send.
   sendBlockedUploading:'File must finish uploading before sending',
   awayOnDone:'You\u2019re set to away. Families will see the away message',

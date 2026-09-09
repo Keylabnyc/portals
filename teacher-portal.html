@@ -312,6 +312,7 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 /* BACKLOG 1.128. Text colour is chosen per swatch for contrast rather than for
    consistency: white on that amber is unreadable, and darkening the amber to
    fix it would undo the saturation AC asked for. */
+.key-badge{width:16px;height:16px;font-size:10px;line-height:16px;min-width:16px}
 .msg-circle{width:30px;height:30px;border-radius:50%;flex:0 0 auto;display:inline-flex;align-items:center;
   justify-content:center;font-size:11.5px;font-weight:600;line-height:1;cursor:pointer;
   font-variant-numeric:tabular-nums;border:1px solid rgba(0,0,0,.22);box-shadow:0 0 0 1.5px rgba(255,255,255,.3)}
@@ -371,8 +372,14 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
    their own line and sit right, instead of crushing the sentence beside them.
    Nothing is removed here: WHICH of the remaining things should come off is
    AC's eye, not a rule, and it is asked rather than guessed. */
-.row-marks{display:flex;align-items:center;flex-wrap:wrap;gap:6px;flex:0 1 auto;max-width:100%;
+.row-marks{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;flex:0 1 auto;max-width:100%;
   margin-left:auto}
+/* [1.449] — the counts travel together and never split across a wrap, and the
+   action is held off them. A number and a button touching is what AC's
+   screenshot shows: they read as one control, and the number looks pressable. */
+.row-badges{display:flex;align-items:center;gap:6px;flex:0 0 auto}
+.row-badges:empty{display:none}
+/* .row-close and its hover rule went with the button [1.450] removed. */
 /* [1.294] — who owes the reply, in words. Quiet: it is context, not an alarm,
    and the left edge strip is the one place urgency is coloured. Identical to
    admin's rule, which is checked. */
@@ -389,8 +396,6 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
   color:var(--text4);text-decoration:underline;cursor:pointer}
 /* The close button in the resting slot — quiet, so a page of answered
    conversations does not read as a page of buttons. */
-.row-close{font-size:10.5px;padding:3px 9px;opacity:.75;white-space:nowrap;max-width:100%}
-.thread-row:hover .row-close{opacity:1}
 /* Admin, wherever it appears as a correspondent — a message from the studio
    should never look like one from a family. Deliberately the SOFT blue, not
    the #1747C0 of the unread circle: two different things in one blue would
@@ -680,6 +685,27 @@ input[type=checkbox]{width:13px;height:13px;padding:0;margin:0;border:0;border-r
   border:1px solid var(--border2);border-radius:var(--rl);background:rgba(255,255,255,.75);
   cursor:pointer;font-family:inherit;text-align:left;color:var(--text)}
 .att-tile:hover{background:#fff}
+/* [1.417] — the pair. AC: "Offer the option to view or download", and he
+   asked for it optimised for mobile: the TILE is the likely action for the
+   type (one tap, no menu), with Download beside it when the tile views. A
+   file a browser cannot render has no second control — its tile downloads,
+   which is the "download only" he agreed to. */
+.att-wrap{display:inline-flex;align-items:stretch;max-width:100%}
+.att-wrap .att-tile{border-top-right-radius:0;border-bottom-right-radius:0}
+.att-dl{display:flex;align-items:center;padding:0 10px;cursor:pointer;
+  border:1px solid var(--border);border-left:0;border-radius:0 6px 6px 0;
+  background:transparent;color:var(--text2);font-size:11px;font-weight:600}
+.att-dl:hover{background:#fff;color:var(--acc)}
+.bubble.mine .att-dl{background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.45);color:#fff}
+/* [1.417] — the tile says what is happening, because the tile is what was
+   pressed. AC, three times: "when clicking on an attached file, nothing tells
+   the user what's happening, but the file is downloading." A toast fired all
+   along; it sat away from the thing under the finger and was easy to miss on
+   a phone. Never grey — [1.404]'s rule applies here too. */
+.att-tile.att-busy{border-color:var(--blue);background:var(--bbg);color:var(--bt);cursor:progress}
+.att-tile.att-busy .att-size{color:var(--bt);font-weight:600}
+.att-tile.att-bad{border-color:var(--red);background:rgba(220,38,38,.08);color:var(--red)}
+.att-tile.att-bad .att-size{color:var(--red);font-weight:600}
 .bubble.mine .att-tile{background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.45);color:#fff}
 .bubble.mine .att-tile:hover{background:rgba(255,255,255,.28)}
 .att-thumb{width:46px;height:46px;object-fit:cover;border-radius:var(--r);flex:0 0 auto;background:var(--bg4)}
@@ -1666,6 +1692,24 @@ function rTimerKey(){
     '<span class="k"><i style="background:var(--age-4h)"></i>4h mark</span>'+
     '<span class="k"><i style="background:var(--age-12h)"></i>12h \u2014 nudge</span>'+
     '<span class="k"><i style="background:var(--age-od)"></i>past due \u2014 overdue</span>'+
+    // ── [1.450] — the two BADGES, in the key that is already on screen ────
+    //
+    // AC, 9 September 2026, shown every roster state at once, agreed the
+    // counts needed to say what they mean. **They already do — in the guide,
+    // in his own words — but the guide is collapsed**, so the meaning is
+    // learned rather than read.
+    //
+    // Put HERE rather than on the rows, and rather than in a block of its own:
+    // this key is already visible, already about "what the marks on a row
+    // mean", and adding two entries costs one line. **[1.346] measured the
+    // cost of a permanent banner at 71% of a phone's first screen** — that is
+    // the reason this is two entries and not a panel.
+    //
+    // The swatches are the badges themselves, not coloured dots, for the same
+    // reason the strip's swatches are its own tokens: a key that draws a
+    // shape the rows do not is a key that can drift.
+    '<span class="k"><span class="msg-circle p-new key-badge">1</span>waiting for you</span>'+
+    '<span class="k"><span class="msg-circle p-review key-badge">1</span>you saved it</span>'+
     '</div>'+rGuide();
 }
 
@@ -3203,121 +3247,56 @@ function rRowMarks(r){
   // Archived conversations." So the ACTION keeps his words and the SECTION
   // keeps his words, and the label in between goes — a row sitting under
   // "Archived conversations" does not also need a badge saying it is closed.
-  //
-  // The blue "ended without a reply" mark STAYS. It is not this label under
-  // another name: it says something the section cannot, which is that the
-  // conversation ended while somebody was still owed an answer ([1.335], his
-  // own). Flagged to him in one line rather than swept away with the pill.
-  if(r.closed) return r.closedUnanswered
-    ? '<span class="closed-tag unanswered" title="Ended without a reply">'+esc(TCH_COPY.endedUnanswered)+'</span>'
-    : '';
-  // ── [1.287] — nothing to close, so nothing offers to close it ───────────
-  //
-  // AC, 4 September: "a conversation that is opened but never started should
-  // not need to be closed. It should be as though it never existed."
-  //
+  if(r.closed){
+    var _r=r.row||{};
+    return _r.closedUnanswered
+      ? '<span class="closed-tag unanswered" title="Ended without a reply">'+esc(TCH_COPY.endedUnanswered)+'</span>'
+      : '';
+  }
   // [1.283] gave the open conversation a row so the left pane names who the
-  // right pane is writing to. That row then inherited the resting Close
-  // button, which asks you to finish something that has not begun — and
-  // closing it would write a closedAt onto a conversation with no messages,
-  // making a real record out of a click. Walk away instead and there is
-  // nothing to walk away from: no messages, no row, no trace.
-  //
-  // The badge is dropped with it. A grey zero on a conversation that does not
-  // exist is [1.178] backwards — a resting state for something with no state.
+  // right pane is writing to. A row with no messages has nothing to count.
   if(!r.hasMessages) return '';
-  // [1.305], AC: "Clicking close conversation doesn't do anything on the
-  // teacher side. That should be accessible from the message card in the left
-  // hand side." It was on the row already, but ONLY when nothing was unread or
-  // saved — so the rows he most wanted to close were the ones that hid it. It
-  // is offered on every open conversation now. The confirm still guards it,
-  // and a thread with saved marks still has to clear them first ([1.233]).
-  var marks=rReadMark(r.awaiting)+rReviewMark(r.review);
-  // [1.335], AC 5 September: "Teacher needs to be able to 'End conversation
-  // without responding' for conversations that don't require a response."
+  // ── [1.450] — END CONVERSATION IS NOT ON THE ROW ──────────────────────
   //
-  // [1.309] hid this button whenever a reply was owed, because the server
-  // refused the write and inviting a click that fails is worse than not
-  // offering it. The server no longer refuses — it RECORDS — so the button is
-  // offered on every open conversation again. The two halves have to move
-  // together: a button the server refuses, or a refusal with no button, are
-  // both worse than either state.
-  return marks+'<button type="button" class="btn btn-s row-close" '+
-    'onclick="event.stopPropagation();closeRow('+_rowArgs(r)+')">'+
-    esc(TCH_COPY.closeConversation)+'</button>';
+  // **This reverses [1.305], which was AC's own request**, and the reason it
+  // can be reversed is that the reason for it is gone. He asked for it here
+  // because *"clicking close conversation doesn't do anything on the teacher
+  // side"* — the button in the thread was broken. It works now, and since
+  // [1.437] it closes the window with it.
+  //
+  // AC, 9 September 2026, looking at every roster state side by side:
+  // *"Maybe only have end conversation in the actual message included with the
+  // other buttons, but not on each message in the row."*
+  //
+  // **He is right, and the states made it obvious.** A full button on every
+  // row made the RAREST action the loudest thing in the list, and in a 300px
+  // pane it took the space the family's name needed. The row's job is to say
+  // WHO and WHETHER SOMETHING IS OWED ([1.314]); ending a conversation is
+  // something you decide having read it.
+  //
+  // **The cost, stated:** clearing several conversations now means opening
+  // each one. That is the trade [1.305] was avoiding, and it is his to make.
+  return '<span class="row-badges">'+rReadMark(r.awaiting)+rReviewMark(r.review)+'</span>';
 }
 
-// Closing from the roster, without opening the conversation first. Same
-// confirm and the same endpoint as the button in the thread.
-function _rowArgs(r){
-  return "'"+esc(r.kind)+"','"+esc(r.id)+"'";
-}
-function closeRow(kind, id){
-  // [1.233] — the same rule from the roster. This path has no thread open, so
-  // it goes on the row's own review count, which is the number the white
-  // circle beside the button is already showing. The dialog is the browser's
-  // here rather than the inline panel: there is no thread on screen to put a
-  // panel inside, and the alternative — opening the conversation just to
-  // refuse — is a worse answer to "close this row".
-  var _r=_msgRows().filter(function(x){ return x.kind===kind && x.id===id; })[0];
-  var _marks=_r?Number(_r.review)||0:0;
-  // [1.327] — one dialog, and only when there is something to lose. Ending a
-  // conversation with no saved marks now happens on the click, because the
-  // server already refuses to end one that owes a reply and the row already
-  // hides the button in that case ([1.309]) — so the confirm was guarding
-  // against nothing. A thread with review marks still asks, because ending it
-  // CLEARS them and that cannot be undone.
-  if(_marks && !confirm(TCH_COPY.closeNeedsReview)) return;
-  var d={teacherToken:TOKEN, teacherId:TEACHER_ID, closed:true};
-  if(kind==='family'){ d.conversationType='family_teacher'; d.familyId=id; }
-  else if(kind==='admin'){ d.conversationType='teacher_admin'; }
-  else { d.conversationType='staff_staff'; d.staffId2=id; }
-  // ── [1.279] — the row moves NOW, not in twenty seconds ──────────────────
-  //
-  // AC, timing it: "it takes about 20 seconds for a teacher's conversation
-  // marked as cleared to actually clear. Should be optimistic."
-  //
-  // Two round trips before anything moved: the write, then a full roster
-  // reload nobody was waiting to read. At [1.263]'s measured ~2s fixed plus
-  // ~1s a sheet read, twenty seconds is arithmetic, not a mystery.
-  //
-  // The same shape toggleReview() has used since [1.231], which is the model
-  // in this file: move it locally, draw, write, put it back if the write
-  // fails. The roster refresh still runs — the server decides what is really
-  // closed — but behind the change rather than in front of it.
-  // [1.311] — THE ROW ITSELF, out of THREADS.list.
-  //
-  // AC: "when closing the conversation, it takes up to 30 seconds to take
-  // effect." [1.279] made this optimistic in @713 and it worked. [1.292] then
-  // turned FAMILY_THREADS and STAFF_THREADS into read-only VIEWS that build a
-  // fresh object on every read — so the optimistic write went into a throwaway
-  // copy and vanished, and the row only moved when the server answered. **A
-  // regression Claude introduced with the one-roster refactor**, and the exact
-  // failure a computed view invites: it reads like an object you can write to.
-  var _src=(THREADS.list||[]).filter(function(x){
-    return x.kind===kind && (kind==='admin' ? true : x.id===id);
-  })[0];
-  var _was=!!(_src&&_src.closed);
-  var _go=function(){
-    if(_src){ _src.closed=true; render(); }
-    api({action:'setConversationClosed', data:d}, function(e,r){
-      if(e||!r||!r.ok){
-        if(_src){ _src.closed=_was; render(); }
-        showMsg((r&&r.error)||'Could not close that.','e'); return;
-      }
-      _refreshRosters();
-    });
-  };
-  if(!_marks) return _go();
-  // Clear first, close second — a close that half-clears is the state this
-  // item exists to prevent.
-  var _c={teacherToken:TOKEN, teacherId:TEACHER_ID};
-  ['conversationType','familyId','staffId2'].forEach(function(k){ if(d[k]!==undefined) _c[k]=d[k]; });
-  api({action:'clearConversationReviews', data:_c}, function(e,r){
-    if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not clear those.','e'); return; }
-    _go();
-  });
-}
+// ── [1.450] — closeRow() and _rowArgs() are GONE, 9 September 2026 ───────
+//
+// They existed only for the roster's End Conversation button, which AC has
+// removed: *"only have end conversation in the actual message included with
+// the other buttons, but not on each message in the row."*
+//
+// **Deleted rather than left unreferenced.** An unused function that patches
+// rows and writes to the server is the most expensive kind of dead code: the
+// next person to change how ending works has a fifty-fifty chance of editing
+// the copy nobody calls. That is the exact hazard the dead-function check was
+// added for.
+//
+// **What it knew is not lost, because the other path knows it too.**
+// _doCloseConversation() carries the same guarantees and the checks that
+// guarded them point there now: it patches the row in THREADS.list (not in a
+// computed view — [1.292]'s trap), moves it BEFORE the write goes ([1.279]:
+// AC timed twenty seconds), and puts it back if the write fails.
+//
 
 // Who spoke last, for the direction on the row. The roster carries the last
 // sender for family threads; for a staff thread "waiting on you" is the same
@@ -3529,10 +3508,27 @@ function loadStaffThreads(silent){ loadThreads(silent); }
 
 // What a roster row actually shows. If none of it moved, neither does the
 // screen — see the note in loadFamilyThreads().
+// Everything a poll could legitimately change the screen for. A field left out
+// of here is a field the roster can change without the screen following.
+//
+// [1.449] — awaitingReply was missing, and it is what the BLUE BADGE counts.
+// AC, on his teacher pass: *"A new family message shows End Conversation with
+// no unread bubble or count for a while; the bubble appears only after a
+// message or two."*
+//
+// The server was checked and is right — the count is 1 on the very first
+// message, driven through the real endpoint. So the fault is here: `unread`
+// goes to zero the moment a thread is opened while `awaitingReply` stays,
+// which is [1.220]'s whole point — SEEN and ANSWERED are different facts — and
+// a tick that changed only the second one decided nothing had moved.
+//
+// reviewCount is here for the same reason: the white badge beside the blue one
+// is drawn from it, and it can change on its own when a mark is cleared in
+// another tab.
 function _famSig(list){
   return (list||[]).map(function(t){
-    return [t.familyId,t.lastMessageAt,t.lastMessageText,t.unread,t.waitingSince,
-            t.closed,t.hasMessages].join('~');
+    return [t.familyId,t.lastMessageAt,t.lastMessageText,t.unread,t.awaitingReply,
+            t.reviewCount,t.waitingSince,t.closed,t.hasMessages].join('~');
   }).join('|');
 }
 
@@ -4009,7 +4005,8 @@ function toggleReview(messageId, on){
     // roster row is a copy of what the server now holds, so it is updated to
     // match rather than left to be corrected later.
     _setRowReviewCount(t, _openReviewMarks(t));
-    _refreshRosters();
+    // [1.418] case 2 — the roster copy was just corrected on the line above,
+    // so re-fetching it only redraws what is already right.
   });
 }
 
@@ -4095,7 +4092,7 @@ function clearAllReviews(t, done){
       showMsg((r&&r.error)||'Could not clear those.','e');
       _refreshOpenThread(); render(); return;
     }
-    _refreshRosters();
+    // [1.418] case 2 — the poll owns the roster.
     if(done) done();
   });
 }
@@ -4231,7 +4228,7 @@ function _doCloseConversation(t){
       if(_src) _src.closed=_was;
       showMsg((r&&r.error)||'Could not end that.','e'); render(); return;
     }
-    _refreshRosters();
+    // [1.418] case 2 — no follow-up fetch.
   });
 }
 
@@ -4251,7 +4248,24 @@ function _threadKey(t, extra){
   Object.keys(extra||{}).forEach(function(k){ d[k]=extra[k]; });
   return d;
 }
-function _refreshRosters(){ loadThreads(true); }   // [1.292] — one list, one call
+// ── [1.418] case 2 — REMOVED 9 September 2026, and this is why ────────────
+//
+// AC: "most actions take quite a while... ending a conversation". Checked
+// rather than assumed: closing a conversation was ALREADY instant — the row
+// is marked, the pane cleared and the screen rendered BEFORE the request goes.
+//
+// The wait he was describing was the SECOND round trip. Every one of these
+// handlers called _refreshRosters() on success, which re-fetched the whole
+// roster and re-rendered — so the screen changed once immediately and then
+// again two seconds later, and that second change is what reads as "still
+// working".
+//
+// Every call site had already corrected its own copy of the row before
+// calling this, so the fetch could only ever redraw what was already right.
+// **The five-second poll refreshes the roster on every tick regardless**
+// (loadThreads(true), unconditionally, before it looks at any thread), so
+// nothing is left uncorrected — the fix is a deletion, which is why it is the
+// cheapest of [1.418]'s three and touches the least.
 function _refreshOpenThread(){
   if(ACTIVE_STAFF_THREAD) refreshStaffThread(); else if(ACTIVE_THREAD) refreshFamilyThread();
 }
@@ -4604,8 +4618,28 @@ function _composerClean(node){
     // [1.332] — a list nested by indenting comes out of the browser as a UL
     // sitting directly inside a UL, which is not valid and renders differently
     // in different mail clients. It belongs inside an item, so it is given one.
+    // [1.332]/[1.443] — a list nested by indenting comes out of the browser as
+    // a UL sitting directly inside a UL, which is not valid and renders
+    // differently in different mail clients. It belongs inside the item it was
+    // indented UNDER.
+    //
+    // [1.443], 9 September 2026: [1.332] gave it an item of its OWN instead,
+    // and AC's screenshot is what that looks like — the outer list counts the
+    // container as an entry, so an empty "2." sits beside the indented group
+    // and the group restarts at 1:
+    //
+    //     1. SCALES          instead of      1. SCALES
+    //     2.   1. try                             1. try
+    //     3. SONGS                          2. SONGS
+    //
+    // It goes inside the PREVIOUS item, which is the one it was indented under.
+    // A list that OPENS indented has no previous item, and there the wrapper
+    // item is genuinely the right answer — that is the fallback, not the rule.
     if((tag==='UL'||tag==='OL')&&(node.nodeName==='UL'||node.nodeName==='OL')){
-      if(inner) out+='<li><'+keep+'>'+inner+'</'+keep+'></li>';
+      if(!inner) continue;
+      var _nest='<'+keep+'>'+inner+'</'+keep+'>';
+      if(/<\/li>\s*$/.test(out)) out=out.replace(/<\/li>\s*$/,_nest+'</li>');
+      else out+='<li>'+_nest+'</li>';
       continue;
     }
     // An explicit font-weight:normal cancels a bold tag. Google Docs wraps its
@@ -5638,7 +5672,7 @@ var TCH_COPY={
   closeUnansweredGo:'End it',
   closeUnansweredBack:'Go back',
   // AC's own wording, 8 September 2026, for the gated Send.
-  sendBlockedUploading:'File must finish uploading before sending',
+  sendBlockedUploading:'Your file is uploading\u2026',
   awayOnDone:'You\u2019re set to away. Families will see the away message',
   awayOffDone:'You\u2019re available. Families will not see your away message',
   savingTemplate:'Saving your template\u2026',
@@ -5668,6 +5702,16 @@ var TCH_COPY={
   attachRemove:'Remove',
   attachWait:'One moment - the file is still uploading.',
   attachOpening:'Getting your file...',
+  // [1.417] — PLACEHOLDER, flagged. Shown on the tile when a file will not
+  // open, and it does not clear itself.
+  attachOpenFailed:'Cannot open file',   // AC's wording, 9 September 2026
+  // [1.417] — PLACEHOLDERS, flagged. Identical in all three portals.
+  attachDownload:'Download',
+  // [1.417] — AC's word, 9 September 2026, for the save offered when a
+  // tab was blocked. Distinct from the ordinary Download beside a tile
+  // because this one costs nothing: the file is already in memory.
+  attachDownloadHeld:'Download file',
+  attachPopupBlocked:'Your browser blocked the new tab \u2014 try Download',
   unsend:'Unsend',
   editMsg:'Edit',
   // ── [1.371] scheduled send ────────────────────────────────────────────
@@ -5701,6 +5745,10 @@ var TCH_COPY={
   sendNowAsk:'Send message now?',        // AC's words, verbatim
   sendNowGo:'Send',                      // AC's words, verbatim
   sendNowBack:'Cancel',                  // AC's words, verbatim
+  // [1.446] — AC's own word, 9 September 2026: "Send later should be changed
+  // to 'Reschedule'." He was looking at a scheduled message, where there was
+  // no way to change the time at all.
+  reschedule:'Reschedule',
   cancelScheduled:'Cancel Send',
   cancelScheduledAsk:'Delete this message?',
   cancelScheduledGo:'Delete It',
@@ -6016,45 +6064,180 @@ function rAttachments(m){
           // [1.401] — in flight, not "there isn't one".
           ? '<span class="att-glyph loading"><span class="spin">&#8635;</span></span>'
           : '<span class="att-glyph">'+esc(_attKind(a.fileName))+'</span>');
-    return '<button type="button" class="att-tile" title="'+esc(a.fileName)+'"'+
-      ' onclick="event.stopPropagation();openAttachment(\''+esc(a.attachmentId)+'\')">'+
+    // [1.417] — the state of THIS tile, on THIS tile. The size line is the
+    // right place for it: it is already the tile's second line, so nothing
+    // moves and nothing is added to a thread that may hold several files.
+    var _st=ACT['att:'+a.attachmentId];
+    var _cls=_st?(_st.state==='failed'?' att-bad':(_st.state==='working'?' att-busy':'')):'';
+    var _foot=_st&&_st.state==='working'
+        ? '<span class="spin">\u21bb</span> '+esc(_st.text||'')
+        : (_st&&_st.state==='failed' ? esc(_st.text||'') : esc(_attSize(a.sizeBytes)));
+    // [1.417] — the tile does the LIKELY thing for this type in one tap, and
+    // Download sits beside it only when the tile views. A file a browser
+    // cannot render has no pair: its tile downloads, and offering View on it
+    // would be offering a choice that is not one.
+    var _canView=_attCanView(a.mimeType, a.fileName);
+    var _tile='<button type="button" class="att-tile'+_cls+'" title="'+esc(a.fileName)+'"'+
+      (_st&&_st.state==='working'?' disabled':'')+
+      ' onclick="event.stopPropagation();openAttachment(\''+esc(a.attachmentId)+'\',\''+
+        (_canView?'view':'download')+'\')">'+
       art+
       '<span class="att-meta"><span class="att-name">'+esc(a.fileName)+'</span>'+
-      '<span class="att-size">'+esc(_attSize(a.sizeBytes))+'</span></span></button>';
+      '<span class="att-size">'+_foot+'</span></span></button>';
+    // [1.417] — a tab the browser blocked leaves the file in hand, so the
+    // offer to save it is instant and costs no second request. It replaces
+    // the Download control while it is there: two buttons doing the same
+    // thing, one of them slower, is a choice nobody should have to make.
+    if(ATT_HELD[a.attachmentId]){
+      return '<span class="att-wrap">'+_tile+
+        '<button type="button" class="att-dl" onclick="event.stopPropagation();'+
+          '_attSaveHeld(\''+esc(a.attachmentId)+'\')">'+esc(TCH_COPY.attachDownloadHeld)+'</button></span>';
+    }
+    if(!_canView) return '<span class="att-wrap">'+_tile+'</span>';
+    return '<span class="att-wrap">'+_tile+
+      '<button type="button" class="att-dl" title="'+esc(TCH_COPY.attachDownload)+'"'+
+        (_st&&_st.state==='working'?' disabled':'')+
+        ' onclick="event.stopPropagation();openAttachment(\''+esc(a.attachmentId)+'\',\'download\')">'+
+        esc(TCH_COPY.attachDownload)+'</button></span>';
   }).join('')+'</div>';
 }
 // The slow path, and a deliberate act: the whole file, base64, through the
 // same authenticated request everything else uses. A blob URL rather than a
 // data: URI so a 10MB PDF is not put through the address bar.
-function openAttachment(id){
-  showMsg(TCH_COPY.attachOpening,'i');
+function openAttachment(id, mode){
+  // [1.417] — keyed by the file, so two tiles pressed in a row cannot show
+  // each other's state, and drawn by the tile itself rather than by a toast
+  // in the corner. [1.404]'s mechanism, on the action it was never applied to.
+  if(actBusy('att:'+id)) return;
+  actStart('att:'+id, TCH_COPY.attachOpening);
   api({action:'getAttachment', data:{attachmentId:id, teacherId:TEACHER_ID, teacherToken:TOKEN}}, function(e,r){
-    if(e||!r||!r.ok||!r.dataBase64){ showMsg((r&&r.error)||'Could not open that file.','e'); return; }
-    _attOpenBlob(r.dataBase64, r.mimeType, r.fileName);
+    if(e||!r||!r.ok||!r.dataBase64){
+      actFail('att:'+id,(r&&r.error)||TCH_COPY.attachOpenFailed); render(); return;
+    }
+    // Cleared, not marked done: the file opening IS the confirmation, and a
+    // tick on the tile underneath a newly opened tab is talking to nobody.
+    actClear('att:'+id);
+    _attOpenBlob(r.dataBase64, r.mimeType, r.fileName, id, mode);
   });
 }
 // Shared by all three portals, and the base64 is decoded in chunks: a single
 // atob over ten megabytes builds a ten-million-character string and then a
 // ten-million-element array, which is what makes a phone drop the tab.
-function _attOpenBlob(b64, mimeType, fileName){
+
+// ── [1.417] — what a browser can actually SHOW ───────────────────────────
+//
+// AC, 9 September 2026: *"agreed for files that can't be previewed download
+// only."* So the tool has to know which is which, and be honest about it: a
+// View that downloads is the invisible decision this item exists to remove,
+// wearing a label.
+//
+// **Previewable:** images, PDF, plain text, and audio — a browser tab plays
+// any audio type with its own controls, which for a music school is a real
+// preview and not a technicality.
+//
+// **Not:** RTF, DOC and DOCX. A browser cannot render any of them; offering
+// View would be offering a choice that is not one.
+//
+// **HEIC is the honest edge case and it is deliberate.** Safari renders it,
+// Chrome and Firefox do not — and it is what every iPhone produces without
+// being asked, so it is the format a parent is most likely to send AND to
+// receive. Treated as previewable: on the iPhones this mostly concerns it
+// opens, and where it does not the browser offers to save it, which is a
+// degraded view rather than the wrong action. Excluding it would penalise the
+// common case here to be tidy about the rare one.
+
+// ── [1.417] — a blocked tab keeps the file in hand ───────────────────────
+//
+// AC, 9 September 2026, on being told the message would say "try Download":
+// *"If the file downloaded already, why 'try download'?"*
+//
+// **He was right and the wording was covering for the design.** When a tab is
+// blocked, the file's BYTES have already come down — the whole slow part is
+// done — but nothing opened and nothing was saved. Sending the reader to the
+// Download button would fetch the identical file a second time and make them
+// wait again for something already sitting in memory.
+//
+// So the blob is KEPT, and the failed tile offers to save it from what is
+// already there. Instant, and no second request.
+//
+// **Not saved automatically**, which was the other option and is the bug AC
+// reported in the first place: the tool deciding between looking and saving on
+// his behalf, invisibly. The reader asked to view it; if that cannot happen
+// they are told, and the save is theirs to press.
+var ATT_HELD = {};   // attachmentId -> {url, fileName}
+function _attHoldBlob(id, url, fileName){
+  if(!id) return;
+  ATT_HELD[id]={url:url, fileName:fileName||'attachment'};
+}
+function _attSaveHeld(id){
+  var held=ATT_HELD[id]; if(!held) return;
+  var a=document.createElement('a');
+  a.href=held.url; a.download=held.fileName;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  // The offer is spent: the file is on their device and the red tile has
+  // nothing left to say. Its state goes with it.
+  delete ATT_HELD[id];
+  // The blob outlived its 60-second sweep because it was held; now that the
+  // file is on their device, the memory goes back.
+  setTimeout(function(){ try{ URL.revokeObjectURL(held.url); }catch(e){} }, 5000);
+  actClear('att:'+id);
+  render();
+}
+
+function _attCanView(mimeType, fileName){
+  var m=String(mimeType||'').toLowerCase();
+  if(m.indexOf('image/')===0) return true;
+  if(m.indexOf('audio/')===0) return true;
+  if(m==='application/pdf') return true;
+  if(m==='text/plain') return true;
+  // A row written before mimeType was stored, or a browser that sent nothing:
+  // fall back to the extension rather than calling everything undownloadable.
+  if(!m){
+    var ext=String(fileName||'').toLowerCase().split('.').pop();
+    return ['jpg','jpeg','png','gif','webp','heic','heif','pdf','txt',
+            'mp3','m4a','wav','aac','ogg'].indexOf(ext)>-1;
+  }
+  return false;
+}
+
+function _attOpenBlob(b64, mimeType, fileName, id, mode){
   try{
     var bin=atob(b64), len=bin.length, bytes=new Uint8Array(len);
     for(var i=0;i<len;i++) bytes[i]=bin.charCodeAt(i);
     var url=URL.createObjectURL(new Blob([bytes],{type:mimeType||'application/octet-stream'}));
-    var w=window.open(url,'_blank');
-    // A blocked pop-up is the common case on a phone, and a file that silently
-    // does not open is worse than a link to press. So: fall back to a real
-    // click on a real anchor, which is a user gesture the browser allows.
-    if(!w){
-      var a=document.createElement('a');
-      a.href=url; a.target='_blank'; a.rel='noopener'; a.download=fileName||'attachment';
-      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    // ── [1.417] — the reader chose, so do what they chose ─────────────────
+    //
+    // This used to try window.open and, when the pop-up was blocked — the
+    // COMMON case on a phone — fall back to an anchor with `download` set. So
+    // the tool decided between viewing and saving on the reader's behalf, and
+    // the decision was invisible: AC saw "the file is downloading" and had
+    // asked for neither. **That fallback is what this replaces.**
+    //
+    // Download is an anchor with `download`; View is a new tab. A blocked
+    // pop-up on the VIEW path is still possible, and it now says so on the
+    // tile rather than quietly saving a file instead — the reader asked to
+    // look at it, and silently doing something else is the fault itself.
+    if(mode==='download'){
+      var dl=document.createElement('a');
+      dl.href=url; dl.download=fileName||'attachment';
+      document.body.appendChild(dl); dl.click(); document.body.removeChild(dl);
+    } else {
+      var w2=window.open(url,'_blank');
+      if(!w2 && id){ _attHoldBlob(id, url, fileName); actFail('att:'+id, TCH_COPY.attachPopupBlocked); render(); }
     }
     // Long enough for the new tab to have taken the bytes, then the memory
     // goes back. Without this every file opened stays in the page until it is
     // reloaded.
-    setTimeout(function(){ try{ URL.revokeObjectURL(url); }catch(e){} }, 60000);
-  }catch(e){ showMsg('Could not open that file.','e'); }
+    // [1.417] — NOT while the file is being held for a blocked tab. The blob
+    // is the whole point of that offer: revoked underneath it, "Download file"
+    // would click an anchor pointing at nothing and fail silently, which is
+    // worse than never offering it. Held blobs are revoked when the save is
+    // taken, in _attSaveHeld.
+    setTimeout(function(){
+      if(id && ATT_HELD[id]) return;
+      try{ URL.revokeObjectURL(url); }catch(e){}
+    }, 60000);
+  }catch(e){ if(id){ actFail('att:'+id, TCH_COPY.attachOpenFailed); render(); } }
 }
 
 // ── Attaching ───────────────────────────────────────────────────────────
@@ -6391,7 +6574,10 @@ function _schedSetAt(v){ SCHED.at=v; }
 // than a dialog because it belongs to the message being written — a modal here
 // would be the second screen PROCESS.md calls a defect.
 function rSendLaterPanel(){
-  if(SCHED.mode!=='picking') return '';
+  // [1.446] — the same picker for a NEW time and a CHANGED one. A second panel
+  // that looked the same and behaved differently is how the two would drift.
+  if(SCHED.mode!=='picking' && SCHED.mode!=='rescheduling') return '';
+  var _re=SCHED.mode==='rescheduling';
   return '<div class="sched-panel">'+
     '<label class="sched-lbl">'+esc(TCH_COPY.schedulePick)+'</label>'+
     '<input type="datetime-local" class="sched-input" id="sched-at"'+
@@ -6402,7 +6588,8 @@ function rSendLaterPanel(){
     (SCHED.at?'<div class="sched-preview">'+esc(TCH_COPY.schedulePreview)+' '+
        esc(fmtMsgTime(_schedLocalInputToMs(SCHED.at)))+'?</div>':'')+
     '<div class="sched-acts">'+
-      '<button type="button" class="btn btn-p" onclick="confirmSendLater()">'+esc(TCH_COPY.scheduleGo)+'</button>'+
+      '<button type="button" class="btn btn-p" onclick="'+(_re?'confirmReschedule()':'confirmSendLater()')+'">'+
+        esc(_re?TCH_COPY.reschedule:TCH_COPY.scheduleGo)+'</button>'+
       '<button type="button" class="btn btn-s" onclick="closeSchedule()">'+esc(TCH_COPY.scheduleCancel)+'</button>'+
     '</div></div>';
 }
@@ -6425,6 +6612,41 @@ function confirmSendLater(){
   if(HOME_TAB==='family') sendFamilyMessage(at); else sendStaffMessage(at);
 }
 var _schedJustSetAt=0;
+
+// ── [1.446] — changing the time of a message already waiting ─────────────
+//
+// Seeded with the time it ALREADY has, not with a default an hour out. The
+// whole act is "not then, this instead", and a picker that throws away the
+// current answer makes the person reconstruct it before they can change it.
+function askReschedule(id){
+  var m=_amendFind(id); if(!m) return;
+  SCHED={mode:'rescheduling', messageId:id, at:_schedMsToLocalInput(Number(m.sendAt)||Date.now())};
+  render();
+}
+function confirmReschedule(){
+  var c=_amendCtx(); if(!c) return;
+  var id=SCHED.messageId;
+  var el=document.getElementById('sched-at');
+  var at=_schedLocalInputToMs(el?el.value:SCHED.at);
+  if(!at || at < Date.now()+60*1000){ showMsg(TCH_COPY.schedulePast,'e'); return; }
+  if(at > Date.now()+14*24*60*60*1000 && !confirm(TCH_COPY.scheduleFar)) return;
+  SCHED={mode:'', messageId:'', at:''};
+  actStart('send', TCH_COPY.schedulingMsg);
+  render();
+  api({action:'rescheduleMessage', data:Object.assign({}, c.req, {messageId:id, sendAt:String(at)})},
+      function(e,r){
+    if(e||!r||!r.ok){ actFail('send',(r&&r.error)||'Could not change that time.'); render(); return; }
+    // The bubble moves with the time it is showing. Reading it back off the
+    // server's answer rather than off the input keeps this the same shape as
+    // every other amend: the row is what happened, the input was only a request.
+    (c.t.scheduled||[]).forEach(function(m){
+      if(m.messageId===id){ m.sendAt=r.sendAt||at; m.schedMissedAt=''; }
+    });
+    actDone('send', TCH_COPY.scheduledDone.replace('{when}', fmtMsgTime(Number(r.sendAt)||at)));
+    _schedInvalidate();
+    render();
+  });
+}
 
 // ── The scheduled bubble ───────────────────────────────────────────────
 // Drawn after the thread's real messages, because that is where it will
@@ -6473,6 +6695,11 @@ function rScheduledBubble(m){
       '<button type="button" class="lnk-btn" onclick="startEditMessage(\''+id+'\')">'+esc(TCH_COPY.editMsg)+'</button>'+
       '<span class="msg-tools-sep">·</span>'+
       '<button type="button" class="lnk-btn" onclick="askSendNow(\''+id+'\')">'+esc(TCH_COPY.sendNow)+'</button>'+
+      '<span class="msg-tools-sep">·</span>'+
+      // [1.446] — the control AC found missing. Between Send now and Cancel
+      // Send because it is what sits between them in consequence: it changes
+      // when, not whether.
+      '<button type="button" class="lnk-btn" onclick="askReschedule(\''+id+'\')">'+esc(TCH_COPY.reschedule)+'</button>'+
       '<span class="msg-tools-sep">·</span>'+
       '<button type="button" class="lnk-btn" onclick="cancelSend(\''+id+'\')">'+esc(TCH_COPY.cancelScheduled)+'</button>'+
       '<span class="msg-tools-sep">·</span>'+

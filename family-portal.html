@@ -221,6 +221,36 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
   body.printing-policy-pdf > *:not(#policy-pdf-print-block){display:none!important}
   body.printing-policy-pdf{background:#fff}
   #policy-pdf-print-block{display:block!important;max-width:680px;margin:0 auto;padding:0}
+  /* ── [1.421] — the PDF is the Show Details block, so the block's own
+     styling has to survive being printed ─────────────────────────────────
+     Browsers drop background colours in print by default, which would leave
+     the two green record banners as black text on white and make them
+     indistinguishable from ordinary paragraphs — the opposite of what they
+     are for. print-color-adjust keeps them, and every colour is restated as
+     a literal because the custom properties are defined on :root for the
+     screen and a print stylesheet is not the place to rely on them. */
+  #policy-pdf-print-block .msg.ms{background:#D4EDE0!important;color:#0B3D20!important;
+    border:1px solid #1A6B3A!important;border-radius:5px;padding:.5rem .7rem;font-size:12px;
+    -webkit-print-color-adjust:exact;print-color-adjust:exact}
+  #policy-pdf-print-block .agree-box{border:1px solid #1A6B3A!important;background:#fff!important;
+    border-radius:5px;padding:.55rem .7rem;display:flex;gap:8px;align-items:flex-start;
+    -webkit-print-color-adjust:exact;print-color-adjust:exact}
+  #policy-pdf-print-block .agree-lbl{font-size:11.5px;color:#181818;line-height:1.5}
+  /* A ticked box is the record. Print it as one rather than as an empty
+     square, which is what an unstyled disabled checkbox becomes on paper. */
+  #policy-pdf-print-block .agree-box input[type=checkbox]{-webkit-appearance:none;appearance:none;
+    width:12px;height:12px;border:1px solid #1A6B3A;border-radius:2px;background:#1A6B3A!important;
+    position:relative;flex:0 0 auto;margin-top:2px;
+    -webkit-print-color-adjust:exact;print-color-adjust:exact}
+  #policy-pdf-print-block .agree-box input[type=checkbox]::after{content:"\2713";color:#fff;
+    font-size:9px;line-height:12px;position:absolute;left:1.5px;top:0}
+  /* Keep a record and its text on one page. A banner alone at the foot of a
+     page, with what was agreed overleaf, is the one break that misleads. */
+  #policy-pdf-print-block .msg.ms{break-after:avoid;page-break-after:avoid}
+  #policy-pdf-print-block .agree-box{break-inside:avoid;page-break-inside:avoid}
+  #policy-pdf-print-block .kl-row{break-inside:avoid;page-break-inside:avoid}
+  /* The Download PDF button must not be IN the PDF. */
+  #policy-pdf-print-block .btn{display:none!important}
 }
 /* Messaging (v1) */
 
@@ -338,6 +368,27 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
   border:1px solid var(--border2);border-radius:var(--rl);background:rgba(255,255,255,.75);
   cursor:pointer;font-family:inherit;text-align:left;color:var(--text)}
 .att-tile:hover{background:#fff}
+/* [1.417] — the pair. AC: "Offer the option to view or download", and he
+   asked for it optimised for mobile: the TILE is the likely action for the
+   type (one tap, no menu), with Download beside it when the tile views. A
+   file a browser cannot render has no second control — its tile downloads,
+   which is the "download only" he agreed to. */
+.att-wrap{display:inline-flex;align-items:stretch;max-width:100%}
+.att-wrap .att-tile{border-top-right-radius:0;border-bottom-right-radius:0}
+.att-dl{display:flex;align-items:center;padding:0 10px;cursor:pointer;
+  border:1px solid var(--border);border-left:0;border-radius:0 6px 6px 0;
+  background:transparent;color:var(--text2);font-size:11px;font-weight:600}
+.att-dl:hover{background:#fff;color:var(--acc)}
+.bubble.mine .att-dl{background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.45);color:#fff}
+/* [1.417] — the tile says what is happening, because the tile is what was
+   pressed. AC, three times: "when clicking on an attached file, nothing tells
+   the user what's happening, but the file is downloading." A toast fired all
+   along; it sat away from the thing under the finger and was easy to miss on
+   a phone. Never grey — [1.404]'s rule applies here too. */
+.att-tile.att-busy{border-color:var(--blue);background:var(--bbg);color:var(--bt);cursor:progress}
+.att-tile.att-busy .att-size{color:var(--bt);font-weight:600}
+.att-tile.att-bad{border-color:var(--red);background:rgba(220,38,38,.08);color:var(--red)}
+.att-tile.att-bad .att-size{color:var(--red);font-weight:600}
 .bubble.mine .att-tile{background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.45);color:#fff}
 .bubble.mine .att-tile:hover{background:rgba(255,255,255,.28)}
 .att-thumb{width:46px;height:46px;object-fit:cover;border-radius:var(--r);flex:0 0 auto;background:var(--bg4)}
@@ -384,6 +435,11 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 .att-done-row.bad{color:var(--red)}
 .att-done-row.bad .att-tick{color:var(--red)}
 .att-err{font-size:11.5px;color:var(--red)}
+.act-note{display:flex;align-items:center;gap:6px;margin-top:6px;padding:6px 10px;
+  border-radius:var(--r);font-size:12.5px;font-weight:600;line-height:1.35}
+.act-working{border:1px solid var(--blue);background:var(--bbg);color:var(--bt)}
+.act-done{border:1px solid var(--green);background:rgba(22,163,74,.10);color:var(--gt)}
+.act-failed{border:1px solid var(--red);background:rgba(220,38,38,.08);color:var(--red)}
 .att-chip-name{max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
 .att-x{background:none;border:0;font-size:14px;line-height:1;cursor:pointer;padding:2px 5px;
   color:var(--text4);font-family:inherit}
@@ -1280,6 +1336,62 @@ function _renderChips(chips){
 // re-run the same draw for no reason and reintroduce the caret problem one
 // tick later.
 var _rendering = false;
+
+// ── [1.404]/[1.439] — ONE status mechanism, and it lives BESIDE THE CONTROL ─
+//
+// **Ported from the teacher portal on 9 September 2026.** [1.404] was built on
+// 8 September and landed in one portal; THE PLAN's rule 5 says every stage
+// lands in all three, and names this exact half-fix as a fault in its own
+// right: *"a status shown beside the control in the teacher portal and as a
+// grey toast in the family portal"*.
+//
+// **And AC's own finding on this portal was never built at all:** *"No
+// indication a message is sending on the family side. I'm sitting there
+// unsure what's happening."*
+//
+// **The parent's version is the standard the other two are held to.** A parent
+// uses this a few times a term, on a phone, and will not go looking for a
+// corner toast that has already faded.
+//
+// Three states, deliberately no more: WORKING, DONE, FAILED. Keyed by the
+// control, so two actions cannot fight over one line, and rendered by whoever
+// draws that control. **Never grey** — grey is what this tool uses for absent,
+// finished and disabled, so a grey status reads as "nothing is happening".
+var ACT = {};   // key -> {state:'working'|'done'|'failed', text:''}
+var _actTimers = {};
+function actStart(key, text){
+  ACT[key] = {state:'working', text:text||''};
+  if(_actTimers[key]){ clearTimeout(_actTimers[key]); delete _actTimers[key]; }
+  render();
+}
+// Done clears itself. A confirmation that stays for ever stops being a
+// confirmation and becomes furniture — but it stays long enough to be READ.
+function actDone(key, text){
+  ACT[key] = {state:'done', text:text||''};
+  if(_actTimers[key]) clearTimeout(_actTimers[key]);
+  _actTimers[key] = setTimeout(function(){ delete ACT[key]; delete _actTimers[key]; render(); }, 4000);
+  render();
+}
+// A failure does NOT clear itself. It is the one state a person has to act on.
+function actFail(key, text){
+  ACT[key] = {state:'failed', text:text||''};
+  if(_actTimers[key]){ clearTimeout(_actTimers[key]); delete _actTimers[key]; }
+  render();
+}
+function actClear(key){
+  if(_actTimers[key]){ clearTimeout(_actTimers[key]); delete _actTimers[key]; }
+  if(ACT[key]){ delete ACT[key]; render(); }
+}
+function actBusy(key){ return !!(ACT[key] && ACT[key].state==='working'); }
+// Drawn by whatever draws the control. Empty when there is nothing to say, so
+// a caller can put it anywhere unconditionally.
+function rAct(key){
+  var a=ACT[key]; if(!a) return '';
+  var icon = a.state==='working' ? '<span class="spin">\u21bb</span> '
+           : a.state==='done'    ? '\u2713 ' : '\u0021 ';
+  return '<div class="act-note act-'+a.state+'">'+icon+esc(a.text||'')+'</div>';
+}
+
 function render(){
   if(_rendering) return;
   _rendering=true;
@@ -2655,15 +2767,68 @@ function rHomeThreadView(){
       '<span class="kl-about-pill'+(_sel?'':' on')+'" onclick="HOME_EXPANDED.studentId=\'\';render()">Something else</span>'+
       '</div>';
   }
-  // No sending/disabled state: the message is already in the history by the
+  // ~~No sending/disabled state: the message is already in the history by the
   // time the request goes out, so a spinner would be reporting on work the
-  // family has no reason to care about (1.43).
-  var sendBtn='<button class="btn btn-p" onclick="sendHomeMessage()">Send</button>';
+  // family has no reason to care about (1.43).~~
+  //
+  // **WITHDRAWN 9 September 2026 by AC's own testing, [1.439].** His words:
+  // *"No indication a message is sending on the family side. I'm sitting there
+  // unsure what's happening."*
+  //
+  // [1.43]'s reasoning was about the BUBBLE, and that half still holds — the
+  // message appears instantly and is not redrawn. What it got wrong is that a
+  // bubble on screen says nothing about whether the message LEFT, and a parent
+  // on a phone with poor signal is asking exactly that. The status is beside
+  // the button and it is about the SEND, not about the message.
+  //
+  // [1.428] — and Send is disabled while a file is still uploading, with AC's
+  // own reason beside it. **That was built for the teacher portal on 8
+  // September and never reached this one**, which is the same half-landing
+  // [1.439] exists to close: a parent could press Send and be refused by a
+  // backstop, where a teacher simply cannot press it.
+  var _uploading=_klAttAnyUploading();
+  // And while the send itself is in flight. The bubble is already on screen,
+  // so a second press is a parent who cannot tell whether the first one did
+  // anything — which is the whole of what AC reported.
+  var _sending=actBusy('send');
+  var sendBtn='<button class="btn btn-p"'+((_uploading||_sending)?' disabled':'')+
+    ' onclick="sendHomeMessage()">Send</button>';
+  // ── [1.444] — a parent can back out of a message ────────────────────────
+  //
+  // AC, 9 September 2026: "a parent should be able to cancel out of a message
+  // also, right?" There was no way to abandon one: the box kept what had been
+  // typed, and the draft survives a reload by design ([1.332]), so a parent who
+  // changed their mind had to select the words and delete them by hand — and
+  // any file they had attached stayed attached with nothing to remove it.
+  //
+  // **It is always drawn, and disabled when there is nothing to cancel.** A
+  // button that appears only when it applies reads as something having gone
+  // wrong; a resting state is what makes it a normal part of the screen.
+  //
+  // **It asks first, and that is the one place a confirm belongs here.**
+  // [1.276]'s rule is that only what cannot be undone asks — and this cannot:
+  // the words are the parent's own and there is nowhere to get them back from.
+  var _hasDraft=!!String(t.draft||'').trim() || (KL_ATT_PENDING||[]).length>0;
+  var cancelBtn='<button class="btn btn-s"'+((_hasDraft&&!_sending)?'':' disabled')+
+    ' onclick="askCancelHomeDraft()">'+esc(KL_STATE_COPY.cancelDraft)+'</button>';
   h+='<div class="composer">'+
-    '<textarea id="home-composer" placeholder="Type your message here..." oninput="HOME_EXPANDED.draft=this.value;_famDraftSet(HOME_EXPANDED.teacherId,this.value)">'+esc(t.draft)+'</textarea>'+
+    '<textarea id="home-composer" placeholder="Type your message here..." oninput="HOME_EXPANDED.draft=this.value;_famDraftSet(HOME_EXPANDED.teacherId,this.value);actClear(\'send\')">'+esc(t.draft)+'</textarea>'+
     // [1.361] — the rules, then the picker beside Send, then the chips.
     rKlAttachRow()+
-    '<div class="kl-send-row">'+rKlAttachButton()+sendBtn+'</div>'+
+    (_uploading?'<div class="act-note act-working"><span class="spin">\u21bb</span> '+
+      esc(KL_STATE_COPY.sendBlockedUploading)+'</div>':'')+
+    // [1.404]/[1.439] — the status for this composer, beside its own button,
+    // exactly as the teacher portal draws it.
+    rAct('send')+
+    (HOME_EXPANDED.cancelAsk
+      ? '<div class="act-note act-failed" style="display:block">'+
+          '<div style="margin-bottom:.5rem">'+esc(KL_STATE_COPY.cancelDraftAsk)+'</div>'+
+          '<div style="display:flex;gap:8px">'+
+            '<button class="btn btn-p" onclick="confirmCancelHomeDraft()">'+esc(KL_STATE_COPY.cancelDraftGo)+'</button>'+
+            '<button class="btn btn-s" onclick="HOME_EXPANDED.cancelAsk=false;render()">'+esc(KL_STATE_COPY.cancelDraftKeep)+'</button>'+
+          '</div></div>'
+      : '')+
+    '<div class="kl-send-row">'+rKlAttachButton()+cancelBtn+sendBtn+'</div>'+
     '</div>';
   // [1.247] / C1 — BELOW the composer's send button. FAMILY-FACING.
   //
@@ -2862,13 +3027,41 @@ function _klPrefetchThreads(){
 // The two attachment strings are HIS, from 8 September, and are not
 // placeholders: "Adding your file…" and "Attached files".
 var KL_STATE_COPY = {
+  // [1.439] — AC: "No indication a message is sending on the family side.
+  // I'm sitting there unsure what's happening." PLACEHOLDERS, flagged: this
+  // is family-facing copy and AC is the only author of it.
+  sendWorking:'Sending your message\u2026',
+  // [1.444] — AC, 9 September 2026: "a parent should be able to cancel out of
+  // a message also, right?" PLACEHOLDERS, flagged: family-facing, AC's to write.
+  // [1.417] — PLACEHOLDER, flagged. Identical in all three portals.
+  attachOpenFailed:'Cannot open file',   // AC's wording, 9 September 2026
+  // [1.417] — PLACEHOLDERS, flagged. "Download" is AC's own word from the
+  // request; the blocked-tab line is mine until he writes it.
+  attachDownload:'Download',
+  // [1.417] — AC's word, 9 September 2026, for the save offered when a
+  // tab was blocked. Distinct from the ordinary Download beside a tile
+  // because this one costs nothing: the file is already in memory.
+  attachDownloadHeld:'Download file',
+  attachPopupBlocked:'Your browser blocked the new tab \u2014 try Download',
+  // AC's wording, 9 September 2026, settled after asking what other software
+  // calls these. The composer button is "Delete Draft" rather than "Cancel",
+  // which frees "Cancel" for its conventional role in the confirm — otherwise
+  // it is Cancel cancelling the Cancel, the same word meaning opposite things
+  // two inches apart. Convention checked first: most apps that confirm use
+  // [destructive verb] / Cancel, and many (Gmail) do not confirm at all.
+  cancelDraft:'Delete Draft',
+  cancelDraftAsk:'Delete this message?',
+  cancelDraftGo:'Delete',
+  cancelDraftKeep:'Cancel',
+  sendDone:'Sent',
+  sendFailed:'That didn\u2019t send. Please try again.',
   loadingThread:  'Loading your conversation\u2026',
   attachOne:      'Adding your file\u2026',            // AC's words
   attachMany:     'Adding your files\u2026',           // AC's words, pluralised
   attachedHead:   'Attached files',                     // AC's words
   attachFailed:   'That file could not be attached.',
   // AC's wording, 8 September 2026, for the gated Send.
-  sendBlockedUploading:'File must finish uploading before sending',
+  sendBlockedUploading:'Your file is uploading\u2026',
   sendWaiting:    'Waiting for your file to finish uploading \u2014 your message will send as soon as it\u2019s ready.',
   // AC's words, 8 September, and final. It commits the composer to KEEPING a
   // failed file on screen — "remove file" has to have something to remove.
@@ -3047,8 +3240,11 @@ function sendHomeMessage(){
   // been sent yet.
   // [1.428] — the button is disabled while an upload is in flight; this is the
   // backstop for a keyboard send or a race, and it refuses plainly.
-  if(_klAttAnyFailed()){ showMsg(KL_STATE_COPY.sendBlocked,'e'); render(); return; }
-  if(_klAttAnyUploading()){ showMsg(KL_STATE_COPY.sendBlockedUploading,'e'); render(); return; }
+  // [1.439] — beside the button, not in the corner. These are the two refusals
+  // a parent is most likely to hit and least likely to understand, and a toast
+  // in the opposite corner of the screen is how AC found both of them.
+  if(_klAttAnyFailed()){ actFail('send', KL_STATE_COPY.sendBlocked); render(); return; }
+  if(_klAttAnyUploading()){ actFail('send', KL_STATE_COPY.sendBlockedUploading); render(); return; }
 
   var clientMsgId=_klNewClientMsgId();
   var pending={
@@ -3069,6 +3265,12 @@ function sendHomeMessage(){
   // message sitting here unconfirmed and append it a second time.
   t._sendInFlight=true;
   _shouldScrollMsgList=true;
+  // [1.439] — AC's finding, verbatim: "No indication a message is sending on
+  // the family side. I'm sitting there unsure what's happening." The bubble
+  // appears optimistically, which is right, but a bubble that is on screen
+  // says nothing about whether it LEFT — and on a phone on studio wifi that
+  // is the whole of the parent's question.
+  actStart('send', KL_STATE_COPY.sendWorking);
   render();
 
   // studentId: which child this is about (1.161 #4). senderParentSlot: which
@@ -3100,7 +3302,9 @@ function sendHomeMessage(){
                 sizeBytes:a.sizeBytes, uploading:false, attachmentId:a.attachmentId};
       });
       KL_ATT_BUSY=0;
-      showMsg((r&&r.error)||'Could not send message.','e');
+      // [1.439] — and it does NOT clear itself, because this is the one state
+      // a parent has to do something about. Their words are back in the box.
+      actFail('send', (r&&r.error)||KL_STATE_COPY.sendFailed);
       render();
       return;
     }
@@ -3113,10 +3317,39 @@ function sendHomeMessage(){
       pending.sentAt=r.message.sentAt||pending.sentAt;
       pending.senderName=r.message.senderName||pending.senderName;
     }
+    // [1.439] — confirmed on the SERVER'S answer, not on the button press. A
+    // confirmation shown before the round trip is a promise rather than a
+    // fact, which is [1.404]'s rule and the reason it is here and not above.
+    // It clears itself after four seconds; the message stays.
+    actDone('send', KL_STATE_COPY.sendDone);
     // Keeps the poll's "anything newer than this" from re-delivering our own
     // message under its real timestamp.
     t.lastSentAt=_maxSentAt(t.messages);
   });
+}
+
+// ── [1.444] — cancelling a message a parent has started ──────────────────
+function askCancelHomeDraft(){
+  var t=HOME_EXPANDED; if(!t) return;
+  t.cancelAsk=true; render();
+}
+function confirmCancelHomeDraft(){
+  var t=HOME_EXPANDED; if(!t) return;
+  t.cancelAsk=false;
+  t.draft='';
+  // Out of storage too, or a reload brings back the message they just deleted
+  // — which is [1.332]'s persistence working against them rather than for them.
+  _famDraftSet(t.teacherId,'');
+  // The files go with the words. They are already uploaded and unbound, so the
+  // sweep will collect them; leaving the chips on screen after the message they
+  // belonged to is gone is the two halves of one screen disagreeing.
+  _klAttClear();
+  // Any leftover status from a failed send is about a message that no longer
+  // exists.
+  actClear('send');
+  var box=document.getElementById('home-composer');
+  if(box) box.value='';
+  render();
 }
 
 // Polls every 5s for: (1) new conversation previews on Home, (2) new
@@ -3359,37 +3592,167 @@ function rKlAttachments(m){
           // [1.401] — in flight, not "there isn't one".
           ? '<span class="att-glyph loading"><span class="spin">&#8635;</span></span>'
           : '<span class="att-glyph">'+esc(_klAttKind(a.fileName))+'</span>');
-    return '<button type="button" class="att-tile" title="'+esc(a.fileName)+'"'+
-      ' onclick="event.stopPropagation();klOpenAttachment(\''+esc(a.attachmentId)+'\')">'+
+    // [1.417] — the state of THIS tile, on THIS tile. It matters most here:
+    // a parent on a phone tapping a photo of sheet music is the reader least
+    // likely to notice a toast in the corner, and the most likely to tap again.
+    var _st=ACT['att:'+a.attachmentId];
+    var _cls=_st?(_st.state==='failed'?' att-bad':(_st.state==='working'?' att-busy':'')):'';
+    var _foot=_st&&_st.state==='working'
+        ? '<span class="spin">\u21bb</span> '+esc(_st.text||'')
+        : (_st&&_st.state==='failed' ? esc(_st.text||'') : esc(_klAttSize(a.sizeBytes)));
+    // [1.417] — the tile does the likely thing for this type in one tap, and
+    // Download sits beside it only when the tile views. This is the portal the
+    // arrangement was chosen FOR: a parent on a phone tapping a photo of sheet
+    // music gets it opened, in one tap, with no menu in the way.
+    var _canView=_attCanView(a.mimeType, a.fileName);
+    var _tile='<button type="button" class="att-tile'+_cls+'" title="'+esc(a.fileName)+'"'+
+      (_st&&_st.state==='working'?' disabled':'')+
+      ' onclick="event.stopPropagation();klOpenAttachment(\''+esc(a.attachmentId)+'\',\''+
+        (_canView?'view':'download')+'\')">'+
       art+
       '<span class="att-meta"><span class="att-name">'+esc(a.fileName)+'</span>'+
-      '<span class="att-size">'+esc(_klAttSize(a.sizeBytes))+'</span></span></button>';
+      '<span class="att-size">'+_foot+'</span></span></button>';
+    // [1.417] — a tab the browser blocked leaves the file in hand, so the
+    // offer to save it is instant and costs no second request. It replaces
+    // the Download control while it is there: two buttons doing the same
+    // thing, one of them slower, is a choice nobody should have to make.
+    if(ATT_HELD[a.attachmentId]){
+      return '<span class="att-wrap">'+_tile+
+        '<button type="button" class="att-dl" onclick="event.stopPropagation();'+
+          '_attSaveHeld(\''+esc(a.attachmentId)+'\')">'+esc(KL_STATE_COPY.attachDownloadHeld)+'</button></span>';
+    }
+    if(!_canView) return '<span class="att-wrap">'+_tile+'</span>';
+    return '<span class="att-wrap">'+_tile+
+      '<button type="button" class="att-dl" title="'+esc(KL_STATE_COPY.attachDownload)+'"'+
+        (_st&&_st.state==='working'?' disabled':'')+
+        ' onclick="event.stopPropagation();klOpenAttachment(\''+esc(a.attachmentId)+'\',\'download\')">'+
+        esc(KL_STATE_COPY.attachDownload)+'</button></span>';
   }).join('')+'</div>';
 }
 // The slow path, and a deliberate act: the whole file, base64, through the
 // same authenticated request everything else on this page uses.
-function klOpenAttachment(id){
-  showMsg(KL_ATT_OPENING,'i');
+
+// ── [1.417] — what a browser can actually SHOW ───────────────────────────
+//
+// AC, 9 September 2026: *"agreed for files that can't be previewed download
+// only."* So the tool has to know which is which, and be honest about it: a
+// View that downloads is the invisible decision this item exists to remove,
+// wearing a label.
+//
+// **Previewable:** images, PDF, plain text, and audio — a browser tab plays
+// any audio type with its own controls, which for a music school is a real
+// preview and not a technicality.
+//
+// **Not:** RTF, DOC and DOCX. A browser cannot render any of them; offering
+// View would be offering a choice that is not one.
+//
+// **HEIC is the honest edge case and it is deliberate.** Safari renders it,
+// Chrome and Firefox do not — and it is what every iPhone produces without
+// being asked, so it is the format a parent is most likely to send AND to
+// receive. Treated as previewable: on the iPhones this mostly concerns it
+// opens, and where it does not the browser offers to save it, which is a
+// degraded view rather than the wrong action. Excluding it would penalise the
+// common case here to be tidy about the rare one.
+
+// ── [1.417] — a blocked tab keeps the file in hand ───────────────────────
+//
+// AC, 9 September 2026, on being told the message would say "try Download":
+// *"If the file downloaded already, why 'try download'?"*
+//
+// **He was right and the wording was covering for the design.** When a tab is
+// blocked, the file's BYTES have already come down — the whole slow part is
+// done — but nothing opened and nothing was saved. Sending the reader to the
+// Download button would fetch the identical file a second time and make them
+// wait again for something already sitting in memory.
+//
+// So the blob is KEPT, and the failed tile offers to save it from what is
+// already there. Instant, and no second request.
+//
+// **Not saved automatically**, which was the other option and is the bug AC
+// reported in the first place: the tool deciding between looking and saving on
+// his behalf, invisibly. The reader asked to view it; if that cannot happen
+// they are told, and the save is theirs to press.
+var ATT_HELD = {};   // attachmentId -> {url, fileName}
+function _attHoldBlob(id, url, fileName){
+  if(!id) return;
+  ATT_HELD[id]={url:url, fileName:fileName||'attachment'};
+}
+function _attSaveHeld(id){
+  var held=ATT_HELD[id]; if(!held) return;
+  var a=document.createElement('a');
+  a.href=held.url; a.download=held.fileName;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  // The offer is spent: the file is on their device and the red tile has
+  // nothing left to say. Its state goes with it.
+  delete ATT_HELD[id];
+  // The blob outlived its 60-second sweep because it was held; now that the
+  // file is on their device, the memory goes back.
+  setTimeout(function(){ try{ URL.revokeObjectURL(held.url); }catch(e){} }, 5000);
+  actClear('att:'+id);
+  render();
+}
+
+function _attCanView(mimeType, fileName){
+  var m=String(mimeType||'').toLowerCase();
+  if(m.indexOf('image/')===0) return true;
+  if(m.indexOf('audio/')===0) return true;
+  if(m==='application/pdf') return true;
+  if(m==='text/plain') return true;
+  // A row written before mimeType was stored, or a browser that sent nothing:
+  // fall back to the extension rather than calling everything undownloadable.
+  if(!m){
+    var ext=String(fileName||'').toLowerCase().split('.').pop();
+    return ['jpg','jpeg','png','gif','webp','heic','heif','pdf','txt',
+            'mp3','m4a','wav','aac','ogg'].indexOf(ext)>-1;
+  }
+  return false;
+}
+
+function klOpenAttachment(id, mode){
+  // [1.417] — keyed by the file; see the teacher portal's note.
+  if(actBusy('att:'+id)) return;
+  actStart('att:'+id, KL_ATT_OPENING);
   fapi('getAttachment', {attachmentId:id}, function(e,r){
-    if(e||!r||!r.ok||!r.dataBase64){ showMsg((r&&r.error)||'Could not open that file.','e'); return; }
+    if(e||!r||!r.ok||!r.dataBase64){
+      actFail('att:'+id,(r&&r.error)||KL_STATE_COPY.attachOpenFailed); render(); return;
+    }
+    actClear('att:'+id);
     try{
       // Decoded by index rather than by spreading a ten-million-character
       // string, which is what makes a phone drop the tab.
       var bin=atob(r.dataBase64), len=bin.length, bytes=new Uint8Array(len);
       for(var i=0;i<len;i++) bytes[i]=bin.charCodeAt(i);
       var url=URL.createObjectURL(new Blob([bytes],{type:r.mimeType||'application/octet-stream'}));
-      var w=window.open(url,'_blank');
-      // A blocked pop-up is the COMMON case on a phone, which is where most
-      // parents read this. A file that silently does not open is worse than
-      // one that downloads, so this falls back to a real click on a real
-      // anchor — a user gesture the browser allows.
-      if(!w){
-        var a=document.createElement('a');
-        a.href=url; a.target='_blank'; a.rel='noopener'; a.download=r.fileName||'attachment';
-        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      // ── [1.417] — the reader chose, so do what they chose ──────────────
+      //
+      // ~~A blocked pop-up is the COMMON case on a phone... so this falls back
+      // to a real click on a real anchor.~~ **That fallback is the bug AC
+      // reported**: *"nothing tells the user what's happening, but the file is
+      // downloading."* He had asked for neither. The tool decided between
+      // looking and saving on his behalf, invisibly, and on a phone the
+      // blocked pop-up made that the usual outcome.
+      //
+      // It matters most in THIS portal, where a parent on a phone is the
+      // reader the arrangement was designed for. A blocked tab now says so on
+      // the tile; silently doing something else is the fault, not the remedy.
+      if(mode==='download'){
+        var dl=document.createElement('a');
+        dl.href=url; dl.download=r.fileName||'attachment';
+        document.body.appendChild(dl); dl.click(); document.body.removeChild(dl);
+      } else {
+        var w=window.open(url,'_blank');
+        if(!w){ _attHoldBlob(id, url, r.fileName); actFail('att:'+id, KL_STATE_COPY.attachPopupBlocked); render(); }
       }
-      setTimeout(function(){ try{ URL.revokeObjectURL(url); }catch(e){} }, 60000);
-    }catch(err){ showMsg('Could not open that file.','e'); }
+    // [1.417] — NOT while the file is being held for a blocked tab. The blob
+      // is the whole point of that offer: revoked underneath it, "Download file"
+      // would click an anchor pointing at nothing and fail silently, which is
+      // worse than never offering it. Held blobs are revoked when the save is
+      // taken, in _attSaveHeld.
+      setTimeout(function(){
+        if(id && ATT_HELD[id]) return;
+        try{ URL.revokeObjectURL(url); }catch(e){}
+      }, 60000);
+    }catch(err){ actFail('att:'+id, KL_STATE_COPY.attachOpenFailed); render(); }
   });
 }
 
@@ -3914,15 +4277,27 @@ function _klLocLabel(raw){
 //
 // selfReleaseText is likewise the wording THEY agreed to ([1.107]), not the
 // current live wording — the same rule, one level down.
+// ── [1.421] — the self-release record, formatted like the acceptance ─────
+//
+// AC, 8 September 2026: *"Self release should be formatted the same way as the
+// acceptance text with the checkbox, etc."*
+//
+// It was a bold heading over a paragraph, while the acceptance beside it was a
+// green banner over a ticked, disabled checkbox. **Two records of the same
+// kind — a thing this family agreed to, and when — drawn as two different
+// kinds of thing.** They are the same shape now.
+//
+// The checkbox is ticked and disabled for the same reason the acceptance's is:
+// it is a RECORD of something already agreed, not a control. Nothing here can
+// be changed by pressing it.
 function _rPolicySelfRelease(s){
   if(!s || !s.selfReleaseGrantedAt) return '';
-  return '<div style="margin-top:1rem;border-top:1px solid var(--border);padding-top:1rem">'+
-    '<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:.4rem">'+
-    'Self-Release Authorized on '+esc(_fmtFamilyTs(s.selfReleaseGrantedAt))+' at '+
-    esc(_fmtFamilyTime(s.selfReleaseGrantedAt))+'</div>'+
-    '<div style="font-size:12px;color:var(--text2);line-height:1.55">'+
-    esc(s.selfReleaseText||_selfReleaseText())+'</div>'+
-    '</div>';
+  var _srId='sr-view-'+esc(s.studentId||'');
+  return '<div class="msg ms" style="margin-top:.9rem">\u2713 Self-Release Authorized on '+
+      esc(_fmtFamilyTs(s.selfReleaseGrantedAt))+' at '+esc(_fmtFamilyTime(s.selfReleaseGrantedAt))+'.</div>'+
+    '<div class="agree-box" style="margin-top:.5rem;border-color:var(--green);background:rgba(255,255,255,.5)">'+
+      '<input type="checkbox" id="'+_srId+'" checked disabled>'+
+      '<label class="agree-lbl" for="'+_srId+'">'+esc(s.selfReleaseText||_selfReleaseText())+'</label></div>';
 }
 
 function _rHomeSelfRelease(s){
@@ -4549,6 +4924,14 @@ function rHomeContactDetails(){
 // for the live checkbox this is a frozen copy of. Shared by
 // _klEnrollmentFactsHtml() (the Home toggle) and rEnrollment() (the
 // Enrollment tab) so the two can't drift into showing this two ways.
+// [1.421] — AC's wording, 8 September 2026, verbatim. The header and both
+// section names are his; they are the only new words in the restructure.
+var KL_ENR_COPY = {
+  detailsHeader:   'Your Enrollment Proposal and Studio Policies',
+  sectionProposal: 'Enrollment Proposal',
+  sectionPolicies: 'Studio Policies'
+};
+
 function _klAckCheckboxHtml(s){
   var _ackShown=s.tcAcknowledgment||_tcAckText(isTruthy(s.needsManualInvoice));
   var _ackId='tc-ack-view-'+esc(s.studentId);
@@ -4557,34 +4940,35 @@ function _klAckCheckboxHtml(s){
     '<label class="agree-lbl" for="'+_ackId+'">'+esc(_ackShown)+'</label></div>';
 }
 
+// ── [1.421] — AC's order for the Show Details block ──────────────────────
+//
+// AC, 8 September 2026, with a screenshot: *"Under the hide details button
+// there should be a header 'Your Enrollment Proposal and Studio Policies'
+// followed by Enrollment Proposal section with details and pricing, then
+// Studio Policies section with the agreement banner w/timestamp and acceptance
+// text block with the checkbox, followed by the self release agreement banner
+// w/timestamp and text block with checkbox, followed by the studio policies."*
+//
+// **What it was:** acceptance banner, acceptance checkbox, self-release record,
+// then the details table, then pricing. So a parent opening "Show Details" to
+// check their child's lesson time met two legal records first and found the
+// facts underneath them.
+//
+// **His order puts the facts first and the records after**, which is the order
+// somebody actually reads in: what am I enrolled in, then what did I agree to.
+//
+// Two SECTIONS with headings, because the block is long enough that a parent
+// scrolling needs to know which half they are in — that is what "section" in
+// his sentence is doing.
+//
+// The header and both section names are his words, verbatim.
 function _klEnrollmentFactsHtml(s){
-  var h='';
-  if(s.tcAcceptedAt||s.tcAcceptedName){
-    h+='<div class="msg ms">\u2713 Proposal and policies accepted'+
-      (s.tcAcceptedName?' by '+esc(s.tcAcceptedName):'')+
-      (s.tcAcceptedAt?' on '+esc(_fmtFamilyTs(s.tcAcceptedAt))+' at '+esc(_fmtFamilyTime(s.tcAcceptedAt)):'')+'.</div>';
-    h+=_klAckCheckboxHtml(s);
-  }
-  // ── [1.397] — the self-release record sits WITH the acceptance record ──
-  //
-  // AC, 8 September 2026: "the self release acceptance banner with timestamp
-  // and agreement language are not showing for students who have accepted.
-  // This was supposed to appear with the policies, not as a separate thing,
-  // when a parent clicks 'show details' on the policies in the family page."
-  //
-  // It was showing — under the OTHER disclosure. [1.299] put it under Review
-  // Policies, beside the policy text; this is the Show Details block, beside
-  // the acceptance record, and that is the one AC opened looking for it.
-  //
-  // It is rendered in ONE place, not both: an enrolled child's card carries
-  // both toggles and they can be open at the same time, so calling it from
-  // each would draw the same record twice on one screen. Placement supersedes
-  // [1.299]; the record it draws is unchanged.
-  //
-  // Outside the acceptance guard on purpose — self-release is a fact about the
-  // child, not about one enrollment, and a granted child whose acceptance was
-  // cleared by a new proposal still granted it.
-  h+=_rPolicySelfRelease(s);
+  var h='<div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:.7rem">'+
+    esc(KL_ENR_COPY.detailsHeader)+'</div>';
+
+  // ── 1. Enrollment Proposal — the details, then the pricing ─────────────
+  h+='<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;'+
+    'color:var(--text3);margin-bottom:.35rem">'+esc(KL_ENR_COPY.sectionProposal)+'</div>';
   var locMap={studio:'at Keylab','in-home':'In-home',virtual:'Virtual'};
   var rows=[
     // Repeated here even though the card above already names the child --
@@ -4606,7 +4990,38 @@ function _klEnrollmentFactsHtml(s){
   // standing monthly price when s.isProrated is set \u2014 never one number
   // alone for a family who paid a prorated first month (AC, 26 Aug).
   h+=_fmtPriceBox(s,false);
+  // [1.339] — the adjustments sit WITH the pricing, which is AC's placement:
+  // they are the explanation of the number above them, not a section.
   h+=_klAdjustmentsHtml(s);
+
+  // ── 2. Studio Policies — the records, in his order ─────────────────────
+  h+='<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;'+
+    'color:var(--text3);margin:1.1rem 0 .35rem">'+esc(KL_ENR_COPY.sectionPolicies)+'</div>';
+  if(s.tcAcceptedAt||s.tcAcceptedName){
+    h+='<div class="msg ms">\u2713 Proposal and policies accepted'+
+      (s.tcAcceptedName?' by '+esc(s.tcAcceptedName):'')+
+      (s.tcAcceptedAt?' on '+esc(_fmtFamilyTs(s.tcAcceptedAt))+' at '+esc(_fmtFamilyTime(s.tcAcceptedAt)):'')+'.</div>';
+    h+=_klAckCheckboxHtml(s);
+  }
+  // ── [1.397] — the self-release record sits WITH the acceptance record ──
+  //
+  // AC, 8 September 2026: "the self release acceptance banner with timestamp
+  // and agreement language are not showing for students who have accepted.
+  // This was supposed to appear with the policies, not as a separate thing."
+  //
+  // It is rendered in ONE place, not both: an enrolled child's card carries
+  // both toggles and they can be open at the same time, so calling it from
+  // each would draw the same record twice on one screen.
+  //
+  // Outside the acceptance guard on purpose — self-release is a fact about the
+  // child, not about one enrollment, and a granted child whose acceptance was
+  // cleared by a new proposal still granted it.
+  h+=_rPolicySelfRelease(s);
+  // [1.421] — and the policies themselves, last, which is where his sentence
+  // ends. The SNAPSHOT where there is one: what this family accepted, not
+  // what the studio publishes today ([1.107], [1.270]).
+  h+='<div style="margin-top:.9rem">'+
+    _klPolicySnapshotHtml(s, s.lessonLocation==='in-home')+'</div>';
   return h;
 }
 
@@ -4965,6 +5380,28 @@ function rHomeOnePage(){
     // un-overlaid snapshot) fixes that on the card; removing the
     // duplicate here means there's nothing left to drift.
     '</div>';
+
+  // ── [1.426] — adding a second parent, put back ─────────────────────────
+  //
+  // AC, 8 September 2026: *"There is no way on the family page to add a 2nd
+  // parent for a family with an enrolled student, so I can't test the two
+  // parent messaging."*
+  //
+  // **It was not a missing feature. It was a regression.** The whole block —
+  // invite, resend, and "is a co-manager for this account" — has existed all
+  // along in `_rHomeParent2()`, and it is called from `rHome()`, which is the
+  // page a family sees WHILE THEY ARE STILL ENROLLING. The first line of
+  // rHome() sends an enrolled family to this function instead, so from the
+  // moment their child was enrolled the block stopped being drawn.
+  //
+  // **[1.36]'s one-page rebuild dropped it**, exactly as it dropped the
+  // enrollment record that had to be put back afterwards. Same rebuild, same
+  // shape of loss: a block that was not on anybody's list because nobody had
+  // noticed it was gone.
+  //
+  // It sits with "Update your contact info" because that is what it is — the
+  // other person on this account — and at the bottom, where it was.
+  h+=_rHomeParent2();
 
   return h;
 }
@@ -7011,25 +7448,34 @@ function _rPolicyTextBuiltIn(isInHome){
 // policy snapshot text. Only reachable post-acceptance (button only renders when
 // tcPolicySnapshot exists), so tcAcceptedAt/tcAcceptedName are always present here.
 var _policyPdfEl = null;
+// ── [1.421] — the PDF is the BLOCK, not a subset of it ───────────────────
+//
+// AC, 9 September 2026, asked whether the downloaded PDF looked like the Show
+// Details block. It did not, and what it left out was the part worth keeping:
+//
+//   - **the self-release record**, entirely — an authorization about a child
+//     arriving and leaving alone, which existed nowhere the family could keep
+//   - **the acceptance text they ticked.** It said WHO accepted and WHEN, and
+//     never WHAT they had agreed to
+//   - **the pricing**, and with it the discounts and teacher absences, which
+//     is the exact loss [1.339] was built to stop
+//   - the start date
+//
+// **AC: "agreed, mirror the blocks... just keep it all together."** So the PDF
+// renders `_klEnrollmentFactsHtml` — the same function the screen uses — and
+// cannot drift from it again. Rebuilding the same content a second time here
+// is how it came to differ in the first place.
+//
+// **The old meta rows are gone, not moved.** They said "Accepted by X on DATE"
+// directly above a banner inside the block saying the same thing. That is
+// [1.240]'s standing rule — AC, 3 September: "Don't say Hi teacher name twice
+// like it does in some of the templates."
+//
+// The header stays: a saved document needs to say what it is and who it is
+// from, which a screen inside the portal does not.
 function _downloadPolicyPdf(stuId){
   var stu = students.filter(function(s){ return s.studentId === stuId; })[0];
   if (!stu || !stu.tcPolicySnapshot) return;
-  var fam = families.filter(function(f){ return f.familyId === stu.familyId; })[0] || {};
-  var locMap = {studio:'at Keylab', 'in-home':'In-home', virtual:'Virtual'};
-  var detailRows = [
-    ['Student', stu.studentName],
-    ['Instrument', stu.instrument],
-    ['Teacher', stu.teacher],
-    ['Day', stu.day],
-    ['Time', stu.time],
-    ['Duration', _effDur(stu.durationBase,stu.durationExtra) ? _effDur(stu.durationBase,stu.durationExtra) + ' minutes' : null],
-    ['Location', locMap[stu.lessonLocation] || stu.lessonLocation || null]
-  ];
-  var detailsHtml = '';
-  detailRows.forEach(function(row){
-    if (!row[1]) return;
-    detailsHtml += '<div class="pdf-detail-row"><span class="pdf-detail-lbl">' + esc(row[0]) + '</span><span class="pdf-detail-val">' + esc(row[1]) + '</span></div>';
-  });
 
   if (_policyPdfEl && _policyPdfEl.parentNode) _policyPdfEl.parentNode.removeChild(_policyPdfEl);
   var wrap = document.createElement('div');
@@ -7040,14 +7486,8 @@ function _downloadPolicyPdf(stuId){
       '<div class="pdf-title">Keylab Children\u2019s Lesson Policies</div>' +
       '<div class="pdf-subtitle">Accepted policy record</div>' +
     '</div>' +
-    '<div class="pdf-meta">' +
-      '<div class="pdf-meta-row"><span class="pdf-meta-lbl">Accepted by</span><span class="pdf-meta-val">' + esc(stu.tcAcceptedName || '') + '</span></div>' +
-      '<div class="pdf-meta-row"><span class="pdf-meta-lbl">Date &amp; time</span><span class="pdf-meta-val">' + esc(_fmtFamilyTs(stu.tcAcceptedAt || '')) + ' at ' + esc(_fmtFamilyTime(stu.tcAcceptedAt || '')) + '</span></div>' +
-    '</div>' +
-    '<div class="pdf-section-lbl">Enrollment Details</div>' +
-    '<div class="pdf-details">' + detailsHtml + '</div>' +
-    '<div class="pdf-section-lbl">Policies</div>' +
-    '<div class="pdf-policy-text">' + stu.tcPolicySnapshot + '</div>';
+    // The block itself, from the one function that defines it.
+    _klEnrollmentFactsHtml(stu);
   document.body.appendChild(wrap);
   _policyPdfEl = wrap;
   document.body.classList.add('printing-policy-pdf');

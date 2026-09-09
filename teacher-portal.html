@@ -766,6 +766,64 @@ input[type=checkbox]{width:13px;height:13px;padding:0;margin:0;border:0;border-r
 .att-x{background:none;border:0;font-size:14px;line-height:1;cursor:pointer;padding:2px 5px;
   color:var(--text4);font-family:inherit}
 .att-x:hover{color:var(--red)}
+/* ── [1.465] — the library picker, INSIDE the composer ──────────────────
+   AC's fourth saving: "it opens inside the composer, above the box, and a
+   file becomes a chip. Not a screen, not a dialog." So it is a panel in the
+   flow of the composer, and pressing a file leaves a chip the composer
+   already knows how to draw ([1.277]'s, with its × already on it).
+   Its own ground, DARKER than the panel it sits in — [1.451]'s finding: the
+   rows inside are white, so what makes a group of them read as contained is
+   the panel and not a border. */
+.lib-panel{margin:0 0 8px;padding:9px 10px;border:1px solid var(--border2);
+  border-radius:var(--r);background:var(--bg5)}
+.lib-hd{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+.lib-hd-t{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;
+  color:var(--text2)}
+.lib-x{margin-left:auto;background:none;border:0;font-size:15px;line-height:1;cursor:pointer;
+  padding:2px 5px;color:var(--text4);font-family:inherit}
+.lib-x:hover{color:var(--red)}
+.lib-search{width:100%;padding:6px 9px;border:1px solid var(--border2);border-radius:var(--r);
+  font-family:inherit;font-size:12.5px;background:#fff}
+.lib-tags{display:flex;flex-wrap:wrap;gap:5px;padding:7px 0 0}
+.lib-tag{padding:3px 9px;border:1px solid var(--border2);border-radius:999px;background:#fff;
+  font-family:inherit;font-size:11.5px;cursor:pointer;color:var(--text2)}
+.lib-tag.on{border-color:var(--acc);background:var(--acc);color:#fff;font-weight:600}
+.lib-tag.priv{border-style:dashed}
+/* The clear is beside the tags it clears, and only while there is something to
+   clear — [1.465]'s "one press clears it". */
+.lib-clear{padding:3px 9px;border:1px solid var(--border2);border-radius:999px;
+  background:none;font-family:inherit;font-size:11.5px;cursor:pointer;color:var(--text4)}
+.lib-clear:hover{color:var(--red)}
+.lib-group{margin-top:9px}
+.lib-group-hd{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;
+  color:var(--text2);margin-bottom:4px}
+.lib-list{max-height:190px;overflow-y:auto;display:flex;flex-direction:column;gap:3px}
+.lib-row{display:flex;align-items:center;gap:7px;padding:5px 7px;border:1px solid var(--border2);
+  border-radius:var(--r);background:#fff}
+.lib-pick{flex:1;display:flex;align-items:center;gap:7px;min-width:0;background:none;border:0;
+  padding:0;font-family:inherit;font-size:12.5px;text-align:left;cursor:pointer;color:var(--text)}
+.lib-pick:hover .lib-name{text-decoration:underline}
+.lib-kind{font-size:9.5px;font-weight:700;letter-spacing:.04em;color:var(--text4);
+  border:1px solid var(--border2);border-radius:3px;padding:1px 3px;flex:none}
+.lib-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+.lib-meta{font-size:10.5px;color:var(--text5);flex:none}
+.lib-mini{background:none;border:0;padding:2px 5px;font-family:inherit;font-size:11px;
+  color:var(--text4);cursor:pointer}
+.lib-mini:hover{color:var(--acc)}
+.lib-mini.bad:hover{color:var(--red)}
+.lib-empty{font-size:12px;color:var(--text4);padding:3px 0}
+/* Managing one file: rename, tags, and the two removals. Inline under its own
+   row, because it is about that file and a second screen is a defect. */
+.lib-edit{margin-top:4px;padding:7px 8px;border:1px solid var(--border2);border-radius:var(--r);
+  background:var(--bg5)}
+.lib-edit input{width:100%;padding:5px 8px;border:1px solid var(--border2);border-radius:var(--r);
+  font-family:inherit;font-size:12.5px;background:#fff;margin-bottom:6px}
+.lib-edit-acts{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.lib-warn{font-size:11.5px;color:var(--red);font-weight:600;margin-top:5px}
+/* [1.465] — the button that opened the panel LOOKS pressed. A panel with no
+   visible cause is the fault [1.178] names: something appeared and nothing on
+   screen says why, or which control closes it again. */
+.btn.lib-on{border-color:var(--acc);background:var(--acc);color:#fff}
 /* [1.276] — unsend and edit.
    The confirm strip that used to live here is GONE, and so are its rules.
    Unsend is one press: AC set the window to ten seconds against Gmail's,
@@ -2521,6 +2579,10 @@ function rMessagingLocked(){
 // recorded here because it is his call and should not be "fixed" by someone
 // later reading the name literally.
 var CLOSED_OPEN = false;   // AC's browsing areas start collapsed — see below.
+// [1.457] — My Students starts shut for the same reason Archived does: the
+// conversations above it are the work, and this is reference. The COUNT shows
+// either way, so the area never vanishes ([1.178]).
+var STUDENTS_OPEN = false;
 // KIDS_OPEN was removed by [1.409], 8 September 2026 — AC: "Remove the 'lesson
 // phases and details' from the teacher portal … Just list everything." There is
 // no collapsed state left to hold. Admin keeps its own; his instruction named
@@ -2820,6 +2882,50 @@ function rSectionedRoster(){
   // staff list has disappeared in teacher portal. There is no way for a
   // teacher to message admin." Somebody who does not know who to ask has to
   // SEE that list, not guess a name into a search box.
+  // ── [1.457] — MY STUDENTS, and it reverses [1.273] on AC's instruction ──
+  //
+  // **AC, 9 September 2026:** *"Teachers should have a list of My Students to
+  // be able to see all of their enrolled students. Click a student, start a
+  // message to the family."*
+  //
+  // **[1.273] removed a list from this exact place, and he asked for that
+  // too** — 4 September: *"getting rid of the full list is good there also. A
+  // teacher should be able to search by student or parent."* So this is a
+  // reversal, and the reason the old one failed is the reason this one will
+  // not: **it was a list of FAMILIES.** His own sentence in that same message
+  // says why — *"Teachers may not know the name of the parent"* — and a list
+  // of names a teacher does not recognise is a wall. **A list of the children
+  // they teach is the thing they think in**, which is also why [1.408] made
+  // the search return one row per student.
+  //
+  // **The data was already here.** Every family this teacher teaches is
+  // already a roster row, seeded from their students whether or not anybody
+  // has written — so this adds no request and no state. It is the same rows,
+  // read the way a teacher reads them.
+  //
+  // **Collapsible, with the count always showing.** [1.178]/[1.260]: the area
+  // never vanishes, so the page somebody learns is the page they get. But it
+  // is forty rows for a busy teacher and the conversations above it are the
+  // work — so it starts SHUT, like Archived, and for the same reason: this is
+  // reference, not a list of things owed. **AC's to flip if he wants it open.**
+  var _stuRows=[];
+  (THREADS.list||[]).forEach(function(t){
+    if(t.kind!=='family') return;
+    (t.students||[]).forEach(function(st){
+      _stuRows.push({fid:t.id, row:t, stu:st});
+    });
+  });
+  _stuRows.sort(function(a,b){
+    return String(a.stu.studentName||'').localeCompare(String(b.stu.studentName||''));
+  });
+  h+='<div class="sep" onclick="STUDENTS_OPEN=!STUDENTS_OPEN;render()">'+
+     '<span class="caret">'+(STUDENTS_OPEN?'▾':'▸')+'</span>'+esc(TCH_COPY.sectionStudents)+
+     '<span class="sepc">'+_stuRows.length+'</span></div>';
+  if(STUDENTS_OPEN){
+    h+=_stuRows.length
+      ? '<div class="thread-list">'+_stuRows.map(rStudentRow).join('')+'</div>'
+      : '<div class="zone-empty">'+esc(TCH_COPY.noStudents)+'</div>';
+  }
   // Closed now holds only what is actually closed, so the heading is true.
   // Still collapsed to start and still carrying its count while collapsed —
   // it says what it holds rather than looking empty ([1.178]).
@@ -3035,6 +3141,40 @@ function _rMark(text, q){
   }
   return res;
 }
+
+// [1.457] — one STUDENT, as a teacher thinks of them: the child's name first,
+// then the facts that tell two children of the same name apart.
+//
+// Clicking opens the FAMILY's conversation — there is one per family, which is
+// [1.408]'s rule — **and carries the student with it**, so the About row is
+// already set. That is worth more than it looks: an unset student is the only
+// case in practice where a merge tag cannot fill in, which is the message AC
+// photographed going to a parent as "[studentFirst]" ([1.454]).
+function rStudentRow(x){
+  var st=x.stu||{}, t=x.row||{};
+  var _what=[st.duration ? st.duration + ' min' : '', st.instrument]
+    .filter(Boolean).join(' ');
+  var _when=[st.day, st.time].filter(Boolean).join(' ');
+  var facts=[_what, _when].filter(Boolean).join(' - ');
+  var parents=[t.parent1Name, t.parent2Name].filter(Boolean).join(' & ');
+  return '<div class="thread-row age-rest" onclick="openStudentRow(\''+esc(x.fid)+'\',\''+
+      esc(st.studentId||'')+'\')">'+
+    '<div class="thread-row-main">'+
+    '<div class="r-parent">'+esc(st.studentName||'')+
+      (facts?' <span class="dir">\u00b7 '+esc(facts)+'</span>':'')+'</div>'+
+    (parents?'<div class="thread-row-preview">'+esc(parents)+'</div>':'')+
+    '</div></div>';
+}
+function openStudentRow(familyId, studentId){
+  var t=(THREADS.list||[]).filter(function(x){ return x.kind==='family' && x.id===familyId; })[0];
+  if(!t) return;
+  // Set BEFORE the open: openFamilyThread rebuilds ACTIVE_THREAD, and a
+  // student chosen afterwards would be chosen on an object about to be
+  // replaced.
+  _pendingStudentId=studentId||'';
+  openFamilyThread(t.id, t.parent1Name, t.parent2Name);
+}
+var _pendingStudentId='';
 
 function rZone(label, n){
   return '<div class="zone">'+esc(label)+
@@ -3487,6 +3627,11 @@ function loadThreads(silent){
     // loadSavedLinks(), so the poll running every few seconds costs one call.
     loadSavedLinks();
     loadSavedTpls();   // [1.127] — warmed the same way and for the same reason
+    // [1.465] — and the library, for the same reason again and with more at
+    // stake: the whole promise of attaching from a shelf is that there is "no
+    // upload wait at all", which a two-second fetch on the first press would
+    // spend before the teacher had picked anything.
+    loadLibrary();
     MSG_LOCK.locked = _tIsTruthy(r.messagingLocked);
     MSG_LOCK.msg = r.messagingLockedMsg||'';
     // The deep link from a notification email, spent the moment the roster
@@ -3546,6 +3691,17 @@ function openFamilyRow(familyId, focusReview){
 // stay on one child, and asking again every time would be friction with no new
 // information.
 function _threadStudentId(t){
+  // [1.457] — a student clicked in My Students is the answer, and it is
+  // consumed here rather than set on the thread by the opener: openFamilyThread
+  // REBUILDS ACTIVE_THREAD, so anything written on the old object is thrown
+  // away. Consumed once, so it cannot follow a teacher into the next thread
+  // they open — which is [1.276]'s rule about an amendment belonging to the
+  // thread it was started in, applied to a choice.
+  if(_pendingStudentId){
+    t.studentId=_pendingStudentId;
+    _pendingStudentId='';
+    return t.studentId;
+  }
   if(t.studentId!==undefined) return t.studentId;
   var last='';
   (t.messages||[]).forEach(function(m){ if(m.studentId) last=m.studentId; });
@@ -3872,7 +4028,7 @@ function rFamilyThread(){
   var _upBusy=_attAnyUploading();
   var sendBtn=AMEND.kind==='edit' ? rEditActions() : (t.sending || actBusy('send')
     ?'<button class="btn btn-p" disabled><span class="spin">↻</span></button>'
-    :rAttachButton()+
+    :rAttachButton()+rLibraryButton()+
       (_upBusy
         ? '<button class="btn btn-p" disabled title="'+esc(TCH_COPY.sendBlockedUploading)+'">Send</button>'
         : '<button class="btn btn-p" onclick="sendFamilyMessage()">Send</button>')+
@@ -4109,7 +4265,30 @@ function markSeen(){
   api({action:'markMessageSeen', data:_threadKey(t,{})}, function(e,r){
     t.seenSending=false;
     if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not send that.','e'); render(); return; }
-    _refreshOpenThread();
+    // ── [1.461] — the note appears NOW, not after a second round trip ─────
+    //
+    // AC, 9 September 2026: *"clicking mark seen system message takes almost
+    // 8-10 seconds to appear in the chat, but should appear immediately."*
+    //
+    // **This called _refreshOpenThread() — a whole second fetch, to find out
+    // what it had just written.** Two round trips at [1.263]'s ~2s each, and
+    // more when the script is busy, for a row the server had already handed
+    // back every field of.
+    //
+    // **Same fault as [1.418] case 2**, and the third time this shape has been
+    // found: the screen already knows the answer and asks again anyway.
+    //
+    // Drawn from the SERVER'S answer, not from what was sent — the id and the
+    // text are its own, so the poll recognises the row rather than adding a
+    // second copy of it.
+    t.messages=(t.messages||[]).concat([{
+      messageId:r.messageId||'', sentAt:r.sentAt||Date.now(),
+      senderType:r.senderType||'teacher', senderId:r.senderId||TEACHER_ID,
+      senderName:r.senderName||TEACHER_NAME, messageText:r.text||'',
+      isAuto:'TRUE', noteKind:'seen'
+    }]);
+    _shouldScrollMsgList=true;
+    render();
   });
 }
 
@@ -4309,6 +4488,25 @@ function sendFamilyMessage(sendAt){
   var t=ACTIVE_THREAD;
   var _el=document.getElementById('family-composer');
   var html=_el?_composerClean(_el):(t.draft||'');
+  // ── [1.454] — a merge tag must never leave the building ────────────────
+  //
+  // AC's screenshot of a real parent's inbox, 9 September 2026:
+  // *"Here is [studentFirst]'s assignment for this week."*
+  //
+  // **[1.434] gave teachers pills that insert the TAG**, as plain text, and
+  // nothing ever substituted it. Templates were merged at INSERT time by
+  // tplUse(); a pill pressed straight into the composer went out as typed.
+  //
+  // Merged HERE, on the way out, because that is the last moment the answer is
+  // known — the child may be picked after the tag is inserted, and merging at
+  // insert would freeze whichever child was chosen first.
+  html=_tplMerge(html);
+  var _unfilled=_tplUnfilledTags(html);
+  if(_unfilled.length){
+    actFail('send', TCH_COPY.tagUnfilled.replace('{tags}',
+      _unfilled.map(function(x){ return TPL_TAG_LABELS[x]||x; }).join(', ')));
+    render(); return;
+  }
   var text=_composerPlain(html);
   // [1.277] — a message can be a file with nothing written on it, which is
   // most of why a teacher wants this at all: a photo of a page of music.
@@ -4407,7 +4605,18 @@ function sendFamilyMessage(sendAt){
       // [1.404] — the act is confirmed here, on the server's answer, not when
       // the button was pressed. A confirmation shown before the round trip is
       // a promise rather than a fact.
-      actDone('send', TCH_COPY.scheduledDone.replace('{when}', fmtMsgTime(Number(sendAt)||_schedJustSetAt)));
+      // [1.462] — NO DUPLICATE BANNER. AC, 9 September 2026, one line: *"no
+      // duplicate banner."*
+      //
+      // The scheduled bubble already reads "Message scheduled. It will be sent on
+      // …" — his own wording from [1.415] — so a banner saying it again is two
+      // things saying one thing, which is [1.455] in a different place. He timed the
+      // gap between them at 5-8 seconds and it was confusing at any gap.
+      //
+      // **The WORKING state stays**: it explains the wait, and nothing else does.
+      // **The FAILED state stays**: it is the one a person must act on. Only the
+      // second confirmation goes.
+      actClear('send');
       _schedInvalidate(); render(); return;
     }
     // [1.276] — ONE exception to the no-render rule above, and it is the whole
@@ -4514,7 +4723,7 @@ function rStaffThread(){
   }
   var sendBtn=AMEND.kind==='edit' ? rEditActions() : (t.sending
     ?'<button class="btn btn-p" disabled><span class="spin">↻</span></button>'
-    :rAttachButton()+'<button class="btn btn-p" onclick="sendStaffMessage()">Send</button>'+
+    :rAttachButton()+rLibraryButton()+'<button class="btn btn-p" onclick="sendStaffMessage()">Send</button>'+
       '<button type="button" class="btn btn-s" onclick="openSendLater()">'+esc(TCH_COPY.sendLater)+'</button>')+
     // Same row as the family thread, minus "Ask admin about this" — you do not
     // ask admin about a conversation you are already having with them.
@@ -5008,6 +5217,486 @@ function loadSavedLinks(){
     render();
   });
 }
+// ═══════════════════════════════════════════════════════════════════════
+// [1.465] — THE PICKER: the panel a teacher actually touches
+// ═══════════════════════════════════════════════════════════════════════
+//
+// [1.464] built everything behind this — the two shelves, the tag vocabulary,
+// the private tags, and attaching from a shelf with no upload. This is the part
+// a teacher presses, and AC's bar for it is a COUNT: *"Teachers primarily want
+// to attach something in as few steps as possible. Filter, click to add file to
+// message."*
+//
+// **The common case is two clicks** — press Library, press the file — and all
+// four of the savings scoped with him are what make it two:
+//
+//   1. THE FILTER REMEMBERS. A piano teacher filters "piano" every time they
+//      ever open this, so the panel opens with their last filter still on and
+//      one press clears it. **The single biggest saving**: two clicks instead
+//      of four, every time, for the life of the tool.
+//   2. TAGS NARROW THEMSELVES. A tag with nothing left under the current
+//      filter is not offered, so no combination of presses reaches an empty
+//      list. Filtering becomes something done by pressing rather than by
+//      remembering what is in there.
+//   3. RECENTLY SENT FIRST, before any filter is applied — the server's
+//      ordering ([1.465], `_libReachByFile_`), because what a teacher sends
+//      this week is usually what they sent last week.
+//   4. IT OPENS INSIDE THE COMPOSER, and a file becomes a chip. [1.277]'s
+//      chips already exist and already carry their ×, which is AC's *"click x
+//      on attached files to remove them"* with nothing new to build.
+//
+// **PLACEHOLDER STRINGS, flagged.** The labels AC settled himself are final —
+// Keylab Master Library, My Library, Save to Library, Library — and the rest of
+// the wording here is teacher-facing, which is his to write.
+var TLIB_COPY={
+  open:'Library',                       // AC's own word for the button
+  openTip:'Attach a file from your library',
+  head:'Attach from your library',
+  close:'Close',
+  search:'Search your files',
+  clear:'Clear filter',
+  mine:'My Library',                    // AC's label, final
+  studio:'Keylab Master Library',       // AC's label, final
+  emptyMine:'Nothing in your library yet. Add a file to a message and press Save to Library.',
+  emptyStudio:'Nothing in the Keylab Master Library yet.',
+  emptyFiltered:'No files match that.',
+  attaching:'Attaching…',
+  attachFailed:'That file could not be attached.',
+  save:'Save to Library',               // AC's own phrase, final
+  saving:'Saving to your library…',
+  saved:'Saved to your library.',
+  saveFailed:'That file could not be saved to your library.',
+  manage:'Edit',
+  renameGo:'Rename',
+  renamed:'Renamed.',
+  renameFailed:'That file could not be renamed.',
+  privatePh:'Your own tag',
+  privateAdd:'Add',
+  unshelve:'Remove from my library',
+  unshelved:'Removed from your library.',
+  del:'Delete file',
+  delAsk:'Delete this file for good?',
+  delReach:'It will disappear from {n} conversation(s) it was sent to.',
+  delReachNone:'It has not been sent to anyone.',
+  delGo:'Delete it',
+  delBack:'Keep it',
+  deleted:'Deleted.',
+  delFailed:'That file could not be deleted.',
+  sentCount:'sent to {n}'
+};
+
+// ── State ───────────────────────────────────────────────────────────────
+// In JS and not in the DOM, for the reason every other composer control here
+// is ([1.28], [1.32]): render() replaces #app every poll tick, so a filter left
+// in the DOM would vanish under the teacher's hand five seconds later.
+var LIB_OPEN=false;
+var LIB_FILTER=[];        // tag ids, and 'p:<word>' for a teacher's own words
+var LIB_Q='';
+var LIB_EDIT='';          // the attachmentId whose row is opened for editing
+var LIB_DEL='';           // the attachmentId a delete is being confirmed for
+var LIB_MINE=[], LIB_SHELF_STUDIO=[], LIB_TAGS=[];
+var _libLoaded=false, _libInFlight=false;
+
+// THE FILTER REMEMBERS — saving #1, and the only piece of this that survives a
+// reload. Kept where the drafts and the session are kept, and read through the
+// same try/catch: a browser with storage blocked gets a working picker with no
+// memory rather than a broken one.
+var LIB_FILTER_KEY='kl_teacher_libfilter';
+function _libFilterSave(){
+  try{ localStorage.setItem(LIB_FILTER_KEY, JSON.stringify(LIB_FILTER)); }catch(e){}
+}
+function _libFilterLoad(){
+  try{
+    var raw=JSON.parse(localStorage.getItem(LIB_FILTER_KEY)||'[]');
+    LIB_FILTER=Object.prototype.toString.call(raw)==='[object Array]'?raw:[];
+  }catch(e){ LIB_FILTER=[]; }
+}
+// A remembered filter is DROPPED when what it names is gone — a retired tag, or
+// a private word whose last file was deleted. Left standing it would filter
+// every file out, and the picker would open empty and read as broken by the one
+// feature meant to save time. Run after every load of the shelves.
+function _libFilterPrune(){
+  var live={};
+  LIB_TAGS.forEach(function(t){ live[t.tagId]=true; });
+  LIB_MINE.forEach(function(f){
+    (f.privateTags||[]).forEach(function(w){ live['p:'+w]=true; });
+  });
+  var kept=LIB_FILTER.filter(function(v){ return !!live[v]; });
+  if(kept.length!==LIB_FILTER.length){ LIB_FILTER=kept; _libFilterSave(); }
+}
+
+// ── Fetched BEFORE it is asked for ──────────────────────────────────────
+// [1.333]'s finding, and the reason it is worth repeating here: AC pressed Link
+// and waited five to ten seconds for a list that could have been fetched while
+// he was reading the thread. Both requests go out when the roster loads, so the
+// panel opens instantly — which is the whole promise of "no upload wait".
+function loadLibrary(force){
+  if(force){ _libLoaded=false; _libInFlight=false; }
+  if(_libLoaded || _libInFlight) return;
+  _libInFlight=true;
+  api({action:'getLibrary', data:{teacherId:TEACHER_ID, teacherToken:TOKEN}}, function(e,r){
+    _libInFlight=false; _libLoaded=true;
+    if(!e && r && r.ok){ LIB_MINE=r.mine||[]; LIB_SHELF_STUDIO=r.studio||[]; }
+    _libFilterPrune();
+    render();
+  });
+  api({action:'getTags', data:{teacherId:TEACHER_ID, teacherToken:TOKEN}}, function(e,r){
+    if(!e && r && r.ok) LIB_TAGS=r.tags||[];
+    _libFilterPrune();
+    render();
+  });
+}
+function _libRefresh(){ loadLibrary(true); }
+
+// ── Filtering: tags AND text, narrowing ONE list ────────────────────────
+// AC: *"Admin and teachers should be able to use both tags and text search at
+// the same time... like the tags 'scales' and 'piano' and text 'Hanon'."* Not a
+// tag view and a search view — the same list, narrowed by both at once.
+function _libTagName(id){
+  for(var i=0;i<LIB_TAGS.length;i++) if(LIB_TAGS[i].tagId===id) return LIB_TAGS[i].name||'';
+  return '';
+}
+function _libMatch(f, filter, q){
+  for(var i=0;i<filter.length;i++){
+    var v=filter[i];
+    if(v.indexOf('p:')===0){
+      if((f.privateTags||[]).indexOf(v.slice(2))<0) return false;
+    } else if((f.tags||[]).indexOf(v)<0) return false;
+  }
+  if(q){
+    // The tag NAMES are in the haystack too, so typing "scales" finds the file
+    // whether that word is on the tag or in the filename — a teacher should not
+    // have to know which.
+    var hay=String(f.fileName||'');
+    (f.tags||[]).forEach(function(t){ hay+=' '+_libTagName(t); });
+    (f.privateTags||[]).forEach(function(w){ hay+=' '+w; });
+    if(hay.toLowerCase().indexOf(q.toLowerCase())<0) return false;
+  }
+  return true;
+}
+function _libFiltered(list){
+  return (list||[]).filter(function(f){ return _libMatch(f, LIB_FILTER, LIB_Q); });
+}
+// TAGS NARROW THEMSELVES — saving #2. A tag is offered only if pressing it
+// would leave something on screen, so no sequence of presses can reach an empty
+// list. A tag already ON is always offered, or there would be no way to press
+// it off again.
+function _libOffered(){
+  var all=LIB_MINE.concat(LIB_SHELF_STUDIO);
+  var out=[];
+  LIB_TAGS.forEach(function(t){
+    if(LIB_FILTER.indexOf(t.tagId)>-1){ out.push({v:t.tagId, name:t.name, priv:false}); return; }
+    var next=LIB_FILTER.concat([t.tagId]);
+    for(var i=0;i<all.length;i++){
+      if(_libMatch(all[i], next, LIB_Q)){ out.push({v:t.tagId, name:t.name, priv:false}); return; }
+    }
+  });
+  // A teacher's own words, gathered from their own files — there is no
+  // vocabulary to read them from, which is the point of a private tag.
+  var seen={};
+  LIB_MINE.forEach(function(f){ (f.privateTags||[]).forEach(function(w){ seen[w]=true; }); });
+  Object.keys(seen).sort().forEach(function(w){
+    var v='p:'+w;
+    if(LIB_FILTER.indexOf(v)>-1){ out.push({v:v, name:w, priv:true}); return; }
+    var next=LIB_FILTER.concat([v]);
+    for(var i=0;i<LIB_MINE.length;i++){
+      if(_libMatch(LIB_MINE[i], next, LIB_Q)){ out.push({v:v, name:w, priv:true}); return; }
+    }
+  });
+  return out;
+}
+
+// ── Opening, filtering, closing ─────────────────────────────────────────
+function libToggle(){
+  LIB_OPEN=!LIB_OPEN;
+  LIB_EDIT=''; LIB_DEL='';
+  if(LIB_OPEN) loadLibrary();
+  render();
+}
+function libClose(){ LIB_OPEN=false; LIB_EDIT=''; LIB_DEL=''; render(); }
+function libTag(v){
+  var i=LIB_FILTER.indexOf(v);
+  if(i>-1) LIB_FILTER.splice(i,1); else LIB_FILTER.push(v);
+  _libFilterSave();
+  render();
+}
+function libClearFilter(){ LIB_FILTER=[]; LIB_Q=''; _libFilterSave(); render(); }
+// The search box keeps its own value in JS and redraws only the LIST, never
+// itself — [1.17]'s Pattern B, and the reason is the same: a full render()
+// while somebody is typing takes the caret with it.
+function libSearch(v){
+  LIB_Q=String(v||'');
+  var el=document.getElementById('lib-body');
+  if(el) el.innerHTML=rLibraryBody();
+}
+
+function _libFind(id){
+  var all=LIB_MINE.concat(LIB_SHELF_STUDIO);
+  for(var i=0;i<all.length;i++) if(all[i].attachmentId===id) return all[i];
+  return null;
+}
+
+// ── ATTACHING, which is the payoff ──────────────────────────────────────
+// AC: *"press Library, pick, and it attaches with no upload wait at all — the
+// file is already in Drive."* The chip is [1.277]'s, so it removes the same
+// way, and Send waits on it the same way — one shape for a file that came off a
+// shelf and a file that came off a phone.
+function libAttach(id){
+  if(ATT_PENDING.length >= ATT_MAX_FILES){ showMsg(TCH_COPY.attachTooMany,'e'); return; }
+  var f=_libFind(id); if(!f) return;
+  var rec={tempId:'t'+Date.now()+Math.random(), fileName:f.fileName, mimeType:f.mimeType,
+           sizeBytes:f.sizeBytes, uploading:true, attachmentId:''};
+  ATT_PENDING.push(rec); ATT_BUSY++;
+  // The panel stays OPEN. A teacher attaching three pieces of music should not
+  // have to press Library three times, and closing it would be the tool
+  // deciding they are finished.
+  render();
+  api({action:'attachFromLibrary', data:{attachmentId:id, teacherId:TEACHER_ID, teacherToken:TOKEN}},
+  function(e,r){
+    if(e||!r||!r.ok||!r.attachment){ _attFail(rec,(r&&r.error)||TLIB_COPY.attachFailed); return; }
+    rec.uploading=false;
+    rec.attachmentId=r.attachment.attachmentId;
+    rec.fileName=r.attachment.fileName;
+    ATT_BUSY--; render();
+  });
+}
+
+// ── SAVE TO LIBRARY ─────────────────────────────────────────────────────
+// The other half of AC's design, and the one that means a teacher never has to
+// think about building a library: they send this week's scales, press Save, and
+// it is there next week.
+//
+// **A teacher may keep what a family sent them** — AC overturned my rule
+// against it ([1.464]) and was right: they can already download it, so refusing
+// only pushed the file out of the tool.
+var LIB_KEPT={};   // attachmentIds this page has shelved, so the offer is not made twice
+function libSave(attachmentId){
+  if(actBusy('lib:'+attachmentId)) return;
+  actStart('lib:'+attachmentId, TLIB_COPY.saving);
+  api({action:'setLibrary', data:{attachmentId:attachmentId, teacherId:TEACHER_ID, teacherToken:TOKEN}},
+  function(e,r){
+    if(e||!r||!r.ok){ actFail('lib:'+attachmentId,(r&&r.error)||TLIB_COPY.saveFailed); return; }
+    LIB_KEPT[attachmentId]=true;
+    actDone('lib:'+attachmentId, TLIB_COPY.saved);
+    _libRefresh();
+  });
+}
+function _libAlready(attachmentId){
+  if(LIB_KEPT[attachmentId]) return true;
+  for(var i=0;i<LIB_MINE.length;i++) if(LIB_MINE[i].attachmentId===attachmentId) return true;
+  return false;
+}
+// The control, beside the file it is about — [1.417]'s rule, and it is why this
+// is a function rather than a line copied into the chip and the tile.
+function rLibSave(attachmentId){
+  if(!attachmentId) return '';
+  if(_libAlready(attachmentId)) return '';
+  return '<button type="button" class="lib-mini" onclick="event.stopPropagation();libSave(\''+
+    esc(attachmentId)+'\')">'+esc(TLIB_COPY.save)+'</button>';
+}
+
+// ── MANAGING: rename, tags, and the two removals ────────────────────────
+// AC asked for rename and delete and for nothing else: *"no moving between
+// folders, no sharing, no permissions. Those are what go wrong and none of them
+// is a teacher's job."*
+//
+// **Removing and deleting are two different acts** and both are offered,
+// because they answer two different questions: taking a file off a shelf
+// withholds nothing from anybody, and deleting it takes it out of every
+// conversation it was ever sent to.
+function libEdit(id){ LIB_EDIT = (LIB_EDIT===id?'':id); LIB_DEL=''; render(); }
+function libRename(id){
+  var el=document.getElementById('lib-rn-'+id);
+  var name=el?el.value:'';
+  if(!String(name||'').trim()){ showMsg(TLIB_COPY.renameFailed,'e'); return; }
+  actStart('lib:'+id, TLIB_COPY.saving);
+  api({action:'renameLibraryFile', data:{attachmentId:id, fileName:name,
+       teacherId:TEACHER_ID, teacherToken:TOKEN}}, function(e,r){
+    if(e||!r||!r.ok){ actFail('lib:'+id,(r&&r.error)||TLIB_COPY.renameFailed); return; }
+    actDone('lib:'+id, TLIB_COPY.renamed);
+    LIB_EDIT='';
+    _libRefresh();
+  });
+}
+function libUnshelve(id){
+  actStart('lib:'+id, TLIB_COPY.saving);
+  api({action:'setLibrary', data:{attachmentId:id, remove:true,
+       teacherId:TEACHER_ID, teacherToken:TOKEN}}, function(e,r){
+    if(e||!r||!r.ok){ actFail('lib:'+id,(r&&r.error)||TLIB_COPY.saveFailed); return; }
+    actDone('lib:'+id, TLIB_COPY.unshelved);
+    LIB_EDIT=''; LIB_DEL='';
+    _libRefresh();
+  });
+}
+// The confirm is INLINE, on the row, and it names the number — the design's own
+// requirement, and the reason is the trade AC took knowingly: one file, so a
+// delete reaches every conversation it was ever sent to. A native confirm() is
+// not used anywhere in this portal ([1.34]) and would not be able to say this.
+function libAskDelete(id){ LIB_DEL=id; render(); }
+function libDelCancel(){ LIB_DEL=''; render(); }
+function libDelete(id){
+  actStart('lib:'+id, TLIB_COPY.saving);
+  api({action:'deleteLibraryFile', data:{attachmentId:id,
+       teacherId:TEACHER_ID, teacherToken:TOKEN}}, function(e,r){
+    if(e||!r||!r.ok){ actFail('lib:'+id,(r&&r.error)||TLIB_COPY.delFailed); LIB_DEL=''; render(); return; }
+    actDone('lib:'+id, TLIB_COPY.deleted);
+    LIB_EDIT=''; LIB_DEL='';
+    _libRefresh();
+  });
+}
+// Tags on one file. A studio tag is a tick; a private tag is a teacher's own
+// word, on their own file, invisible to everybody including admin.
+function libFileTag(id, tagId){
+  var f=_libFind(id); if(!f) return;
+  var tags=(f.tags||[]).slice();
+  var i=tags.indexOf(tagId);
+  if(i>-1) tags.splice(i,1); else tags.push(tagId);
+  f.tags=tags;   // drawn from this immediately; the server confirms behind it
+  render();
+  api({action:'setAttachmentTags', data:{attachmentId:id, tags:tags,
+       teacherId:TEACHER_ID, teacherToken:TOKEN}}, function(e,r){
+    if(e||!r||!r.ok){ actFail('lib:'+id,(r&&r.error)||TLIB_COPY.saveFailed); _libRefresh(); return; }
+    f.tags=r.tags||tags; render();
+  });
+}
+function libPrivateAdd(id){
+  var el=document.getElementById('lib-pt-'+id);
+  var word=el?String(el.value||'').trim():'';
+  if(!word) return;
+  var f=_libFind(id); if(!f) return;
+  var words=(f.privateTags||[]).slice();
+  if(words.indexOf(word)<0) words.push(word);
+  _libSetPrivate(id, f, words);
+}
+function libPrivateRemove(id, word){
+  var f=_libFind(id); if(!f) return;
+  _libSetPrivate(id, f, (f.privateTags||[]).filter(function(w){ return w!==word; }));
+}
+function _libSetPrivate(id, f, words){
+  f.privateTags=words; render();
+  api({action:'setAttachmentTags', data:{attachmentId:id, privateTags:words,
+       teacherId:TEACHER_ID, teacherToken:TOKEN}}, function(e,r){
+    if(e||!r||!r.ok){ actFail('lib:'+id,(r&&r.error)||TLIB_COPY.saveFailed); _libRefresh(); return; }
+    f.privateTags=r.privateTags||words;
+    // A word that has just been added is a word the filter can now offer, and
+    // one that has just gone may be one it is still filtering by.
+    _libFilterPrune(); render();
+  });
+}
+
+// ── Drawing it ──────────────────────────────────────────────────────────
+function rLibraryButton(){
+  // Beside Add file, in the row where the things you do with a message already
+  // live ([1.234]'s own words). Two doors to one act — this file is on a shelf,
+  // that one is on your phone — so they belong side by side.
+  return '<button type="button" class="btn btn-s'+(LIB_OPEN?' lib-on':'')+'"'+
+    ' aria-pressed="'+(LIB_OPEN?'true':'false')+'" title="'+esc(TLIB_COPY.openTip)+'"'+
+    ' onclick="libToggle()">'+esc(TLIB_COPY.open)+'</button>';
+}
+function rLibraryPanel(){
+  if(!LIB_OPEN) return '';
+  return '<div class="lib-panel">'+
+    '<div class="lib-hd"><span class="lib-hd-t">'+esc(TLIB_COPY.head)+'</span>'+
+      '<button type="button" class="lib-x" aria-label="'+esc(TLIB_COPY.close)+'"'+
+        ' onclick="libClose()">&#215;</button></div>'+
+    '<input id="lib-q" class="lib-search" type="search" value="'+esc(LIB_Q)+'"'+
+      ' placeholder="'+esc(TLIB_COPY.search)+'" aria-label="'+esc(TLIB_COPY.search)+'"'+
+      ' oninput="libSearch(this.value)">'+
+    rLibraryTags()+
+    '<div id="lib-body">'+rLibraryBody()+'</div>'+
+  '</div>';
+}
+function rLibraryTags(){
+  var offered=_libOffered();
+  if(!offered.length && !LIB_FILTER.length) return '';
+  return '<div class="lib-tags">'+offered.map(function(t){
+    var on=LIB_FILTER.indexOf(t.v)>-1;
+    return '<button type="button" class="lib-tag'+(on?' on':'')+(t.priv?' priv':'')+'"'+
+      ' aria-pressed="'+(on?'true':'false')+'"'+
+      ' onclick="libTag(\''+esc(t.v)+'\')">'+esc(t.name)+'</button>';
+  }).join('')+
+  // ONE PRESS CLEARS IT — and it is only there when there is something to
+  // clear, so the resting state of this row is the tags alone.
+  ((LIB_FILTER.length||LIB_Q)?'<button type="button" class="lib-clear" onclick="libClearFilter()">'+
+     esc(TLIB_COPY.clear)+'</button>':'')+
+  '</div>';
+}
+function rLibraryBody(){
+  var mine=_libFiltered(LIB_MINE), studio=_libFiltered(LIB_SHELF_STUDIO);
+  // Nothing at all, versus nothing MATCHING: two different facts, and telling
+  // them apart is the difference between "add a file" and "clear the filter".
+  if(!mine.length && !studio.length && (LIB_FILTER.length||LIB_Q)){
+    return '<div class="lib-empty">'+esc(TLIB_COPY.emptyFiltered)+'</div>';
+  }
+  return rLibGroup(TLIB_COPY.mine, mine, true, TLIB_COPY.emptyMine)+
+         rLibGroup(TLIB_COPY.studio, studio, false, TLIB_COPY.emptyStudio);
+}
+function rLibGroup(head, files, mine, empty){
+  return '<div class="lib-group"><div class="lib-group-hd">'+esc(head)+'</div>'+
+    (files.length
+      ? '<div class="lib-list">'+files.map(function(f){ return rLibRow(f, mine); }).join('')+'</div>'
+      : '<div class="lib-empty">'+esc(empty)+'</div>')+
+  '</div>';
+}
+function rLibRow(f, mine){
+  var id=f.attachmentId;
+  var meta=_attSize(f.sizeBytes);
+  if(f.reach) meta+=' · '+TLIB_COPY.sentCount.replace('{n}', String(f.reach));
+  var h='<div class="lib-row">'+
+    '<button type="button" class="lib-pick" title="'+esc(f.fileName)+'" onclick="libAttach(\''+esc(id)+'\')">'+
+      '<span class="lib-kind">'+esc(_attKind(f.fileName))+'</span>'+
+      '<span class="lib-name">'+esc(f.fileName)+'</span>'+
+      '<span class="lib-meta">'+esc(meta)+'</span></button>'+
+    // Editing is offered on a teacher's OWN files only. The Keylab Master
+    // Library is AC's shelf: a teacher sends from it and changes nothing on it,
+    // which is his own ruling — "teachers can only send from the master
+    // library" — and the server refuses it as well.
+    (mine?'<button type="button" class="lib-mini" onclick="libEdit(\''+esc(id)+'\')">'+
+       esc(TLIB_COPY.manage)+'</button>':'')+
+  '</div>';
+  h+=rAct('lib:'+id);
+  if(mine && LIB_EDIT===id) h+=rLibEdit(f);
+  if(mine && LIB_DEL===id) h+=rLibConfirmDelete(f);
+  return h;
+}
+function rLibEdit(f){
+  var id=f.attachmentId;
+  return '<div class="lib-edit">'+
+    '<input id="lib-rn-'+esc(id)+'" value="'+esc(f.fileName)+'" aria-label="'+esc(TLIB_COPY.renameGo)+'">'+
+    '<div class="lib-edit-acts">'+
+      '<button type="button" class="lib-mini" onclick="libRename(\''+esc(id)+'\')">'+esc(TLIB_COPY.renameGo)+'</button>'+
+      '<button type="button" class="lib-mini" onclick="libUnshelve(\''+esc(id)+'\')">'+esc(TLIB_COPY.unshelve)+'</button>'+
+      '<button type="button" class="lib-mini bad" onclick="libAskDelete(\''+esc(id)+'\')">'+esc(TLIB_COPY.del)+'</button>'+
+    '</div>'+
+    // The studio's vocabulary, as ticks. AC owns the words; anybody who may
+    // write to the shelf applies them.
+    '<div class="lib-tags">'+LIB_TAGS.map(function(t){
+      var on=(f.tags||[]).indexOf(t.tagId)>-1;
+      return '<button type="button" class="lib-tag'+(on?' on':'')+'" aria-pressed="'+(on?'true':'false')+'"'+
+        ' onclick="libFileTag(\''+esc(id)+'\',\''+esc(t.tagId)+'\')">'+esc(t.name)+'</button>';
+    }).join('')+'</div>'+
+    // And their own words, which nobody else ever sees — not even admin.
+    '<div class="lib-tags">'+(f.privateTags||[]).map(function(w){
+      return '<button type="button" class="lib-tag priv on" onclick="libPrivateRemove(\''+esc(id)+'\',\''+
+        esc(w)+'\')">'+esc(w)+' &#215;</button>';
+    }).join('')+
+      '<input id="lib-pt-'+esc(id)+'" style="width:auto;margin:0" placeholder="'+esc(TLIB_COPY.privatePh)+'"'+
+        ' aria-label="'+esc(TLIB_COPY.privatePh)+'" onkeydown="if(event.key===\'Enter\'){event.preventDefault();libPrivateAdd(\''+esc(id)+'\');}">'+
+      '<button type="button" class="lib-mini" onclick="libPrivateAdd(\''+esc(id)+'\')">'+esc(TLIB_COPY.privateAdd)+'</button>'+
+    '</div>'+
+  '</div>';
+}
+function rLibConfirmDelete(f){
+  var id=f.attachmentId;
+  return '<div class="lib-edit">'+
+    '<div class="lib-warn">'+esc(TLIB_COPY.delAsk)+' '+
+      esc(f.reach?TLIB_COPY.delReach.replace('{n}', String(f.reach)):TLIB_COPY.delReachNone)+'</div>'+
+    '<div class="lib-edit-acts">'+
+      '<button type="button" class="lib-mini bad" onclick="libDelete(\''+esc(id)+'\')">'+esc(TLIB_COPY.delGo)+'</button>'+
+      '<button type="button" class="lib-mini" onclick="libDelCancel()">'+esc(TLIB_COPY.delBack)+'</button>'+
+    '</div></div>';
+}
+
 // ── [1.127] — templates, in the composer where they are used and made ───
 // AC, 6 September, replacing his own design of an hour earlier: "easier for
 // the TEACHER to simply open a studio template and then edit in the composer.
@@ -5187,6 +5876,26 @@ function _tplMerge(html){
     var val=v[tag];
     return (val===undefined || val==='') ? whole : esc(val);
   });
+}
+// ── [1.454] — the gate, and it is the half that matters ──────────────────
+//
+// **Merging is not enough on its own.** _tplMerge deliberately LEAVES a tag it
+// cannot fill ([1.351]: "Hi ," is not noticed until it has been sent, and
+// "[parentFirst]" is noticed at once) — and that rule is right for a composer
+// and catastrophic for a send. Left alone, an unfillable tag now goes to a
+// family instead of an empty space.
+//
+// So a send REFUSES while a known tag survives the merge, and says which. The
+// only case in practice is a family with more than one child this teacher
+// teaches and no child picked — which is fixable in one press, on the row
+// directly above the composer.
+function _tplUnfilledTags(html){
+  var out=[], seen={};
+  String(html||'').replace(/\[([A-Za-z]+)\]/g, function(whole, tag){
+    if(TPL_TAGS.indexOf(tag)>-1 && !seen[tag]){ seen[tag]=1; out.push(tag); }
+    return whole;
+  });
+  return out;
 }
 // ── [1.351] — when a placeholder cannot fill itself, say why ─────────────
 //
@@ -5519,6 +6228,10 @@ var TCH_COPY={
   // [1.320] — the one link under the header. The same wording admin uses, so
   // the two screens say it identically.
   sectionStaff:'Admin & staff',
+  // [1.457] — AC's own words for the section, 9 September 2026: "a list of My
+  // Students". The empty line is a PLACEHOLDER, flagged.
+  sectionStudents:'My Students',
+  noStudents:'No students assigned to you yet.',
   searchPlaceholder:'Search by student or parent, or type a name to start\u2026',
   guideTitle:'How to use Messages',
   // AC's copy, 3 September 2026 — his draft, his headings, his wording. Two
@@ -5668,6 +6381,9 @@ var TCH_COPY={
   // conversation it names.
   nudgeGoto:'Open that conversation',
   // [1.438] — AC's question, verbatim, with placeholder buttons under it.
+  // [1.454] — PLACEHOLDER, flagged. Shown beside Send when a merge tag could
+  // not be filled in, which in practice means no child has been picked.
+  tagUnfilled:'Pick which child this is about \u2014 {tags} could not be filled in',
   closeUnansweredAsk:'End conversation without a reply?',
   closeUnansweredGo:'End it',
   closeUnansweredBack:'Go back',
@@ -5680,7 +6396,6 @@ var TCH_COPY={
   savedTemplateNamed:'Saved \u201c{name}\u201d.',
   tplDuplicate:'You already have a template called \u201c{name}\u201d. Give this one a different name.',
   schedulingMsg:'Scheduling message\u2026',
-  scheduledDone:'Message scheduled. It will be sent on {when}',
   sendingMsg:'Sending\u2026',
   sentDone:'Sent.',
   // ── [1.404] — the working/done/failed vocabulary, teacher side ────────
@@ -5962,6 +6677,10 @@ function rComposer(id,draft,onInput,sendBtn){
     rComposerToolbar(id)+
     rComposerLinkRow(id)+
     '<div class="composer">'+
+      // [1.465] — AC's fourth saving: the library "opens inside the composer,
+      // above the box". Not a screen and not a dialog: it belongs to the
+      // message being written, and a file picked from it becomes a chip below.
+      rLibraryPanel()+
       '<div id="'+id+'" class="cmp-rich" contenteditable="true" role="textbox" aria-multiline="true"'+
         ' aria-label="Message" data-ph="'+esc(CMP_COPY.placeholder)+'"'+
         ' oninput="'+onInput+';_composerState(\''+id+'\')"'+
@@ -5983,8 +6702,24 @@ function rComposer(id,draft,onInput,sendBtn){
       // that sends it, which is where a file being added belongs.
       rAttachRow()+
       // [1.404]/[1.428] — the status for this composer, beside its buttons.
-      (_attAnyUploading()?'<div class="act-note act-working"><span class="spin">\u21bb</span> '+
-        esc(TCH_COPY.sendBlockedUploading)+'</div>':'')+
+    // ── [1.455] — ONE working line, not two ────────────────────────────
+    //
+    // AC's screenshot, 9 September 2026, showed both at once:
+    //
+    //     ↻ Adding your file…
+    //     ↻ Your file is uploading…
+    //
+    // **Both are mine and both went in today**, five hours apart, for two
+    // different items: [1.403]'s attachment banner says the first, [1.439]'s
+    // composer status said the second in AC's reworded wording ([1.445]).
+    // **Neither knew about the other, because nothing looks at a composer as
+    // a whole.**
+    //
+    // The composer's copy is the one that goes. They answer two questions —
+    // *is my file going up* and *why can I not press Send* — and the answer
+    // to both is one line, and it belongs BESIDE THE FILE, which is
+    // [1.417]'s rule: the state goes on the thing it is about.
+
       rAct('send')+
       '<div class="composer-actions">'+sendBtn+'</div>'+
       // [1.371] — the picker, under the buttons, only while it is open. Inline
@@ -6093,12 +6828,17 @@ function rAttachments(m){
         '<button type="button" class="att-dl" onclick="event.stopPropagation();'+
           '_attSaveHeld(\''+esc(a.attachmentId)+'\')">'+esc(TCH_COPY.attachDownloadHeld)+'</button></span>';
     }
-    if(!_canView) return '<span class="att-wrap">'+_tile+'</span>';
+    // [1.465] — and Save to Library, on any file in a thread. **A teacher may
+    // keep what a family sent them**: AC overturned my rule against it and was
+    // right — they can already download it, so refusing only pushed the file
+    // out of the tool where the studio cannot see it at all.
+    var _keep=rLibSave(a.attachmentId)+rAct('lib:'+a.attachmentId);
+    if(!_canView) return '<span class="att-wrap">'+_tile+_keep+'</span>';
     return '<span class="att-wrap">'+_tile+
       '<button type="button" class="att-dl" title="'+esc(TCH_COPY.attachDownload)+'"'+
         (_st&&_st.state==='working'?' disabled':'')+
         ' onclick="event.stopPropagation();openAttachment(\''+esc(a.attachmentId)+'\',\'download\')">'+
-        esc(TCH_COPY.attachDownload)+'</button></span>';
+        esc(TCH_COPY.attachDownload)+'</button>'+_keep+'</span>';
   }).join('')+'</div>';
 }
 // The slow path, and a deliberate act: the whole file, base64, through the
@@ -6111,6 +6851,15 @@ function openAttachment(id, mode){
   if(actBusy('att:'+id)) return;
   actStart('att:'+id, TCH_COPY.attachOpening);
   api({action:'getAttachment', data:{attachmentId:id, teacherId:TEACHER_ID, teacherToken:TOKEN}}, function(e,r){
+    // [1.463] — a LINK is the fast answer and the bytes are the fallback, so
+    // the client has to accept either. The link is opened by exactly the same
+    // two lines a blob is ([1.417]'s view/download), so a phone behaves as it
+    // already does and the held-file offer still applies.
+    if(!e && r && r.ok && r.url){
+      actClear('att:'+id);
+      _attOpenUrl_(r.url, r.fileName, id, mode);
+      return;
+    }
     if(e||!r||!r.ok||!r.dataBase64){
       actFail('att:'+id,(r&&r.error)||TCH_COPY.attachOpenFailed); render(); return;
     }
@@ -6182,6 +6931,32 @@ function _attSaveHeld(id){
   setTimeout(function(){ try{ URL.revokeObjectURL(held.url); }catch(e){} }, 5000);
   actClear('att:'+id);
   render();
+}
+
+
+// ── [1.463] — opening an ADDRESS, which is the fast path ─────────────────
+//
+// A link and a blob are opened the same two ways ([1.417]): View is a new tab,
+// Download is an anchor. The difference is that there is nothing to wait for
+// and nothing to hold — the browser fetches it from Drive itself.
+//
+// **A blocked tab is handled the same way too**, and it is simpler here: the
+// address does not expire the way a blob does, so there is nothing to keep
+// alive and nothing to sweep. The reader is told, and the Download control
+// beside the tile does the other thing.
+function _attOpenUrl_(url, fileName, id, mode){
+  if(mode==='download'){
+    var dl=document.createElement('a');
+    dl.href=url; dl.download=fileName||'attachment';
+    // A cross-origin download attribute is advisory: Drive serves its own
+    // filename. Opening in a tab is the honest fallback rather than a link
+    // that appears to do nothing.
+    dl.target='_blank'; dl.rel='noopener';
+    document.body.appendChild(dl); dl.click(); document.body.removeChild(dl);
+    return;
+  }
+  var w=window.open(url,'_blank');
+  if(!w && id){ actFail('att:'+id, TCH_COPY.attachPopupBlocked); render(); }
 }
 
 function _attCanView(mimeType, fileName){
@@ -6375,6 +7150,10 @@ function rAttachRow(){
            '<span class="att-chip-name">'+esc(a.fileName)+'</span>'+
            '<span class="att-size">'+esc(_attSize(a.sizeBytes))+'</span>'+
            (a.failed?'<span class="att-err">'+esc(a.error||TCH_COPY.attachFailed)+'</span>':'')+
+           // [1.465] — Save to Library, on the file it is about. This is how a
+           // teacher builds a library without thinking about one: they send
+           // this week's scales and press Save.
+           (a.failed?'':rLibSave(a.attachmentId))+
            '<button type="button" class="att-x" aria-label="'+esc(TCH_COPY.attachRemove)+'"'+
              ' onclick="attachRemove(\''+esc(a.tempId)+'\')">&#215;</button></div>';
        }).join('')+'</div>';
@@ -6642,7 +7421,18 @@ function confirmReschedule(){
     (c.t.scheduled||[]).forEach(function(m){
       if(m.messageId===id){ m.sendAt=r.sendAt||at; m.schedMissedAt=''; }
     });
-    actDone('send', TCH_COPY.scheduledDone.replace('{when}', fmtMsgTime(Number(r.sendAt)||at)));
+    // [1.462] — NO DUPLICATE BANNER. AC, 9 September 2026, one line: *"no
+    // duplicate banner."*
+    //
+    // The scheduled bubble already reads "Message scheduled. It will be sent on
+    // …" — his own wording from [1.415] — so a banner saying it again is two
+    // things saying one thing, which is [1.455] in a different place. He timed the
+    // gap between them at 5-8 seconds and it was confusing at any gap.
+    //
+    // **The WORKING state stays**: it explains the wait, and nothing else does.
+    // **The FAILED state stays**: it is the one a person must act on. Only the
+    // second confirmation goes.
+    actClear('send');
     _schedInvalidate();
     render();
   });
@@ -7395,6 +8185,17 @@ function sendStaffMessage(sendAt){
   var t=ACTIVE_STAFF_THREAD;
   var _el=document.getElementById('staff-composer');
   var html=_el?_composerClean(_el):(t.draft||'');
+  // [1.454] — a staff thread has no student and no parent, so the pills are
+  // not offered here. A TEMPLATE can still carry a tag into one, and a tag
+  // reaching another member of staff is the same fault with a smaller
+  // audience. Same merge, same gate.
+  html=_tplMerge(html);
+  var _unfilledS=_tplUnfilledTags(html);
+  if(_unfilledS.length){
+    actFail('send', TCH_COPY.tagUnfilled.replace('{tags}',
+      _unfilledS.map(function(x){ return TPL_TAG_LABELS[x]||x; }).join(', ')));
+    render(); return;
+  }
   var text=_composerPlain(html);
   var _att=_attTakeIds();   // [1.277]
   if(!text && !_att.length) return;
@@ -7465,7 +8266,18 @@ function sendStaffMessage(sendAt){
       // [1.404] — the act is confirmed here, on the server's answer, not when
       // the button was pressed. A confirmation shown before the round trip is
       // a promise rather than a fact.
-      actDone('send', TCH_COPY.scheduledDone.replace('{when}', fmtMsgTime(Number(sendAt)||_schedJustSetAt)));
+      // [1.462] — NO DUPLICATE BANNER. AC, 9 September 2026, one line: *"no
+      // duplicate banner."*
+      //
+      // The scheduled bubble already reads "Message scheduled. It will be sent on
+      // …" — his own wording from [1.415] — so a banner saying it again is two
+      // things saying one thing, which is [1.455] in a different place. He timed the
+      // gap between them at 5-8 seconds and it was confusing at any gap.
+      //
+      // **The WORKING state stays**: it explains the wait, and nothing else does.
+      // **The FAILED state stays**: it is the one a person must act on. Only the
+      // second confirmation goes.
+      actClear('send');
       _schedInvalidate(); render(); return;
     }   // [1.371]
     if(_canAmendMsg(pending)) render();   // [1.276] — see sendFamilyMessage
@@ -7589,6 +8401,12 @@ function doSignOut(){
   _ktClearSession();
   // [1.336] — drafts are this teacher's unsent words on a shared machine.
   DRAFTS={}; try{ localStorage.removeItem('kl_teacher_drafts'); }catch(e){}
+  // [1.465] — this teacher's shelves go with them off a shared machine, and so
+  // does the panel's open state. The remembered FILTER stays: it is a tag
+  // preference, not anybody's material, and it is what makes the next sign-in
+  // two clicks instead of four.
+  LIB_OPEN=false; LIB_EDIT=''; LIB_DEL=''; LIB_KEPT={};
+  LIB_MINE=[]; LIB_SHELF_STUDIO=[]; LIB_TAGS=[]; _libLoaded=false; _libInFlight=false;
   if(_pollTimer){ clearInterval(_pollTimer); _pollTimer=null; }
   TOKEN=''; TEACHER_ID=''; TEACHER_NAME='';
   LF={email:'', password:'', remember:true};
@@ -7627,6 +8445,10 @@ function _ktDeviceId(){
 var _magicSettled=false, _magicRefused=false;
 function boot(){
   _draftsLoad();   // [1.336] — anything unsent from last time is back before the first render
+  // [1.465] — and the remembered library filter, which is the biggest of the
+  // four savings AC scoped: a piano teacher's "piano" is still on when they
+  // open the picker, so the common case is two clicks rather than four.
+  _libFilterLoad();
   var resetTokenFromUrl = '';
   var loginTokenFromUrl = '';
   try {

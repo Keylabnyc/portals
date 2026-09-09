@@ -2815,8 +2815,24 @@ function rHomeThreadView(){
     '<textarea id="home-composer" placeholder="Type your message here..." oninput="HOME_EXPANDED.draft=this.value;_famDraftSet(HOME_EXPANDED.teacherId,this.value);actClear(\'send\')">'+esc(t.draft)+'</textarea>'+
     // [1.361] — the rules, then the picker beside Send, then the chips.
     rKlAttachRow()+
-    (_uploading?'<div class="act-note act-working"><span class="spin">\u21bb</span> '+
-      esc(KL_STATE_COPY.sendBlockedUploading)+'</div>':'')+
+    // ── [1.455] — ONE working line, not two ────────────────────────────
+    //
+    // AC's screenshot, 9 September 2026, showed both at once:
+    //
+    //     ↻ Adding your file…
+    //     ↻ Your file is uploading…
+    //
+    // **Both are mine and both went in today**, five hours apart, for two
+    // different items: [1.403]'s attachment banner says the first, [1.439]'s
+    // composer status said the second in AC's reworded wording ([1.445]).
+    // **Neither knew about the other, because nothing looks at a composer as
+    // a whole.**
+    //
+    // The composer's copy is the one that goes. They answer two questions —
+    // *is my file going up* and *why can I not press Send* — and the answer
+    // to both is one line, and it belongs BESIDE THE FILE, which is
+    // [1.417]'s rule: the state goes on the thing it is about.
+
     // [1.404]/[1.439] — the status for this composer, beside its own button,
     // exactly as the teacher portal draws it.
     rAct('send')+
@@ -3692,6 +3708,32 @@ function _attSaveHeld(id){
   render();
 }
 
+
+// ── [1.463] — opening an ADDRESS, which is the fast path ─────────────────
+//
+// A link and a blob are opened the same two ways ([1.417]): View is a new tab,
+// Download is an anchor. The difference is that there is nothing to wait for
+// and nothing to hold — the browser fetches it from Drive itself.
+//
+// **A blocked tab is handled the same way too**, and it is simpler here: the
+// address does not expire the way a blob does, so there is nothing to keep
+// alive and nothing to sweep. The reader is told, and the Download control
+// beside the tile does the other thing.
+function _attOpenUrl_(url, fileName, id, mode){
+  if(mode==='download'){
+    var dl=document.createElement('a');
+    dl.href=url; dl.download=fileName||'attachment';
+    // A cross-origin download attribute is advisory: Drive serves its own
+    // filename. Opening in a tab is the honest fallback rather than a link
+    // that appears to do nothing.
+    dl.target='_blank'; dl.rel='noopener';
+    document.body.appendChild(dl); dl.click(); document.body.removeChild(dl);
+    return;
+  }
+  var w=window.open(url,'_blank');
+  if(!w && id){ actFail('att:'+id, KL_STATE_COPY.attachPopupBlocked); render(); }
+}
+
 function _attCanView(mimeType, fileName){
   var m=String(mimeType||'').toLowerCase();
   if(m.indexOf('image/')===0) return true;
@@ -3713,6 +3755,14 @@ function klOpenAttachment(id, mode){
   if(actBusy('att:'+id)) return;
   actStart('att:'+id, KL_ATT_OPENING);
   fapi('getAttachment', {attachmentId:id}, function(e,r){
+    // [1.463] — a LINK is the fast answer and the bytes are the fallback, so
+    // this accepts either. It matters most in THIS portal: a parent on a phone
+    // is the reader who waits longest for a file to come through the tool.
+    if(!e && r && r.ok && r.url){
+      actClear('att:'+id);
+      _attOpenUrl_(r.url, r.fileName, id, mode);
+      return;
+    }
     if(e||!r||!r.ok||!r.dataBase64){
       actFail('att:'+id,(r&&r.error)||KL_STATE_COPY.attachOpenFailed); render(); return;
     }

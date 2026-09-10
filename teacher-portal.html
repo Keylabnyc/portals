@@ -6025,6 +6025,10 @@ var TLIB_COPY={
   addedDone:'Done',
   privateBulkPh:'Your own tag for the ticked files',
   adding:'Adding your files\u2026',
+  // [1.557] — the singular. DERIVED from the line above, not new voice: one
+  // file told about "files" is [1.543]'s fault again, one string doing for two,
+  // and the one-step card is only ever about one.
+  addingOne:'Adding your file\u2026',
   // [1.543] — its own word. PLACEHOLDER, flagged: teacher-facing.
   addingLinks:'adding your links...',   // [1.552] — AC's words, verbatim
   added:'Added to your library.',
@@ -6910,9 +6914,75 @@ function libAddChosen(input){
   var files=input && input.files ? Array.prototype.slice.call(input.files) : [];
   input.value='';
   if(!files.length) return;
+  // ── [1.557] — ONE FILE TAKES THE CARD ──────────────────────────────────
+  //
+  // **AC, 10 September 2026, with a screenshot of the batch:** *"Teacher side is
+  // still requiring a 2 step process with a very messy busy screen after
+  // selecting a link to add. I should just be able to add it and tag it in the
+  // same step, not two steps. I thought you fixed this?"*
+  //
+  // **He is right and [1.553] was half a fix.** It made a LINK one step and
+  // left Add files on the old batch — and the batch is the busy screen: a row
+  // of twelve chips for the ticked files, a second row for your own word, a
+  // third row of twelve on the file itself, and two red buttons under it. **For
+  // ONE file that is a review step reviewing nothing**, and one file is nearly
+  // every time.
+  //
+  // Named rather than dropped: **several files still land in the batch**, which
+  // is what it is for — one press tags all twenty, and twenty names guessed
+  // from filenames genuinely do want reviewing together.
+  if(files.length===1) return libAddFileOne(files[0]);
   // [1.468] — nobody waits to tag. They go up now, and the batch they land in
   // is where tagging happens.
   files.forEach(libAddUpload);
+}
+// The card opens AT ONCE and the bytes go up behind it, because the bytes are
+// the slow part: a teacher spends the upload naming and tagging instead of
+// watching it. The press at the end is one round trip — shelve, rename and tag
+// in one write ([1.553] server side) — and it can be pressed before the upload
+// lands, in which case it fires the moment it does.
+function libAddFileOne(file){
+  if(file.size > ATT_MAX_BYTES){ showMsg(TCH_COPY.attachTooBig,'e'); return; }
+  // [1.513] — a cloud placeholder arrives as zero bytes. Refused here, in the
+  // server's own words, rather than after the whole round trip.
+  if(!file.size){ showMsg(TCH_COPY.attachEmpty,'e'); return; }
+  libAddOpen({kind:'file', at:'lib', name:file.name, uploading:true});
+  var mine=LIBADD.seq, key=LIBADD.key;
+  actStart(key, TLIB_COPY.addingOne);
+  var reader=new FileReader();
+  var stop=function(msg){
+    if(LIBADD && LIBADD.seq===mine){ LIBADD.uploading=false; LIBADD.waiting=false; }
+    actFail(key, msg);
+  };
+  reader.onerror=function(){ stop(TLIB_COPY.addFailed); };
+  reader.onload=function(){
+    var b64=String(reader.result||'');
+    b64=b64.slice(b64.indexOf(',')+1);
+    // **NOT `toLibrary`.** The file is shelved by the PRESS, not by the upload,
+    // which is what makes Cancel mean cancel: an upload nobody confirmed is an
+    // attachment bound to no message, and the server's own sweep clears it a
+    // day later. [1.553]'s one call does the shelving, the naming and the tags
+    // together when the teacher says so.
+    api({action:'uploadAttachment', data:{fileName:file.name, mimeType:file.type,
+         dataBase64:b64, teacherId:TEACHER_ID, teacherToken:TOKEN}}, function(e,r){
+      if(e||!r||!r.ok||!r.attachment){ stop((r&&r.error)||TLIB_COPY.addFailed); return; }
+      // Cancelled, or a different card opened while this was in flight. The
+      // upload is orphaned on purpose rather than shelved behind their back.
+      if(!LIBADD || LIBADD.seq!==mine) return;
+      LIBADD.attachmentId=r.attachment.attachmentId;
+      LIBADD.fileName=r.attachment.fileName;
+      LIBADD.uploading=false;
+      // **The upload's own busy state is cleared FIRST**, before the queued
+      // press is fired. Without this the press hits `actBusy` — still 'working'
+      // from the upload that has just finished — and is swallowed. That is
+      // [1.539] exactly, on a path written the same evening the rule was:
+      // *a state that disables a control must be cleared on every path out.*
+      actClear(key);
+      if(LIBADD.waiting){ LIBADD.waiting=false; libAddGo(); return; }
+      _libAddRedraw();
+    });
+  };
+  reader.readAsDataURL(file);
 }
 // ═══════════════════════════════════════════════════════════════════════
 // [1.553] — ONE STEP: the address, the display text and the tags together
@@ -6944,9 +7014,10 @@ function libAddChosen(input){
 var LIBADD=null;
 // {kind:'link'|'file', at:'lib'|'link:<composerId>'|'att:<tempId>',
 //  url, text, name, tags:[], priv:[], attachmentId, tempId}
+var _LIBADD_SEQ=0;
 function libAddOpen(o){
   LIBADD={kind:'link', at:'lib', url:'', text:'', name:'', tags:[], priv:[],
-          attachmentId:'', tempId:''};
+          attachmentId:'', tempId:'', uploading:false, waiting:false, seq:++_LIBADD_SEQ};
   if(o) for(var k in o) if(o.hasOwnProperty.call(o,k)) LIBADD[k]=o[k];
   // ── The status line's key, and why it is not one key for all three ──────
   //
@@ -7018,8 +7089,14 @@ function libAddPrivRemove(w){
 // exists and is being shelved — and both are ONE round trip, because a press
 // that costs three at [1.263]'s ~2s each is not one step to the person waiting.
 function libAddGo(){
-  if(!LIBADD || actBusy(LIBADD.key)) return;
+  if(!LIBADD) return;
+  // The file branch is asked FIRST, before the busy guard, on purpose: while
+  // its bytes are going up the status line is already 'working', and a guard
+  // that reads busy would swallow the press instead of queueing it. That is
+  // [1.539]'s lesson — *a state that disables a control must be cleared on
+  // every path out* — met by not disabling the control at all.
   if(LIBADD.kind==='file') return _libAddFileGo();
+  if(actBusy(LIBADD.key)) return;
   var key=LIBADD.key;
   var lines=_libAddLines(LIBADD.url);
   if(!lines.length) return;
@@ -7069,8 +7146,13 @@ function libAddGo(){
 // it was attached — so this shelves, renames and tags one row in one write
 // ([1.553] server side). Nothing here uploads anything twice.
 function _libAddFileGo(){
+  if(LIBADD.waiting) return;                 // already queued behind the upload
+  // Pressed before the bytes landed: remembered, and fired the moment they do.
+  // Nothing is lost and nobody waits with their hand over the button.
+  if(LIBADD.uploading){ LIBADD.waiting=true; _libAddRedraw(); return; }
   var id=LIBADD.attachmentId; if(!id) return;
   var key=LIBADD.key;
+  if(actBusy(key)) return;
   var name=String(LIBADD.name||'').trim();
   actStart(key, TLIB_COPY.saving);
   api({action:'setLibrary', data:{attachmentId:id, fileName:name,
@@ -7094,7 +7176,10 @@ function _libAddFileGo(){
 function rLibAddCard(at){
   if(!LIBADD || LIBADD.at!==at) return '';
   var link=(LIBADD.kind==='link');
-  var busy=actBusy(LIBADD.key);
+  // [1.557] — a file's button stays PRESSABLE while its bytes go up, because
+  // pressing it queues the press. It goes quiet only once that press is
+  // waiting, which is the one moment there is nothing more to say.
+  var busy=link ? actBusy(LIBADD.key) : !!LIBADD.waiting;
   return '<div class="lib-new lib-add-card">'+
     '<div class="lib-new-body">'+
       (link

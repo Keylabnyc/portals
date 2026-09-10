@@ -5011,7 +5011,19 @@ function sendFamilyMessage(sendAt){
   // never disabled, which is why AC could press it twice. The server deduped, so
   // no message was doubled — but the press was allowed, and he is right that it
   // should not be.
-  actStart('send', TCH_COPY.sending);
+  // [1.536] — SCHEDULING is not sending, and this line said it was.
+  //
+  // AC, 10 September 2026: *"when I set a time for schedule send, the progress
+  // bar correctly shows up but incorrectly says 'Sending...' it should say the
+  // correct string we already decided on."*
+  //
+  // **My regression, from [1.523]/[1.533].** Scheduling goes through the same
+  // function with `sendAt` set, so the busy line added for an ordinary send
+  // claimed every scheduled one was going out now. **The right words already
+  // existed** — AC settled `Scheduling message…` and `Message scheduled to be
+  // sent` when [1.371] was built — so this is his copy being used where it
+  // belongs, not new copy.
+  actStart('send', sendAt ? TCH_COPY.schedulingMsg : TCH_COPY.sending);
   t._sendInFlight=true;
   _shouldScrollMsgList=true;
   // [1.371] — and it does NOT stop the clock. A scheduled reply is not a
@@ -5024,7 +5036,7 @@ function sendFamilyMessage(sendAt){
     t._sendInFlight=false;
     // [1.523] — cleared only on success; a failure says so through actFail
     // below and must not be overwritten by a success line.
-    if(!(e||!r||!r.ok)) actDone('send', TCH_COPY.sentOk);
+    if(!(e||!r||!r.ok)) actDone('send', sendAt ? TCH_COPY.scheduledConfirm : TCH_COPY.sentOk);   // [1.536]
     if(e||!r||!r.ok){
       // Put it back where the teacher can see and retry it, rather than losing
       // words they watched "send".
@@ -10373,7 +10385,19 @@ function sendStaffMessage(sendAt){
   // [1.533] — the same busy state [1.523] gave the FAMILY send. This is the
   // day's pattern in miniature: one mechanism, built for one of two twins.
   // Nothing said "Sending…" here either, and Send was never disabled.
-  actStart('send', TCH_COPY.sending);
+  // [1.536] — SCHEDULING is not sending, and this line said it was.
+  //
+  // AC, 10 September 2026: *"when I set a time for schedule send, the progress
+  // bar correctly shows up but incorrectly says 'Sending...' it should say the
+  // correct string we already decided on."*
+  //
+  // **My regression, from [1.523]/[1.533].** Scheduling goes through the same
+  // function with `sendAt` set, so the busy line added for an ordinary send
+  // claimed every scheduled one was going out now. **The right words already
+  // existed** — AC settled `Scheduling message…` and `Message scheduled to be
+  // sent` when [1.371] was built — so this is his copy being used where it
+  // belongs, not new copy.
+  actStart('send', sendAt ? TCH_COPY.schedulingMsg : TCH_COPY.sending);
   t._sendInFlight=true;
   _shouldScrollMsgList=true;
   // [1.371] — a scheduled reply does not answer anybody yet.
@@ -10383,7 +10407,7 @@ function sendStaffMessage(sendAt){
   api({action:'sendMessage', data:reqData}, function(e,r){
     if(!ACTIVE_STAFF_THREAD || ACTIVE_STAFF_THREAD.otherId!==t.otherId) return;
     t._sendInFlight=false;
-    if(!(e||!r||!r.ok)) actDone('send', TCH_COPY.sentOk);   // [1.533]
+    if(!(e||!r||!r.ok)) actDone('send', sendAt ? TCH_COPY.scheduledConfirm : TCH_COPY.sentOk);   // [1.536]   // [1.533]
     if(e||!r||!r.ok){
       if(sendAt) t.scheduled=(t.scheduled||[]).filter(function(m){ return m!==pending; });
       else t.messages=t.messages.filter(function(m){ return m!==pending; });

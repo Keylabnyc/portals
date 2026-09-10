@@ -1084,6 +1084,22 @@ input[type=checkbox]{width:13px;height:13px;padding:0;margin:0;border:0;border-r
   .pane-empty{flex:1;display:flex;align-items:center;justify-content:center;
               color:var(--text4);font-size:13px;text-align:center;padding:1rem}
 }
+/* ── [1.494]/[1.495] — the pickers and the My Library overlay ───────────── */
+.modal-x { margin-left:auto;flex:0 0 auto;width:36px;height:36px;border-radius:50%;border:1px solid var(--border3);
+  background:#fff;font-size:22px;line-height:1;color:var(--text);cursor:pointer;font-family:inherit;padding:0 }
+.pick-from { width:100%;margin-bottom:8px }
+.lib-panel .cmp-linkrow { display:flex;margin-bottom:8px }
+.lib-said { margin-left:auto;font-size:12px;font-weight:700;color:var(--gt);background:var(--gbg);
+  border:1px solid var(--green);border-radius:var(--r);padding:2px 8px;white-space:nowrap;display:inline-flex;align-items:center;gap:4px }
+.lib-said.working { color:var(--bt);background:var(--bbg);border-color:var(--blue) }
+.lib-said.bad { color:var(--rt);background:var(--rbg);border-color:var(--red);white-space:normal }
+.lib-foot { margin-top:9px;display:flex;justify-content:flex-end }
+.lib-scrim { position:fixed;inset:0;background:rgba(0,0,0,.42);z-index:60 }
+.lib-modal { position:fixed;top:4vh;left:50%;transform:translateX(-50%);width:min(680px,94vw);max-height:92vh;
+  overflow-y:auto;background:var(--bg2);border:1px solid var(--border3);border-radius:var(--rl);padding:14px;
+  box-shadow:0 18px 40px rgba(0,0,0,.35);z-index:61 }
+.lib-modal-hd { display:flex;align-items:center;margin-bottom:10px }
+.lib-modal-t { font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text2) }
 </style>
 </head>
 <body>
@@ -1486,7 +1502,7 @@ function _renderBody(){
   else if(PAGE==='login')    h+=rLogin();
   else if(PAGE==='forgotpw') h+=rForgotPassword();
   else if(PAGE==='setpw')    h+=rSetPassword();
-  else                       h+=rHome();
+  else                       h+=rHome()+rLibraryOverlay();   // [1.495]
   // render() replaces #app wholesale, so a message arriving mid-poll would
   // otherwise yank the teacher's cursor out of a half-typed message — the
   // teacher-side twin of the family bug fixed in 1.32.
@@ -3071,14 +3087,10 @@ function rSectionedRoster(){
   // Collapsed to start, like My Students and Archived, and carrying its count
   // while shut so it says what it holds rather than looking empty ([1.178]).
   var _libCount=LIB_MINE.length+LIB_MY_LINKS.length;
-  h+='<div class="sep" onclick="LIBRARY_OPEN=!LIBRARY_OPEN;if(LIBRARY_OPEN)loadLibrary();render()">'+
-     '<span class="caret">'+(LIBRARY_OPEN?'▾':'▸')+'</span>'+esc(TLIB_COPY.manageHead)+
+  // [1.495] — opens the overlay rather than expanding in place.
+  h+='<div class="sep" onclick="libraryOpen()">'+
+     '<span class="caret">▸</span>'+esc(TLIB_COPY.manageHead)+
      '<span class="sepc">'+_libCount+'</span></div>';
-  if(LIBRARY_OPEN){
-    LIB_STANDALONE=true;
-    h+=rLibraryPanel('');
-    LIB_STANDALONE=false;
-  }
 
   // Closed now holds only what is actually closed, so the heading is true.
   // Still collapsed to start and still carrying its count while collapsed —
@@ -3991,11 +4003,15 @@ function openFamilyThread(familyId, p1, p2, focusReview){
 // conversation has to keep showing that it is still loading, because the only
 // honest thing to say about it is that we do not know yet.
   var _had=_cachedMessages(_req);
+  // [1.493] — a thread the roster shows as EMPTY opens with nothing to wait
+  // for: the fetch can only confirm it, so it runs as a refresh behind the
+  // composer instead of as a spinner in front of it.
+  var _knownEmpty=(_row.hasMessages===false);
   // [1.336] — the draft comes back with the conversation. This line is the
   // whole fix for the data loss: it used to read draft:''.
   ACTIVE_THREAD = {familyId:familyId, parent1Name:p1, parent2Name:p2, messages:_had||[],
                    draft:_draftGet('family', familyId), sending:false,
-                   loading:!_had, refreshing:!!_had, notifyP1:true, notifyP2:true,
+                   loading:!_had && !_knownEmpty, refreshing:!!_had || _knownEmpty, notifyP1:true, notifyP2:true,
                    students:_row.students||[]};
   _openPane('family');   // [1.336] — one pane, one open thing
   _shouldScrollMsgList=true;
@@ -4004,7 +4020,7 @@ function openFamilyThread(familyId, p1, p2, focusReview){
     if(!ACTIVE_THREAD || ACTIVE_THREAD.familyId!==familyId) return; // navigated away before this resolved
     ACTIVE_THREAD.loading=false; ACTIVE_THREAD.refreshing=false;
     if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not load conversation.','e'); render(); return; }
-    ACTIVE_THREAD.messages=r.messages||[];
+    ACTIVE_THREAD.messages=_mergeLoaded(r.messages||[], ACTIVE_THREAD.messages);   // [1.493]
     // [1.371] — the sender's own scheduled messages for this thread, in their
     // own array. Never merged into messages: their sentAt is when they were
     // WRITTEN, and adopting it would move the poll's watermark backwards.
@@ -4124,14 +4140,15 @@ function rFamilyThread(){
       ? '<span class="due-inline">'+esc(fmtDueFull(_cRow.replyDueBy))+'</span>' : '')+
     '<button type="button" class="lnk-btn" style="margin-left:auto" onclick="refreshFamilyThread()">'+(t.refreshing?'<span class="spin">↻</span>':'↻ Refresh')+'</button></div>';
   h+=rThreadKids(t.students);
-  if(t.loading){
-    return h+'<div style="text-align:center;padding:2rem;color:var(--text3)"><span class="spin" style="font-size:20px">↻</span></div>';
-  }
+  // [1.493] — the spinner stands where the messages will go; the composer
+  // below is drawn either way, so a teacher can start typing at once.
+  var _spin=(t.loading && !t.messages.length);
+  if(_spin) h+='<div style="text-align:center;padding:2rem;color:var(--text3)"><span class="spin" style="font-size:20px">↻</span></div>';
   // [1.371] — a thread with nothing sent but something scheduled is not an
   // empty conversation. The scheduled bubbles come LAST, where the message
   // will be when it goes.
   var _sched=(t.scheduled||[]);
-  if(!t.messages.length && !_sched.length){
+  if(_spin){ /* [1.493] — drawn above */ } else if(!t.messages.length && !_sched.length){
     h+='<div class="empty-state">No messages yet — send a message to get started.</div>';
   } else {
     var _r=_convRow(t.familyId);
@@ -4182,7 +4199,7 @@ function rFamilyThread(){
   var _upBusy=_attAnyUploading();
   var sendBtn=AMEND.kind==='edit' ? rEditActions() : (t.sending || actBusy('send')
     ?'<button class="btn btn-p" disabled><span class="spin">↻</span></button>'
-    :rAttachButton()+rLibraryButton()+
+    :rPickButtons('family-composer')+
       (_upBusy
         ? '<button class="btn btn-p" disabled title="'+esc(TCH_COPY.sendBlockedUploading)+'">Send</button>'
         : '<button class="btn btn-p" onclick="sendFamilyMessage()">Send</button>')+
@@ -4808,10 +4825,14 @@ function openStaffThread(contactType, otherId, otherName, focusReview){
     ? {conversationType:'teacher_admin', teacherId:TEACHER_ID, teacherToken:TOKEN}
     : {conversationType:'staff_staff', teacherId:TEACHER_ID, staffId2:otherId, teacherToken:TOKEN};
   var _had=_cachedMessages(reqData);   // [1.291]
+  // [1.493] — see openFamilyThread: a thread the roster knows is empty opens at once.
+  var _srow=(STAFF_THREADS.list||[]).filter(function(x){
+    return contactType==='admin' ? x.contactType==='admin' : x.teacherId===otherId; })[0]||{};
+  var _knownEmpty=(_srow.hasMessages===false);
   // [1.336] — same rule on the staff side; it used to read draft:''.
   ACTIVE_STAFF_THREAD = {contactType:contactType, otherId:otherId, otherName:otherName, messages:_had||[],
                          draft:_draftGet(contactType==='admin'?'admin':'staff', contactType==='admin'?'admin':otherId), sending:false,
-                         loading:!_had, refreshing:!!_had};
+                         loading:!_had && !_knownEmpty, refreshing:!!_had || _knownEmpty};
   _openPane('staff');    // [1.336] — one pane, one open thing
   _shouldScrollMsgList=true;
   render();
@@ -4819,13 +4840,23 @@ function openStaffThread(contactType, otherId, otherName, focusReview){
     if(!ACTIVE_STAFF_THREAD || ACTIVE_STAFF_THREAD.otherId!==otherId) return; // navigated away before this resolved
     ACTIVE_STAFF_THREAD.loading=false; ACTIVE_STAFF_THREAD.refreshing=false;
     if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not load messages.','e'); render(); return; }
-    ACTIVE_STAFF_THREAD.messages=r.messages||[];
+    ACTIVE_STAFF_THREAD.messages=_mergeLoaded(r.messages||[], ACTIVE_STAFF_THREAD.messages);   // [1.493]
     ACTIVE_STAFF_THREAD.scheduled=r.scheduled||[];   // [1.371] — see openFamilyThread
     THREAD_CACHE[_threadCacheKey(reqData)]=ACTIVE_STAFF_THREAD.messages;
     _applyPendingReviews(ACTIVE_STAFF_THREAD);   // [1.231]
     _shouldScrollMsgList=true; render();
     _markThreadRead(reqData);   // [1.263] — after the thread is drawn, never before
   });
+}
+// [1.493] — the composer is usable while the history loads, so a message
+// SENT in that gap is in the local list and not yet in the server's answer.
+// The server's list wins for everything it knows; anything local it does not
+// know is kept, so a send cannot be wiped by the history landing after it.
+function _mergeLoaded(server, local){
+  var have={};
+  (server||[]).forEach(function(m){ if(m.messageId) have[m.messageId]=true; });
+  var keep=(local||[]).filter(function(m){ return !m.messageId || !have[m.messageId]; });
+  return (server||[]).concat(keep);
 }
 
 // Manual "Refresh" — same reasoning as refreshFamilyThread() above.
@@ -4863,11 +4894,12 @@ function rStaffThread(){
   h+='<div style="display:flex;justify-content:space-between;align-items:center">'+
     '<div class="thread-hd" style="margin-bottom:0">'+esc(t.otherName)+'</div>'+
     '<button type="button" class="lnk-btn"  onclick="refreshStaffThread()">'+(t.refreshing?'<span class="spin">↻</span>':'↻ Refresh')+'</button></div>';
-  if(t.loading){
-    return h+'<div style="text-align:center;padding:2rem;color:var(--text3)"><span class="spin" style="font-size:20px">↻</span></div>';
-  }
+  // [1.493] — the spinner stands where the messages will go; the composer
+  // below is drawn either way, so a teacher can start typing at once.
+  var _spin=(t.loading && !t.messages.length);
+  if(_spin) h+='<div style="text-align:center;padding:2rem;color:var(--text3)"><span class="spin" style="font-size:20px">↻</span></div>';
   var _sched=(t.scheduled||[]);   // [1.371] — see the family thread above
-  if(!t.messages.length && !_sched.length){
+  if(_spin){ /* [1.493] — drawn above */ } else if(!t.messages.length && !_sched.length){
     h+='<div class="empty-state">No messages yet — send a message to get started.</div>';
   } else {
     h+='<div class="msg-list">'+t.messages.map(function(_m,_i,_all){
@@ -4877,7 +4909,7 @@ function rStaffThread(){
   }
   var sendBtn=AMEND.kind==='edit' ? rEditActions() : (t.sending
     ?'<button class="btn btn-p" disabled><span class="spin">↻</span></button>'
-    :rAttachButton()+rLibraryButton()+'<button class="btn btn-p" onclick="sendStaffMessage()">Send</button>'+
+    :rPickButtons('staff-composer')+'<button class="btn btn-p" onclick="sendStaffMessage()">Send</button>'+
       '<button type="button" class="btn btn-s" onclick="openSendLater()">'+esc(TCH_COPY.sendLater)+'</button>')+
     // Same row as the family thread, minus "Ask admin about this" — you do not
     // ask admin about a conversation you are already having with them.
@@ -5403,8 +5435,22 @@ function loadSavedLinks(){
 // Keylab Master Library, My Library, Save to Library, Library — and the rest of
 // the wording here is teacher-facing, which is his to write.
 var TLIB_COPY={
-  open:'Library',                       // AC's own word for the button
-  openTip:'Attach a file from your library',
+  // ── [1.494] — the two pickers. AC's words, 10 September 2026, FINAL ──
+  pickFile:'Add file',
+  pickLink:'Add link',
+  fromDevice:'Add from your device',
+  searchFiles:'Search your saved files',
+  searchLinks:'Search your saved links',
+  fileAttached:'File attached',
+  linkAdded:'Link added',
+  linkKind:'LINK',              // DERIVED — AC, 11 September: "simply list the file type instead" of the site
+  linkSelected:'Selected',      // PLACEHOLDER — what a saved link's row says once it has filled the fields
+  manageGo:'Manage Library',
+  editMessage:'Edit Message',
+  // DERIVED from his "Search your saved files / links", not written by him.
+  mineFiles:'Your saved files',
+  mineLinks:'Your saved links',
+  emptyPickLinks:"That link isn't here",   // DERIVED from emptyFiltered
   // ── AC's words, 10 September 2026. FINAL, not placeholders ───────────
   //
   // **He would not let the title assume the act:** *"Shouldn't they both not
@@ -5484,7 +5530,6 @@ var TLIB_COPY={
   added:'Added to your library.',
   addFailed:'That file could not be added.',
   already:'That file is already attached to this message.',
-  linkInserted:'Added \u201c{name}\u201d to your message.',
   linkNoComposer:'Open a message first, then pick a link.',
   linksHead:'Links',
   filesHead:'Files',
@@ -5517,7 +5562,14 @@ var TLIB_COPY={
 // In JS and not in the DOM, for the reason every other composer control here
 // is ([1.28], [1.32]): render() replaces #app every poll tick, so a filter left
 // in the DOM would vanish under the teacher's hand five seconds later.
-var LIB_OPEN=false;
+// ── [1.494] — WHICH picker is open inside the composer: '' | 'file' | 'link'.
+// There is no Library button any more (AC: "is there really a reason to have
+// a library button here at all?" — no). Add file and Add link each open their
+// own picker at once, with the new thing at the top and the library below.
+var PICK='';
+var PICK_Q='';            // the picker's own search, so the manager's remembered filter cannot hide files here
+var LINK_ADDED={};
+var LINK_SELECTED='';     // the saved link whose address and text are in the fields, awaiting Add link        // library link ids inserted into the OPEN message — "Link added" on the row
 // [1.481] — the panel drawn on the home page rather than inside a composer.
 // The flag is set for the length of one render and cleared straight after, so
 // nothing else in the file has to know about it.
@@ -5616,14 +5668,6 @@ function _libNormLink(l){
   l.fileName=l.label;   // the name every filter and search already reads
   return l;
 }
-// The site, from the address — a link's badge, where a file has its type.
-function _libLinkSite(url){
-  var m=String(url||'').match(/^https?:\/\/([^\/?#]+)/i);
-  var host=m?m[1].replace(/^www\./i,''):'';
-  if(!host) return 'LINK';
-  var first=host.split('.')[0];
-  return String(first||host).slice(0,8).toUpperCase();
-}
 function _libLinkHost(url){
   var m=String(url||'').match(/^https?:\/\/([^\/?#]+)/i);
   return m?m[1].replace(/^www\./i,''):String(url||'');
@@ -5692,13 +5736,125 @@ function _libOffered(){
 }
 
 // ── Opening, filtering, closing ─────────────────────────────────────────
-function libToggle(){
-  LIB_OPEN=!LIB_OPEN;
-  LIB_EDIT=''; LIB_DEL='';
-  if(LIB_OPEN) loadLibrary();
+// ── [1.494] — THE TWO PICKERS ───────────────────────────────────────────
+//
+// AC, 10 September 2026, after four passes over a mockup drawn in the
+// portal's own styles: two buttons beside Send, no Library button. Each opens
+// its picker on the first press — "the button functions should get the
+// teacher to the file or link picker immediately" — with the way to add a NEW
+// one at the top (the device chooser; the paste row) and the library below,
+// holding ONLY that kind: "it shouldn't open 'My links and files' if we're
+// adding a file." Tap one or several. The row itself says File attached / Link
+// added, where the thumb is, because the old panel's answer landed under the
+// composer out of view and read as "nothing happens." Edit Message, beside
+// Send, is the way back to writing. Manage Library, at the foot, opens the
+// full My Library overlay — the manager is only ever there now ([1.495]).
+function pickOpen(kind, composerId){
+  if(PICK===kind){ pickClose(composerId); return; }   // the pressed button, pressed again
+  PICK=kind; PICK_Q='';
+  _libComposerId=composerId||_libComposerId;
+  loadLibrary();
   render();
+  // The paste row's own opener: it remembers the highlighted words so a link
+  // lands over them, pre-fills the text, and puts the cursor in the address.
+  if(kind==='link') _composerLinkOpen(_libComposerId);
 }
-function libClose(){ LIB_OPEN=false; LIB_EDIT=''; LIB_DEL=''; render(); }
+function pickClose(composerId){
+  PICK=''; PICK_Q='';
+  var id=composerId||_libComposerId;
+  render();
+  // Edit Message: back in the box, caret at the end, no scroll jump.
+  var el=id?document.getElementById(id):null;
+  if(!el) return;
+  _focusNoScroll(el);
+  try{
+    var r=document.createRange(); r.selectNodeContents(el); r.collapse(false);
+    var sel=window.getSelection(); sel.removeAllRanges(); sel.addRange(r);
+  }catch(e){}
+}
+function pickSearch(v){ PICK_Q=String(v||''); _pickRedraw(); }
+// A press on a row. A file becomes one of [1.277]'s chips through libAttach;
+// a link goes into the words through the same insertion the paste row uses.
+// Either way the ROW says so — see rPickRow — and the picker stays open for
+// the next one.
+function pickUse(id, composerId){
+  var it=_pickFind(id); if(!it) return;
+  // AC, 11 September: a saved link FILLS the address and the text, so the
+  // words can be edited, and Add link is what inserts it — like Gmail. The
+  // text keeps whatever was highlighted; the link's name fills it otherwise.
+  if(it.kind==='link'){
+    var cid=composerId||_libComposerId;
+    var st=_cmpLinkState(cid);
+    st.url=it.url; st.bad=false;
+    if(!st.text) st.text=it.label||it.fileName||'';
+    LINK_SELECTED=id;
+    _pickRedraw();
+    var t=document.getElementById(cid+'-linktext');
+    if(t){ _focusNoScroll(t); try{ t.setSelectionRange(t.value.length, t.value.length); }catch(e){} }
+    return;
+  }
+  libAttach(id, composerId);
+}
+// The picker's items. Files: the two shelves' files. Links: the two shelves'
+// links, plus a teacher's older quick links ([1.338], a separate sheet) that
+// are not already on the shelf by address — so nothing a teacher saved before
+// the library existed disappears from the one place they now look for it.
+function _pickFiles(mine){ return _pickFiltered(mine?LIB_MINE:LIB_SHELF_STUDIO); }
+function _pickLinks(mine){
+  if(!mine) return _pickFiltered(LIB_STUDIO_LINKS);
+  var have={}; LIB_MY_LINKS.forEach(function(l){ have[String(l.url||'').toLowerCase()]=true; });
+  var extra=(SAVED_LINKS||[]).filter(function(l){ return !have[String(l.url||'').toLowerCase()]; })
+    .map(function(l){ return {kind:'link', id:'q:'+l.linkId, url:l.url, label:l.label, fileName:l.label, tags:[], privateTags:[]}; });
+  return _pickFiltered(LIB_MY_LINKS.concat(extra));
+}
+function _pickFiltered(list){ return (list||[]).filter(function(f){ return _libMatch(f, [], PICK_Q); }); }
+function _pickFind(id){
+  var it=_libFind(id); if(it) return it;
+  return _pickLinks(true).filter(function(x){ return x.id===id; })[0]||null;
+}
+// Redraws the picker and nothing else — [1.485]'s rule for the manager,
+// applied here: typing in the search must not rebuild the page under the
+// keyboard. Keeps the field's focus and caret, and each shelf's scroll.
+function _pickRedraw(){
+  var panel=document.getElementById('pick-panel');
+  if(!panel){ render(); return; }
+  var tops=[];
+  Array.prototype.forEach.call(panel.querySelectorAll('.lib-list'), function(l){ tops.push(l.scrollTop); });
+  var act=document.activeElement;
+  var actId=(act && panel.contains(act) && act.id) ? act.id : '';
+  var selStart=null, selEnd=null;
+  if(actId && act.setSelectionRange){ try{ selStart=act.selectionStart; selEnd=act.selectionEnd; }catch(e){} }
+  var tmp=document.createElement('div');
+  tmp.innerHTML=rPickPanel(_libComposerId);
+  var fresh=tmp.firstChild;
+  if(!fresh){ render(); return; }
+  panel.innerHTML=fresh.innerHTML;
+  Array.prototype.forEach.call(panel.querySelectorAll('.lib-list'), function(l, i){ if(tops[i]) l.scrollTop=tops[i]; });
+  if(actId){
+    var back=document.getElementById(actId);
+    if(back){ _focusNoScroll(back); if(selStart!==null && back.setSelectionRange){ try{ back.setSelectionRange(selStart, selEnd); }catch(e){} } }
+  }
+}
+// ── [1.495] — MY LIBRARY IS AN OVERLAY ──────────────────────────────────
+// AC: "The library does not fit in the side panel. It should open as an
+// overlay that has a clear obvious x to close the window." Opened from the
+// My Library row in the side panel and from Manage Library in either picker;
+// closed by its ×, the dimmed page behind it, or Escape.
+function libraryOpen(){ LIBRARY_OPEN=true; LIB_EDIT=''; LIB_DEL=''; loadLibrary(); render(); }
+function libraryClose(){ LIBRARY_OPEN=false; LIB_EDIT=''; LIB_DEL=''; LIB_ADD_LINK=false; render(); }
+document.addEventListener('keydown', function(ev){ if(ev.key==='Escape' && LIBRARY_OPEN) libraryClose(); });
+function rLibraryOverlay(){
+  if(!LIBRARY_OPEN) return '';
+  LIB_STANDALONE=true;
+  var panel=rLibraryPanel('');
+  LIB_STANDALONE=false;
+  return '<div class="lib-scrim" onclick="libraryClose()"></div>'+
+    '<div class="lib-modal" role="dialog" aria-modal="true" aria-label="'+esc(TLIB_COPY.manageHead)+'">'+
+      '<div class="lib-modal-hd"><span class="lib-modal-t">'+esc(TLIB_COPY.manageHead)+'</span>'+
+        '<button type="button" class="modal-x" aria-label="'+esc(TLIB_COPY.close)+'" onclick="libraryClose()">&#215;</button></div>'+
+      panel+
+    '</div>';
+}
 
 // ── [1.485] — REDRAW THE PANEL, NOT THE PAGE ────────────────────────────
 //
@@ -5727,7 +5883,9 @@ function _libRedraw(){
     try{ selStart=act.selectionStart; selEnd=act.selectionEnd; }catch(e){}
   }
   var tmp=document.createElement('div');
-  tmp.innerHTML=rLibraryPanel(_libComposerId);
+  LIB_STANDALONE=true;
+  tmp.innerHTML=rLibraryPanel('');
+  LIB_STANDALONE=false;
   var fresh=tmp.firstChild;
   if(!fresh){ render(); return; }
   // The INNER html is swapped, so the node the browser is scrolling stays the
@@ -5788,7 +5946,7 @@ function libAttach(id, composerId){
   // indistinguishable from the first on the tile — so the shelf entry a chip
   // came from is remembered and the second press says so instead.
   for(var i=0;i<ATT_PENDING.length;i++){
-    if(ATT_PENDING[i].fromLibrary===id){ showMsg(TLIB_COPY.already,'e'); return; }
+    if(ATT_PENDING[i].fromLibrary===id) return;   // [1.494] — the row already says File attached
   }
   var rec={tempId:'t'+Date.now()+Math.random(), fileName:f.fileName, mimeType:f.mimeType,
            sizeBytes:f.sizeBytes, uploading:true, attachmentId:'', fromLibrary:id};
@@ -5822,7 +5980,6 @@ function _libInsertLink(it, composerId){
   var id=composerId||_libComposerId;
   if(!id || !document.getElementById(id)){ showMsg(TLIB_COPY.linkNoComposer,'e'); return; }
   _composerInsertLink(id, it.url, it.label||it.fileName||it.url);
-  showMsg(TLIB_COPY.linkInserted.replace('{name}', it.label||it.fileName||''),'s');
 }
 // Which composer this panel belongs to. Set when the panel is drawn, because
 // the two composers in this portal are the same function called twice and the
@@ -6530,7 +6687,7 @@ function rLibraryAdded(){
           '<div style="display:flex;align-items:flex-start;gap:8px">'+
             '<input type="checkbox" class="lib-tick"'+(_on?' checked':'')+
               ' onclick="libAddedSel(\''+esc(f.id)+'\')" aria-label="'+esc(f.fileName)+'">'+
-            '<span class="lib-kind">'+esc(_lk?_libLinkSite(f.url):_attKind(f.fileName))+'</span>'+
+            '<span class="lib-kind">'+esc(_lk?TLIB_COPY.linkKind:_attKind(f.fileName))+'</span>'+
             '<input class="lib-name-in" style="flex:1" id="lib-bn-'+esc(f.id)+'"'+
               ' value="'+esc(f.fileName)+'" aria-label="'+esc(TLIB_COPY.lblName)+'"'+
               ' onkeydown="if(event.key===\'Enter\'){event.preventDefault();this.blur();}"'+
@@ -6579,19 +6736,10 @@ function rLibraryAdded(){
   '</div>';
 }
 
-// ── Drawing it ──────────────────────────────────────────────────────────
-function rLibraryButton(){
-  // Beside Add file, in the row where the things you do with a message already
-  // live ([1.234]'s own words). Two doors to one act — this file is on a shelf,
-  // that one is on your phone — so they belong side by side.
-  return '<button type="button" class="btn btn-s'+(LIB_OPEN?' lib-on':'')+'"'+
-    ' aria-pressed="'+(LIB_OPEN?'true':'false')+'" title="'+esc(TLIB_COPY.openTip)+'"'+
-    ' onclick="libToggle()">'+esc(TLIB_COPY.open)+'</button>';
-}
 function rLibraryPanel(composerId){
-  if(!LIB_OPEN && !LIB_STANDALONE) return '';
-  // [1.471] — WHICH composer this panel belongs to.
-  if(composerId) _libComposerId=composerId;
+  // [1.495] — the MANAGER, and it is drawn in one place only: the My Library
+  // overlay. The composer draws rPickPanel instead.
+  if(!LIB_STANDALONE) return '';
   var mine=_libFiltered(LIB_MINE), myLinks=_libFiltered(LIB_MY_LINKS);
   var studio=_libFiltered(LIB_SHELF_STUDIO), studioLinks=_libFiltered(LIB_STUDIO_LINKS);
   var total=LIB_MINE.length+LIB_MY_LINKS.length+LIB_SHELF_STUDIO.length+LIB_STUDIO_LINKS.length;
@@ -6604,13 +6752,8 @@ function rLibraryPanel(composerId){
   // enough on the shelves to be worth narrowing.
   var wantFind=(total>6)||LIB_Q||LIB_FILTER.length;
   // [1.485] — the id is what lets a press redraw THIS and nothing else.
+  // No heading of its own: the overlay carries the title and the ×.
   return '<div class="lib-panel" id="lib-panel">'+
-    '<div class="lib-hd">'+
-      '<span class="lib-hd-t">'+esc(LIB_STANDALONE?TLIB_COPY.manageHead:TLIB_COPY.head)+'</span>'+
-      (LIB_STANDALONE?''
-        :'<button type="button" class="lib-x" aria-label="'+esc(TLIB_COPY.close)+'"'+
-         ' onclick="libClose()">&#215;</button>')+
-    '</div>'+
     // The two ways IN, first and loudest ([1.480]).
     '<div class="lib-add-row">'+
       '<button type="button" class="btn btn-p" onclick="libAddFiles()">'+esc(TLIB_COPY.addGo)+'</button>'+
@@ -6763,7 +6906,7 @@ function rLibRow(f, mine){
     '<button type="button" class="lib-pick"'+(_press?'':' disabled')+
       ' title="'+esc(link?f.url:f.fileName)+'"'+
       ' onclick="'+_press+'">'+
-      '<span class="lib-kind">'+esc(link?_libLinkSite(f.url):_attKind(f.fileName))+'</span>'+
+      '<span class="lib-kind">'+esc(link?TLIB_COPY.linkKind:_attKind(f.fileName))+'</span>'+
       '<span class="lib-name">'+esc(f.fileName)+'</span>'+
     '</button>'+
     '<div class="lib-row-foot">'+
@@ -7246,29 +7389,6 @@ function tplSaveAsDo(id){
 }
 
 
-function rSavedLinks(id){
-  if(!SAVED_LINKS.length) return '';
-  return '<div class="cmp-saved">'+SAVED_LINKS.map(function(l){
-    return '<button type="button" class="cmp-mini" onmousedown="event.preventDefault()" '+
-      'title="'+esc(l.url)+'" onclick="_composerUseSaved(\''+esc(id)+'\',\''+esc(l.linkId)+'\')">'+
-      esc(l.label)+'</button>';
-  }).join('')+'</div>';
-}
-function _composerUseSaved(id, linkId){
-  var l=SAVED_LINKS.filter(function(x){ return x.linkId===linkId; })[0];
-  if(!l) return;
-  var st=_cmpLinkState(id);
-  st.url=l.url;
-  // Keep whatever they highlighted; use the saved name only when there is
-  // nothing to keep, so selecting a phrase and picking a link still links the
-  // phrase ([1.34]'s rule, unchanged).
-  if(!st.text) st.text=l.label;
-  var u=document.getElementById(id+'-linkurl');
-  var t=document.getElementById(id+'-linktext');
-  if(u){ u.value=st.url; u.classList.remove('bad'); }
-  if(t) t.value=st.text;
-  st.bad=false;
-}
 // [1.338] — the teacher's own library, NOT AC's. This line is the reversal:
 // [1.324] pointed it at getMessageLinks two days ago, and AC settled it on
 // 5 September — "teachers do not keep my links. Admin keeps admin links.
@@ -7300,7 +7420,7 @@ function _composerLinkOpen(id){
   // landed between pressing Link and pressing Add link: the link then landed
   // at the end of the message instead of over the highlighted words. Sixth
   // instance of [1.32]'s trap, and the last one that stores a live node.
-  _cmpLinkSel[id]=el?_cmpOffsets(el):null;
+  var _here=el?_cmpOffsets(el):null; if(_here) _cmpLinkSel[id]=_here;   // keep the remembered spot if the box is not focused
   var st=_cmpLinkState(id);
   st.open=true; st.url=''; st.bad=false;
   // Pre-fill the link text with whatever is selected, so highlighting a phrase
@@ -7314,17 +7434,9 @@ function _composerLinkOpen(id){
   if(u) u.focus();
 }
 
-function _composerLinkClose(id){
-  var row=document.getElementById(id+'-linkrow'); if(row) row.classList.remove('open');
-  var st=_cmpLinkState(id);
-  st.open=false; st.url=''; st.text=''; st.bad=false;
-  _cmpLinkSel[id]=null;
-  var el=document.getElementById(id); if(el) el.focus();
-}
-
 function _composerLinkKey(ev,id){
   if(ev.key==='Enter'){ ev.preventDefault(); _composerLinkInsert(id); }
-  if(ev.key==='Escape'){ ev.preventDefault(); _composerLinkClose(id); }
+  if(ev.key==='Escape'){ ev.preventDefault(); pickClose(id); }   // [1.494] — Escape is Edit Message
 }
 
 // AC, 28 Aug: site.com, www.site.com, https://www.site.com and https://site.com
@@ -7364,7 +7476,10 @@ function _composerLinkInsert(id){
   }
   var label=(tIn && tIn.value.trim()) || url.replace(/^https?:\/\//i,'');
   _composerInsertLink(id, url, label);
-  _composerLinkClose(id);
+  // [1.494] — the picker stays open for the next link; the fields clear.
+  var st=_cmpLinkState(id); st.url=''; st.text=''; st.bad=false;
+  if(LINK_SELECTED){ LINK_ADDED[LINK_SELECTED]=true; LINK_SELECTED=''; }   // the saved link that filled the fields is now in the message
+  render();
 }
 // [1.471] — ONE insertion, used by the Link box and by a link picked from the
 // library. Two copies of an execCommand that writes an anchor into a message is
@@ -7374,10 +7489,11 @@ function _composerInsertLink(id, url, label){
   var el=document.getElementById(id); if(!el) return;
   el.focus();
   var saved=_cmpLinkSel[id];
-  if(saved) _cmpRestore(el,saved);
+  _cmpRestore(el,saved);   // no memory at all means the END of the message, never the start
   try{ document.execCommand('styleWithCSS',false,false); }catch(e){}
   document.execCommand('insertHTML',false,'<a href="'+esc(url)+'">'+esc(label)+'</a>&nbsp;');
   _composerSync(id);
+  _cmpRemember(id);   // the next link goes after this one, like typing
 }
 
 // ── Toolbar active state ───────────────────────────────────────────────────
@@ -7386,8 +7502,20 @@ function _composerInsertLink(id, url, label){
 // commands; blockquote has no state to query, so it is resolved from the DOM.
 var _CMP_STATE_CMDS=['bold','italic','underline','insertUnorderedList','insertOrderedList'];
 
+// AC, 11 September 2026: "The link needs to be added directly where the
+// cursor currently is in the message, just like gmail." The caret was saved
+// once, when Add link was pressed, used once and forgotten — so a second link
+// landed at the START of the message. Now every keyup, mouseup and blur in
+// the box remembers where the caret is, an insert re-remembers the spot just
+// after what it inserted, and nothing ever forgets it.
+function _cmpRemember(id){
+  var el=document.getElementById(id); if(!el) return;
+  var o=_cmpOffsets(el);   // null when the selection is not in the box — then the last known spot stands
+  if(o) _cmpLinkSel[id]=o;
+}
 function _composerState(id){
   var el=document.getElementById(id); if(!el) return;
+  _cmpRemember(id);
   var wrap=el.closest?el.closest('.composer-wrap'):null; if(!wrap) return;
   _CMP_STATE_CMDS.forEach(function(c){
     var b=wrap.querySelector('[data-cmd="'+c+'"]'); if(!b) return;
@@ -7411,6 +7539,7 @@ function _composerState(id){
 
 function _composerStateClear(id){
   var el=document.getElementById(id); if(!el) return;
+  _cmpRemember(id);   // blur: the caret as it was when the teacher reached for a picker
   var wrap=el.closest?el.closest('.composer-wrap'):null; if(!wrap) return;
   var btns=wrap.querySelectorAll('.cmp-tb-btn.on');
   for(var i=0;i<btns.length;i++) btns[i].classList.remove('on');
@@ -7807,8 +7936,8 @@ function rComposerToolbar(id){
     _tbBtn(id,'insertUnorderedList','• List',CMP_COPY.bullet)+
     _tbBtn(id,'insertOrderedList','1. List',CMP_COPY.number)+
     '<span class="cmp-div"></span>'+
-    '<button type="button" class="cmp-tb-btn" title="'+esc(CMP_COPY.link)+'" onmousedown="event.preventDefault()"'+
-      ' onclick="_composerLinkOpen(\''+id+'\')">'+esc(CMP_COPY.link)+'</button>'+
+    // [1.494] — the Link button moved off this row to Add link beside Send,
+    // so the toolbar is formatting only: one control per job.
     '<button type="button" class="cmp-tb-btn" title="'+esc(CMP_COPY.clear)+'" onmousedown="event.preventDefault()"'+
       ' onclick="_composerClearFmt(\''+id+'\')">✕</button>'+
     // ── [1.434] — the merge tags, on the toolbar where a message is WRITTEN ──
@@ -7853,7 +7982,9 @@ function _composerInsertTag(id, tag){
 // the Link button is pressed so the composer stays quiet in normal use.
 function rComposerLinkRow(id){
   var st=_cmpLinkState(id);
-  return '<div class="cmp-linkrow'+(st.open?' open':'')+'" id="'+id+'-linkrow">'+
+  // [1.494] — drawn inside the Add link picker and nowhere else, so it is
+  // always open there; the picker's own × and Edit Message are the way out.
+  return '<div class="cmp-linkrow open" id="'+id+'-linkrow">'+
     '<input id="'+id+'-linkurl" class="'+(st.bad?'bad':'')+'" value="'+esc(st.url)+'"'+
       ' placeholder="'+esc(st.bad?CMP_COPY.linkRejected:CMP_COPY.linkUrlPlaceholder)+'"'+
       ' aria-label="'+esc(CMP_COPY.linkUrlPlaceholder)+'"'+
@@ -7863,8 +7994,6 @@ function rComposerLinkRow(id){
       ' oninput="_cmpLinkState(\''+id+'\').text=this.value"'+
       ' onkeydown="_composerLinkKey(event,\''+id+'\')">'+
     '<button type="button" class="cmp-mini" onmousedown="event.preventDefault()" onclick="_composerLinkInsert(\''+id+'\')">'+esc(CMP_COPY.linkAdd)+'</button>'+
-    '<button type="button" class="cmp-mini" onmousedown="event.preventDefault()" onclick="_composerLinkClose(\''+id+'\')" aria-label="'+esc(CMP_COPY.linkCancel)+'">×</button>'+
-    rSavedLinks(id)+
     '<div class="cmp-guide">'+esc(CMP_COPY.linkSharing)+'</div>'+
   '</div>';
 }
@@ -7897,12 +8026,11 @@ function rEditActions(){
 function rComposer(id,draft,onInput,sendBtn){
   return '<div class="composer-wrap">'+
     rComposerToolbar(id)+
-    rComposerLinkRow(id)+
     '<div class="composer">'+
-      // [1.465] — AC's fourth saving: the library "opens inside the composer,
-      // above the box". Not a screen and not a dialog: it belongs to the
-      // message being written, and a file picked from it becomes a chip below.
-      rLibraryPanel(id)+
+      // [1.494] — one of the two pickers, inside the composer above the box,
+      // only while Add file or Add link has been pressed. Not a screen and not
+      // a dialog: it belongs to the message being written.
+      rPickPanel(id)+
       '<div id="'+id+'" class="cmp-rich" contenteditable="true" role="textbox" aria-multiline="true"'+
         ' aria-label="Message" data-ph="'+esc(CMP_COPY.placeholder)+'"'+
         ' oninput="'+onInput+';_composerState(\''+id+'\')"'+
@@ -8307,7 +8435,7 @@ function _attTakeIds(){
   return ATT_PENDING.filter(function(x){ return x.attachmentId; })
                     .map(function(x){ return x.attachmentId; });
 }
-function _attClear(){ ATT_PENDING=[]; ATT_BUSY=0; }
+function _attClear(){ ATT_PENDING=[]; ATT_BUSY=0; PICK=''; PICK_Q=''; LINK_ADDED={}; LINK_SELECTED=''; }   // [1.494] — a picker belongs to the thread it was opened in
 // [1.277] — the accepted formats, ONCE, feeding three things: the picker's
 // filter, the list a teacher can open, and nothing else. AC asked for the list
 // to be reachable on screen rather than guessed at, and a second hand-written
@@ -8382,13 +8510,80 @@ function rAttachRow(){
   }
   return h;
 }
-function rAttachButton(){
-  // Beside Send, in "the row where the things you do with a message already
-  // live" — [1.234]'s own words. Not on the formatting toolbar: everything
-  // there produces markup the server's allowlist accepts, and a control that
-  // does something else on that row would be the odd one out.
-  return '<button type="button" class="btn btn-s btn-attach" title="'+esc(TCH_COPY.attachTip)+'"'+
-    ' onclick="attachPick()">'+esc(TCH_COPY.attach)+'</button>';
+// [1.494] — Add file · Add link · (Edit Message, while a picker is open),
+// beside Send, in "the row where the things you do with a message already
+// live" — [1.234]'s own words. Not on the formatting toolbar.
+function rPickButtons(composerId){
+  function b(kind, label){
+    return '<button type="button" class="btn btn-s'+(PICK===kind?' lib-on':'')+'"'+
+      ' aria-pressed="'+(PICK===kind?'true':'false')+'"'+
+      ' onclick="pickOpen(\''+kind+'\',\''+esc(composerId)+'\')">'+esc(label)+'</button>';
+  }
+  return b('file', TLIB_COPY.pickFile)+b('link', TLIB_COPY.pickLink)+
+    (PICK ? '<button type="button" class="btn btn-s" onclick="pickClose(\''+esc(composerId)+'\')">'+
+              esc(TLIB_COPY.editMessage)+'</button>' : '');
+}
+// The picker itself. One shape for both kinds: the new thing first, the
+// search, the two shelves holding only that kind, Manage Library last.
+function rPickPanel(composerId){
+  if(!PICK) return '';
+  if(composerId) _libComposerId=composerId;
+  var file=(PICK==='file');
+  var mine=file?_pickFiles(true):_pickLinks(true);
+  var studio=file?_pickFiles(false):_pickLinks(false);
+  var h='<div class="lib-panel" id="pick-panel">'+
+    '<div class="lib-hd"><span class="lib-hd-t">'+esc(file?TLIB_COPY.pickFile:TLIB_COPY.pickLink)+'</span>'+
+      '<button type="button" class="modal-x" aria-label="'+esc(TLIB_COPY.close)+'"'+
+        ' onclick="pickClose(\''+esc(composerId)+'\')">&#215;</button></div>';
+  if(file){
+    h+='<button type="button" class="btn btn-p pick-from" onclick="attachPick()">'+esc(TLIB_COPY.fromDevice)+'</button>';
+  } else {
+    h+=rComposerLinkRow(composerId);
+  }
+  h+='<input id="pick-q" class="lib-search" type="text" value="'+esc(PICK_Q)+'"'+
+       ' placeholder="'+esc(file?TLIB_COPY.searchFiles:TLIB_COPY.searchLinks)+'"'+
+       ' aria-label="'+esc(file?TLIB_COPY.searchFiles:TLIB_COPY.searchLinks)+'"'+
+       ' oninput="pickSearch(this.value)">';
+  if(!mine.length && !studio.length && PICK_Q){
+    h+='<div class="lib-empty">'+esc(file?TLIB_COPY.emptyFiltered:TLIB_COPY.emptyPickLinks)+'</div>';
+  } else {
+    h+=rPickShelf(file?TLIB_COPY.mineFiles:TLIB_COPY.mineLinks, mine, composerId)+
+       rPickShelf(TLIB_COPY.studio, studio, composerId);
+  }
+  h+='<div class="lib-foot"><button type="button" class="lnk-btn" onclick="libraryOpen()">'+esc(TLIB_COPY.manageGo)+'</button></div>';
+  return h+'</div>';
+}
+// A shelf with nothing on it draws nothing: there is nothing to pick.
+function rPickShelf(label, items, composerId){
+  if(!items.length) return '';
+  return '<div class="lib-shelf"><div class="lib-group-hd">'+esc(label)+'</div>'+
+    '<div class="lib-list">'+items.map(function(f){ return rPickRow(f, composerId); }).join('')+'</div></div>';
+}
+// The row says what happened to it — AC's two words, on the row the thumb
+// pressed, never in a corner ([[lesson-status-banners]]).
+function rPickRow(f, composerId){
+  var id=f.id||f.attachmentId;
+  var link=f.kind==='link';
+  var said='';
+  if(link){
+    if(LINK_ADDED[id]) said='<span class="lib-said">&#10003; '+esc(TLIB_COPY.linkAdded)+'</span>';
+    else if(LINK_SELECTED===id) said='<span class="lib-said working">'+esc(TLIB_COPY.linkSelected)+'</span>';
+  } else {
+    var rec=ATT_PENDING.filter(function(a){ return a.fromLibrary===id; })[0];
+    if(rec){
+      said = rec.uploading ? '<span class="lib-said working"><span class="spin">&#8635;</span> '+esc(TLIB_COPY.attaching)+'</span>'
+           : rec.failed    ? '<span class="lib-said bad">'+esc(rec.error||TLIB_COPY.attachFailed)+'</span>'
+           :                 '<span class="lib-said">&#10003; '+esc(TLIB_COPY.fileAttached)+'</span>';
+    }
+  }
+  return '<div class="lib-row'+(link?' lib-link':'')+'">'+
+    '<button type="button" class="lib-pick" title="'+esc(link?f.url:f.fileName)+'"'+
+      ' onclick="pickUse(\''+esc(id)+'\',\''+esc(composerId)+'\')">'+
+      '<span class="lib-kind">'+esc(link?TLIB_COPY.linkKind:_attKind(f.fileName))+'</span>'+
+      '<span class="lib-name">'+esc(f.fileName)+'</span>'+
+    '</button>'+
+    '<div class="lib-row-foot"><span class="lib-meta">'+esc(link?_libLinkHost(f.url):_attSize(f.sizeBytes))+'</span>'+said+'</div>'+
+  '</div>';
 }
 
 // ── [1.276] — one merge for every poll in this file ─────────────────────
@@ -9627,7 +9822,7 @@ function doSignOut(){
   // does the panel's open state. The remembered FILTER stays: it is a tag
   // preference, not anybody's material, and it is what makes the next sign-in
   // two clicks instead of four.
-  LIB_OPEN=false; LIB_EDIT=''; LIB_DEL=''; LIB_KEPT={};
+  PICK=''; PICK_Q=''; LINK_ADDED={}; LIBRARY_OPEN=false; LIB_EDIT=''; LIB_DEL=''; LIB_KEPT={};
   LIB_MINE=[]; LIB_SHELF_STUDIO=[]; LIB_TAGS=[]; _libLoaded=false; _libInFlight=false;
   if(_pollTimer){ clearInterval(_pollTimer); _pollTimer=null; }
   TOKEN=''; TEACHER_ID=''; TEACHER_NAME='';

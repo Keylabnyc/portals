@@ -343,11 +343,31 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 /* 1.190, AC: "NO HYPERLINK TEXT! Buttons only. For everyone." Every control
    that used to be a text link is this. Sized to be pressed, including on a
    phone, and readable at arm's length (1.186). */
-.lnk-btn{display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border-radius:var(--r);
-  border:1px solid var(--border2);background:rgba(255,255,255,.55);color:var(--text2);
+/* ── [1.550] — the pale style is retired, at the STYLE ─────────────────────
+   AC, 10 September 2026: *"no text links like manage library"*, and before that
+   *"white and washed out"*, and before that *"No text links for important
+   functions. Buttons, and visible buttons, not hidden."* Three reports, one
+   cause: `.lnk-btn` was white-on-white in the second-faintest grey in the file.
+
+   **Fixed at the style rather than at the call sites**, which is the same move
+   [1.518] made for `.lib-mini`: there are 61 uses across the three portals, and
+   editing 61 places to say the same thing is how the 48 variations happened.
+
+   It is the SECONDARY role now — the same fill and weight as `.btn-s`, so a
+   secondary control looks the same wherever it is drawn. It keeps its own
+   metrics (smaller padding, left-aligned) because it is used inline in rows
+   where a full button would break the line. */
+.lnk-btn{display:inline-flex;align-items:center;gap:5px;padding:6px 11px;border-radius:var(--r);
+  border:1px solid var(--border2);background:rgba(0,0,0,.10);color:var(--text);
   font-family:"Inter",sans-serif;font-size:12.5px;font-weight:600;cursor:pointer;line-height:1.25;
   text-align:left}
-.lnk-btn:hover{background:rgba(255,255,255,.85);color:var(--text)}
+.lnk-btn:hover{background:rgba(0,0,0,.18);color:var(--text);border-color:var(--text4)}
+/* [1.550] — DANGER, and it is deliberately the only fourth role. Not a colour
+   for variety: the one case where a button must NOT look like every other
+   button, so it is not pressed by reflex. It matches [1.544]'s red banner, so
+   the colour already means "gone" in this tool before the press happens. */
+.btn-danger{background:none;border:1px solid var(--red);color:var(--red);font-weight:600}
+.btn-danger:hover{background:rgba(220,38,38,.10);border-color:var(--red);color:var(--red)}
 /* [1.413] — Messages-format runs, identical in all three portals. */
 .bubble-row{display:flex;margin-top:2px}
 .bubble-row.run-start{margin-top:.6rem}

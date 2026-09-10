@@ -8200,7 +8200,8 @@ function openAttachment(id, mode){
   // in the corner. [1.404]'s mechanism, on the action it was never applied to.
   if(actBusy('att:'+id)) return;
   actStart('att:'+id, TCH_COPY.attachOpening);
-  api({action:'getAttachment', data:{attachmentId:id, teacherId:TEACHER_ID, teacherToken:TOKEN}}, function(e,r){
+  // [1.504] — a save needs the BYTES; a cross-origin link cannot download.
+  api({action:'getAttachment', data:{attachmentId:id, wantBytes:(mode==='download'), teacherId:TEACHER_ID, teacherToken:TOKEN}}, function(e,r){
     // [1.463] — a LINK is the fast answer and the bytes are the fallback, so
     // the client has to accept either. The link is opened by exactly the same
     // two lines a blob is ([1.417]'s view/download), so a phone behaves as it
@@ -8298,9 +8299,10 @@ function _attOpenUrl_(url, fileName, id, mode){
   if(mode==='download'){
     var dl=document.createElement('a');
     dl.href=url; dl.download=fileName||'attachment';
-    // A cross-origin download attribute is advisory: Drive serves its own
-    // filename. Opening in a tab is the honest fallback rather than a link
-    // that appears to do nothing.
+    // [1.504] — a cross-origin `download` attribute is IGNORED, which made
+    // Download identical to opening. A save now asks for the BYTES
+    // (`wantBytes`) and writes a blob; this is only the last resort for a
+    // server that hands back a link anyway.
     dl.target='_blank'; dl.rel='noopener';
     document.body.appendChild(dl); dl.click(); document.body.removeChild(dl);
     return;

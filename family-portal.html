@@ -3151,6 +3151,20 @@ function toggleHomeThread(teacherId, teacherName){
   fapi('getConversation', {conversationType:'family_teacher', familyId:FAMILY_ID, teacherId:teacherId}, function(e,r){
     if(!HOME_EXPANDED||HOME_EXPANDED.teacherId!==teacherId) return;
     HOME_EXPANDED.loading=false;
+    // ── [1.505] — and `refreshing`, which nothing ever cleared ────────────
+    //
+    // AC, 10 September 2026: *"The refresh button on the family page is
+    // constantly spinning."*
+    //
+    // The open above sets `refreshing:!!_had` — [1.493]'s instant open, drawn
+    // from cache with the fetch running behind it. **`loading` was cleared here
+    // and `refreshing` was not**, so any thread opened a SECOND time (the first
+    // open fills the cache) span for ever.
+    //
+    // **And it is worse than a stuck spinner: it disabled the button.**
+    // `refreshHomeThread` opens with `if(!t||t.refreshing) return;` — so Refresh
+    // did nothing at all, silently, for the rest of the session.
+    HOME_EXPANDED.refreshing=false;
     if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not load conversation.','e'); render(); return; }
     HOME_EXPANDED.messages=r.messages||[];
     KL_THREAD_CACHE[teacherId]=HOME_EXPANDED.messages;
@@ -3169,6 +3183,11 @@ function refreshHomeThread(){
   if(!t||t.refreshing) return;
   t.refreshing=true; render();
   fapi('getConversation', {conversationType:'family_teacher', familyId:FAMILY_ID, teacherId:t.teacherId}, function(e,r){
+    // Cleared on the object the flag was SET on, before the guard below — the
+    // guard returns when the parent has moved to another thread, and clearing
+    // only `HOME_EXPANDED` would leave this one latched if it were ever reused.
+    // [1.505] is what a latched copy of this flag costs.
+    t.refreshing=false;
     if(!HOME_EXPANDED||HOME_EXPANDED.teacherId!==t.teacherId) return;
     HOME_EXPANDED.refreshing=false;
     if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not refresh.','e'); render(); return; }
@@ -3721,11 +3740,20 @@ function _attSaveHeld(id){
 // beside the tile does the other thing.
 function _attOpenUrl_(url, fileName, id, mode){
   if(mode==='download'){
+    // ── [1.504] — this branch should now be unreachable for a real save ───
+    //
+    // A cross-origin `download` attribute is IGNORED, so this opened a tab and
+    // made Download identical to clicking the name — AC's report. A save now
+    // asks the server for the BYTES (`wantBytes`), and the blob path in
+    // klOpenAttachment is what actually writes the file to the device.
+    //
+    // Kept as a last resort for the one case that can still reach it: the
+    // server refusing the bytes and handing back a link anyway. Opening a tab
+    // is then the only thing left, and it is better than a control that does
+    // nothing — but it is no longer the ordinary path, and it is no longer
+    // described as an honest fallback, because the reader asked to save.
     var dl=document.createElement('a');
     dl.href=url; dl.download=fileName||'attachment';
-    // A cross-origin download attribute is advisory: Drive serves its own
-    // filename. Opening in a tab is the honest fallback rather than a link
-    // that appears to do nothing.
     dl.target='_blank'; dl.rel='noopener';
     document.body.appendChild(dl); dl.click(); document.body.removeChild(dl);
     return;
@@ -3754,7 +3782,8 @@ function klOpenAttachment(id, mode){
   // [1.417] — keyed by the file; see the teacher portal's note.
   if(actBusy('att:'+id)) return;
   actStart('att:'+id, KL_ATT_OPENING);
-  fapi('getAttachment', {attachmentId:id}, function(e,r){
+  // [1.504] — a save needs the BYTES; a cross-origin link cannot download.
+  fapi('getAttachment', {attachmentId:id, wantBytes:(mode==='download')}, function(e,r){
     // [1.463] — a LINK is the fast answer and the bytes are the fallback, so
     // this accepts either. It matters most in THIS portal: a parent on a phone
     // is the reader who waits longest for a file to come through the tool.

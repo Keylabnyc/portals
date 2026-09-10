@@ -1171,6 +1171,7 @@ var busy = false;
 var RESET_TOKEN = '';
 var _pollTimer = null;
 var _pendingOpenFamilyId = '';   // set by boot() from ?openFamilyId=, consumed once by loadFamilyThreads()
+var _lastPickState='';   // [1.512] — which picker was open on the previous render
 var _shouldScrollMsgList = false; // see render() — scroll-to-newest, set only when messages actually change
 // [1.235] — set when a conversation is opened FROM the Marked for review
 // section, cleared by the first render that has a thread to look in.
@@ -1599,6 +1600,28 @@ function _renderBody(){
   // page's HTML can briefly shorten the document and the browser clamps the
   // scroll position when it does.
   var _prevWinY=window.pageYOffset||document.documentElement.scrollTop||0;
+  // ── [1.512] — the COMPOSER is the anchor when a picker opens or closes ──
+  //
+  // AC, 10 September 2026: *"The screen was jumping also. Can you check to make
+  // sure it's stable?"*
+  //
+  // Restoring `pageYOffset` is right for an ordinary re-render and WRONG for
+  // this one, and [1.507] is what made the difference. The picker takes the
+  // message list's place, so opening it swaps a region of one height for a
+  // region of another: a three-message thread is short and a link picker is a
+  // paste row, guidance, a search box and two shelves. Putting the page back to
+  // the same offset therefore puts DIFFERENT CONTENT under the reader's eye —
+  // the composer moves down the screen by the difference, which is the jump.
+  //
+  // So on the render where a picker OPENS or CLOSES, the thing held still is
+  // the composer rather than the scroll offset. Its distance from the top of
+  // the viewport is measured before and after, and the page is moved by the
+  // difference. Every other render keeps the existing behaviour untouched.
+  var _prevCmp=el.querySelector('.composer-wrap');
+  var _prevCmpTop=_prevCmp?_prevCmp.getBoundingClientRect().top:null;
+  var _pickWas=_lastPickState;
+  _lastPickState=PICK||'';
+  var _pickChanged=(_pickWas!==_lastPickState);
   el.innerHTML=h;
   // [1.127] — an arrow-key reorder has to leave the focus ON THE ROW IT MOVED,
   // and that cannot be done at the call site: the save that follows re-renders
@@ -1678,6 +1701,15 @@ function _renderBody(){
   });
   // [1.221] — and the page itself, last, after every other restore above has
   // had its say.
+  // [1.512] — the composer wins on the render that swapped the region.
+  if(_pickChanged&&_prevCmpTop!==null){
+    var _nowCmp=el.querySelector('.composer-wrap');
+    if(_nowCmp){
+      var _delta=_nowCmp.getBoundingClientRect().top-_prevCmpTop;
+      if(_delta) window.scrollBy(0,_delta);
+      return;
+    }
+  }
   var _nowWinY=window.pageYOffset||document.documentElement.scrollTop||0;
   if(_prevWinY&&_nowWinY!==_prevWinY) window.scrollTo(0,_prevWinY);
 }

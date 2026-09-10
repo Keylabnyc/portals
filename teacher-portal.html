@@ -949,9 +949,19 @@ input[type=checkbox]{width:13px;height:13px;padding:0;margin:0;border:0;border-r
 .lib-act.bad:hover{border-color:var(--red);color:var(--red)}
 .lib-act[disabled]{opacity:.45;cursor:default}
 .lib-act[disabled]:hover{border-color:var(--border2);color:var(--text2)}
-.lib-mini{background:none;border:0;padding:2px 5px;font-family:inherit;font-size:11px;
-  color:var(--text4);cursor:pointer}
-.lib-mini:hover{color:var(--acc)}
+/* ── [1.518] — an important action is a BUTTON ─────────────────────────
+   AC, 10 September 2026: *"Save to library is hidden css. Needs to be a button.
+   No text links for important functions. Buttons, and visible buttons, not
+   hidden."*
+
+   This was `background:none;border:0` in `--text4`, the faintest grey in the
+   file — a control that looked like a caption. It is a RULE rather than one
+   control, so it is fixed at the style: every `.lib-mini` in both portals is a
+   real button now, and there are twenty of them. */
+.lib-mini{background:rgba(0,0,0,.06);border:1px solid var(--border2);border-radius:var(--r);
+  padding:4px 9px;font-family:inherit;font-size:11.5px;font-weight:600;
+  color:var(--text2);cursor:pointer;line-height:1.25}
+.lib-mini:hover{background:rgba(0,0,0,.12);color:var(--text);border-color:var(--text4)}
 .lib-tagfind{padding:4px 8px;border:1px solid var(--border2);border-radius:var(--r);
   font-family:inherit;font-size:11.5px;background:#fff;color:var(--text);width:118px}
 .lib-tick{width:15px;height:15px;flex:none;margin:2px 0 0 0}
@@ -1585,6 +1595,23 @@ function _renderBody(){
   // every poll re-render dropped the reader back to the top of the list.
   var _prevList=el.querySelector('.msg-list');
   var _prevListTop=_prevList?_prevList.scrollTop:null;
+  // ── [1.521] — the thread came back at the OLDEST message ───────────────
+  //
+  // AC, 10 September 2026: *"After adding a link, the messages scroll back to
+  // the very 1st message in the thread instead of staying on the current
+  // message being composed."*
+  //
+  // The list's offset is remembered above only when `.msg-list` is on screen.
+  // [1.507] put the picker in its place, so while a picker is open there is no
+  // list to remember — and when it closes, a freshly built list starts at
+  // scrollTop 0, which is the OLDEST message. Every earlier scroll fix restored
+  // a value that no longer applied to anything.
+  //
+  // A list that was ABSENT and is now back is treated exactly like opening the
+  // thread: [1.27] and [1.430] both settled that a thread rests at its NEWEST
+  // message, so this is the existing rule applied to a case that did not exist
+  // when they were written.
+  var _listWasAbsent=!_prevList;
   // [1.484] — AC: "when I click a tag to add, the screen jumps, but should
   // not." The library's shelves scroll inside themselves, and render() replaces
   // #app wholesale — so every press put every one of those lists back to the
@@ -1689,6 +1716,11 @@ function _renderBody(){
   }
   if(_didFocusReview){
     /* already positioned */
+  } else if(_listWasAbsent && el.querySelector('.msg-list')){
+    // [1.521] — back from behind a picker: rest at the newest, never the oldest.
+    var mlBack=el.querySelector('.msg-list');
+    if(mlBack) mlBack.scrollTop=mlBack.scrollHeight;
+    _shouldScrollMsgList=false;
   } else if(_shouldScrollMsgList){
     _shouldScrollMsgList=false;
     var ml=el.querySelector('.msg-list');
@@ -1720,6 +1752,52 @@ function _renderBody(){
 // [1.221] — focus without the browser's automatic scroll-into-view. Where
 // preventScroll is not honoured, the scroll offsets are put back by the
 // caller, so the worst case is the behaviour we already had.
+
+// ── [1.520] — mobile and desktop want DIFFERENT answers here ─────────────
+//
+// AC, 10 September 2026, three reports that are one fault:
+//   *"adding a link from the library on mobile doesn't jump up to the link
+//    address and name and 'add link' button... it's very easy to get lost on
+//    mobile without helpful guidance"*
+//   *"clicking add file correctly opens the file browser, but screen stays put
+//    so I can't see the browser"*
+//   *"On mobile the browsers are better opened under the control buttons. This
+//    might be a better solution than putting in the conversation history
+//    location?"*
+//
+// **He is right, and [1.507] is the item this corrects.** Putting the picker
+// where the message history goes was the right answer for a LAPTOP — the
+// composer keeps its place and the history is the thing nobody needs while
+// choosing. **On a phone that same choice puts the picker off the top of the
+// screen**, because the composer is already near the bottom and everything
+// above it is scrolled away. The picker opened, correctly, out of sight.
+//
+// So the placement is now a function of the screen rather than a constant, and
+// AC's own proposal is what it does: **under the controls that opened it, on
+// mobile.** The breakpoint is the one the stylesheet already uses (900px), read
+// once per call so a rotated phone or a resized window is never stale.
+//
+// **And the scroll rule inverts with it.** [1.512] holds the composer still on
+// a desktop, which is right when the picker appears somewhere the reader is not
+// looking. On mobile the picker IS the next step, so the screen should go to it
+// — which AC named as a deliberate reversal: *"This is a reversal of previous
+// requests to not jump, but this is targeted and purposeful."*
+function _isPhone(){
+  try { return window.matchMedia('(max-width:899px)').matches; }
+  catch(e){ return (window.innerWidth||1200) < 900; }
+}
+// Bring an element to the top of the viewport, once, after the render that made
+// it. Used ONLY on mobile and ONLY for a step the person just asked for.
+function _guideTo(sel){
+  if(!_isPhone()) return;
+  setTimeout(function(){
+    var el=document.querySelector(sel);
+    if(!el||!el.scrollIntoView) return;
+    try{ el.scrollIntoView({block:'start',behavior:'smooth'}); }
+    catch(e){ el.scrollIntoView(true); }
+  },0);
+}
+
 function _focusNoScroll(el){
   try{ el.focus({preventScroll:true}); }catch(e){ try{ el.focus(); }catch(e2){} }
 }
@@ -4228,13 +4306,13 @@ function rFamilyThread(){
   // move — so what is being written and what is already attached stay on screen
   // throughout. That is the clarity he asked for, and it is also why [1.502]'s
   // missing device-file confirmation stops mattering: the chip appears in view.
-  if(PICK){ h+=rPickPanel('family-composer'); }
+  if(PICK && !_isPhone()){ h+=rPickPanel('family-composer'); }   // [1.520] — on a phone it goes under the controls instead
   else if(_spin) h+='<div style="text-align:center;padding:2rem;color:var(--text3)"><span class="spin" style="font-size:20px">↻</span></div>';
   // [1.371] — a thread with nothing sent but something scheduled is not an
   // empty conversation. The scheduled bubbles come LAST, where the message
   // will be when it goes.
   var _sched=(t.scheduled||[]);
-  if(PICK){ /* [1.507] — the picker has the history's space */ }
+  if(PICK && !_isPhone()){ /* [1.507] — the picker has the history's space, on a desktop */ }
   else if(_spin){ /* [1.493] — drawn above */ } else if(!t.messages.length && !_sched.length){
     h+='<div class="empty-state">No messages yet — send a message to get started.</div>';
   } else {
@@ -4996,10 +5074,10 @@ function rStaffThread(){
   // move — so what is being written and what is already attached stay on screen
   // throughout. That is the clarity he asked for, and it is also why [1.502]'s
   // missing device-file confirmation stops mattering: the chip appears in view.
-  if(PICK){ h+=rPickPanel('staff-composer'); }
+  if(PICK && !_isPhone()){ h+=rPickPanel('staff-composer'); }   // [1.520]
   else if(_spin) h+='<div style="text-align:center;padding:2rem;color:var(--text3)"><span class="spin" style="font-size:20px">↻</span></div>';
   var _sched=(t.scheduled||[]);   // [1.371] — see the family thread above
-  if(PICK){ /* [1.507] — the picker has the history's space */ }
+  if(PICK && !_isPhone()){ /* [1.507] — the picker has the history's space, on a desktop */ }
   else if(_spin){ /* [1.493] — drawn above */ } else if(!t.messages.length && !_sched.length){
     h+='<div class="empty-state">No messages yet — send a message to get started.</div>';
   } else {
@@ -5880,6 +5958,11 @@ function _libOffered(){
 // Send, is the way back to writing. Manage Library, at the foot, opens the
 // full My Library overlay — the manager is only ever there now ([1.495]).
 function pickOpen(kind, composerId){
+  // [1.520] — on a phone, the picker IS the next step, so the screen goes to
+  // it. AC: *"on mobile, we need more predictive behavior in terms of jumping
+  // to the next logical step. Not on desktop."* On a desktop the picker appears
+  // where the reader is already looking and [1.512] holds everything still.
+  _guideTo('.lib-panel');
   if(PICK===kind){ pickClose(composerId); return; }   // the pressed button, pressed again
   PICK=kind; PICK_Q='';
   _libComposerId=composerId||_libComposerId;
@@ -5921,6 +6004,12 @@ function pickUse(id, composerId){
     _pickRedraw();
     var t=document.getElementById(cid+'-linktext');
     if(t){ _focusNoScroll(t); try{ t.setSelectionRange(t.value.length, t.value.length); }catch(e){} }
+    // [1.520] — AC: *"adding a link from the library on mobile doesn't jump up
+    // to the link address and name and 'add link' button... it's very easy to
+    // get lost on mobile without helpful guidance."* The fields are ABOVE the
+    // list on a phone, so tapping a saved link fills something the person
+    // cannot see. This takes them to it, and only on a phone.
+    _guideTo('.cmp-linkrow');
     return;
   }
   libAttach(id, composerId);
@@ -8025,9 +8114,22 @@ var CMP_COPY={
   // words, moved beside Send on 3 Sept at AC's instruction.
   askAdmin:'Ask Admin',
   placeholder:'Type your message here...',
-  linkUrlPlaceholder:'Add link here',
-  linkTextPlaceholder:'Link text (optional)',
-  linkAdd:'Add link',
+  // [1.517] — AC's words: the field says what goes IN it.
+  linkUrlPlaceholder:'Add link address here',
+  linkTextPlaceholder:'Add display text here',
+  // ── [1.517] — three controls called "Add link" was two too many ────────
+  //
+  // AC, 10 September 2026: *"It says 'Add link' in several different places.
+  // This is poor design."* He is right, and the collision was mine: `pickLink`
+  // OPENS the picker and `linkAdd` INSERTS into the message, and both said the
+  // same words on the same screen.
+  //
+  // **`pickLink` keeps 'Add link' — it is AC's own word for that button and it
+  // is the one a teacher presses first.** The one that changes is this, the
+  // control that puts the link into the words, and it is now named for what it
+  // does. The two fields say what goes in them rather than sharing a name with
+  // the button beneath.
+  linkAdd:'Insert link',
   // AC's words, 10 September 2026, verbatim.
   linkSelectedDo:'Click "Add link" to add the link to your message',
   linkCancel:'Cancel',
@@ -8226,7 +8328,11 @@ function rComposer(id,draft,onInput,sendBtn){
       // [1.277] — the chips sit between what is being written and the button
       // that sends it, which is where a file being added belongs.
       rAttachRow()+
-      // [1.404]/[1.428] — the status for this composer, beside its buttons.
+        // [1.520] — ON A PHONE the picker is drawn here, under the controls that
+      // opened it, which is AC's own proposal. On a desktop this is empty and
+      // the thread draws it in the message history's place ([1.507]).
+      (_isPhone()?rPickPanel(id):'')+
+    // [1.404]/[1.428] — the status for this composer, beside its buttons.
     // ── [1.455] — ONE working line, not two ────────────────────────────
     //
     // AC's screenshot, 9 September 2026, showed both at once:

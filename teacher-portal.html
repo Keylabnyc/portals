@@ -758,6 +758,9 @@ input[type=checkbox]{width:13px;height:13px;padding:0;margin:0;border:0;border-r
 .att-size{font-size:10.5px;color:var(--text5)}
 .bubble.mine .att-size{color:rgba(255,255,255,.7)}
 .att-input{display:none}
+/* [1.516] — the composer says it will take a file, only while one is over it. */
+.cmp-drop.drop-hot{outline:2px dashed #1a4fc4;outline-offset:2px;background:rgba(26,79,196,.06)}
+
 .att-chips{display:flex;flex-wrap:wrap;gap:6px;padding:6px 0 0}
 .att-chip{display:inline-flex;align-items:center;gap:6px;padding:3px 4px 3px 9px;
   border:1px solid var(--border2);border-radius:999px;background:var(--bg5);font-size:11.5px}
@@ -5265,6 +5268,28 @@ function _composerCmd(id,cmd){
 function _composerPaste(ev){
   var cd=ev.clipboardData||window.clipboardData;
   if(!cd) return;
+  // ── [1.516] — a FILE on the clipboard is attached, not ignored ─────────
+  //
+  // AC: teachers want to add "by ... copy/paste". A copied screenshot of a
+  // passage, or a file copied in Finder, arrives here as clipboardData.files —
+  // which this function never looked at. It read text/html and returned early
+  // when there was none, so pasting an image did nothing at all.
+  //
+  // **Checked BEFORE the HTML branch and only when there are real files**, so
+  // [1.33d]'s paste handling — the Google Docs bold quirk, the inline-style
+  // promotion, the inert DOMParser — is untouched for every ordinary paste.
+  // A copy from Word carries both an image and HTML; the HTML is the message
+  // there, so a paste is treated as a file only when there is no HTML with it.
+  var _pf=cd.files&&cd.files.length?Array.prototype.slice.call(cd.files):[];
+  if(_pf.length){
+    var _hasHtml='';
+    try{ _hasHtml=cd.getData('text/html')||''; }catch(e){}
+    if(!_hasHtml){
+      ev.preventDefault();
+      _pf.forEach(attachUpload);
+      return;
+    }
+  }
   var html='';
   try{ html=cd.getData('text/html')||''; }catch(e){}
   // No HTML flavour on the clipboard (plain-text copy, most mobile keyboards):
@@ -5537,6 +5562,8 @@ var TLIB_COPY={
   pickFile:'Add file',
   pickLink:'Add link',
   fromDevice:'Add from your device',
+  // PLACEHOLDER — flagged for AC, 10 September 2026. Teacher-facing.
+  dropHint:'[PLACEHOLDER \u2014 AC to write] Or drag a file onto your message, or paste one.',
   searchFiles:'Search your saved files',
   searchLinks:'Search your saved links',
   fileAttached:'File attached',
@@ -8159,7 +8186,14 @@ function rEditActions(){
 function rComposer(id,draft,onInput,sendBtn){
   return '<div class="composer-wrap">'+
     rComposerToolbar(id)+
-    '<div class="composer">'+
+    // [1.516] — the composer is the drop zone. Not the whole page: a drop
+    // has to land somewhere a person can see it will be accepted, and the
+    // window-level guard refuses everything outside this so a stray drop
+    // cannot navigate away and take the message with it.
+    '<div class="composer cmp-drop"'+
+      ' ondragover="_attDropOver(event,this)"'+
+      ' ondragleave="_attDropLeave(event,this)"'+
+      ' ondrop="_attDrop(event,this)">'+
       // ── [1.507] — the picker is NOT here any more ──────────────────────
       //
       // AC, 10 September 2026: *"it's ideal if the library takes the space of
@@ -8517,6 +8551,69 @@ function attachPick(){
   var el=document.getElementById('att-file');
   if(el) el.click();
 }
+
+// ══ [1.516] — a file arrives by DROP or by PASTE, not only by the chooser ══
+//
+// AC, 10 September 2026: *"Teachers want to be able to add by searching their
+// drive or cloud, their computer, or drag/drop, copy/paste. Can you make this
+// all happen smoothly for teachers and admin?"*
+//
+// **Both of these are provider-agnostic, and that is the point.** By the time a
+// file has been dragged or copied it is just bytes — it does not matter whether
+// it came from a Finder window, a desktop, Dropbox, or a Google Drive page open
+// in another tab. **Dragging a file straight out of drive.google.com works**,
+// which is the case AC was stuck on, with no Drive integration at all.
+//
+// **They feed attachUpload, never a parallel path.** The count, size, empty and
+// type guards, the chip, the status line and the server are all the ones the
+// chooser already uses. A second route into the same feature that skipped one
+// of those guards is exactly the shape this session has spent the day undoing.
+function _attDropFiles(list){
+  var files=Array.prototype.slice.call(list||[]);
+  if(!files.length) return;
+  files.forEach(attachUpload);
+}
+// **The window-level handler is a SAFETY NET, not the feature.** A file dropped
+// anywhere a browser has no handler for makes the browser NAVIGATE TO IT — the
+// message being written is gone, with no warning and nothing to undo. That is a
+// worse fault than the one being fixed, and it is created BY making drops
+// plausible. So the whole window refuses stray drops, and only the composer
+// accepts them.
+function _attDropGuard(){
+  if(window._klTchDropGuard) return;
+  window._klTchDropGuard=true;
+  ['dragover','drop'].forEach(function(evt){
+    window.addEventListener(evt, function(e){
+      var inZone=e.target && e.target.closest && e.target.closest('.cmp-drop');
+      if(inZone) return;              // the composer's own handler deals with it
+      e.preventDefault();             // and nothing else may open the file
+      if(evt==='drop') _attDropOff();
+    }, false);
+  });
+}
+
+
+// The highlight is toggled on the NODE, never through render(): dragover fires
+// many times a second and a re-render on each one would fight the drag itself.
+function _attDropOn(el){ if(el&&el.classList) el.classList.add('drop-hot'); }
+function _attDropOff(el){
+  var nodes=el?[el]:Array.prototype.slice.call(document.querySelectorAll('.cmp-drop.drop-hot'));
+  nodes.forEach(function(n){ if(n&&n.classList) n.classList.remove('drop-hot'); });
+}
+function _attDropOver(e,el){ e.preventDefault(); e.stopPropagation(); _attDropOn(el); }
+function _attDropLeave(e,el){
+  // relatedTarget is what the pointer moved TO. Leaving for a child of the same
+  // zone is not leaving the zone, and without this the highlight strobes.
+  if(el&&e.relatedTarget&&el.contains(e.relatedTarget)) return;
+  _attDropOff(el);
+}
+function _attDrop(e,el){
+  e.preventDefault(); e.stopPropagation();
+  _attDropOff(el);
+  var dt=e.dataTransfer; if(!dt) return;
+  _attDropFiles(dt.files);
+}
+
 function attachChosen(input){
   var files=input && input.files ? Array.prototype.slice.call(input.files) : [];
   input.value='';   // so choosing the same file twice in a row still fires
@@ -8722,6 +8819,12 @@ function rPickPanel(composerId){
         ' onclick="pickClose(\''+esc(composerId)+'\')">&#215;</button></div>';
   if(file){
     h+='<button type="button" class="btn btn-p pick-from" onclick="attachPick()">'+esc(TLIB_COPY.fromDevice)+'</button>';
+    // [1.516] — an affordance nobody can see is not built. Drag-and-drop and
+    // paste are invisible by nature, so the one place a person is already
+    // looking to add a file says they exist.
+    //
+    // PLACEHOLDER WORDING, flagged: teacher-facing, so it is AC's to write.
+    h+='<div class="att-guide">'+esc(TLIB_COPY.dropHint)+'</div>';
   } else {
     h+=rComposerLinkRow(composerId);
   }
@@ -10059,6 +10162,10 @@ function _ktDeviceId(){
 // treated as if it were never in the URL at all.
 var _magicSettled=false, _magicRefused=false;
 function boot(){
+  // [1.516] — armed once, before anything is drawn. A file dropped where no
+  // handler catches it makes the browser open it, and the message being written
+  // goes with the page. The composer's own zone opts out of this.
+  _attDropGuard();
   _draftsLoad();   // [1.336] — anything unsent from last time is back before the first render
   // [1.465] — and the remembered library filter, which is the biggest of the
   // four savings AC scoped: a piano teacher's "piano" is still on when they

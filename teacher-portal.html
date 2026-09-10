@@ -5032,11 +5032,31 @@ function sendFamilyMessage(sendAt){
   render();
 
   api({action:'sendMessage', data:{conversationType:'family_teacher', familyId:t.familyId, teacherId:TEACHER_ID, teacherToken:TOKEN, messageText:text, messageHtml:html, studentId:_stuId, notifyParents:notifyParents, clientMsgId:clientMsgId, attachmentIds:_att, sendAt:sendAt||''}}, function(e,r){
+    // ── [1.539] — the busy state is RESOLVED FIRST, always ─────────────────
+    //
+    // AC, 10 September 2026: *"I can't send a message. I can schedule one, but
+    // clicking send doesn't do anything."*
+    //
+    // **My regression, from [1.523].** That item gave the send a busy state so
+    // Send could not be pressed twice, and `actBusy('send')` renders the button
+    // DISABLED. But the state was only ever cleared on SUCCESS:
+    //
+    //   • a FAILED send called no `actFail`, so it stayed 'working' for ever;
+    //   • and this guard returned early when the teacher had navigated away
+    //     mid-flight — which is AC's other report, switching tabs — leaving it
+    //     'working' with nobody to clear it.
+    //
+    // **Either one killed Send for the rest of the session**, silently, because
+    // a disabled button does nothing when pressed. Scheduling appeared to work
+    // because AC had not yet had a scheduled send fail.
+    //
+    // **So it resolves before anything else can return.** The rule this teaches:
+    // a state that disables a control must be cleared on EVERY path out,
+    // including the ones that give up.
+    if(e||!r||!r.ok) actFail('send', (r&&r.error)||TCH_COPY.notSent);
+    else actDone('send', sendAt ? TCH_COPY.scheduledConfirm : TCH_COPY.sentOk);   // [1.536]
     if(!ACTIVE_THREAD || ACTIVE_THREAD.familyId!==t.familyId) return; // navigated away mid-flight
     t._sendInFlight=false;
-    // [1.523] — cleared only on success; a failure says so through actFail
-    // below and must not be overwritten by a success line.
-    if(!(e||!r||!r.ok)) actDone('send', sendAt ? TCH_COPY.scheduledConfirm : TCH_COPY.sentOk);   // [1.536]
     if(e||!r||!r.ok){
       // Put it back where the teacher can see and retry it, rather than losing
       // words they watched "send".
@@ -10369,9 +10389,14 @@ function sendStaffMessage(sendAt){
   render();
 
   api({action:'sendMessage', data:reqData}, function(e,r){
+    // [1.539] — resolved FIRST, before the navigated-away guard can return.
+    // Same regression, same fix, same reason as the family send above: a state
+    // that disables a control must be cleared on every path out, including the
+    // ones that give up.
+    if(e||!r||!r.ok) actFail('send', (r&&r.error)||TCH_COPY.notSent);
+    else actDone('send', sendAt ? TCH_COPY.scheduledConfirm : TCH_COPY.sentOk);   // [1.536]/[1.533]
     if(!ACTIVE_STAFF_THREAD || ACTIVE_STAFF_THREAD.otherId!==t.otherId) return;
     t._sendInFlight=false;
-    if(!(e||!r||!r.ok)) actDone('send', sendAt ? TCH_COPY.scheduledConfirm : TCH_COPY.sentOk);   // [1.536]   // [1.533]
     if(e||!r||!r.ok){
       if(sendAt) t.scheduled=(t.scheduled||[]).filter(function(m){ return m!==pending; });
       else t.messages=t.messages.filter(function(m){ return m!==pending; });

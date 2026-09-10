@@ -3134,67 +3134,28 @@ function rSectionedRoster(){
   // disappeared in teacher portal. There is no way for a teacher to message
   // admin."
   //
-  // Admin & staff comes FIRST of the two: it is short, it is the same for
-  // every teacher, and it holds the one contact a teacher needs when they do
-  // not know who else to ask. Families can be twenty-four rows.
-  // ── [1.527] — Admin & staff collapses, and starts shut ─────────────────
+  // ~~Admin & staff comes FIRST of the two~~ — **REVERSED by AC, 10 September
+  // 2026, and the ordering is now [1.528]'s.** Every reason below is still
+  // true (it is short, identical for every teacher, and holds the one contact
+  // somebody needs when they do not know who else to ask) — it is simply not
+  // the principle he orders by. **His is urgency**, and the office is the least
+  // time-sensitive of the three. Left standing rather than deleted, because a
+  // reversed decision is exactly what a later reader needs to be able to see.
+  // ── [1.528] — MESSAGES first, then MY STUDENTS, then Admin & staff ─────
   //
-  // AC, 10 September 2026: *"Teacher portal list on left should have my
-  // students first, admin and staff next, both collapsed by default, and must
-  // include admin option, then my library and archived conversations."*
+  // AC, 10 September 2026: *"I think messages first, as that's the most time
+  // sensitive thing they need to see, then students, etc"*.
   //
-  // **It was a plain heading — `rZone` draws a label and a count and nothing
-  // else — so this one section could not be shut** while My Students and
-  // Archived both could. It carries the same caret and the same count as they
-  // do now, and starts closed for the reason [1.178]/[1.260] gave: the area
-  // never vanishes, so the page somebody learns is the page they get.
+  // **This REVERSES the reason written above**, and the reason is worth
+  // keeping rather than deleting: [1.260] put Admin & staff first because it
+  // is short, identical for every teacher, and holds the one contact somebody
+  // needs when they do not know who else to ask. All still true — and it is
+  // not the ordering principle AC wants. **His is urgency**: the conversations
+  // are what has a clock on them, the children are what a teacher thinks in,
+  // and the office is neither. Short does not mean first.
   //
-  // **The Admin row inside it is not new and must not be lost.** The server
-  // emits `kind:'admin'` in this roster (`doGetTeacherThreads`), which is what
-  // AC's *"must include admin option"* is asking to preserve — a teacher who
-  // does not know who to ask has to SEE the office in the list. A check pins it.
-  h+='<div class="sep" onclick="STAFF_OPEN=!STAFF_OPEN;render()">'+
-     '<span class="caret">'+(STAFF_OPEN?'\u25be':'\u25b8')+'</span>'+esc(TCH_COPY.sectionStaff)+
-     (staff.length?'<span class="zcount">'+staff.length+'</span>':'')+'</div>';
-  if(STAFF_OPEN){
-    h+=(staff.length?'<div class="thread-list">'+staff.map(rConvRow).join('')+'</div>'
-                    :'<div class="zone-empty">Nobody to show.</div>');
-  }
-  // ── [1.273] — no list of every family here either ───────────────────────
-  //
-  // AC, 4 September, after the same fix landed on the admin screen: "Teachers
-  // may not know the name of the parent, but getting rid of the full list is
-  // good there also. A teacher should be able to search by student or parent,
-  // and either parent if two parents."
-  //
-  // So families a teacher has never written to appear only once something is
-  // typed, exactly as on the admin screen — and the search already matches
-  // BOTH parents and every student, which is what makes removing the list safe
-  // here: a teacher who only knows the child can still find the family.
-  //
-  // ADMIN & STAFF ABOVE IS DELIBERATELY NOT TREATED THIS WAY. It is short, it
-  // is the same for every teacher, and AC asked for it by name on 3 September
-  // — "Options to see a staff list has disappeared in teacher portal. There is
-  // no way for a teacher to message admin." A teacher who does not know who to
-  // ask needs to SEE that list, not guess a name into a search box.
-  // ── [1.273] — no list of every family here either ───────────────────────
-  //
-  // AC, 4 September, after the same fix landed on the admin screen: "Teachers
-  // may not know the name of the parent, but getting rid of the full list is
-  // good there also. A teacher should be able to search by student or parent,
-  // and either parent if two parents."
-  //
-  // Families a teacher has never written to are drawn NOWHERE now. Not gated
-  // behind a query, not moved — gone. The search box at the top of this pane
-  // already offers every family by EITHER parent's name and every student by
-  // their own (_searchNames), and clicking a result opens the thread. A second
-  // list below it would have put the same names on screen twice.
-  //
-  // ADMIN & STAFF ABOVE IS DELIBERATELY KEPT. It is short, identical for every
-  // teacher, and AC asked for it by name on 3 September — "Options to see a
-  // staff list has disappeared in teacher portal. There is no way for a
-  // teacher to message admin." Somebody who does not know who to ask has to
-  // SEE that list, not guess a name into a search box.
+  // Both sections start shut ([1.527]), so the cost of the swap is one line of
+  // heading either way.
   // ── [1.457] — MY STUDENTS, and it reverses [1.273] on AC's instruction ──
   //
   // **AC, 9 September 2026:** *"Teachers should have a list of My Students to
@@ -3238,6 +3199,64 @@ function rSectionedRoster(){
     h+=_stuRows.length
       ? '<div class="thread-list">'+_stuRows.map(rStudentRow).join('')+'</div>'
       : '<div class="zone-empty">'+esc(TCH_COPY.noStudents)+'</div>';
+  }
+  // ── [1.273] — no list of every family here either ───────────────────────
+  //
+  // AC, 4 September, after the same fix landed on the admin screen: "Teachers
+  // may not know the name of the parent, but getting rid of the full list is
+  // good there also. A teacher should be able to search by student or parent,
+  // and either parent if two parents."
+  //
+  // So families a teacher has never written to appear only once something is
+  // typed, exactly as on the admin screen — and the search already matches
+  // BOTH parents and every student, which is what makes removing the list safe
+  // here: a teacher who only knows the child can still find the family.
+  //
+  // ADMIN & STAFF ABOVE IS DELIBERATELY NOT TREATED THIS WAY. It is short, it
+  // is the same for every teacher, and AC asked for it by name on 3 September
+  // — "Options to see a staff list has disappeared in teacher portal. There is
+  // no way for a teacher to message admin." A teacher who does not know who to
+  // ask needs to SEE that list, not guess a name into a search box.
+  // ── [1.273] — no list of every family here either ───────────────────────
+  //
+  // AC, 4 September, after the same fix landed on the admin screen: "Teachers
+  // may not know the name of the parent, but getting rid of the full list is
+  // good there also. A teacher should be able to search by student or parent,
+  // and either parent if two parents."
+  //
+  // Families a teacher has never written to are drawn NOWHERE now. Not gated
+  // behind a query, not moved — gone. The search box at the top of this pane
+  // already offers every family by EITHER parent's name and every student by
+  // their own (_searchNames), and clicking a result opens the thread. A second
+  // list below it would have put the same names on screen twice.
+  //
+  // ADMIN & STAFF ABOVE IS DELIBERATELY KEPT. It is short, identical for every
+  // teacher, and AC asked for it by name on 3 September — "Options to see a
+  // staff list has disappeared in teacher portal. There is no way for a
+  // teacher to message admin." Somebody who does not know who to ask has to
+  // SEE that list, not guess a name into a search box.
+  // ── [1.527] — Admin & staff collapses, and starts shut ─────────────────
+  //
+  // AC, 10 September 2026: *"Teacher portal list on left should have my
+  // students first, admin and staff next, both collapsed by default, and must
+  // include admin option, then my library and archived conversations."*
+  //
+  // **It was a plain heading — `rZone` draws a label and a count and nothing
+  // else — so this one section could not be shut** while My Students and
+  // Archived both could. It carries the same caret and the same count as they
+  // do now, and starts closed for the reason [1.178]/[1.260] gave: the area
+  // never vanishes, so the page somebody learns is the page they get.
+  //
+  // **The Admin row inside it is not new and must not be lost.** The server
+  // emits `kind:'admin'` in this roster (`doGetTeacherThreads`), which is what
+  // AC's *"must include admin option"* is asking to preserve — a teacher who
+  // does not know who to ask has to SEE the office in the list. A check pins it.
+  h+='<div class="sep" onclick="STAFF_OPEN=!STAFF_OPEN;render()">'+
+     '<span class="caret">'+(STAFF_OPEN?'\u25be':'\u25b8')+'</span>'+esc(TCH_COPY.sectionStaff)+
+     (staff.length?'<span class="zcount">'+staff.length+'</span>':'')+'</div>';
+  if(STAFF_OPEN){
+    h+=(staff.length?'<div class="thread-list">'+staff.map(rConvRow).join('')+'</div>'
+                    :'<div class="zone-empty">Nobody to show.</div>');
   }
   // ── [1.481] — MY LIBRARY, without writing a message first ──────────────
   //

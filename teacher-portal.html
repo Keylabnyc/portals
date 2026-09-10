@@ -824,6 +824,8 @@ input[type=checkbox]{width:13px;height:13px;padding:0;margin:0;border:0;border-r
    panel ground, shelf card, band, row, white field. ═══════════════════════ */
 .lib-panel{margin:0 0 8px;padding:10px;border:1px solid var(--border2);
   border-radius:var(--rl);background:var(--bg3)}
+.lib-shelf-hd{cursor:pointer;display:flex;align-items:center;gap:6px}
+.lib-shelf-hd .zcount{margin-left:auto}
 .lib-shelf{background:rgba(255,255,255,.45);border:1px solid var(--border);
   border-radius:var(--rl);padding:9px 10px;margin-top:8px}
 .lib-shelf:first-of-type{margin-top:0}
@@ -1075,6 +1077,23 @@ input[type=checkbox]{width:13px;height:13px;padding:0;margin:0;border:0;border-r
    when an input under 16px is focused and leaves it zoomed, which is a real
    part of the "screen jumping" reported on both portals. */
 @media(max-width:560px){
+  /* ── [1.530] — the history reads as its own area on a phone ─────────────
+     AC, 10 September 2026: *"on mobile, [the message history window] above the
+     composer background should be lighter color than container to make it
+     clear where the visual boundaries are"*.
+
+     On a phone the history had NO background at all — it sat straight on the
+     page, so there was nothing separating the conversation from the composer
+     under it. On a desktop the two panes already do that work; a phone has one
+     column and no panes, which is why the boundary went missing there and only
+     there.
+
+     Lighter than the ground, not darker: the messages are the content, and
+     content sits on top. Deliberately a smaller step than the bubbles' own
+     white so the individual messages still read as cards within it. */
+  .msg-list{background:rgba(255,255,255,.38);border:1px solid var(--border);
+            border-radius:var(--rl);padding:10px;margin-bottom:.85rem}
+
   body{font-size:16px}
   p{font-size:15px}
   .msg{font-size:15px}
@@ -7165,14 +7184,40 @@ function rLibraryBody(){
   // nothing in it draws nothing at all**, so a teacher with no links sees
   // exactly what they saw before links existed — which is the only way this
   // does not become four headings in a panel that had two.
-  return '<div class="lib-shelf"><div class="lib-group-hd">'+esc(TLIB_COPY.mine)+'</div>'+
+  // ── [1.529] — both shelves start SHUT ───────────────────────────────────
+  //
+  // AC, 10 September 2026: *"master library for teachers My library and keylab
+  // master library should be collapsed by default"*.
+  //
+  // **The same rule the side panel already follows** ([1.178]/[1.260]/[1.527]):
+  // a browsing area starts closed, and its COUNT stays visible while it is
+  // shut, so the heading says what it holds rather than looking empty. A
+  // teacher opening My Library to find one thing should see two headings and
+  // two numbers, not two walls of rows.
+  //
+  // Counted across BOTH groups inside the shelf — files and links together —
+  // because that is what the heading is the heading of.
+  var _mineN=(mine?mine.length:0)+(myLinks?myLinks.length:0);
+  var _studN=(studio?studio.length:0)+(studioLinks?studioLinks.length:0);
+  return _libShelf(TLIB_COPY.mine, 'mine', _mineN,
       rLibSub(TLIB_COPY.filesHead, mine, true, TLIB_COPY.emptyMine, true)+
-      rLibSub(TLIB_COPY.linksHead, myLinks, true, '', false)+
-    '</div>'+
-    '<div class="lib-shelf"><div class="lib-group-hd">'+esc(TLIB_COPY.studio)+'</div>'+
+      rLibSub(TLIB_COPY.linksHead, myLinks, true, '', false))+
+    _libShelf(TLIB_COPY.studio, 'studio', _studN,
       rLibSub(TLIB_COPY.filesHead, studio, false, TLIB_COPY.emptyStudio, true)+
-      rLibSub(TLIB_COPY.linksHead, studioLinks, false, '', false)+
-    '</div>';
+      rLibSub(TLIB_COPY.linksHead, studioLinks, false, '', false));
+}
+// [1.529] — one shelf, with its own caret and its count. The count is drawn
+// whether it is open or shut; that is the whole point of collapsing it.
+var LIB_SHELF_OPEN = { mine:false, studio:false };
+function libShelfToggle(key){ LIB_SHELF_OPEN[key]=!LIB_SHELF_OPEN[key]; render(); }
+function _libShelf(label, key, n, body){
+  var open=!!LIB_SHELF_OPEN[key];
+  return '<div class="lib-shelf">'+
+    '<div class="lib-group-hd lib-shelf-hd" onclick="libShelfToggle(\''+esc(key)+'\')">'+
+      '<span class="caret">'+(open?'\u25be':'\u25b8')+'</span>'+esc(label)+
+      '<span class="zcount">'+n+'</span></div>'+
+    (open?body:'')+
+  '</div>';
 }
 // A group inside a shelf: Files, then Links. `empty` is drawn only for the one
 // that has something to say when it is empty — a teacher with no files needs

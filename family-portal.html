@@ -69,7 +69,24 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 .tab.on{color:#fff;background:var(--acc);border-color:var(--acc)}
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .login-cards{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1rem}
-@media(max-width:560px){.login-cards{grid-template-columns:1fr}}
+@media(max-width:560px){
+  /* ── [1.530] — the history reads as its own area on a phone ─────────────
+     AC, 10 September 2026: *"on mobile, [the message history window] above the
+     composer background should be lighter color than container to make it
+     clear where the visual boundaries are"*.
+
+     On a phone the history had NO background at all — it sat straight on the
+     page, so there was nothing separating the conversation from the composer
+     under it. On a desktop the two panes already do that work; a phone has one
+     column and no panes, which is why the boundary went missing there and only
+     there.
+
+     Lighter than the ground, not darker: the messages are the content, and
+     content sits on top. Deliberately a smaller step than the bubbles' own
+     white so the individual messages still read as cards within it. */
+  .msg-list{background:rgba(255,255,255,.38);border:1px solid var(--border);
+            border-radius:var(--rl);padding:10px;margin-bottom:.85rem}
+.login-cards{grid-template-columns:1fr}}
 .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
 .prop-row{display:flex;justify-content:space-between;align-items:baseline;padding:6px 0;border-bottom:.5px solid var(--border)}
 .prop-row:last-child{border-bottom:none}

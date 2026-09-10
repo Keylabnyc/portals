@@ -886,9 +886,19 @@ input[type=checkbox]{width:13px;height:13px;padding:0;margin:0;border:0;border-r
 .lib-shelf{background:rgba(255,255,255,.45);border:1px solid var(--border);
   border-radius:var(--rl);padding:9px 10px;margin-top:8px}
 .lib-shelf:first-of-type{margin-top:0}
-.lib-shelf + .lib-shelf{margin-top:22px;position:relative}
-.lib-shelf + .lib-shelf::before{content:"";position:absolute;left:-11px;right:-11px;top:-13px;
-  border-top:4px solid var(--text)}
+/* ── [1.551] — the thick rule between the shelves is gone ─────────────────
+   AC, 10 September 2026: *"the thick black rule can go away."*
+
+   [1.477] put it there, and it was right then: the two shelves were both OPEN,
+   full of rows, and a reader needed to know where one library stopped and the
+   other began. **Three changes since have done that job better.** Both shelves
+   are collapsed by default ([1.529]); each is a headed card carrying its own
+   count; and a search opens only the one that matched ([1.546]).
+
+   **So the rule is now separating two things that already look separate** —
+   which is [1.487]'s finding in a different place: the same fact drawn twice.
+   The gap between the cards is the separation. */
+.lib-shelf + .lib-shelf{margin-top:14px}
 
 /* The header: what this is, and the two ways in. */
 .lib-hd{display:flex;align-items:center;gap:8px;margin-bottom:8px}

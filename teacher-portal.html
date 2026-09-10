@@ -2875,6 +2875,7 @@ var CLOSED_OPEN = false;   // AC's browsing areas start collapsed — see below.
 // conversations above it are the work, and this is reference. The COUNT shows
 // either way, so the area never vanishes ([1.178]).
 var STUDENTS_OPEN = false;
+var STAFF_OPEN = false;   // [1.527] — AC: 'both collapsed by default'
 // KIDS_OPEN was removed by [1.409], 8 September 2026 — AC: "Remove the 'lesson
 // phases and details' from the teacher portal … Just list everything." There is
 // no collapsed state left to hold. Admin keeps its own; his instruction named
@@ -3136,9 +3137,29 @@ function rSectionedRoster(){
   // Admin & staff comes FIRST of the two: it is short, it is the same for
   // every teacher, and it holds the one contact a teacher needs when they do
   // not know who else to ask. Families can be twenty-four rows.
-  h+=rZone(TCH_COPY.sectionStaff, staff.length)+
-     (staff.length?'<div class="thread-list">'+staff.map(rConvRow).join('')+'</div>'
-                  :'<div class="zone-empty">Nobody to show.</div>');
+  // ── [1.527] — Admin & staff collapses, and starts shut ─────────────────
+  //
+  // AC, 10 September 2026: *"Teacher portal list on left should have my
+  // students first, admin and staff next, both collapsed by default, and must
+  // include admin option, then my library and archived conversations."*
+  //
+  // **It was a plain heading — `rZone` draws a label and a count and nothing
+  // else — so this one section could not be shut** while My Students and
+  // Archived both could. It carries the same caret and the same count as they
+  // do now, and starts closed for the reason [1.178]/[1.260] gave: the area
+  // never vanishes, so the page somebody learns is the page they get.
+  //
+  // **The Admin row inside it is not new and must not be lost.** The server
+  // emits `kind:'admin'` in this roster (`doGetTeacherThreads`), which is what
+  // AC's *"must include admin option"* is asking to preserve — a teacher who
+  // does not know who to ask has to SEE the office in the list. A check pins it.
+  h+='<div class="sep" onclick="STAFF_OPEN=!STAFF_OPEN;render()">'+
+     '<span class="caret">'+(STAFF_OPEN?'\u25be':'\u25b8')+'</span>'+esc(TCH_COPY.sectionStaff)+
+     (staff.length?'<span class="zcount">'+staff.length+'</span>':'')+'</div>';
+  if(STAFF_OPEN){
+    h+=(staff.length?'<div class="thread-list">'+staff.map(rConvRow).join('')+'</div>'
+                    :'<div class="zone-empty">Nobody to show.</div>');
+  }
   // ── [1.273] — no list of every family here either ───────────────────────
   //
   // AC, 4 September, after the same fix landed on the admin screen: "Teachers

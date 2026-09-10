@@ -758,6 +758,16 @@ input[type=checkbox]{width:13px;height:13px;padding:0;margin:0;border:0;border-r
 .att-size{font-size:10.5px;color:var(--text5)}
 .bubble.mine .att-size{color:rgba(255,255,255,.7)}
 .att-input{display:none}
+/* [1.535] — the composer's two rows at rest. Add file and Add link share the
+   width equally, which is AC's "equal weight and width"; the Aa disclosure sits
+   before them and takes only what it needs. Formatting expands ABOVE this row,
+   so opening it never moves the row or the buttons under it. */
+.cmp-row2{display:flex;gap:6px;align-items:stretch}
+.cmp-row2 .cmp-tb-pick{flex:1 1 0;justify-content:center;font-weight:600}
+.cmp-fmt-toggle{flex:0 0 auto;font-weight:700}
+.cmp-fmt-toggle.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+.cmp-tb-fmt{margin-bottom:6px}
+
 /* [1.532] — the More menu. Anchored to its button so it cannot drift, and
    above the row rather than below it: on a phone the row is near the bottom of
    the screen and a menu opening downward would be off it. */
@@ -8197,6 +8207,8 @@ var TCH_COPY={
   // to it, in its own place.
   // [1.532] — AC's approved layout. One word, and it is the standard one.
   more:'More',
+  // [1.535] — PLACEHOLDER, flagged: teacher-facing, so it is AC's to write.
+  formatting:'[PLACEHOLDER \u2014 AC] Formatting',
   sending:'Sending\u2026',
   sentOk:'Message sent',
   sendLater:'Schedule Send',
@@ -8379,6 +8391,9 @@ function _tbPick(id, kind, label){
 // possible, End Conversation only when there is something to end and no reply
 // is owed ([1.287]/[1.309]/[1.312]).
 var MORE_OPEN = false;
+// [1.535] — per composer, so the staff and family boxes do not share a state.
+var CMP_FMT_OPEN = {};
+function _cmpFmtToggle(id){ CMP_FMT_OPEN[id]=!CMP_FMT_OPEN[id]; render(); }
 function moreToggle(){ MORE_OPEN=!MORE_OPEN; render(); }
 function moreClose(){ if(MORE_OPEN){ MORE_OPEN=false; render(); } }
 // Closed by a press anywhere else and by Escape, like every other menu on the
@@ -8443,65 +8458,66 @@ function _oncePress(key){
 function _onceDone(key){ delete _ONCE[key]; }
 
 function rComposerToolbar(id){
-  return '<div class="cmp-tb">'+
-    _tbBtn(id,'bold','<b>B</b>',CMP_COPY.bold)+
-    _tbBtn(id,'italic','<i>I</i>',CMP_COPY.italic)+
-    _tbBtn(id,'underline','<u>U</u>',CMP_COPY.underline)+
-    '<span class="cmp-div"></span>'+
-    _tbBtn(id,'insertUnorderedList','• List',CMP_COPY.bullet)+
-    _tbBtn(id,'insertOrderedList','1. List',CMP_COPY.number)+
-    '<span class="cmp-div"></span>'+
-    // ~~[1.494] — the Link button moved off this row… the toolbar is formatting
-    // only~~ — **REVERSED by [1.532], AC's approved layout, 10 September 2026.**
-    //
-    // *"the button layout and functions work as proposed."* The proposal sorted
-    // the composer's controls by WHEN they are used, and Add file / Add link
-    // are things you do **while writing** — which is what this row is. They sit
-    // beside the formatting controls now, and the actions row keeps only the
-    // things you do when you are FINISHED.
-    //
-    // [1.494]'s reasoning was "one control per job", and that still holds: this
-    // is the same one control, moved, not a second one.
-    '<button type="button" class="cmp-tb-btn" title="'+esc(CMP_COPY.clear)+'" onmousedown="event.preventDefault()"'+
-      ' onclick="_composerClearFmt(\''+id+'\')">✕</button>'+
-    '<span class="cmp-div"></span>'+
-    _tbPick(id,'file',TLIB_COPY.pickFile)+
-    _tbPick(id,'link',TLIB_COPY.pickLink)+
-    // ── [1.434] — the merge tags, on the toolbar where a message is WRITTEN ──
-    //
-    // AC, 8 September 2026: "merge tags need to be typed in and can't be
-    // selected. Merge tags pills are already in the code and should be
-    // available for teachers too."
-    //
-    // They were in the template editor and nowhere else, so writing an
-    // ordinary message meant typing [studentFirst] from memory — which is not
-    // a thing to ask of anybody, and is the same reasoning the template
-    // editor's own pills were added for.
-    //
-    // Only in a FAMILY thread: there is no student and no parent in a staff
-    // conversation, so the tags would insert something that can never fill in.
-    (HOME_TAB==='family' && id==='family-composer'
-      ? '<span class="cmp-div"></span>'+TPL_TAGS_OFFERED.map(function(tag){
-          return '<button type="button" class="cmp-tb-btn cmp-tag" onmousedown="event.preventDefault()"'+
-            ' title="'+esc(TPL_TAG_LABELS[tag]||tag)+'"'+
-            ' onclick="_composerInsertTag(\''+id+'\',\''+tag+'\')">['+esc(tag)+']</button>';
-        }).join('')
-      : '')+
-  '</div>';
+  // ── [1.535] — two rows at rest, and formatting is one of them only when asked
+  //
+  // AC, 10 September 2026: *"the formatting buttons can be hidden, including add
+  // link and add file. Add link and add file should be equal weight and width
+  // buttons on 2nd row after formatting options... so no 3rd row needed."* And,
+  // on the merge tags: *"only needed when creating a template, not in the main
+  // composer."*
+  //
+  // **What a teacher sees at rest is two rows:**
+  //   1. [Aa] · Add file · Add link      — Aa opens formatting; the pair is equal
+  //   2. More · Send                     — drawn by the thread, not here
+  //
+  // **Formatting is hidden behind Aa**, expanding ABOVE the row so the two rows
+  // never move when it opens. It is a real need for a teacher writing an
+  // assignment ([1.33]) and a rare one, which is exactly what a disclosure is
+  // for.
+  //
+  // **The ✕ went WITH it, not away.** AC: *"The x button here is vague... but
+  // seems unnecessary?"* Both halves are right — it is Clear formatting with no
+  // label, and standing outside the formatting group it had no context to make
+  // it readable. Inside, next to the controls it undoes, it explains itself.
+  // Deleting it would have removed the only way out of a format applied by
+  // accident.
+  //
+  // **The merge tags are gone from here**, and lose nothing: the template editor
+  // has always drawn its own set (`.tpl-tags`), and a fuller one — six tags
+  // against two. [1.434] put them here because a teacher writing an ordinary
+  // message had no other way to reach them; AC has since decided an ordinary
+  // message does not need them.
+  var fmtOn = !!CMP_FMT_OPEN[id];
+  var fmt = fmtOn
+    ? '<div class="cmp-tb cmp-tb-fmt">'+
+        _tbBtn(id,'bold','<b>B</b>',CMP_COPY.bold)+
+        _tbBtn(id,'italic','<i>I</i>',CMP_COPY.italic)+
+        _tbBtn(id,'underline','<u>U</u>',CMP_COPY.underline)+
+        '<span class="cmp-div"></span>'+
+        _tbBtn(id,'insertUnorderedList','• List',CMP_COPY.bullet)+
+        _tbBtn(id,'insertOrderedList','1. List',CMP_COPY.number)+
+        '<span class="cmp-div"></span>'+
+        '<button type="button" class="cmp-tb-btn" title="'+esc(CMP_COPY.clear)+'" onmousedown="event.preventDefault()"'+
+          ' onclick="_composerClearFmt(\''+id+'\')">'+esc(CMP_COPY.clear)+'</button>'+
+      '</div>'
+    : '';
+  return fmt+
+    '<div class="cmp-tb cmp-row2">'+
+      '<button type="button" class="cmp-tb-btn cmp-fmt-toggle'+(fmtOn?' on':'')+'"'+
+        ' aria-expanded="'+(fmtOn?'true':'false')+'" title="'+esc(CMP_COPY.formatting)+'"'+
+        ' onmousedown="event.preventDefault()" onclick="_cmpFmtToggle(\''+esc(id)+'\')">Aa</button>'+
+      _tbPick(id,'file',TLIB_COPY.pickFile)+
+      _tbPick(id,'link',TLIB_COPY.pickLink)+
+    '</div>';
 }
-// Plain text at the cursor, never insertHTML: a merge tag must carry none of
-// the formatting active where it lands, or it is markup-wrapped from the
-// moment it is inserted and the substitution can no longer find it — the same
-// trap [1.412] closed on the admin side.
-function _composerInsertTag(id, tag){
-  var el=document.getElementById(id); if(!el) return;
-  el.focus();
-  var txt='['+tag+']';
-  var placed=false;
-  try{ placed=document.execCommand('insertText', false, txt); }catch(e){ placed=false; }
-  if(!placed) el.appendChild(document.createTextNode(txt));
-  _composerSync(id);
-}
+
+// [1.535] — `_composerInsertTag` REMOVED with the merge-tag pills. AC decided
+// an ordinary message does not need them: *"Merge tags for parent and student
+// first name are only needed when creating a template, not in the main
+// composer."* The template editor is unaffected — it has always used its own
+// `ttplInsertTag`, over a fuller set of six tags. This reverses [1.434], which
+// put the pills here because a teacher had no other way to reach them; that is
+// still true and is no longer a problem worth a permanent control.
 
 // Replaces window.prompt() (BACKLOG 1.34, and AC again on 28 Aug). The prompt
 // could not be styled or corrected and dropped the teacher out of their

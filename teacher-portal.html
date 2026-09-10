@@ -4362,8 +4362,30 @@ function rFamilyThread(){
   // prefers the button plainly unavailable with a reason. His current word
   // wins, and the reason is rendered beside the button rather than as a toast.
   var _upBusy=_attAnyUploading();
-  var sendBtn=AMEND.kind==='edit' ? rEditActions() : (t.sending || actBusy('send')
-    ?'<button class="btn btn-p" disabled><span class="spin">↻</span></button>'
+  // ── [1.523] — Send keeps its place and changes only its WORDS ──────────
+  //
+  // AC, 10 September 2026: *"when I click send in mobile, there is nothing by
+  // the button telling me 'sending...'. The screen moves a bit, but it's
+  // confusing... When I click send, I only want to click it once."*
+  //
+  // **Both complaints had one cause.** The whole actions row was REPLACED by a
+  // lone spinner button while a send was in flight — five controls became one,
+  // so the row reflowed under the thumb ("the screen moves a bit") and the
+  // spinner said nothing about what was happening.
+  //
+  // **The row is left alone now.** Every other control is disabled in place and
+  // Send says `Sending…`, then `Message sent`, then goes back to `Send`. Nothing
+  // is added or removed, so nothing moves — which is a better answer than a
+  // status line beside it, because the button a person is already looking at is
+  // the thing that tells them.
+  //
+  // **It was already unpressable twice** (the disabled swap did that much), and
+  // it still is — `disabled` on the same button, in the same place.
+  var _sending=(t.sending || actBusy('send'));
+  var sendBtn=AMEND.kind==='edit' ? rEditActions() : (_sending
+    ?rPickButtons('family-composer')+
+      '<button class="btn btn-p" disabled>'+esc(TCH_COPY.sending)+'</button>'+
+      '<button type="button" class="btn btn-s" disabled>'+esc(TCH_COPY.sendLater)+'</button>'
     :rPickButtons('family-composer')+
       (_upBusy
         ? '<button class="btn btn-p" disabled title="'+esc(TCH_COPY.sendBlockedUploading)+'">Send</button>'
@@ -4895,6 +4917,13 @@ function sendFamilyMessage(sendAt){
   _draftKeep(t, '');   // [1.336] — sent is not a draft any more
   // Stops the 5s poll delivering this same message back before the server has
   // confirmed it, which would show it twice.
+  // [1.523] — the ordinary send never set a busy state at all. `actStart('send')`
+  // existed only on the SCHEDULING path, so `actBusy('send')` was false the whole
+  // time an ordinary message was in flight: nothing said "Sending…", and Send was
+  // never disabled, which is why AC could press it twice. The server deduped, so
+  // no message was doubled — but the press was allowed, and he is right that it
+  // should not be.
+  actStart('send', TCH_COPY.sending);
   t._sendInFlight=true;
   _shouldScrollMsgList=true;
   // [1.371] — and it does NOT stop the clock. A scheduled reply is not a
@@ -4905,6 +4934,9 @@ function sendFamilyMessage(sendAt){
   api({action:'sendMessage', data:{conversationType:'family_teacher', familyId:t.familyId, teacherId:TEACHER_ID, teacherToken:TOKEN, messageText:text, messageHtml:html, studentId:_stuId, notifyParents:notifyParents, clientMsgId:clientMsgId, attachmentIds:_att, sendAt:sendAt||''}}, function(e,r){
     if(!ACTIVE_THREAD || ACTIVE_THREAD.familyId!==t.familyId) return; // navigated away mid-flight
     t._sendInFlight=false;
+    // [1.523] — cleared only on success; a failure says so through actFail
+    // below and must not be overwritten by a success line.
+    if(!(e||!r||!r.ok)) actDone('send', TCH_COPY.sentOk);
     if(e||!r||!r.ok){
       // Put it back where the teacher can see and retry it, rather than losing
       // words they watched "send".
@@ -5693,7 +5725,12 @@ var TLIB_COPY={
   attachFailed:'That file could not be attached.',
   save:'Save to Library',               // AC's own phrase, final
   saving:'Saving to your library…',
+  // [1.522] — AC's words, 10 September 2026: *"there should be a success
+  // message when saving a file to library '[filename] saved to library!'"*.
+  // The filename is what makes it a confirmation rather than a notice: a
+  // teacher saving three files in a row needs to know WHICH one landed.
   saved:'Saved to your library.',
+  savedNamed:function(n){ return (n||'That file')+' saved to library!'; },
   saveFailed:'That file could not be saved to your library.',
   manage:'Edit',
   renameGo:'Rename',
@@ -5976,9 +6013,22 @@ function pickClose(composerId){
   PICK=''; PICK_Q='';
   var id=composerId||_libComposerId;
   render();
-  // Edit Message: back in the box, caret at the end, no scroll jump.
+  // ── [1.525] — on a PHONE, do not raise the keyboard ────────────────────
+  //
+  // AC, 10 September 2026: *"after adding a file, it shouldn't default to the
+  // cursor and typing, as that takes up the screen space. Let the user tap into
+  // the editor window to begin typing and keep the keyboard hidden so buttons
+  // show."*
+  //
+  // **Focusing a contenteditable on a phone opens the on-screen keyboard**,
+  // which takes roughly half the viewport and hides the very buttons the person
+  // just came back to. On a desktop the caret costs nothing and putting it back
+  // is the whole point of the control, so this stays exactly as it was there.
+  //
+  // The same reasoning as [1.520]: the right answer differs by screen, and the
+  // phone's answer is to do less.
   var el=id?document.getElementById(id):null;
-  if(!el) return;
+  if(!el || _isPhone()) return;
   _focusNoScroll(el);
   try{
     var r=document.createRange(); r.selectNodeContents(el); r.collapse(false);
@@ -6221,9 +6271,19 @@ function libSave(attachmentId){
   function(e,r){
     if(e||!r||!r.ok){ actFail('lib:'+attachmentId,(r&&r.error)||TLIB_COPY.saveFailed); return; }
     LIB_KEPT[attachmentId]=true;
-    actDone('lib:'+attachmentId, TLIB_COPY.saved);
+    // [1.522] — named, so three saves in a row are three distinct answers.
+    actDone('lib:'+attachmentId, TLIB_COPY.savedNamed(_attName(attachmentId)));
     _libRefresh();
   });
+}
+// The file's name, wherever it is known from — the chip being sent, the
+// teacher's own shelf, or the studio's. [1.522] needs it for the confirmation.
+function _attName(attachmentId){
+  var i;
+  for(i=0;i<ATT_PENDING.length;i++) if(ATT_PENDING[i].attachmentId===attachmentId) return ATT_PENDING[i].fileName||'';
+  for(i=0;i<LIB_MINE.length;i++) if(LIB_MINE[i].attachmentId===attachmentId) return LIB_MINE[i].fileName||LIB_MINE[i].label||'';
+  for(i=0;i<LIB_SHELF_STUDIO.length;i++) if(LIB_SHELF_STUDIO[i].attachmentId===attachmentId) return LIB_SHELF_STUDIO[i].fileName||LIB_SHELF_STUDIO[i].label||'';
+  return '';
 }
 function _libAlready(attachmentId){
   if(LIB_KEPT[attachmentId]) return true;
@@ -8020,6 +8080,10 @@ var TCH_COPY={
   // question and its two buttons are quoted verbatim from 7 September ("There
   // should be a confirm step 'Send message now?' with send or cancel as
   // options"), and "Send later" is the name he approved in the plan.
+  // [1.523] — AC's words, 10 September 2026. The button says what is happening
+  // to it, in its own place.
+  sending:'Sending\u2026',
+  sentOk:'Message sent',
   sendLater:'Schedule Send',
   schedulePick:'Choose a date and time',
   // [1.415] — AC, 8 September 2026, final. "Save" was wrong twice over: it did
@@ -8907,9 +8971,21 @@ function rPickButtons(composerId){
       ' aria-pressed="'+(PICK===kind?'true':'false')+'"'+
       ' onclick="pickOpen(\''+kind+'\',\''+esc(composerId)+'\')">'+esc(label)+'</button>';
   }
-  // [1.508] — Done moved into the picker's own footer, beside Manage Library.
-  // It is not repeated here: one control, one place.
-  return b('file', TLIB_COPY.pickFile)+b('link', TLIB_COPY.pickLink);
+  // ── [1.524] — Done follows the PANEL, not a fixed spot ─────────────────
+  //
+  // AC, 10 September 2026: *"On desktop, the done button is placed correctly in
+  // the new location, but on mobile the button needs to appear with the other
+  // buttons."*
+  //
+  // **Right, and the reason is [1.520].** On a desktop the panel is up where the
+  // history was, far from this row, so Done belongs with the panel it ends. On a
+  // phone the panel is directly under these buttons, so the panel's own footer is
+  // below the fold and Done belongs here, with everything else the thumb is on.
+  // **One control either way — it is drawn in exactly one of the two places.**
+  return b('file', TLIB_COPY.pickFile)+b('link', TLIB_COPY.pickLink)+
+    ((PICK && _isPhone())
+      ? '<button type="button" class="btn btn-p" onclick="pickClose(\''+esc(composerId)+'\')">'+esc(TLIB_COPY.editMessage)+'</button>'
+      : '');
 }
 // The picker itself. One shape for both kinds: the new thing first, the
 // search, the two shelves holding only that kind, Manage Library last.
@@ -8956,7 +9032,7 @@ function rPickPanel(composerId){
   // Manage Library stays a quiet link beside it — it goes somewhere else, and
   // two primary buttons in one row would be two answers to one question.
   h+='<div class="lib-foot">'+
-     '<button type="button" class="lib-done" onclick="pickClose(\''+esc(composerId)+'\')">'+esc(TLIB_COPY.editMessage)+'</button>'+
+     (_isPhone()?'':'<button type="button" class="lib-done" onclick="pickClose(\''+esc(composerId)+'\')">'+esc(TLIB_COPY.editMessage)+'</button>')+
      '<button type="button" class="lnk-btn" onclick="libraryOpen()">'+esc(TLIB_COPY.manageGo)+'</button></div>';
   return h+'</div>';
 }

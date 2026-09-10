@@ -4143,12 +4143,26 @@ function rFamilyThread(){
   // [1.493] — the spinner stands where the messages will go; the composer
   // below is drawn either way, so a teacher can start typing at once.
   var _spin=(t.loading && !t.messages.length);
-  if(_spin) h+='<div style="text-align:center;padding:2rem;color:var(--text3)"><span class="spin" style="font-size:20px">↻</span></div>';
+  // ── [1.507] — a picker takes the HISTORY's place, never the composer's ──
+  //
+  // AC, 10 September 2026: *"the library takes the space of the old messages
+  // and leaves the current message unobstructed while selecting files. The user
+  // should be able to see the files they have added at all times here also for
+  // clarity."*
+  //
+  // The history is the one thing on this screen nobody needs while choosing a
+  // file, and it is the largest. Drawn here, the box, the chips and Send never
+  // move — so what is being written and what is already attached stay on screen
+  // throughout. That is the clarity he asked for, and it is also why [1.502]'s
+  // missing device-file confirmation stops mattering: the chip appears in view.
+  if(PICK){ h+=rPickPanel('family-composer'); }
+  else if(_spin) h+='<div style="text-align:center;padding:2rem;color:var(--text3)"><span class="spin" style="font-size:20px">↻</span></div>';
   // [1.371] — a thread with nothing sent but something scheduled is not an
   // empty conversation. The scheduled bubbles come LAST, where the message
   // will be when it goes.
   var _sched=(t.scheduled||[]);
-  if(_spin){ /* [1.493] — drawn above */ } else if(!t.messages.length && !_sched.length){
+  if(PICK){ /* [1.507] — the picker has the history's space */ }
+  else if(_spin){ /* [1.493] — drawn above */ } else if(!t.messages.length && !_sched.length){
     h+='<div class="empty-state">No messages yet — send a message to get started.</div>';
   } else {
     var _r=_convRow(t.familyId);
@@ -4897,9 +4911,23 @@ function rStaffThread(){
   // [1.493] — the spinner stands where the messages will go; the composer
   // below is drawn either way, so a teacher can start typing at once.
   var _spin=(t.loading && !t.messages.length);
-  if(_spin) h+='<div style="text-align:center;padding:2rem;color:var(--text3)"><span class="spin" style="font-size:20px">↻</span></div>';
+  // ── [1.507] — a picker takes the HISTORY's place, never the composer's ──
+  //
+  // AC, 10 September 2026: *"the library takes the space of the old messages
+  // and leaves the current message unobstructed while selecting files. The user
+  // should be able to see the files they have added at all times here also for
+  // clarity."*
+  //
+  // The history is the one thing on this screen nobody needs while choosing a
+  // file, and it is the largest. Drawn here, the box, the chips and Send never
+  // move — so what is being written and what is already attached stay on screen
+  // throughout. That is the clarity he asked for, and it is also why [1.502]'s
+  // missing device-file confirmation stops mattering: the chip appears in view.
+  if(PICK){ h+=rPickPanel('staff-composer'); }
+  else if(_spin) h+='<div style="text-align:center;padding:2rem;color:var(--text3)"><span class="spin" style="font-size:20px">↻</span></div>';
   var _sched=(t.scheduled||[]);   // [1.371] — see the family thread above
-  if(_spin){ /* [1.493] — drawn above */ } else if(!t.messages.length && !_sched.length){
+  if(PICK){ /* [1.507] — the picker has the history's space */ }
+  else if(_spin){ /* [1.493] — drawn above */ } else if(!t.messages.length && !_sched.length){
     h+='<div class="empty-state">No messages yet — send a message to get started.</div>';
   } else {
     h+='<div class="msg-list">'+t.messages.map(function(_m,_i,_all){
@@ -5446,7 +5474,12 @@ var TLIB_COPY={
   linkKind:'LINK',              // DERIVED — AC, 11 September: "simply list the file type instead" of the site
   linkSelected:'Selected',      // PLACEHOLDER — what a saved link's row says once it has filled the fields
   manageGo:'Manage Library',
-  editMessage:'Edit Message',
+  // [1.507] — AC, 10 September 2026: *"needs the done button there to clearly
+  // end the adding of files"*. It was `Edit Message`, his own word on the 10th,
+  // chosen when the picker sat inside the composer and the question was how to
+  // get back to writing. The picker now takes the HISTORY's place and the box
+  // was never covered, so the question changed: what ends the job. `Done`.
+  editMessage:'Done',
   // DERIVED from his "Search your saved files / links", not written by him.
   mineFiles:'Your saved files',
   mineLinks:'Your saved links',
@@ -8027,10 +8060,18 @@ function rComposer(id,draft,onInput,sendBtn){
   return '<div class="composer-wrap">'+
     rComposerToolbar(id)+
     '<div class="composer">'+
-      // [1.494] — one of the two pickers, inside the composer above the box,
-      // only while Add file or Add link has been pressed. Not a screen and not
-      // a dialog: it belongs to the message being written.
-      rPickPanel(id)+
+      // ── [1.507] — the picker is NOT here any more ──────────────────────
+      //
+      // AC, 10 September 2026: *"it's ideal if the library takes the space of
+      // the old messages and leaves the current message unobstructed while
+      // selecting files. The user should be able to see the files they have
+      // added at all times here also for clarity."*
+      //
+      // [1.494] put it inside the composer above the box, which pushed the box,
+      // the chips and Send down the screen — so the thing being written and the
+      // files already on it were both below the fold while choosing. It is
+      // drawn in the MESSAGE LIST's place now, by rFamilyThread/rStaffThread.
+      // The composer keeps its own space and never moves.
       '<div id="'+id+'" class="cmp-rich" contenteditable="true" role="textbox" aria-multiline="true"'+
         ' aria-label="Message" data-ph="'+esc(CMP_COPY.placeholder)+'"'+
         ' oninput="'+onInput+';_composerState(\''+id+'\')"'+

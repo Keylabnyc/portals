@@ -3464,7 +3464,37 @@ var KL_ATT_TYPES = [
   {m:'audio/mpeg',l:'MP3'}, {m:'audio/mp4',l:'M4A'}, {m:'audio/wav',l:'WAV'},
   {m:'audio/aac',l:'AAC'}, {m:'audio/ogg',l:'OGG'}
 ];
-function _klAttAccept(){ return KL_ATT_TYPES.map(function(t){ return t.m; }).join(','); }
+// ── [1.513] — the chooser must accept files from iCloud and Drive too ────
+//
+// AC, 10 September 2026: *"I can add files directly from my device, but not
+// from google drive, icloud, etc."*
+//
+// **The cause is this attribute, not a missing feature.** `accept` held MIME
+// TYPES ONLY. A cloud provider in the OS chooser — iCloud Drive, Google Drive,
+// Dropbox — often cannot state a type for a file it has not downloaded yet, so
+// the picker greys those files out and the folder looks empty or unusable.
+// Matching on the EXTENSION as well is the standard remedy: the name is
+// something every provider can supply without fetching the bytes.
+//
+// **This loosens nothing.** `accept` is advisory in every browser and always
+// has been — the real gate is the server, which checks the DECODED bytes
+// against ATTACH_ALLOWED_MIME and rewrites the filename to agree with the type
+// it verified. Widening this attribute cannot widen what is accepted; it only
+// stops the chooser hiding files it should offer.
+//
+// **It is NOT an in-tool Google Drive browser**, which is a different thing
+// and would mean widening `drive.file` — the scope [1.390] deliberately
+// narrowed so a fault in this tool cannot reach AC's own documents. That stays
+// AC's decision, and it is not this.
+function _klAttAccept(){
+  var out=[], seen={};
+  KL_ATT_TYPES.forEach(function(t){
+    if(!seen[t.m]){ seen[t.m]=1; out.push(t.m); }
+    var ext='.'+String(t.l||'').toLowerCase();
+    if(ext.length>1 && !seen[ext]){ seen[ext]=1; out.push(ext); }
+  });
+  return out.join(',');
+}
 function _klAttFormatList(){ return KL_ATT_TYPES.map(function(t){ return t.l; }).join(', ')+'.'; }
 var KL_ATT_FORMATS_OPEN=false;
 function klAttToggleFormats(){ KL_ATT_FORMATS_OPEN=!KL_ATT_FORMATS_OPEN; render(); }
@@ -3477,6 +3507,18 @@ function klAttachChosen(input){
 function klAttachUpload(file){
   if(KL_ATT_PENDING.length >= KL_ATT_MAX_FILES){ showMsg(KL_ATT_TOO_MANY,'e'); return; }
   if(file.size > KL_ATT_MAX_BYTES){ showMsg(KL_ATT_TOO_BIG,'e'); return; }
+  // [1.513] — and the case that opening the chooser to CLOUD files creates.
+  //
+  // A provider hands over a placeholder when the file is not downloaded yet —
+  // iCloud Drive's "optimised storage", Drive's streaming mount — and that
+  // arrives here as zero bytes. The server already refuses it ("That file is
+  // empty."), so nothing bad is stored either way; but it refuses after the
+  // whole round trip, and the reason a person sees is about the file rather
+  // than about what to do. The size check on the line above exists for exactly
+  // this reason — "a teacher who picks a 40MB video is told at once instead of
+  // after a minute of uploading" — and this is the same courtesy at the other
+  // end of the scale. The wording is the SERVER'S OWN, not a new string.
+  if(!file.size){ showMsg(KL_ATT_EMPTY,'e'); return; }
   var rec={tempId:'k'+Date.now()+Math.random(), fileName:file.name, mimeType:file.type,
            sizeBytes:file.size, uploading:true, attachmentId:''};
   KL_ATT_PENDING.push(rec); KL_ATT_BUSY++; render();
@@ -4035,6 +4077,8 @@ var KL_ATT_HINT='Send a file. 10 MB limit. Maximum 5 files.';
 var KL_ATT_FORMATS='Accepted file types';
 var KL_ATT_REMOVE='Remove';
 var KL_ATT_TOO_MANY='You can add 5 files to one message.';
+// [1.513] — the server's own wording, reused rather than invented.
+var KL_ATT_EMPTY='That file is empty.';
 var KL_ATT_TOO_BIG='That file is over the 10 MB limit.';
 // [1.137] — AC's wording, 6 September. What a parent is told when the link
 // they clicked belongs to another device, or has expired. Both land on the

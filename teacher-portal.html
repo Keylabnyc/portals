@@ -6478,6 +6478,18 @@ function libAddLinks(){
 var LIB_UP=0;
 function libAddUpload(file){
   if(file.size > ATT_MAX_BYTES){ showMsg(TCH_COPY.attachTooBig,'e'); return; }
+  // [1.513] — and the case that opening the chooser to CLOUD files creates.
+  //
+  // A provider hands over a placeholder when the file is not downloaded yet —
+  // iCloud Drive's "optimised storage", Drive's streaming mount — and that
+  // arrives here as zero bytes. The server already refuses it ("That file is
+  // empty."), so nothing bad is stored either way; but it refuses after the
+  // whole round trip, and the reason a person sees is about the file rather
+  // than about what to do. The size check on the line above exists for exactly
+  // this reason — "a teacher who picks a 40MB video is told at once instead of
+  // after a minute of uploading" — and this is the same courtesy at the other
+  // end of the scale. The wording is the SERVER'S OWN, not a new string.
+  if(!file.size){ showMsg(TCH_COPY.attachEmpty,'e'); return; }
   LIB_UP++;
   actStart('libadd', TLIB_COPY.adding);
   var reader=new FileReader();
@@ -7867,6 +7879,9 @@ var TCH_COPY={
   savingTemplate: 'Saving your template\u2026',
   savedTemplate:  'Template saved.',
   savingSettings: 'Saving\u2026',
+  // [1.513] — the SERVER's own wording for this case, reused rather than
+  // invented: one sentence for one fact, wherever it is refused.
+  attachEmpty:'That file is empty.',
   attachTooBig:'File limit 10 MB',
   attachRemove:'Remove',
   attachWait:'One moment - the file is still uploading.',
@@ -8513,6 +8528,18 @@ function attachUpload(file){
   // once instead of after a minute of uploading. The server refuses it as well
   // — that is the rule; this is the courtesy.
   if(file.size > ATT_MAX_BYTES){ showMsg(TCH_COPY.attachTooBig,'e'); return; }
+  // [1.513] — and the case that opening the chooser to CLOUD files creates.
+  //
+  // A provider hands over a placeholder when the file is not downloaded yet —
+  // iCloud Drive's "optimised storage", Drive's streaming mount — and that
+  // arrives here as zero bytes. The server already refuses it ("That file is
+  // empty."), so nothing bad is stored either way; but it refuses after the
+  // whole round trip, and the reason a person sees is about the file rather
+  // than about what to do. The size check on the line above exists for exactly
+  // this reason — "a teacher who picks a 40MB video is told at once instead of
+  // after a minute of uploading" — and this is the same courtesy at the other
+  // end of the scale. The wording is the SERVER'S OWN, not a new string.
+  if(!file.size){ showMsg(TCH_COPY.attachEmpty,'e'); return; }
   var rec={tempId:'t'+Date.now()+Math.random(), fileName:file.name, mimeType:file.type,
            sizeBytes:file.size, uploading:true, attachmentId:''};
   ATT_PENDING.push(rec); ATT_BUSY++; render();
@@ -8587,7 +8614,37 @@ var ATT_TYPES=[
   // thirty seconds of phone video, and a file served through the portal has to
   // travel whole. The Link button in the composer is the route for those.
 ];
-function _attAccept(){ return ATT_TYPES.map(function(t){ return t.m; }).join(','); }
+// ── [1.513] — the chooser must accept files from iCloud and Drive too ────
+//
+// AC, 10 September 2026: *"I can add files directly from my device, but not
+// from google drive, icloud, etc."*
+//
+// **The cause is this attribute, not a missing feature.** `accept` held MIME
+// TYPES ONLY. A cloud provider in the OS chooser — iCloud Drive, Google Drive,
+// Dropbox — often cannot state a type for a file it has not downloaded yet, so
+// the picker greys those files out and the folder looks empty or unusable.
+// Matching on the EXTENSION as well is the standard remedy: the name is
+// something every provider can supply without fetching the bytes.
+//
+// **This loosens nothing.** `accept` is advisory in every browser and always
+// has been — the real gate is the server, which checks the DECODED bytes
+// against ATTACH_ALLOWED_MIME and rewrites the filename to agree with the type
+// it verified. Widening this attribute cannot widen what is accepted; it only
+// stops the chooser hiding files it should offer.
+//
+// **It is NOT an in-tool Google Drive browser**, which is a different thing
+// and would mean widening `drive.file` — the scope [1.390] deliberately
+// narrowed so a fault in this tool cannot reach AC's own documents. That stays
+// AC's decision, and it is not this.
+function _attAccept(){
+  var out=[], seen={};
+  ATT_TYPES.forEach(function(t){
+    if(!seen[t.m]){ seen[t.m]=1; out.push(t.m); }
+    var ext='.'+String(t.x||'').toLowerCase();
+    if(ext.length>1 && !seen[ext]){ seen[ext]=1; out.push(ext); }
+  });
+  return out.join(',');
+}
 function _attFormatList(){
   var seen={}, out=[];
   ATT_TYPES.forEach(function(t){ if(!seen[t.x]){ seen[t.x]=1; out.push(t.x); } });

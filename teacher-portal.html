@@ -265,6 +265,14 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 .lnk-frow .btn{width:auto;flex:0 0 auto}
 .lnk-actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:.5rem}
 .cmp-mini{background:rgba(0,0,0,.12);border:1px solid var(--border2);color:var(--text2);border-radius:var(--r);padding:7px 11px;font-size:12px;font-weight:600;font-family:"Inter",sans-serif;cursor:pointer;flex:0 0 auto}
+/* [1.510] — the one control in the link row that acts. Same metrics as
+   .cmp-mini so the row does not reflow; only the colour differs. */
+.cmp-mini-p{background:#1a4fc4;border-color:#1a4fc4;color:#fff}
+.cmp-mini-p:hover{background:#1440a8;border-color:#1440a8}
+/* The instruction that appears once a saved link has filled the fields. It is
+   the same guidance type as the sharing line below it, weighted so the thing
+   to DO reads before the thing to KNOW. */
+.cmp-guide-do{color:#1a4fc4;font-weight:600}
 .cmp-mini:hover{background:rgba(0,0,0,.2);color:var(--text)}
 .cmp-guide{flex:0 0 100%;font-size:11px;color:var(--text4);line-height:1.5}
 .bubble-text ul,.bubble-text ol{margin:.3rem 0;padding-left:1.25rem}
@@ -1102,6 +1110,23 @@ input[type=checkbox]{width:13px;height:13px;padding:0;margin:0;border:0;border-r
   background:#fff;font-size:22px;line-height:1;color:var(--text);cursor:pointer;font-family:inherit;padding:0 }
 .pick-from { width:100%;margin-bottom:8px }
 .lib-panel .cmp-linkrow { display:flex;margin-bottom:8px }
+
+/* ── [1.511] — the picker can never push the composer off the screen ──────
+   AC, 10 September 2026: "the link picker is taking over the screen like the
+   file picker was. This should have the same treatment."
+
+   [1.507] moved the picker into the message list's PLACE but not into its
+   BUDGET. The list is capped at 50vh and scrolls; the panel was uncapped, so
+   the link picker — a paste row, a line of guidance, a search box and two
+   shelves of up to 230px each — grew past the fold and took the composer with
+   it. The file picker only looked fine because it is shorter.
+
+   Capped at the same 50vh the list had, so the box, the chips and Send stay on
+   screen for EITHER kind and for anything added to the panel later. The cap is
+   on the picker in the thread only: the manager in the overlay has its own
+   92vh and must not inherit this. */
+.lib-panel.pick-in-thread{max-height:50vh;overflow-y:auto}
+
 .lib-said { margin-left:auto;font-size:12px;font-weight:700;color:var(--gt);background:var(--gbg);
   border:1px solid var(--green);border-radius:var(--r);padding:2px 8px;white-space:nowrap;display:inline-flex;align-items:center;gap:4px }
 .lib-said.working { color:var(--bt);background:var(--bbg);border-color:var(--blue) }
@@ -7929,6 +7954,8 @@ var CMP_COPY={
   linkUrlPlaceholder:'Add link here',
   linkTextPlaceholder:'Link text (optional)',
   linkAdd:'Add link',
+  // AC's words, 10 September 2026, verbatim.
+  linkSelectedDo:'Click "Add link" to add the link to your message',
   linkCancel:'Cancel',
   linkRejected:'That doesn’t look like a web address. Try something like keylab.nyc/lessons.',
   linkSharing:'Set sharing to “Anyone with the link” before you send, or ask admin for the parent’s email to share it privately.',
@@ -8039,7 +8066,20 @@ function rComposerLinkRow(id){
     '<input id="'+id+'-linktext" value="'+esc(st.text)+'" placeholder="'+esc(CMP_COPY.linkTextPlaceholder)+'" aria-label="'+esc(CMP_COPY.linkTextPlaceholder)+'"'+
       ' oninput="_cmpLinkState(\''+id+'\').text=this.value"'+
       ' onkeydown="_composerLinkKey(event,\''+id+'\')">'+
-    '<button type="button" class="cmp-mini" onmousedown="event.preventDefault()" onclick="_composerLinkInsert(\''+id+'\')">'+esc(CMP_COPY.linkAdd)+'</button>'+
+    // [1.510] — AC, 10 September 2026: *"The add link button should be blue."*
+    // It is the one thing in this row that ACTS; the two fields and the
+    // guidance beneath do not.
+    '<button type="button" class="cmp-mini cmp-mini-p" onmousedown="event.preventDefault()" onclick="_composerLinkInsert(\''+id+'\')">'+esc(CMP_COPY.linkAdd)+'</button>'+
+    // [1.510] — and, once a SAVED link has filled the fields, the sentence
+    // saying what to do next. AC: *"there should be a tooltip after clicking a
+    // link to add: 'Click "Add link" to add the link to your message'."*
+    //
+    // Not a tooltip in the hover sense — it is drawn in the row, beside the
+    // button it names, which is [[lesson-status-banners]]'s rule and the reason
+    // a corner toast was rejected for this in [1.494]. It replaces the
+    // placeholder "Selected" that used to appear on the row instead: the row
+    // said something had happened, and this says what to do about it.
+    (LINK_SELECTED ? '<div class="cmp-guide cmp-guide-do">'+esc(CMP_COPY.linkSelectedDo)+'</div>' : '')+
     '<div class="cmp-guide">'+esc(CMP_COPY.linkSharing)+'</div>'+
   '</div>';
 }
@@ -8587,7 +8627,7 @@ function rPickPanel(composerId){
   var file=(PICK==='file');
   var mine=file?_pickFiles(true):_pickLinks(true);
   var studio=file?_pickFiles(false):_pickLinks(false);
-  var h='<div class="lib-panel" id="pick-panel">'+
+  var h='<div class="lib-panel pick-in-thread" id="pick-panel">'+
     '<div class="lib-hd"><span class="lib-hd-t">'+esc(file?TLIB_COPY.pickFile:TLIB_COPY.pickLink)+'</span>'+
       '<button type="button" class="modal-x" aria-label="'+esc(TLIB_COPY.close)+'"'+
         ' onclick="pickClose(\''+esc(composerId)+'\')">&#215;</button></div>';

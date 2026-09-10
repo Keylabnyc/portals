@@ -883,7 +883,25 @@ input[type=checkbox]{width:13px;height:13px;padding:0;margin:0;border:0;border-r
   border-radius:var(--rl);background:var(--bg3)}
 .lib-shelf-hd{cursor:pointer;display:flex;align-items:center;gap:6px}
 .lib-shelf-hd .zcount{margin-left:auto}
-.lib-shelf{background:rgba(255,255,255,.45);border:1px solid var(--border);
+/* ── [1.555] — the library's layers are TOKENS, not tints ────────────────
+   AC, 10 September 2026: *"Remember to use proper layered css to backgrounds
+   to distinguish main background from section background to tertiary area
+   background, etc."*
+   **The ORDER was already his** ([1.475]: *"the file cards themselves should be
+   shaded in between the darker background and the light My Library and Keylab
+   Master Library cards"*). What was wrong is that two of the four layers were
+   `rgba(255,255,255,...)` rather than a step on the ladder — and this file's own
+   [1.477] note already argues against exactly that: *"a translucent tint would
+   be a different colour on each"* ground it sits on. A tint IS its backdrop
+   plus milk, so a card in the panel and the same card in a composer were two
+   different greys claiming to be one layer.
+   **Four layers, and each is a named step:**
+     page   --bg2   the ground the panel sits on
+     panel  --bg3   the section
+     row    --bg4   shaded BETWEEN, per [1.475] — via --row-file/--row-link
+     card   --bg5   the shelf and the add card, the light cards on top
+     field  #fff    inputs, and the batch's own rows                        */
+.lib-shelf{background:var(--bg5);border:1px solid var(--border);
   border-radius:var(--rl);padding:9px 10px;margin-top:8px}
 .lib-shelf:first-of-type{margin-top:0}
 /* ── [1.551] — the thick rule between the shelves is gone ─────────────────
@@ -912,8 +930,16 @@ input[type=checkbox]{width:13px;height:13px;padding:0;margin:0;border:0;border-r
 .lib-add-row .btn{flex:1 1 auto;width:auto;justify-content:center;text-align:center}
 
 /* ── The review step: what you just added, and the one thing to do to it ── */
+/* [1.556] — AC, 10 September 2026: *"text entry areas should not be the same
+   colour as the immediate background layer behind them. Main background, 2nd
+   background, 3rd background, text edit area. The my links and files areas are
+   good."*
+   **So the FORM cards drop a step and the browsing cards do not.** A shelf at
+   --bg5 holding --bg4 rows is what he called good and it is untouched; a card
+   holding INPUTS has to leave room above itself for the field. Four steps, his
+   own list: page --bg2 · panel --bg3 · form card --bg4 · field #fff. */
 .lib-new{margin-top:9px;border:2px solid var(--acc);border-radius:var(--rl);
-  background:rgba(255,255,255,.55);overflow:hidden}
+  background:var(--bg4);overflow:hidden}
 .lib-new-hd{display:flex;flex-wrap:wrap;align-items:center;gap:8px;
   padding:6px 10px;background:var(--acc);color:#fff}
 .lib-new-t{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em}
@@ -922,6 +948,29 @@ input[type=checkbox]{width:13px;height:13px;padding:0;margin:0;border:0;border-r
 .lib-say{font-size:12px;color:var(--text3);line-height:1.45;margin-bottom:7px}
 .lib-new .lib-row{background:#fff}
 .lib-new .lib-row.sel{border-color:var(--acc);box-shadow:inset 3px 0 0 var(--acc)}
+
+/* ── [1.553] — the one-step add card, and the offer that opens it ────────
+   The card borrows `.lib-new`'s accent edge, because it IS the review step:
+   the naming and the tagging that used to happen after the write now happen
+   before it, in the same shape a teacher already knows.
+   Its buttons are sized rather than stretched — `.btn` is full width by
+   default, which is right for a row of its own and wrong for two controls
+   ending a form. */
+.lib-add-card .lib-fld > input,.lib-add-card .lib-fld > textarea{width:100%;padding:6px 9px;
+  border:1px solid var(--border2);border-radius:var(--r);font-family:inherit;font-size:13px;
+  background:#fff;color:var(--text)}
+.lib-add-card .lib-fld > input:focus,.lib-add-card .lib-fld > textarea:focus{
+  border-color:var(--acc);outline:none}
+.lib-add-card .lib-edit-acts .btn{width:auto;flex:0 0 auto;padding:7px 14px;font-size:12.5px}
+/* The offer, beside the thing it is about ([[lesson-status-banners]]) — never a
+   corner toast, and never grey: the question is the loudest thing in the row
+   because it is the only thing being asked. */
+.lib-ask{display:flex;flex-wrap:wrap;align-items:center;gap:7px;margin-top:7px;
+  padding:7px 9px;border:1px solid var(--acc);border-radius:var(--r);
+  background:var(--bg4)}
+.lib-ask-t{flex:1 1 150px;min-width:0;font-size:12.5px;font-weight:600;color:var(--text);
+  line-height:1.35;overflow-wrap:anywhere}
+.lib-ask .btn.lib-ask-b{width:auto;flex:0 0 auto;padding:6px 12px;font-size:12px}
 
 /* ── Labelled form sections, used by the edit card and the review step ── */
 .lib-fld{margin-bottom:9px}
@@ -1000,7 +1049,7 @@ input[type=checkbox]{width:13px;height:13px;padding:0;margin:0;border:0;border-r
 
 /* ── The edit card, and the delete question that replaces it ───────────── */
 .lib-edit{margin-top:6px;padding:9px 10px;border:1px solid var(--acc);border-radius:var(--r);
-  background:var(--bg5)}
+  background:var(--bg4)}   /* [1.556] — a form card, so its fields have a step to stand on */
 .lib-edit-acts{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .lib-warn{font-size:12px;color:var(--red);font-weight:600;margin-bottom:6px;line-height:1.4}
 .lib-name-in{padding:5px 8px;border:1px solid var(--border2);border-radius:var(--r);
@@ -5986,6 +6035,34 @@ var TLIB_COPY={
   filesHead:'Files',
   addLinks:'Paste web addresses, one per line',
   addLinksGo:'Add links',
+  // ── [1.553] — the one-step card, and the offer that opens it ──────────
+  //
+  // **AC's own words for the offer, 10 September 2026, and he settled them
+  // twice.** First *"Ask every time. 'Add to library' with yes or no"*, then, on
+  // seeing it drawn: *"I actually understand this better and like this version
+  // best: Add Blues Scale — Position 1.pdf to your library? / Add / No thanks"*.
+  //
+  // **The second version is the one built, and the difference is the NAME.**
+  // Three files attached is three offers, and "Add to library" three times over
+  // does not say which one is being asked about — which is the same reason
+  // [1.522] put the filename into the confirmation.
+  keepAsk:function(n){ return 'Add '+(n||'this')+' to your library?'; },
+  keepYes:'Add',
+  keepNo:'No thanks',
+  // The button that finishes the card. AC's phrase from the same answer, used
+  // as a control rather than as a question.
+  addToLib:'Add to library',
+  addingLink:'Adding your link\u2026',
+  // DERIVED from AC's own placeholders — `Add link address here` and `Add
+  // display text here` ([1.517], his words, final). The labels name the same
+  // two things the boxes below them ask for, so the card cannot call them one
+  // thing while the box calls them another.
+  lblAddress:'Address',
+  lblDisplay:'Display text',
+  // Said on the press rather than guessed at: a paste of several addresses
+  // cannot share one display text, and quietly dropping what a teacher typed
+  // is the kind of silence this project has a rule about.
+  addManyNoText:'Display text is for one link at a time. Clear it, or paste one address.',
   addLinksDone:'Added {n} link(s).',
   addLinksDupe:'{n} were already in your library.',
   addLinksBad:'{n} were not web addresses.',
@@ -6316,7 +6393,7 @@ function _pickRedraw(){
 // My Library row in the side panel and from Manage Library in either picker;
 // closed by its ×, the dimmed page behind it, or Escape.
 function libraryOpen(){ LIBRARY_OPEN=true; LIB_EDIT=''; LIB_DEL=''; loadLibrary(); render(); }
-function libraryClose(){ LIBRARY_OPEN=false; LIB_EDIT=''; LIB_DEL=''; LIB_ADD_LINK=false; render(); }
+function libraryClose(){ LIBRARY_OPEN=false; LIB_EDIT=''; LIB_DEL=''; LIBADD=null; actClear('libadd'); render(); }
 document.addEventListener('keydown', function(ev){ if(ev.key==='Escape' && LIBRARY_OPEN) libraryClose(); });
 function rLibraryOverlay(){
   if(!LIBRARY_OPEN) return '';
@@ -6837,33 +6914,266 @@ function libAddChosen(input){
   // is where tagging happens.
   files.forEach(libAddUpload);
 }
-// Pasted, not typed: the box takes as many addresses as they have and each one
-// becomes a row in the same batch a file upload lands in — same ticks, same
-// bulk row, same names to fix.
-function libAddLinks(){
-  var el=document.getElementById('lib-add-links');
-  var text=el?String(el.value||''):'';
-  if(!text.trim()) return;
-  // [1.543] — AC: *"When I add a link to the library, before the naming and
-  // tagging step, it says 'adding your files' incorrectly."* One string was
-  // doing for both, and a teacher adding a link was told about files.
-  actStart('libadd', TLIB_COPY.addingLinks);
-  api({action:'addLibraryLinks', data:{urls:text, teacherId:TEACHER_ID, teacherToken:TOKEN}},
+// ═══════════════════════════════════════════════════════════════════════
+// [1.553] — ONE STEP: the address, the display text and the tags together
+// ═══════════════════════════════════════════════════════════════════════
+//
+// **AC, 10 September 2026:** *"We need to update the adding of links to be a
+// single step to add link, display text, and tags. Adding a tag should be as
+// simple as selecting it before saving the link into the library."*
+//
+// **Counted, because [PROCESS]'s rule is to count the presses:** adding one
+// named, tagged link was EIGHT — open the box, paste, press Add links, wait,
+// find the row that landed under Just added, type over the guessed name, click
+// away so it saves, tick the row, press the tag, press Done. It is three now,
+// and the tag is chosen BEFORE the write rather than after it, which is the
+// half that was being skipped: nothing is lost by ignoring the batch, and that
+// is exactly why a library fills up with untagged addresses.
+//
+// **ONE card, drawn in three places**, because the fault this project keeps
+// finding is a mechanism built in one place and not its twin. The library
+// panel opens it, a link just inserted into a message opens it, and a file just
+// attached to a message opens it. There is one renderer, one submit and one
+// status line.
+//
+// **What it does NOT try to be:** a paste of twenty addresses cannot share one
+// display text. That case keeps the box it has, keeps its names from the
+// addresses, and lands in the Just added batch to be renamed — but it now
+// carries the tags picked on the card, which is the half a batch of twenty most
+// needs.
+var LIBADD=null;
+// {kind:'link'|'file', at:'lib'|'link:<composerId>'|'att:<tempId>',
+//  url, text, name, tags:[], priv:[], attachmentId, tempId}
+function libAddOpen(o){
+  LIBADD={kind:'link', at:'lib', url:'', text:'', name:'', tags:[], priv:[],
+          attachmentId:'', tempId:''};
+  if(o) for(var k in o) if(o.hasOwnProperty.call(o,k)) LIBADD[k]=o[k];
+  // ── The status line's key, and why it is not one key for all three ──────
+  //
+  // A confirmation has to OUTLIVE the card — the card closes the moment the
+  // write lands, and "saved to library!" with nothing left to draw it is a
+  // confirmation nobody sees. So the key belongs to the SLOT rather than to the
+  // card, and the slot goes on drawing it after the card has gone. `libadd` is
+  // the panel's existing key, which its uploads and deletions already use.
+  LIBADD.key = LIBADD.at==='lib' ? 'libadd'
+             : (LIBADD.kind==='file' ? 'libadd:'+LIBADD.attachmentId : 'libadd:link');
+  actClear(LIBADD.key);
+  _libAddRedraw();
+  // The box is open because somebody means to type in it — the address for a
+  // link, the name for a file, since a file's address is not a thing.
+  var el=document.getElementById(LIBADD.kind==='link'?'libadd-url':'libadd-name');
+  if(el) _focusNoScroll(el);
+}
+function libAddClose(){ var k=LIBADD?LIBADD.key:'libadd'; LIBADD=null; actClear(k); _libAddRedraw(); }
+// The panel redraws itself in place and keeps its focus and scroll; anywhere
+// else it is the whole page. One function, so no caller has to know which.
+function _libAddRedraw(){
+  if(LIBADD && LIBADD.at!=='lib'){ render(); return; }
+  if(document.getElementById('lib-panel')) _libRedraw(); else render();
+}
+// More than one address in the box. Trimmed and emptied first, so a trailing
+// newline — which is what pressing Enter after one address leaves — is not a
+// second link.
+function _libAddLines(v){
+  return String(v||'').split(/[\r\n]+/).map(function(x){ return x.trim(); })
+    .filter(function(x){ return x; });
+}
+// The display text steps aside when a LIST is pasted, and it does so WITHOUT a
+// re-render: the box being typed in is the one that would lose its caret.
+// [1.547]'s lesson — a row that reflows under the finger reads as chaos — with
+// the row here being the field the finger is in.
+function libAddUrlIn(el){
+  if(!LIBADD) return;
+  LIBADD.url=el.value;
+  var many=_libAddLines(el.value).length>1;
+  var wrap=document.getElementById('libadd-text-wrap');
+  if(wrap) wrap.hidden=many;
+}
+function libAddTextIn(el){ if(LIBADD) LIBADD.text=el.value; }
+function libAddNameIn(el){ if(LIBADD) LIBADD.name=el.value; }
+// Selecting a tag IS adding it — AC's *"as simple as selecting it before
+// saving"*. Nothing is written until the one press at the end, so a tag pressed
+// by mistake costs a second press and no round trip.
+function libAddTag(tagId){
+  if(!LIBADD) return;
+  var i=LIBADD.tags.indexOf(tagId);
+  if(i>-1) LIBADD.tags.splice(i,1); else LIBADD.tags.push(tagId);
+  _libAddRedraw();
+}
+function libAddPriv(){
+  if(!LIBADD) return;
+  var el=document.getElementById('libadd-priv');
+  var w=el?String(el.value||'').trim().slice(0,40):'';
+  if(!w) return;
+  if(LIBADD.priv.indexOf(w)<0) LIBADD.priv.push(w);
+  if(el) el.value='';
+  _libAddRedraw();
+}
+function libAddPrivRemove(w){
+  if(!LIBADD) return;
+  LIBADD.priv=LIBADD.priv.filter(function(x){ return x!==w; });
+  _libAddRedraw();
+}
+// The one press. Two shapes behind it — a link is created, a file already
+// exists and is being shelved — and both are ONE round trip, because a press
+// that costs three at [1.263]'s ~2s each is not one step to the person waiting.
+function libAddGo(){
+  if(!LIBADD || actBusy(LIBADD.key)) return;
+  if(LIBADD.kind==='file') return _libAddFileGo();
+  var key=LIBADD.key;
+  var lines=_libAddLines(LIBADD.url);
+  if(!lines.length) return;
+  var text=String(LIBADD.text||'').trim();
+  // Said, not swallowed. The server ignores a label when the list is longer
+  // than one and it would be right to — but a teacher who typed a display text
+  // and never saw it again would have no way of knowing that.
+  if(lines.length>1 && text){ actFail(key, TLIB_COPY.addManyNoText); return; }
+  actStart(key, lines.length>1?TLIB_COPY.addingLinks:TLIB_COPY.addingLink);
+  var tags=LIBADD.tags.slice(), priv=LIBADD.priv.slice(), one=(lines.length===1);
+  api({action:'addLibraryLinks', data:{urls:lines.join('\n'), label:(one?text:''),
+       tags:tags, privateTags:priv, teacherId:TEACHER_ID, teacherToken:TOKEN}},
   function(e,r){
-    if(e||!r||!r.ok){ actFail('libadd',(r&&r.error)||TLIB_COPY.addLinksFailed); return; }
-    if(el) el.value='';
-    (r.added||[]).forEach(function(l){
-      LIB_ADDED.push({attachmentId:l.linkId, fileName:l.label});
-      LIB_ADD_SEL[l.linkId]=true;
-    });
+    if(e||!r||!r.ok){ actFail(key,(r&&r.error)||TLIB_COPY.addLinksFailed); return; }
+    var added=r.added||[];
+    // ONE link named and tagged has nothing left to review, so the batch is not
+    // drawn for it: a "Just added" block under a finished job is the second
+    // step this item exists to remove. A LIST still lands in it, because twenty
+    // names guessed from addresses is exactly what that block is for.
+    if(added.length>1 || (added.length && !one)){
+      added.forEach(function(l){
+        LIB_ADDED.push({attachmentId:l.linkId, fileName:l.label});
+        LIB_ADD_SEL[l.linkId]=true;
+      });
+    }
     // What happened to the ones that did NOT land is said, not swallowed: a
     // paste of twenty that adds fourteen has to account for the other six.
-    var note=TLIB_COPY.addLinksDone.replace('{n}', String((r.added||[]).length));
-    if(r.skipped) note+=' '+TLIB_COPY.addLinksDupe.replace('{n}', String(r.skipped));
-    if(r.rejected) note+=' '+TLIB_COPY.addLinksBad.replace('{n}', String(r.rejected));
-    actDone('libadd', note);
+    var note;
+    if(one && added.length===1){
+      note=TLIB_COPY.savedNamed(added[0].label);
+    } else {
+      note=TLIB_COPY.addLinksDone.replace('{n}', String(added.length));
+      if(r.skipped) note+=' '+TLIB_COPY.addLinksDupe.replace('{n}', String(r.skipped));
+      if(r.rejected) note+=' '+TLIB_COPY.addLinksBad.replace('{n}', String(r.rejected));
+    }
+    // Nothing added at all is not a success, whatever the request returned:
+    // a green tick over "Added 0 link(s)" is the quiet lie this project has a
+    // rule about.
+    var where=LIBADD?LIBADD.at:'lib';
+    LIBADD=null;
+    if(!added.length) actFail(key, note);
+    else { if(where!=='lib') render(); actDone(key, note); }
     _libRefresh();
   });
+}
+// A FILE is already uploaded by the time it is offered — the bytes went up when
+// it was attached — so this shelves, renames and tags one row in one write
+// ([1.553] server side). Nothing here uploads anything twice.
+function _libAddFileGo(){
+  var id=LIBADD.attachmentId; if(!id) return;
+  var key=LIBADD.key;
+  var name=String(LIBADD.name||'').trim();
+  actStart(key, TLIB_COPY.saving);
+  api({action:'setLibrary', data:{attachmentId:id, fileName:name,
+       tags:LIBADD.tags.slice(), privateTags:LIBADD.priv.slice(),
+       teacherId:TEACHER_ID, teacherToken:TOKEN}},
+  function(e,r){
+    if(e||!r||!r.ok){ actFail(key,(r&&r.error)||TLIB_COPY.saveFailed); return; }
+    LIB_KEPT[id]=true;
+    // The server cleans a filename, so the chip shows what was STORED rather
+    // than what was typed — the same rule the upload already follows.
+    ATT_PENDING.forEach(function(a){ if(a.attachmentId===id && r.fileName) a.fileName=r.fileName; });
+    LIBADD=null;
+    render();
+    actDone(key, TLIB_COPY.savedNamed(r.fileName||name));
+    _libRefresh();
+  });
+}
+// ── The card itself, and the only place any of this is drawn ────────────
+// `at` is the slot asking. It draws nothing anywhere else, so three callers can
+// call it unconditionally and only one of them can ever be showing it.
+function rLibAddCard(at){
+  if(!LIBADD || LIBADD.at!==at) return '';
+  var link=(LIBADD.kind==='link');
+  var busy=actBusy(LIBADD.key);
+  return '<div class="lib-new lib-add-card">'+
+    '<div class="lib-new-body">'+
+      (link
+        ? '<div class="lib-fld">'+
+            '<div class="lib-lbl">'+esc(TLIB_COPY.lblAddress)+'</div>'+
+            '<textarea id="libadd-url" rows="2" class="lib-search" style="resize:vertical"'+
+              ' placeholder="'+esc(CMP_COPY.linkUrlPlaceholder)+'"'+
+              ' aria-label="'+esc(CMP_COPY.linkUrlPlaceholder)+'"'+
+              ' oninput="libAddUrlIn(this)">'+esc(LIBADD.url)+'</textarea>'+
+          '</div>'+
+          '<div class="lib-fld" id="libadd-text-wrap"'+
+            (_libAddLines(LIBADD.url).length>1?' hidden':'')+'>'+
+            '<div class="lib-lbl">'+esc(TLIB_COPY.lblDisplay)+'</div>'+
+            '<input id="libadd-text" value="'+esc(LIBADD.text)+'"'+
+              ' placeholder="'+esc(CMP_COPY.linkTextPlaceholder)+'"'+
+              ' aria-label="'+esc(CMP_COPY.linkTextPlaceholder)+'"'+
+              ' oninput="libAddTextIn(this)">'+
+          '</div>'
+        : '<div class="lib-fld">'+
+            '<div class="lib-lbl">'+esc(TLIB_COPY.lblName)+'</div>'+
+            '<input id="libadd-name" value="'+esc(LIBADD.name)+'"'+
+              ' aria-label="'+esc(TLIB_COPY.lblName)+'" oninput="libAddNameIn(this)">'+
+          '</div>')+
+      // ── The tags, PRESSED BEFORE IT SAVES. AC: *"adding a tag should be as
+      // ── simple as selecting it before saving the link into the library."*
+      '<div class="lib-fld">'+
+        '<div class="lib-lbl">'+esc(TLIB_COPY.lblTags)+'</div>'+
+        (LIB_TAGS.length
+          // [1.472]'s near-match, on the card: a tag the name nearly says is
+          // OUTLINED, never pressed for them. Read from the display text (or
+          // the file's name), which is the only thing here a teacher has
+          // written — pressing it is still their press.
+          ? '<div class="lib-tags" style="padding-top:0">'+
+            _libTagChips(LIB_TAGS, link?LIBADD.text:LIBADD.name, LIBADD.tags).map(function(c){
+              var t=c.t, on=LIBADD.tags.indexOf(t.tagId)>-1;
+              return '<button type="button" class="lib-tag'+(on?' on':(c.near?' near':''))+'"'+
+                ' aria-pressed="'+(on?'true':'false')+'"'+
+                ' onclick="libAddTag(\''+esc(t.tagId)+'\')">'+esc(t.name)+'</button>';
+            }).join('')+'</div>'
+          : '<div class="lib-empty">'+esc(TLIB_COPY.noTagsYet)+'</div>')+
+      '</div>'+
+      '<div class="lib-fld">'+
+        '<div class="lib-lbl">'+esc(TLIB_COPY.lblMine)+'</div>'+
+        (LIBADD.priv.length
+          ? '<div class="lib-tags" style="padding-top:0;padding-bottom:4px">'+LIBADD.priv.map(function(w){
+              return '<button type="button" class="lib-tag priv on" title="'+esc(TLIB_COPY.removeWord)+'"'+
+                ' onclick="libAddPrivRemove(\''+esc(w)+'\')">'+esc(w)+' &#215;</button>';
+            }).join('')+'</div>'
+          : '')+
+        '<div class="lib-fld-row">'+
+          '<input id="libadd-priv" placeholder="'+esc(TLIB_COPY.privatePh)+'"'+
+            ' aria-label="'+esc(TLIB_COPY.privatePh)+'"'+
+            ' onkeydown="if(event.key===\'Enter\'){event.preventDefault();libAddPriv();}">'+
+          '<button type="button" class="lib-act" onclick="libAddPriv()">'+esc(TLIB_COPY.privateAdd)+'</button>'+
+        '</div>'+
+      '</div>'+
+      '<div class="lib-edit-acts">'+
+        '<button type="button" class="btn btn-p"'+(busy?' disabled':'')+
+          ' onclick="libAddGo()">'+esc(TLIB_COPY.addToLib)+'</button>'+
+        '<button type="button" class="btn btn-s" onclick="libAddClose()">'+esc(TLIB_COPY.cancel)+'</button>'+
+      '</div>'+
+      rAct(LIBADD.key)+
+    '</div>'+
+  '</div>';
+}
+// ── The offer, and AC settled every word of it ──────────────────────────
+//
+// **AC, 10 September 2026:** *"Ask every time"* — asked once per thing added,
+// so a teacher who says No thanks to this file is still asked about the next
+// one. And his second pass on the words: the question NAMES the file, because
+// three attachments is three offers and an unnamed one does not say which.
+// Drawn BESIDE the thing it is about, never in a corner
+// ([[lesson-status-banners]]).
+function rLibAddAsk(name, yes, no){
+  return '<div class="lib-ask">'+
+    '<span class="lib-ask-t">'+esc(TLIB_COPY.keepAsk(name))+'</span>'+
+    '<button type="button" class="btn btn-p lib-ask-b" onclick="'+yes+'">'+esc(TLIB_COPY.keepYes)+'</button>'+
+    '<button type="button" class="btn btn-s lib-ask-b" onclick="'+no+'">'+esc(TLIB_COPY.keepNo)+'</button>'+
+  '</div>';
 }
 
 var LIB_UP=0;
@@ -6920,14 +7230,15 @@ function libAddUpload(file){
 // nothing at all: a handler named in markup and missing from the file fails
 // silently in the console and looks like a dead button. There is a check for
 // exactly this now.
-var LIB_ADD_LINK=false;
-function libAddLinkOpen(){
-  LIB_ADD_LINK=true;
-  _libRedraw();
-  var el=document.getElementById('lib-add-links');
-  if(el) _focusNoScroll(el);   // the box is open because somebody means to type in it
-}
-function libAddLinkClose(){ LIB_ADD_LINK=false; _libRedraw(); }
+//
+// [1.553] — the box they opened is the one-step card now, so `LIB_ADD_LINK` is
+// gone and `LIBADD` holds the state. `libAddLinkOpen` KEEPS ITS NAME, because
+// the markup that calls it is the markup [1.485] found broken and a rename for
+// tidiness would be that same fault, deliberately. **`libAddLinkClose` is
+// deleted rather than kept as a one-line forwarder** — the card's Cancel calls
+// `libAddClose` directly, and a function nothing calls is what the dead-code
+// check exists to find.
+function libAddLinkOpen(){ libAddOpen({kind:'link', at:'lib'}); }
 function libAddedDone(){ LIB_ADDED=[]; LIB_ADD_SEL={}; _libRedraw(); }
 function libAddedSel(id){
   if(LIB_ADD_SEL[id]) delete LIB_ADD_SEL[id]; else LIB_ADD_SEL[id]=true;
@@ -7282,24 +7593,18 @@ function rLibraryPanel(composerId){
     // The two ways IN, first and loudest ([1.480]).
     '<div class="lib-add-row">'+
       '<button type="button" class="btn btn-p" onclick="libAddFiles()">'+esc(TLIB_COPY.addGo)+'</button>'+
-      '<button type="button" class="btn btn-s'+(LIB_ADD_LINK?' lib-on':'')+'"'+
+      '<button type="button" class="btn btn-s'+((LIBADD&&LIBADD.at==='lib')?' lib-on':'')+'"'+
         ' onclick="libAddLinkOpen()">'+esc(TLIB_COPY.addLinksGo)+'</button>'+
     '</div>'+
     '<input type="file" id="lib-add-file" class="att-input" multiple accept="'+_attAccept()+'"'+
       ' onchange="libAddChosen(this)">'+
-    // The paste box, only once Add link has been pressed.
-    (LIB_ADD_LINK
-      ? '<div class="lib-edit" style="margin-top:8px">'+
-          '<div class="lib-lbl">'+esc(TLIB_COPY.addLinks)+'</div>'+
-          '<textarea id="lib-add-links" rows="2" class="lib-search" style="resize:vertical"'+
-            ' placeholder="'+esc(TLIB_COPY.addLinksPh)+'" aria-label="'+esc(TLIB_COPY.addLinks)+'"></textarea>'+
-          '<div class="lib-edit-acts" style="margin-top:6px">'+
-            '<button type="button" class="btn btn-p" onclick="libAddLinks()">'+esc(TLIB_COPY.addLinksGo)+'</button>'+
-            '<button type="button" class="lib-act" onclick="libAddLinkClose()">'+esc(TLIB_COPY.cancel)+'</button>'+
-          '</div>'+
-        '</div>'
-      : '')+
-    rAct('libadd')+
+    // [1.553] — the one-step card, where the paste box used to be. Address,
+    // display text and tags together, and the press at the end is the only
+    // round trip.
+    rLibAddCard('lib')+
+    // The card draws its own status line, so this one is only for what the card
+    // is not doing — an upload, or a deletion from the shelves below.
+    ((LIBADD&&LIBADD.at==='lib')?'':rAct('libadd'))+
     // ── The review step. AC: "it should ask for tags, etc when adding, not
     // ── after and then having to remember to edit." So what just landed sits
     // ── HERE, at the top where the press was, with the tagging on it.
@@ -8084,11 +8389,48 @@ function _composerLinkInsert(id){
   }
   var label=(tIn && tIn.value.trim()) || url.replace(/^https?:\/\//i,'');
   _composerInsertLink(id, url, label);
+  // ── [1.553] — and THEN the offer, never before ─────────────────────────
+  //
+  // **AC:** *"when a teacher is adding a link or file to a message, they should
+  // be prompted to add it to their library."*
+  //
+  // **After the link is in the words, so it cannot hold up the thing the
+  // teacher was actually doing.** It is set HERE and not in
+  // `_composerInsertLink`, which is deliberate: that function is also how a
+  // link picked FROM the library is inserted, and offering to add a library
+  // link to the library is a question with no answer.
+  //
+  // A link already on either shelf is not offered either — the same address
+  // twice is a picker with two identical rows, which is what the server's own
+  // duplicate rule exists to prevent.
+  if(!LINK_SELECTED && !_libHasUrl(url)) LINK_OFFER={composerId:id, url:url, text:label};
   // [1.494] — the picker stays open for the next link; the fields clear.
   var st=_cmpLinkState(id); st.url=''; st.text=''; st.bad=false;
   if(LINK_SELECTED){ LINK_ADDED[LINK_SELECTED]=true; LINK_SELECTED=''; }   // the saved link that filled the fields is now in the message
   render();
 }
+// Is this address already on a shelf? Asked before the offer is made, over both
+// shelves, because a studio link a teacher pastes by hand is one they already
+// have — it is just not theirs.
+function _libHasUrl(url){
+  var u=String(url||'').toLowerCase();
+  if(!u) return false;
+  var hit=false;
+  [LIB_MY_LINKS, LIB_STUDIO_LINKS].forEach(function(list){
+    (list||[]).forEach(function(l){ if(String(l.url||'').toLowerCase()===u) hit=true; });
+  });
+  return hit;
+}
+// The two answers to the offer. Handlers with nothing to pass, so no address
+// and no display text is ever written into an onclick attribute — a URL with a
+// quote in it would end the attribute and take the rest of the row with it.
+var LINK_OFFER=null;   // {composerId, url, text}
+function libOfferYes(){
+  if(!LINK_OFFER) return;
+  var o=LINK_OFFER; LINK_OFFER=null;
+  libAddOpen({kind:'link', at:'link:'+o.composerId, url:o.url, text:o.text});
+}
+function libOfferNo(){ LINK_OFFER=null; render(); }
 // [1.471] — ONE insertion, used by the Link box and by a link picked from the
 // library. Two copies of an execCommand that writes an anchor into a message is
 // how the two end up producing different markup for the same act — and the
@@ -8749,6 +9091,15 @@ function rComposerLinkRow(id){
     // placeholder "Selected" that used to appear on the row instead: the row
     // said something had happened, and this says what to do about it.
     (LINK_SELECTED ? '<div class="cmp-guide cmp-guide-do">'+esc(CMP_COPY.linkSelectedDo)+'</div>' : '')+
+    // [1.553] — the offer, and then the card it opens, both in the row the
+    // link was typed into. Neither is drawn until the link is in the message.
+    ((LINK_OFFER && LINK_OFFER.composerId===id)
+      ? rLibAddAsk(LINK_OFFER.text, 'libOfferYes()', 'libOfferNo()') : '')+
+    rLibAddCard('link:'+id)+
+    // The confirmation outlives the card, so the slot draws it once the card
+    // has closed — otherwise "saved to library!" lands on a node that has just
+    // been removed and nobody ever sees it.
+    ((LIBADD && LIBADD.at==='link:'+id) ? '' : rAct('libadd:link'))+
     '<div class="cmp-guide">'+esc(CMP_COPY.linkSharing)+'</div>'+
   '</div>';
 }
@@ -9286,7 +9637,11 @@ function _attTakeIds(){
   return ATT_PENDING.filter(function(x){ return x.attachmentId; })
                     .map(function(x){ return x.attachmentId; });
 }
-function _attClear(){ ATT_PENDING=[]; ATT_BUSY=0; PICK=''; PICK_Q=''; LINK_ADDED={}; LINK_SELECTED=''; }   // [1.494] — a picker belongs to the thread it was opened in
+function _attClear(){ ATT_PENDING=[]; ATT_BUSY=0; PICK=''; PICK_Q=''; LINK_ADDED={}; LINK_SELECTED='';
+  // [1.553] — the offer and the card go with the thread. An offer about a link
+  // typed into another conversation would open a card that adds it here.
+  LINK_OFFER=null; LIB_NO={};
+  if(LIBADD && LIBADD.at!=='lib'){ actClear(LIBADD.key); LIBADD=null; } }   // [1.494] — a picker belongs to the thread it was opened in
 // [1.277] — the accepted formats, ONCE, feeding three things: the picker's
 // filter, the list a teacher can open, and nothing else. AC asked for the list
 // to be reachable on screen rather than guessed at, and a second hand-written
@@ -9381,16 +9736,47 @@ function rAttachRow(){
            '<span class="att-chip-name">'+esc(a.fileName)+'</span>'+
            '<span class="att-size">'+esc(_attSize(a.sizeBytes))+'</span>'+
            (a.failed?'<span class="att-err">'+esc(a.error||TCH_COPY.attachFailed)+'</span>':'')+
-           // [1.465] — Save to Library, on the file it is about. This is how a
-           // teacher builds a library without thinking about one: they send
-           // this week's scales and press Save.
-           (a.failed?'':rLibSave(a.attachmentId))+
            '<button type="button" class="att-x" aria-label="'+esc(TCH_COPY.attachRemove)+'"'+
-             ' onclick="attachRemove(\''+esc(a.tempId)+'\')">&#215;</button></div>';
+             ' onclick="attachRemove(\''+esc(a.tempId)+'\')">&#215;</button></div>'+
+           // ── [1.553] — the offer, under the file it is about ─────────────
+           //
+           // **AC:** *"Add Blues Scale — Position 1.pdf to your library? / Add /
+           // No thanks"*, and *"ask every time"* — once per file, so saying No
+           // thanks to this one changes nothing about the next.
+           //
+           // [1.465]'s Save to Library button is GONE FROM HERE and its job is
+           // done by this: two controls for one act, one of them silent about
+           // tags, is how a library fills with untagged files. It stays on a
+           // file in a SENT message, which is a different question — keeping
+           // something somebody else named, not filing something you are adding.
+           _rAttKeep(a);
        }).join('')+'</div>';
   }
   return h;
 }
+// Drawn per file, and only where there is something to ask or show: a failed
+// upload has nothing to shelve, a file already on the shelf has nowhere to go,
+// and a file said No thanks to has been answered.
+function _rAttKeep(a){
+  if(a.failed || !a.attachmentId) return '';
+  var card=rLibAddCard('att:'+a.attachmentId);
+  if(card) return card;
+  if(_libAlready(a.attachmentId) || LIB_NO[a.attachmentId]) return rAct('libadd:'+a.attachmentId);
+  return rLibAddAsk(a.fileName, 'libKeepYes(\''+esc(a.attachmentId)+'\')',
+                                'libKeepNo(\''+esc(a.attachmentId)+'\')');
+}
+// [1.553] — No thanks, remembered PER FILE and nowhere else. AC asked to be
+// asked every time, so this is cleared with the thread ([1.553] in `_attClear`)
+// and never consulted for a file it was not pressed on.
+var LIB_NO={};
+function libKeepYes(attachmentId){
+  var rec=null;
+  ATT_PENDING.forEach(function(x){ if(x.attachmentId===attachmentId) rec=x; });
+  if(!rec) return;
+  libAddOpen({kind:'file', at:'att:'+attachmentId, attachmentId:attachmentId,
+              name:rec.fileName||'', tempId:rec.tempId||''});
+}
+function libKeepNo(attachmentId){ LIB_NO[attachmentId]=true; render(); }
 // [1.494] — Add file · Add link · (Edit Message, while a picker is open),
 // beside Send, in "the row where the things you do with a message already
 // live" — [1.234]'s own words. Not on the formatting toolbar.

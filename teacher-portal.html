@@ -940,6 +940,9 @@ input[type=checkbox]{width:13px;height:13px;padding:0;margin:0;border:0;border-r
 .lib-act.bad:hover{border-color:var(--red);color:var(--red)}
 .lib-act[disabled]{opacity:.45;cursor:default}
 /* The box that narrows a long tag list, in the bar it belongs to. */
+/* [1.480] — the two ways IN, at the top of the panel and before anything a
+   teacher has to type. */
+.lib-add-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:2px}
 .lib-tagfind{padding:3px 7px;border:1px solid var(--border2);border-radius:var(--r);
   font-family:inherit;font-size:11.5px;background:#fff;color:var(--text);width:110px}
 .lib-warn{font-size:11.5px;color:var(--red);font-weight:600;margin-top:5px}
@@ -3049,6 +3052,35 @@ function rSectionedRoster(){
       ? '<div class="thread-list">'+_stuRows.map(rStudentRow).join('')+'</div>'
       : '<div class="zone-empty">'+esc(TCH_COPY.noStudents)+'</div>';
   }
+  // ── [1.481] — MY LIBRARY, without writing a message first ──────────────
+  //
+  // **AC:** *"There is no way for a teacher to manage their library unless they
+  // actually compose a message, it seems. There should be a way for them to
+  // manage these without composing."*
+  //
+  // He is right, and it followed from where the picker was born: it was built
+  // as part of the composer ([1.465], on his own instruction that it open
+  // inside the message), so **the only door to a teacher's own files was
+  // starting a message they did not want to send.**
+  //
+  // The same panel, in a section of this page — same shelves, same tags, same
+  // Add file and Add link, same Edit on every row of their own. **What changes
+  // is what pressing a ROW does:** in a message it attaches; here there is
+  // nothing to attach to, so it opens that file for editing instead of failing
+  // quietly.
+  //
+  // Collapsed to start, like My Students and Archived, and carrying its count
+  // while shut so it says what it holds rather than looking empty ([1.178]).
+  var _libCount=LIB_MINE.length+LIB_MY_LINKS.length;
+  h+='<div class="sep" onclick="LIBRARY_OPEN=!LIBRARY_OPEN;if(LIBRARY_OPEN)loadLibrary();render()">'+
+     '<span class="caret">'+(LIBRARY_OPEN?'▾':'▸')+'</span>'+esc(TLIB_COPY.mine)+
+     '<span class="sepc">'+_libCount+'</span></div>';
+  if(LIBRARY_OPEN){
+    LIB_STANDALONE=true;
+    h+=rLibraryPanel('');
+    LIB_STANDALONE=false;
+  }
+
   // Closed now holds only what is actually closed, so the heading is true.
   // Still collapsed to start and still carrying its count while collapsed —
   // it says what it holds rather than looking empty ([1.178]).
@@ -5375,6 +5407,7 @@ var TLIB_COPY={
   open:'Library',                       // AC's own word for the button
   openTip:'Attach a file from your library',
   head:'Attach from your library',
+  manageHead:'Your library',
   close:'Close',
   search:'Search your files',
   clear:'Clear filter',
@@ -5455,6 +5488,10 @@ var TLIB_COPY={
 // is ([1.28], [1.32]): render() replaces #app every poll tick, so a filter left
 // in the DOM would vanish under the teacher's hand five seconds later.
 var LIB_OPEN=false;
+// [1.481] — the panel drawn on the home page rather than inside a composer.
+// The flag is set for the length of one render and cleared straight after, so
+// nothing else in the file has to know about it.
+var LIBRARY_OPEN=false, LIB_STANDALONE=false;
 var LIB_FILTER=[];        // tag ids, and 'p:<word>' for a teacher's own words
 var LIB_Q='';
 var LIB_EDIT='';          // the attachmentId whose row is opened for editing
@@ -6340,52 +6377,74 @@ function rLibraryButton(){
     ' onclick="libToggle()">'+esc(TLIB_COPY.open)+'</button>';
 }
 function rLibraryPanel(composerId){
-  if(!LIB_OPEN) return '';
+  if(!LIB_OPEN && !LIB_STANDALONE) return '';
   // [1.471] — WHICH composer this panel belongs to. Both composers in this
   // portal are the same function called twice, and a link has to be inserted
   // into the box the panel is sitting inside rather than into whichever one was
   // opened last.
   if(composerId) _libComposerId=composerId;
   return '<div class="lib-panel">'+
-    '<div class="lib-hd"><span class="lib-hd-t">'+esc(TLIB_COPY.head)+'</span>'+
-      '<button type="button" class="lib-x" aria-label="'+esc(TLIB_COPY.close)+'"'+
-        ' onclick="libClose()">&#215;</button></div>'+
-    '<input id="lib-q" class="lib-search" type="search" value="'+esc(LIB_Q)+'"'+
-      ' placeholder="'+esc(TLIB_COPY.search)+'" aria-label="'+esc(TLIB_COPY.search)+'"'+
-      ' oninput="libSearch(this.value)">'+
-    rLibraryTags()+
-    '<div id="lib-body">'+rLibraryBody()+'</div>'+
-    rLibraryAdd()+
-  '</div>';
-}
-// Under the shelves, not above them: nine times out of ten a teacher is here to
-// SEND something they already have, and the thing they came for should be the
-// first thing under their hand.
-function rLibraryAdd(){
-  return '<div class="lib-edit" style="margin-top:9px">'+
-    '<div class="lib-group-hd">'+esc(TLIB_COPY.addHead)+'</div>'+
+    '<div class="lib-hd"><span class="lib-hd-t">'+
+      esc(LIB_STANDALONE?TLIB_COPY.manageHead:TLIB_COPY.head)+'</span>'+
+      // No × on the home page: the section's own heading closes it, and a
+      // second control that does the same thing is a second thing to learn.
+      (LIB_STANDALONE?''
+        :'<button type="button" class="lib-x" aria-label="'+esc(TLIB_COPY.close)+'"'+
+         ' onclick="libClose()">&#215;</button>')+
+    '</div>'+
+    // ── [1.480] — ADDING IS A BUTTON, and it comes first ─────────────────
+    //
+    // **AC:** *"The teacher should be able to click a button to add a file or a
+    // button to add a link here. It's not a pro design to have them search
+    // their files like this by just starting to type something. The correct
+    // flow is click button, choose to upload from device or drive, pick the
+    // file or files, then tags, etc."*
+    //
+    // **He is right about the order.** The search box was the first thing under
+    // the heading, so the panel opened by asking a teacher to type — which
+    // answers "find something I already have" and says nothing at all to
+    // somebody whose library is empty. Adding was a control at the BOTTOM,
+    // below both shelves, which on a phone is off the screen.
+    //
+    // Two buttons, at the top, before anything else: **Add file** opens the
+    // device's own picker; **Add link** opens the paste box. Both land in the
+    // batch below, where the tags are set — which is the rest of his sentence
+    // and was already built.
+    '<div class="lib-add-row">'+
+      '<button type="button" class="btn btn-p" onclick="libAddFiles()">'+esc(TLIB_COPY.addGo)+'</button>'+
+      '<button type="button" class="btn btn-s" onclick="libAddLinkOpen()">'+esc(TLIB_COPY.addLinksGo)+'</button>'+
+    '</div>'+
     '<input type="file" id="lib-add-file" class="att-input" multiple accept="'+_attAccept()+'"'+
       ' onchange="libAddChosen(this)">'+
-    '<div class="lib-edit-acts">'+
-      '<button type="button" class="btn btn-s" onclick="libAddFiles()">'+esc(TLIB_COPY.addGo)+'</button>'+
-    '</div>'+
-    // ── [1.471] — the other half, and for most teachers the bigger one ──
-    //
-    // Their material is mostly not on this computer: it is in their own Drive,
-    // on YouTube, on IMSLP. A file cannot be over 10MB and cannot be a video at
-    // all, and `drive.file` means the tool can never read a file it did not
-    // create. **A list of addresses moves a personal library in one paste.**
-    '<textarea id="lib-add-links" rows="2" style="width:100%;margin-top:8px;padding:6px 8px;'+
-      'border:1px solid var(--border2);border-radius:var(--r);font-family:inherit;font-size:12.5px"'+
-      ' placeholder="'+esc(TLIB_COPY.addLinks)+'" aria-label="'+esc(TLIB_COPY.addLinks)+'"></textarea>'+
-    '<div class="lib-edit-acts" style="margin-top:5px">'+
-      '<button type="button" class="btn btn-s" onclick="libAddLinks()">'+esc(TLIB_COPY.addLinksGo)+'</button>'+
-    '</div>'+
+    // The paste box only when Add link has been pressed: a textarea sitting
+    // open above the shelves is the same clutter the search box was.
+    (LIB_ADD_LINK
+      ? '<div class="lib-edit" style="margin-top:7px">'+
+          '<textarea id="lib-add-links" rows="2" style="width:100%;padding:6px 8px;'+
+            'border:1px solid var(--border2);border-radius:var(--r);font-family:inherit;'+
+            'font-size:12.5px" placeholder="'+esc(TLIB_COPY.addLinks)+'"'+
+            ' aria-label="'+esc(TLIB_COPY.addLinks)+'"></textarea>'+
+          '<div class="lib-edit-acts" style="margin-top:5px">'+
+            '<button type="button" class="btn btn-p" onclick="libAddLinks()">'+esc(TLIB_COPY.addLinksGo)+'</button>'+
+            '<button type="button" class="lib-act" onclick="libAddLinkClose()">'+esc(TLIB_COPY.close)+'</button>'+
+          '</div>'+
+        '</div>'
+      : '')+
     rAct('libadd')+
-  '</div>'+
-  // [1.468] — and what just landed, which is where tagging happens.
-  rLibraryAdded();
+    '<input id="lib-q" class="lib-search" type="search" value="'+esc(LIB_Q)+'"'+
+      ' placeholder="'+esc(TLIB_COPY.search)+'" aria-label="'+esc(TLIB_COPY.search)+'"'+
+      ' oninput="libSearch(this.value)" style="margin-top:8px">'+
+    rLibraryTags()+
+    '<div id="lib-body">'+rLibraryBody()+'</div>'+
+    // [1.468] — what just landed, where tagging happens. Below the shelves,
+    // because it is about the files that arrived rather than about finding one.
+    rLibraryAdded()+
+  '</div>';
 }
+// [1.480] — the paste box is opened by the Add link button and closed again.
+var LIB_ADD_LINK=false;
+function libAddLinkOpen(){ LIB_ADD_LINK=true; render(); }
+function libAddLinkClose(){ LIB_ADD_LINK=false; render(); }
 function rLibraryTags(){
   var offered=_libOffered();
   if(!offered.length && !LIB_FILTER.length) return '';
@@ -6464,9 +6523,17 @@ function rLibRow(f, mine){
   // keeps the column in the Settings table, which is where the studio's
   // bookkeeping lives.
   var meta=link?_libLinkHost(f.url):_attSize(f.sizeBytes);
+  // [1.481] — in a message, pressing a row ATTACHES. On the home page there is
+  // nothing to attach to, so it opens the file for editing instead — for a
+  // teacher's own row. A studio row has nothing to edit, so it stays inert
+  // rather than pretending.
+  var _press=LIB_STANDALONE
+    ? (mine?'libEdit(\''+esc(id)+'\')':'')
+    : 'libAttach(\''+esc(id)+'\')';
   var h='<div class="lib-row'+(link?' lib-link':'')+'">'+
-    '<button type="button" class="lib-pick" title="'+esc(link?f.url:f.fileName)+'"'+
-      ' onclick="libAttach(\''+esc(id)+'\')">'+
+    '<button type="button" class="lib-pick"'+(_press?'':' disabled')+
+      ' title="'+esc(link?f.url:f.fileName)+'"'+
+      ' onclick="'+_press+'">'+
       '<span class="lib-kind">'+esc(link?_libLinkSite(f.url):_attKind(f.fileName))+'</span>'+
       '<span class="lib-name">'+esc(f.fileName)+'</span>'+
       '<span class="lib-meta">'+esc(meta)+'</span></button>'+

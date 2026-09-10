@@ -9536,16 +9536,6 @@ function confirmSendLater(){
 }
 var _schedJustSetAt=0;
 
-// ── [1.446] — changing the time of a message already waiting ─────────────
-//
-// Seeded with the time it ALREADY has, not with a default an hour out. The
-// whole act is "not then, this instead", and a picker that throws away the
-// current answer makes the person reconstruct it before they can change it.
-function askReschedule(id){
-  var m=_amendFind(id); if(!m) return;
-  SCHED={mode:'rescheduling', messageId:id, at:_schedMsToLocalInput(Number(m.sendAt)||Date.now())};
-  render();
-}
 function confirmReschedule(){
   var c=_amendCtx(); if(!c) return;
   var id=SCHED.messageId;
@@ -9599,18 +9589,11 @@ function rScheduledBubble(m){
   // server's sanitizer, and a plain message keeps the escaped path.
   var body=m.messageHtml?m.messageHtml:esc(m.messageText||'').replace(/\n/g,'<br>');
   var acts;
-  if(SCHED.mode==='send-now' && SCHED.messageId===m.messageId){
-    // AC's confirm, in AC's words. Cancel here backs out of the ACTION — the
-    // message stays scheduled, untouched. That is deliberately not the same
-    // Cancel as the one two buttons along, which destroys it.
-    acts='<div class="sched-confirm"><span>'+esc(TCH_COPY.sendNowAsk)+'</span>'+
-      '<button type="button" class="btn btn-p" onclick="doSendNow(\''+id+'\')">'+esc(TCH_COPY.sendNowGo)+'</button>'+
-      '<button type="button" class="btn btn-s" onclick="closeSchedule()">'+esc(TCH_COPY.sendNowBack)+'</button></div>';
-  } else if(SCHED.mode==='delete' && SCHED.messageId===m.messageId){
-    acts='<div class="sched-confirm"><span>'+esc(TCH_COPY.cancelScheduledAsk)+'</span>'+
-      '<button type="button" class="btn btn-p" onclick="deleteScheduled(\''+id+'\')">'+esc(TCH_COPY.cancelScheduledGo)+'</button>'+
-      '<button type="button" class="btn btn-s" onclick="closeSchedule()">'+esc(TCH_COPY.cancelScheduledKeep)+'</button></div>';
-  } else if(SCHED.mode==='' && !AMEND.messageId && settled){
+  // [1.537] — the Send now and Delete confirms went with their controls. Both
+  // asked "are you sure" about an action that no longer exists; Cancel Send is
+  // the one route now, and it needs no confirm because it destroys nothing —
+  // the words come back to the composer.
+  if(SCHED.mode==='' && !AMEND.messageId && settled){
     // AC, 7 September — FOUR controls, and the distinction between them is his:
     //
     //   Edit         changes the words and KEEPS the time
@@ -9625,20 +9608,34 @@ function rScheduledBubble(m){
     //
     // The same gate the sent bubble uses: while ANY amendment or confirm is
     // open, no message offers a control.
+    // ── [1.537] — two controls, and they are BUTTONS ───────────────────────
+    //
+    // AC, 10 September 2026: *"the buttons that show up on a scheduled message
+    // in queue in the message thread are white and washed out. And maybe some
+    // are unnecessary? Cancel send or edit message are all that's really needed
+    // here. If they want to delete they can cancel send and then delete the
+    // message text from the body. If they want to reschedule, they can cancel
+    // send and go through the reschedule process."*
+    //
+    // **Agreed, and it is safe for a reason worth stating: `cancelSend` APPENDS
+    // the returned words to any draft already in the box** (`cur+'<br><br>'+back`)
+    // rather than replacing it. So making Cancel Send the route to rescheduling,
+    // deleting and sending now cannot destroy work in progress — which is the
+    // thing that would have made this a bad trade.
+    //
+    // **Send now went with them**, though AC named only two: cancelling puts the
+    // words in the composer, so sending now is Cancel Send then Send. One extra
+    // press on a rare action, which is the same trade [1.532]'s More menu makes.
+    //
+    // **Five link-buttons became two real ones.** `lnk-btn` is the washed-out
+    // style AC is describing — white on white, `--text4` text — and it was doing
+    // the work of a button. These are secondary buttons: white with a real edge,
+    // which is his rule ("blue buttons with white text are action buttons"), and
+    // neither of these completes anything.
     acts='<div class="msg-tools">'+
-      '<button type="button" class="lnk-btn" onclick="startEditMessage(\''+id+'\')">'+esc(TCH_COPY.editMsg)+'</button>'+
-      '<span class="msg-tools-sep">·</span>'+
-      '<button type="button" class="lnk-btn" onclick="askSendNow(\''+id+'\')">'+esc(TCH_COPY.sendNow)+'</button>'+
-      '<span class="msg-tools-sep">·</span>'+
-      // [1.446] — the control AC found missing. Between Send now and Cancel
-      // Send because it is what sits between them in consequence: it changes
-      // when, not whether.
-      '<button type="button" class="lnk-btn" onclick="askReschedule(\''+id+'\')">'+esc(TCH_COPY.reschedule)+'</button>'+
-      '<span class="msg-tools-sep">·</span>'+
-      '<button type="button" class="lnk-btn" onclick="cancelSend(\''+id+'\')">'+esc(TCH_COPY.cancelScheduled)+'</button>'+
-      '<span class="msg-tools-sep">·</span>'+
-      '<button type="button" class="lnk-btn" onclick="askDeleteScheduled(\''+id+'\')">'+esc(TCH_COPY.deleteScheduled)+'</button>'+
-      '</div>';
+      '<button type="button" class="btn btn-s btn-sm" onclick="startEditMessage(\''+id+'\')">'+esc(TCH_COPY.editMsg)+'</button>'+
+      '<button type="button" class="btn btn-s btn-sm" onclick="cancelSend(\''+id+'\')">'+esc(TCH_COPY.cancelScheduled)+'</button>'+
+    '</div>';
   } else { acts=''; }
   var editing = AMEND.kind==='edit' && AMEND.messageId===m.messageId;
   return '<div class="bubble-row mine" id="msg-'+id+'">'+
@@ -9648,46 +9645,6 @@ function rScheduledBubble(m){
     rAttachments(m)+
     acts+
     '</div></div>';
-}
-function askSendNow(id){ SCHED={mode:'send-now', messageId:id, at:''}; render(); }
-function askDeleteScheduled(id){ SCHED={mode:'delete', messageId:id, at:''}; render(); }
-
-// Send now. The server calls the same release the trigger does, so there is
-// nothing here that decides how a message is sent — only when.
-function doSendNow(id){
-  var c=_amendCtx(); if(!c) return;
-  if(!_oncePress('sendnow:'+id)) return;   // [1.534]
-  SCHED={mode:'', messageId:'', at:''};
-  var keep=(c.t.scheduled||[]).slice();
-  var row=null;
-  (c.t.scheduled||[]).forEach(function(m){ if(m.messageId===id) row=m; });
-  // Off the scheduled list and into the thread in one move, before the round
-  // trip — [1.43]'s rule: a teacher who presses Send watches it send.
-  c.t.scheduled=keep.filter(function(m){ return m.messageId!==id; });
-  if(row){
-    var now=Date.now();
-    c.t.messages=(c.t.messages||[]).concat([Object.assign({}, row, {sendAt:'', sentAt:now, amendUntil:now+MSG_UNSEND_WINDOW_MS})]);
-    _threadCacheWrite(c);
-  }
-  _shouldScrollMsgList=true;
-  render();
-  api({action:'sendScheduledNow', data:Object.assign({}, c.req, {messageId:id})}, function(e,r){
-    _onceDone('sendnow:'+id);   // [1.534] — the answer releases it
-    if(e||!r||!r.ok){
-      c.t.scheduled=keep;
-      c.t.messages=(c.t.messages||[]).filter(function(m){ return m.messageId!==id; });
-      _threadCacheWrite(c);
-      showMsg((r&&r.error)||'Could not send that message.','e');
-      render();
-      return;
-    }
-    (c.t.messages||[]).forEach(function(m){
-      if(m.messageId===id){ m.sentAt=r.sentAt||m.sentAt; m.amendUntil=r.amendUntil||0; }
-    });
-    _threadCacheWrite(c);
-    _schedInvalidate();
-    render();
-  });
 }
 // ── Cancel Send (AC, 7 September) ──────────────────────────────────────
 // "keeps the message as a draft but cancels the scheduled send time."
@@ -9701,6 +9658,13 @@ function doSendNow(id){
 // in the box stays first, and the returned message follows it. Merging two
 // messages into one is a nuisance a teacher can see and fix; silently losing
 // either is [1.43]'s rule broken, on words they watched themselves type.
+// [1.537] — `askSendNow`, `askReschedule`, `askDeleteScheduled` and `doSendNow`
+// were REMOVED with the controls they served. AC: *"Cancel send or edit message
+// are all that's really needed here."* Each was Cancel Send plus an obvious next
+// step, and `cancelSend` appends the words to any draft rather than replacing
+// one — so nothing they did is lost, it is two presses instead of one on three
+// rare actions. `deleteScheduled` stays: the Scheduled list elsewhere still uses
+// it. Removed rather than left orphaned, which the dead-code check insists on.
 function cancelSend(id){
   var c=_amendCtx(); if(!c) return;
   if(!_oncePress('cancel:'+id)) return;   // [1.534]

@@ -5190,16 +5190,25 @@ function rStaffThread(){
     ((t.messages||[]).length
       ? '<button type="button" class="btn btn-s" onclick="closeConversation()">'+esc(TCH_COPY.closeConversation)+'</button>'
       : '');
-  // BACKLOG 1.158 — staff messages stay in-app by default (AC, 1 Sept), with
-  // the same per-message override admin has always had, for reaching someone
-  // who is not watching the portal. Unchecked every time on purpose: a sticky
-  // setting would quietly become "email everything".
-  // Same trap as .msg-tools label above: the inline style set size and colour
-  // but not text-transform, so the page-wide label rule still rendered this as
-  // SMALL CAPS. Given a class so it is styled in one place with the rest.
-  h+='<label class="opt-check">'+
-     '<input type="checkbox" '+(t.emailToo?'checked':'')+' onchange="ACTIVE_STAFF_THREAD.emailToo=this.checked"> '+
-     'Also send by email (for something that can\'t wait for the portal)</label>';
+  // ── [1.531] — no "Also send by email" for a teacher ────────────────────
+  //
+  // AC, 10 September 2026, asking first and then deciding: *"Does the teacher
+  // need also send by email when email notifications go out automatically?"* —
+  // and then *"we can remove that entirely from the teacher portal."*
+  //
+  // **It was never redundant, but it was never a teacher's to have either.**
+  // It only ever appeared in a STAFF thread; a message to a family emails on
+  // its own, so there was nothing there to opt into. What it did was let a
+  // teacher force an email into the one channel built to be silent — the
+  // channel whose whole purpose is replacing Slack for teacher↔admin.
+  //
+  // **[1.158] gave teachers admin's override on 1 September. This takes it
+  // back**, which returns the design to what the spec said on 18 August and
+  // what `doSendMessage`'s own comment has said all along: *"notifyByEmail:
+  // admin-only override"*. The code and its comment disagreed; they agree now.
+  //
+  // **Admin's override is untouched** — it rides `ADM_MSG.forceEmail` and is a
+  // different control on a different screen.
   h+=rComposer('staff-composer',t.draft,'_composerSync(\'staff-composer\')',sendBtn);
   // [1.233] — the same dialog as the family thread. A staff conversation can
   // hold review marks too, and closing one with marks outstanding is the same
@@ -10196,7 +10205,7 @@ function sendStaffMessage(sendAt){
   if(sendAt) reqData.sendAt=sendAt;   // [1.371]
   // BACKLOG 1.158 — the sender's own per-message email override, read here
   // and cleared below so the next message starts unchecked again.
-  if(t.emailToo) reqData.notifyByEmail=true;
+  // [1.531] — a teacher no longer sends this flag at all.
   // Same optimistic path as sendFamilyMessage() above (BACKLOG 1.124 #2).
   var clientMsgId=_ktNewClientMsgId();
   reqData.clientMsgId=clientMsgId;
@@ -10215,7 +10224,7 @@ function sendStaffMessage(sendAt){
   _attClear();         // [1.277]
   TPL_USED=null; TPL_NAMING=false;   // [1.127] — sent, so there is nothing left to offer to save
   _draftKeep(t, '');   // [1.336]
-  t.emailToo=false;
+  // [1.531] — nothing to reset; the flag is gone from this portal.
   t._sendInFlight=true;
   _shouldScrollMsgList=true;
   // [1.371] — a scheduled reply does not answer anybody yet.

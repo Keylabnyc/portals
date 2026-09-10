@@ -129,6 +129,19 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
   font-family:"Inter",sans-serif;font-size:12.5px;font-weight:600;cursor:pointer;line-height:1.25;
   text-align:left}
 .lnk-btn:hover{background:rgba(255,255,255,.85);color:var(--text)}
+
+/* [1.509b] — Done, the same size and shape as Manage Library beside it.
+   AC, 10 September 2026: "Done is huge. It should be equal size to the manage
+   library button and should sit just to the left of the manage library button."
+   It was `btn btn-p`, and `.btn` carries `width:100%` — so the primary class
+   that made it blue is also what made it a full-width bar under the row.
+   This is `.lnk-btn`'s own metrics with the primary colours, so the two
+   controls match exactly and only their weight differs. */
+.lib-done{display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border-radius:var(--r);
+  border:1px solid #1a4fc4;background:#1a4fc4;color:#fff;
+  font-family:"Inter",sans-serif;font-size:12.5px;font-weight:600;cursor:pointer;line-height:1.25}
+.lib-done:hover{background:#1440a8;border-color:#1440a8}
+
 /* [1.413] — Messages-format runs, identical in all three portals. */
 .bubble-row{display:flex;margin-top:2px}
 .bubble-row.run-start{margin-top:.6rem}
@@ -8604,8 +8617,9 @@ function rPickPanel(composerId){
   // out is the most prominent thing in the thing you are trying to leave.
   // Manage Library stays a quiet link beside it — it goes somewhere else, and
   // two primary buttons in one row would be two answers to one question.
-  h+='<div class="lib-foot"><button type="button" class="lnk-btn" onclick="libraryOpen()">'+esc(TLIB_COPY.manageGo)+'</button>'+
-     '<button type="button" class="btn btn-p" onclick="pickClose(\''+esc(composerId)+'\')">'+esc(TLIB_COPY.editMessage)+'</button></div>';
+  h+='<div class="lib-foot">'+
+     '<button type="button" class="lib-done" onclick="pickClose(\''+esc(composerId)+'\')">'+esc(TLIB_COPY.editMessage)+'</button>'+
+     '<button type="button" class="lnk-btn" onclick="libraryOpen()">'+esc(TLIB_COPY.manageGo)+'</button></div>';
   return h+'</div>';
 }
 // A shelf with nothing on it draws nothing: there is nothing to pick.

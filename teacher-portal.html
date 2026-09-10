@@ -758,6 +758,16 @@ input[type=checkbox]{width:13px;height:13px;padding:0;margin:0;border:0;border-r
 .att-size{font-size:10.5px;color:var(--text5)}
 .bubble.mine .att-size{color:rgba(255,255,255,.7)}
 .att-input{display:none}
+/* [1.547] — the tag disclosure. Closed it is one row that never moves; open, the
+   chips narrow as they always did, but only for somebody who asked to see them. */
+.lib-tags-wrap{margin:8px 0}
+.lib-tags-hd{display:flex;align-items:center;gap:6px;width:100%;text-align:left;
+  background:rgba(255,255,255,.45);border:1px solid var(--border2);border-radius:var(--r);
+  padding:7px 10px;font-family:"Inter",sans-serif;font-size:12.5px;font-weight:600;
+  color:var(--text2);cursor:pointer}
+.lib-tags-hd.on{border-color:var(--acc);color:var(--acc)}
+.lib-tags-hd .zcount{margin-left:auto}
+
 /* [1.535] — the composer's two rows at rest. Add file and Add link share the
    width equally, which is AC's "equal weight and width"; the Aa disclosure sits
    before them and takes only what it needs. Formatting expands ABOVE this row,
@@ -805,6 +815,11 @@ input[type=checkbox]{width:13px;height:13px;padding:0;margin:0;border:0;border-r
 .act-working{border:1px solid var(--blue);background:var(--bbg);color:var(--bt)}
 .act-done{border:1px solid var(--green);background:rgba(22,163,74,.10);color:var(--gt)}
 .act-failed{border:1px solid var(--red);background:rgba(220,38,38,.08);color:var(--red)}
+/* [1.544] — a deletion that WORKED. Red, because it is irreversible and worth a
+   beat of attention, and AC asked for red by name. Distinguished from a failure
+   by its × rather than its ! — the colour says "notice this", the icon says
+   what happened. */
+.act-gone{border:1px solid var(--red);background:rgba(220,38,38,.08);color:var(--red)}
 /* [1.403] — the two attachment states. The FINISHED one is the loud one:
    a file successfully attached used to be the quietest thing on screen. */
 .att-banner{display:flex;align-items:center;gap:7px;margin-top:7px;padding:7px 10px;
@@ -1445,10 +1460,30 @@ function actClear(key){
 function actBusy(key){ return !!(ACT[key] && ACT[key].state==='working'); }
 // Drawn by whatever draws the control. Empty when there is nothing to say, so
 // a caller can put it anywhere unconditionally.
+// ── [1.544] — a DESTRUCTIVE completion does not read as good news ────────
+//
+// AC, 10 September 2026: *"a green check success banner 'deleted' but this
+// should be red banner."*
+//
+// **He is right, and the reason is that green means "carry on".** A deletion
+// succeeded is not the same kind of fact as a message sent: it is irreversible
+// and it is worth a beat of attention. The mechanism had two colours — working
+// and done and failed — and no way to say "this worked, and you should notice".
+//
+// A fourth state rather than reusing `failed`: calling a successful deletion a
+// FAILURE would be the quiet lie this project has a rule about, and the icon
+// would say the wrong thing too.
+function actGone(key, text){
+  ACT[key] = {state:'gone', text:text||''};
+  if(_actTimers[key]) clearTimeout(_actTimers[key]);
+  _actTimers[key] = setTimeout(function(){ delete ACT[key]; delete _actTimers[key]; render(); }, 4000);
+  render();
+}
 function rAct(key){
   var a=ACT[key]; if(!a) return '';
   var icon = a.state==='working' ? '<span class="spin">\u21bb</span> '
-           : a.state==='done'    ? '\u2713 ' : '\u0021 ';
+           : a.state==='done'    ? '\u2713 '
+           : a.state==='gone'    ? '\u2715 ' : '\u0021 ';
   return '<div class="act-note act-'+a.state+'">'+icon+esc(a.text||'')+'</div>';
 }
 
@@ -5839,6 +5874,8 @@ var TLIB_COPY={
   close:'Close',
   search:'Search your library',
   clear:'Clear filter',
+  // [1.547] — AC's own word for the control that opens them.
+  tagsHead:'Tags',
   mine:'My Links and Files',            // AC's label, 10 September 2026
   studio:'Keylab Master Library',       // AC's label, final
   // [1.480] — the old wording sent a teacher to a message to add anything,
@@ -5854,6 +5891,9 @@ var TLIB_COPY={
   attachFailed:'That file could not be attached.',
   save:'Save to Library',               // AC's own phrase, final
   saving:'Saving to your library…',
+  // [1.542] — deleting is not saving, and a teacher watching the wrong word is
+  // being told the wrong thing about an irreversible action.
+  deleting:'Deleting\u2026',
   // [1.522] — AC's words, 10 September 2026: *"there should be a success
   // message when saving a file to library '[filename] saved to library!'"*.
   // The filename is what makes it a confirmation rather than a notice: a
@@ -5901,6 +5941,8 @@ var TLIB_COPY={
   addedDone:'Done',
   privateBulkPh:'Your own tag for the ticked files',
   adding:'Adding your files\u2026',
+  // [1.543] — its own word. PLACEHOLDER, flagged: teacher-facing.
+  addingLinks:'[PLACEHOLDER \u2014 AC] Adding your links\u2026',
   added:'Added to your library.',
   addFailed:'That file could not be added.',
   already:'That file is already attached to this message.',
@@ -6437,6 +6479,12 @@ function rLibSave(attachmentId){
 // because they answer two different questions: taking a file off a shelf
 // withholds nothing from anybody, and deleting it takes it out of every
 // conversation it was ever sent to.
+// [1.545] — the destination, in a new tab. `noopener` because the page being
+// opened is one a teacher pasted and nothing here has vouched for it.
+function libOpenLink(id){
+  var it=_libFind(id); if(!it || !it.url) return;
+  try{ window.open(it.url,'_blank','noopener'); }catch(e){}
+}
 function libEdit(id){ LIB_EDIT = (LIB_EDIT===id?'':id); LIB_DEL=''; _libRedraw(); }
 // ── [1.488] — the name saves when you leave the field ────────────────────
 //
@@ -6508,7 +6556,7 @@ function libDelete(id){
     api({action:'deleteLibraryLink', data:{linkId:id,
          teacherId:TEACHER_ID, teacherToken:TOKEN}}, function(e,r){
       if(e||!r||!r.ok){ actFail('lib:'+id,(r&&r.error)||TLIB_COPY.delFailed); LIB_DEL=''; render(); return; }
-      actDone('lib:'+id, TLIB_COPY.deleted);
+      actGone('lib:'+id, TLIB_COPY.deleted);   // [1.544]
       LIB_EDIT=''; LIB_DEL=''; _libRefresh();
     });
     return;
@@ -6517,7 +6565,7 @@ function libDelete(id){
   api({action:'deleteLibraryFile', data:{attachmentId:id,
        teacherId:TEACHER_ID, teacherToken:TOKEN}}, function(e,r){
     if(e||!r||!r.ok){ actFail('lib:'+id,(r&&r.error)||TLIB_COPY.delFailed); LIB_DEL=''; render(); return; }
-    actDone('lib:'+id, TLIB_COPY.deleted);
+    actGone('lib:'+id, TLIB_COPY.deleted);   // [1.544]
     LIB_EDIT=''; LIB_DEL='';
     _libRefresh();
   });
@@ -6761,7 +6809,10 @@ function libAddLinks(){
   var el=document.getElementById('lib-add-links');
   var text=el?String(el.value||''):'';
   if(!text.trim()) return;
-  actStart('libadd', TLIB_COPY.adding);
+  // [1.543] — AC: *"When I add a link to the library, before the naming and
+  // tagging step, it says 'adding your files' incorrectly."* One string was
+  // doing for both, and a teacher adding a link was told about files.
+  actStart('libadd', TLIB_COPY.addingLinks);
   api({action:'addLibraryLinks', data:{urls:text, teacherId:TEACHER_ID, teacherToken:TOKEN}},
   function(e,r){
     if(e||!r||!r.ok){ actFail('libadd',(r&&r.error)||TLIB_COPY.addLinksFailed); return; }
@@ -6986,11 +7037,30 @@ function libAddedDelete(){
   var files=_libAddedSelected();
   if(!files.length){ LIB_ADD_DEL=false; render(); return; }
   LIB_ADD_DEL=false;
-  actStart('libadd', TLIB_COPY.saving);
+  // ── [1.542] — a LINK is deleted by the link endpoint ────────────────────
+  //
+  // AC, 10 September 2026: *"I can't delete a link I have added"*, with a
+  // screenshot reading **"! Deleted 0. 1 could not be deleted."**
+  //
+  // **Every row went to `deleteLibraryFile`.** A link is not a file — it lives
+  // on its own sheet with a `linkId`, and `deleteLibraryLink` is the endpoint
+  // that removes it. So the server was asked to delete an attachment that does
+  // not exist, refused, and the batch reported the refusal honestly. **The
+  // report was right; the request was wrong.**
+  //
+  // `_libNormLink` already sets `kind:'link'` and `id:linkId` on every link, so
+  // the two were always distinguishable here — nothing looked.
+  //
+  // [1.542] — and the word. AC: *"I can delete a file but it says 'saving to
+  // your library' when I confirm i want to delete it."* `saving` is the string
+  // for SAVING; deleting is not saving. `deleting` is its own word.
+  actStart('libadd', TLIB_COPY.deleting);
   var left=files.length, done=0, failed=0;
   files.forEach(function(f){
-    api({action:'deleteLibraryFile', data:{attachmentId:f.attachmentId,
-         teacherId:TEACHER_ID, teacherToken:TOKEN}}, function(e,r){
+    var isLink=(f.kind==='link');
+    api({action:isLink?'deleteLibraryLink':'deleteLibraryFile',
+         data:isLink ? {linkId:f.linkId||f.id, teacherId:TEACHER_ID, teacherToken:TOKEN}
+                     : {attachmentId:f.attachmentId, teacherId:TEACHER_ID, teacherToken:TOKEN}}, function(e,r){
       if(!e && r && r.ok){
         done++;
         // Out of the batch as well as off the shelf: a row left behind would be
@@ -7004,7 +7074,7 @@ function libAddedDelete(){
         // "Deleted 5" when it deleted 4 is the kind of quiet lie this project
         // has a rule about.
         if(failed) actFail('libadd', TLIB_COPY.delSelPartial.replace('{n}', String(done)).replace('{f}', String(failed)));
-        else actDone('libadd', TLIB_COPY.delSelDone.replace('{n}', String(done)));
+        else actGone('libadd', TLIB_COPY.delSelDone.replace('{n}', String(done)));
         _libRefresh();
       }
     });
@@ -7221,10 +7291,36 @@ function rLibraryPanel(composerId){
     '<div id="lib-body" style="margin-top:9px">'+rLibraryBody()+'</div>'+
   '</div>';
 }
+// ── [1.547] — the tags are behind a disclosure ───────────────────────────
+//
+// AC, 10 September 2026: *"clicking merge tags makes the screen jump and
+// reposition, and some of the merge tags are interacting in strange ways where
+// some disappear when I select another, delayed behavior, and general
+// messiness... These can be collapsed by default with an obvious button to open
+// 'Tags'."*
+//
+// **The disappearing is [1.487] working as designed** — the offered tags narrow
+// to those that can still match, so no sequence of presses reaches an empty
+// list. It is a good rule and it reads as chaos, because the row REFLOWS under
+// the finger on every press: that is the jump, and the two are the same thing.
+//
+// **Collapsed, it stops being either.** A teacher who opens Tags has asked to
+// see them and expects them to change; one who has not is never shown a row
+// that moves. **The count of what is ON stays visible while it is shut**, which
+// is the same rule the shelves ([1.529]) and the side panel ([1.527]) follow —
+// otherwise a filter could be left on with nothing saying so.
+var LIB_TAGS_OPEN=false;
+function libTagsToggle(){ LIB_TAGS_OPEN=!LIB_TAGS_OPEN; render(); }
 function rLibraryTags(){
   var offered=_libOffered();
   if(!offered.length && !LIB_FILTER.length) return '';
-  return '<div class="lib-tags">'+offered.map(function(t){
+  var n=LIB_FILTER.length;
+  var hd='<button type="button" class="lib-tags-hd'+(n?' on':'')+'"'+
+    ' aria-expanded="'+(LIB_TAGS_OPEN?'true':'false')+'" onclick="libTagsToggle()">'+
+    '<span class="caret">'+(LIB_TAGS_OPEN?'\u25be':'\u25b8')+'</span>'+esc(TLIB_COPY.tagsHead)+
+    (n?'<span class="zcount">'+n+'</span>':'')+'</button>';
+  if(!LIB_TAGS_OPEN) return '<div class="lib-tags-wrap">'+hd+'</div>';
+  return '<div class="lib-tags-wrap">'+hd+'<div class="lib-tags">'+offered.map(function(t){
     var on=LIB_FILTER.indexOf(t.v)>-1;
     return '<button type="button" class="lib-tag'+(on?' on':'')+(t.priv?' priv':'')+'"'+
       ' aria-pressed="'+(on?'true':'false')+'"'+
@@ -7232,7 +7328,7 @@ function rLibraryTags(){
   }).join('')+
   // [1.488] — the clear used to be a button at the end of this row. It is now
   // an × on the search box, where a person looks for it.
-  '</div>';
+  '</div></div>';
 }
 function rLibraryBody(){
   var mine=_libFiltered(LIB_MINE), studio=_libFiltered(LIB_SHELF_STUDIO);
@@ -7281,7 +7377,24 @@ function rLibraryBody(){
 var LIB_SHELF_OPEN = { mine:false, studio:false };
 function libShelfToggle(key){ LIB_SHELF_OPEN[key]=!LIB_SHELF_OPEN[key]; render(); }
 function _libShelf(label, key, n, body){
-  var open=!!LIB_SHELF_OPEN[key];
+  // ── [1.546] — a SEARCH opens the shelves it found things in ─────────────
+  //
+  // AC, 10 September 2026: *"text searching files and links correctly changes
+  // the number on the two respective header rows, but it's subtle. Instead,
+  // both should open up to reveal the items searched for. Closed by default,
+  // but open in this way for search results for easy browsing."*
+  //
+  // **A count changing from 12 to 2 is a fact stated where nobody is looking.**
+  // Somebody who has just typed is looking for the THINGS, and [1.529] closed
+  // the shelves for the ordinary case where they are browsing rather than
+  // hunting. Searching is the other case, and the disclosure should get out of
+  // the way in it.
+  //
+  // **Only while there is something typed**, and only for a shelf with matches:
+  // opening an empty shelf to show nothing is a worse answer than the count.
+  // Clearing the box puts both back to however the teacher had them.
+  var searching=!!String(LIB_Q||'').trim();
+  var open=(searching && n>0) || !!LIB_SHELF_OPEN[key];
   return '<div class="lib-shelf">'+
     '<div class="lib-group-hd lib-shelf-hd" onclick="libShelfToggle(\''+esc(key)+'\')">'+
       '<span class="caret">'+(open?'\u25be':'\u25b8')+'</span>'+esc(label)+
@@ -7335,8 +7448,22 @@ function rLibRow(f, mine){
   // nothing to attach to, so it opens the file for editing instead — for a
   // teacher's own row. A studio row has nothing to edit, so it stays inert
   // rather than pretending.
+  // ── [1.545] — a LINK opens where it points ─────────────────────────────
+  //
+  // AC, 10 September 2026: *"Instead of opening up the link to edit, if I click
+  // the link in the library, it should take me to the link destination in my
+  // browser. Edit is the only way to edit."*
+  //
+  // **Right, and it is what a link is.** [1.481] made a row press open the edit
+  // form on the home page because a FILE there has nothing else to do —
+  // there is no message to attach it to. A link always has somewhere to go, so
+  // "nothing to attach to" was never a reason to make it an editor.
+  //
+  // In a MESSAGE the row still attaches, for both kinds: that is the whole
+  // point of the picker and AC has not changed it. This is the standalone
+  // library only.
   var _press=LIB_STANDALONE
-    ? (mine?'libEdit(\''+esc(id)+'\')':'')
+    ? (link ? 'libOpenLink(\''+esc(id)+'\')' : (mine?'libEdit(\''+esc(id)+'\')':''))
     : 'libAttach(\''+esc(id)+'\')';
   // ── [1.484] — THE NAME GETS THE ROW ──────────────────────────────────
   //

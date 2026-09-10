@@ -852,10 +852,20 @@ input[type=checkbox]{width:13px;height:13px;padding:0;margin:0;border:0;border-r
 .lib-tag.on{border-color:var(--acc);background:var(--acc);color:#fff;font-weight:600}
 .lib-tag.on:hover{color:#fff}
 .lib-tag.some{border-color:var(--acc);color:var(--acc);font-weight:600}
+/* [1.487] — a tag the item's own name nearly says. An outline only: it is
+   a place to look, not a state, and .on stays filled so the two never read
+   as the same thing. */
+.lib-tag.near{border-color:var(--acc)}
 .lib-tag.priv{border-style:dashed}
-.lib-clear{padding:4px 10px;border:1px solid var(--border2);border-radius:999px;background:none;
-  font-family:inherit;font-size:11.5px;cursor:pointer;color:var(--text4)}
-.lib-clear:hover{color:var(--red)}
+/* [1.488] — the clear, on the box rather than beside it. Room on the right is
+   reserved always, not with :has(): an older iPad that does not support it
+   would draw the × on top of what the teacher had typed. */
+.lib-find{position:relative;margin-top:9px}
+.lib-find .lib-search{padding-right:26px}
+.lib-clear-x{position:absolute;right:3px;top:50%;transform:translateY(-50%);
+  width:21px;height:21px;padding:0;border:0;border-radius:999px;background:none;
+  font-family:inherit;font-size:15px;line-height:1;cursor:pointer;color:var(--text4)}
+.lib-clear-x:hover{color:var(--red)}
 
 /* ── The shelves ───────────────────────────────────────────────────────── */
 .lib-group{margin-top:0}
@@ -3062,7 +3072,7 @@ function rSectionedRoster(){
   // while shut so it says what it holds rather than looking empty ([1.178]).
   var _libCount=LIB_MINE.length+LIB_MY_LINKS.length;
   h+='<div class="sep" onclick="LIBRARY_OPEN=!LIBRARY_OPEN;if(LIBRARY_OPEN)loadLibrary();render()">'+
-     '<span class="caret">'+(LIBRARY_OPEN?'▾':'▸')+'</span>'+esc(TLIB_COPY.mine)+
+     '<span class="caret">'+(LIBRARY_OPEN?'▾':'▸')+'</span>'+esc(TLIB_COPY.manageHead)+
      '<span class="sepc">'+_libCount+'</span></div>';
   if(LIBRARY_OPEN){
     LIB_STANDALONE=true;
@@ -5395,20 +5405,36 @@ function loadSavedLinks(){
 var TLIB_COPY={
   open:'Library',                       // AC's own word for the button
   openTip:'Attach a file from your library',
-  head:'Attach from your library',
-  manageHead:'Your library',
+  // ── AC's words, 10 September 2026. FINAL, not placeholders ───────────
+  //
+  // **He would not let the title assume the act:** *"Shouldn't they both not
+  // assume the action that the teacher is going to take and just say my
+  // library?"* Right — "Attach from your library" is only true in a message,
+  // and the same panel opens from their own page where nothing is being
+  // attached.
+  //
+  // **And it could not simply be "My Library" either**, because that was the
+  // heading of the first shelf INSIDE it, and the panel also holds AC's. He
+  // settled both in one line: *"The main title of the page should be my library
+  // and then instead of my library for their personal things it should say My
+  // Links and Files, and then keep Keylab Master Library."* The title names the
+  // PLACE; the shelves name whose things they are.
+  head:'My Library',
+  manageHead:'My Library',
   close:'Close',
-  search:'Search your files',
+  search:'Search your library',
   clear:'Clear filter',
-  mine:'My Library',                    // AC's label, final
+  mine:'My Links and Files',            // AC's label, 10 September 2026
   studio:'Keylab Master Library',       // AC's label, final
   // [1.480] — the old wording sent a teacher to a message to add anything,
   // which stopped being true the moment Add file and Add link moved to the top
   // of this panel. Corrected as a FACT, not as a style choice; AC's words when
   // he has seen it.
-  emptyMine:'Nothing in your library yet. Use Add file or Add link above.',
+  // AC's words, 10 September 2026. FINAL.
+  emptyMine:'Add files and links here',
   emptyStudio:'Nothing in the Keylab Master Library yet.',
-  emptyFiltered:'No files match that.',
+  // AC's words, 10 September 2026. FINAL.
+  emptyFiltered:"That file isn't here",
   attaching:'Attaching…',
   attachFailed:'That file could not be attached.',
   save:'Save to Library',               // AC's own phrase, final
@@ -5472,14 +5498,13 @@ var TLIB_COPY={
   linkDelAsk:'Remove this link from your library?',
   linkDelSafe:'Messages you have already sent keep working \u2014 a link has no file to take away.',
   linkRenamed:'Renamed.',
-  maybe:'Maybe:',
   someRefused:'{n} of those are not yours to change.',
   // ── [1.484] — the words the redesign added. PLACEHOLDERS, flagged. ────
-  newSay:'Give these a name and tags now, or press Done and edit them later.',
+  // AC's words, 10 September 2026. FINAL.
+  newSay:'You can name your link or file and add tags. Tags help organize your library and make it searchable.',
   lblName:'Name',
-  lblTags:'Tags',
-  lblMine:'Your own tags',
-  saveName:'Save name',
+  lblTags:'Keylab Tags',
+  lblMine:'Your Tags',
   doneEditing:'Done',
   removeWord:'Remove this word',
   noTagsYet:'Your studio has not added any tags yet. You can still use your own words below.',
@@ -5848,30 +5873,52 @@ function rLibSave(attachmentId){
 // withholds nothing from anybody, and deleting it takes it out of every
 // conversation it was ever sent to.
 function libEdit(id){ LIB_EDIT = (LIB_EDIT===id?'':id); LIB_DEL=''; _libRedraw(); }
+// ── [1.488] — the name saves when you leave the field ────────────────────
+//
+// AC asked what could be condensed out of seven buttons, and told me to use my
+// judgement. Save name was the clearest of the two: the SAME field in the
+// just-added block, one section higher up the same panel, has no such button —
+// you type a name there, click away, and it is saved. A field that needs a
+// button in one place and not the other teaches nothing, and a teacher who
+// learns the block's behaviour loses their typing here.
+//
+// So this is now what the block already does, and three things about it matter:
+//
+//   NO CALL WHEN NOTHING CHANGED — a blur fires on the way to a tag chip. An
+//   unchanged name that still sent a request would put "Renamed." on screen for
+//   a rename nobody performed.
+//
+//   THE FORM STAYS OPEN — the button version cleared LIB_EDIT on success,
+//   which was right for a press and wrong for a blur: tabbing from the name to
+//   a tag would have shut the form under the teacher's hand.
+//
+//   BLANK PUTS THE NAME BACK — clearing the box and clicking away is a slip,
+//   not an instruction to name a file nothing.
 function libRename(id){
   var el=document.getElementById('lib-rn-'+id);
-  var name=el?el.value:'';
-  if(!String(name||'').trim()){ showMsg(TLIB_COPY.renameFailed,'e'); return; }
+  var it=_libFind(id);
+  if(!el || !it) return;
+  var name=String(el.value||'').trim();
+  if(!name || name===it.fileName){ el.value=it.fileName; return; }
+  // Drawn from the model at once, so the name changes under the finger and the
+  // request is the only thing that waits ([1.485]).
+  it.fileName=name; if(it.kind==='link') it.label=name;
+  _libRedraw();
   // [1.471] — AC: *"teachers can edit the link name when uploading (does not
   // affect link address) or after adding it to their library."* The address is
   // never sent, so it cannot be changed here by accident.
-  if(_libIsLink(id)){
-    actStart('lib:'+id, TLIB_COPY.saving);
-    api({action:'saveLibraryLink', data:{linkId:id, label:name,
-         teacherId:TEACHER_ID, teacherToken:TOKEN}}, function(e,r){
-      if(e||!r||!r.ok){ actFail('lib:'+id,(r&&r.error)||TLIB_COPY.renameFailed); return; }
-      actDone('lib:'+id, TLIB_COPY.linkRenamed);
-      LIB_EDIT=''; _libRefresh();
-    });
-    return;
-  }
-  actStart('lib:'+id, TLIB_COPY.saving);
-  api({action:'renameLibraryFile', data:{attachmentId:id, fileName:name,
-       teacherId:TEACHER_ID, teacherToken:TOKEN}}, function(e,r){
-    if(e||!r||!r.ok){ actFail('lib:'+id,(r&&r.error)||TLIB_COPY.renameFailed); return; }
-    actDone('lib:'+id, TLIB_COPY.renamed);
-    LIB_EDIT='';
-    _libRefresh();
+  var req=_libIsLink(id)
+    ? {action:'saveLibraryLink', data:{linkId:id, label:name,
+       teacherId:TEACHER_ID, teacherToken:TOKEN}}
+    : {action:'renameLibraryFile', data:{attachmentId:id, fileName:name,
+       teacherId:TEACHER_ID, teacherToken:TOKEN}};
+  api(req, function(e,r){
+    if(e||!r||!r.ok){ actFail('lib:'+id,(r&&r.error)||TLIB_COPY.renameFailed); _libRefresh(); return; }
+    // The server cleans a filename ([1.465]), so what it stored is what is
+    // drawn — not what was typed.
+    it.fileName=r.fileName||r.label||name;
+    if(it.kind==='link') it.label=it.fileName;
+    _libRedraw();
   });
 }
 function libUnshelve(id){
@@ -6008,8 +6055,56 @@ function libTagFind(v){
 }
 function _libTagsFiltered(){
   var q=LIB_TAGFIND.trim().toLowerCase();
-  if(!q) return LIB_TAGS;
-  return LIB_TAGS.filter(function(t){ return String(t.name||'').toLowerCase().indexOf(q)>-1; });
+  if(!q) return _libTagOrder(LIB_TAGS);
+  return _libTagOrder(LIB_TAGS.filter(function(t){
+    return String(t.name||'').toLowerCase().indexOf(q)>-1; }));
+}
+// ── [1.487] — the likely tag first, the near one outlined ─────────────
+//
+// AC, 10 September 2026, on the row of suggestions that used to sit under a
+// "Maybe:" label: *"the teacher should be able to obviously select a tag and
+// add it by clicking it. Simple, easy. No need for a suggested banner. If they
+// like it, they can add it. If not, they can ignore it."* And on using the
+// student record for it: *"Less is more here."*
+//
+// So there is ONE row of chips, not two — the old suggestion row drew the same
+// tag twice, once plain in the row above and once again below it with a word in
+// front. Two things move within that one row, and neither adds anything to read:
+//
+//   ORDER — the tag matching what THIS student plays comes first, because the
+//   panel knows who the message is for. Order helps a thumb find the chip; it
+//   never claims the file is about that instrument. That distinction is the
+//   whole reason this is ordering and not a highlight: a teacher writing to a
+//   violin student also uploads general theory sheets, and a nudge that files
+//   one of those under Violin is a mistake nobody ever goes back and finds —
+//   the sheet then stops surfacing for every piano student they have.
+//
+//   OUTLINE — a tag nearly present in the item's OWN name is outlined. That
+//   signal comes from what the teacher called the file, so it is about the
+//   file, and it is the one guess worth drawing attention to.
+//
+// Standalone (the library opened from the home page, no conversation) has no
+// student, so nothing leads and the row is in its usual order.
+function _libLeadTag(){
+  if(LIB_STANDALONE) return '';
+  var v=null;
+  try{ v=_tplValues(); }catch(e){ v=null; }
+  return String((v&&v.instrument)||'').trim().toLowerCase();
+}
+function _libTagOrder(tags){
+  var lead=_libLeadTag();
+  if(!lead) return tags||[];
+  var first=[], rest=[];
+  (tags||[]).forEach(function(t){
+    if(String(t.name||'').trim().toLowerCase()===lead) first.push(t); else rest.push(t);
+  });
+  return first.concat(rest);
+}
+// Ordered, and each chip carrying whether the item's own name nearly says it.
+function _libTagChips(tags, name, applied){
+  var near={};
+  if(name) _libNearSuggest(name, tags, applied||[]).forEach(function(id){ near[id]=true; });
+  return _libTagOrder(tags).map(function(t){ return { t:t, near:!!near[t.tagId] }; });
 }
 // Any live tag whose word appears in a filename. **Suggested, never applied
 // silently** — a wrong tag on twenty files is worse than typing twenty times,
@@ -6442,25 +6537,17 @@ function rLibraryAdded(){
               ' onblur="libAddedRename(\''+esc(f.id)+'\')">'+
           '</div>'+
           (_lk?'<div class="lib-row-foot"><span class="lib-meta">'+esc(_libLinkHost(f.url))+'</span></div>':'')+
+          // [1.487] — ONE row. The likely tag leads it, a tag the name nearly
+          // says is outlined, and there is nothing to read.
           (LIB_TAGS.length
-            ? '<div class="lib-tags" style="padding-top:5px">'+LIB_TAGS.map(function(t){
-                var on=(f.tags||[]).indexOf(t.tagId)>-1;
-                return '<button type="button" class="lib-tag'+(on?' on':'')+'"'+
+            ? '<div class="lib-tags" style="padding-top:5px">'+
+              _libTagChips(LIB_TAGS, f.fileName, f.tags||[]).map(function(c){
+                var t=c.t, on=(f.tags||[]).indexOf(t.tagId)>-1;
+                return '<button type="button" class="lib-tag'+(on?' on':(c.near?' near':''))+'"'+
                   ' aria-pressed="'+(on?'true':'false')+'"'+
                   ' onclick="libFileTag(\''+esc(f.id)+'\',\''+esc(t.tagId)+'\',this)">'+esc(t.name)+'</button>';
               }).join('')+'</div>'
             : '')+
-          // [1.472] — the near matches, offered rather than applied.
-          (function(){
-            var near=_libNearSuggest(f.fileName, LIB_TAGS, f.tags||[]);
-            if(!near.length) return '';
-            return '<div class="lib-tags" style="padding-top:3px">'+
-              '<span class="lib-meta">'+esc(TLIB_COPY.maybe)+'</span>'+
-              near.map(function(tid){
-                return '<button type="button" class="lib-tag some" onclick="libFileTag(\''+
-                  esc(f.id)+'\',\''+esc(tid)+'\',this)">+ '+esc(_libTagName(tid))+'</button>';
-              }).join('')+'</div>';
-          })()+
           ((f.privateTags||[]).length
             ? '<div class="lib-tags" style="padding-top:3px">'+(f.privateTags||[]).map(function(w){
                 return '<button type="button" class="lib-tag priv on" title="'+esc(TLIB_COPY.removeWord)+'"'+
@@ -6550,9 +6637,22 @@ function rLibraryPanel(composerId){
     // ── HERE, at the top where the press was, with the tagging on it.
     rLibraryAdded()+
     (wantFind
-      ? '<input id="lib-q" class="lib-search" type="search" value="'+esc(LIB_Q)+'"'+
-          ' placeholder="'+esc(TLIB_COPY.search)+'" aria-label="'+esc(TLIB_COPY.search)+'"'+
-          ' oninput="libSearch(this.value)" style="margin-top:9px">'+
+      // [1.488] — the way OUT of a filter sits ON the filter. It was a
+      // separate "Clear filter" button in the chip row below; the box is where
+      // a person looks for it, and one fewer control is on the panel. The words
+      // are kept as the label a screen reader reads and the tooltip a mouse
+      // finds. type="text", not "search": the browser's own × would clear the
+      // typing and leave the tag chips on, which is a different thing done by
+      // an identical-looking control.
+      ? '<div class="lib-find">'+
+          '<input id="lib-q" class="lib-search" type="text" value="'+esc(LIB_Q)+'"'+
+            ' placeholder="'+esc(TLIB_COPY.search)+'" aria-label="'+esc(TLIB_COPY.search)+'"'+
+            ' oninput="libSearch(this.value)">'+
+          ((LIB_Q||LIB_FILTER.length)
+            ? '<button type="button" class="lib-clear-x" onclick="libClearFilter()"'+
+              ' aria-label="'+esc(TLIB_COPY.clear)+'" title="'+esc(TLIB_COPY.clear)+'">&#215;</button>'
+            : '')+
+        '</div>'+
         rLibraryTags()
       : '')+
     '<div id="lib-body" style="margin-top:9px">'+rLibraryBody()+'</div>'+
@@ -6567,10 +6667,8 @@ function rLibraryTags(){
       ' aria-pressed="'+(on?'true':'false')+'"'+
       ' onclick="libTag(\''+esc(t.v)+'\')">'+esc(t.name)+'</button>';
   }).join('')+
-  // ONE PRESS CLEARS IT — and it is only there when there is something to
-  // clear, so the resting state of this row is the tags alone.
-  ((LIB_FILTER.length||LIB_Q)?'<button type="button" class="lib-clear" onclick="libClearFilter()">'+
-     esc(TLIB_COPY.clear)+'</button>':'')+
+  // [1.488] — the clear used to be a button at the end of this row. It is now
+  // an × on the search box, where a person looks for it.
   '</div>';
 }
 function rLibraryBody(){
@@ -6734,11 +6832,12 @@ function rLibEdit(f){
     '<div class="lib-fld">'+
       '<div class="lib-lbl">'+esc(TLIB_COPY.lblName)+'</div>'+
       '<div class="lib-fld-row">'+
-        '<input id="lib-rn-'+esc(id)+'" value="'+esc(f.fileName)+'"'+
+        // [1.488] — Enter leaves the field, and leaving the field is what
+        // saves. One behaviour, and the same one the just-added block has.
+        '<input id="lib-rn-'+esc(id)+'" value="'+esc(f.fileName)+'" style="flex:1"'+
           ' aria-label="'+esc(TLIB_COPY.lblName)+'"'+
-          ' onkeydown="if(event.key===\'Enter\'){event.preventDefault();libRename(\''+esc(id)+'\');}">'+
-        '<button type="button" class="lib-act" onclick="libRename(\''+esc(id)+'\')">'+
-          esc(TLIB_COPY.saveName)+'</button>'+
+          ' onkeydown="if(event.key===\'Enter\'){event.preventDefault();this.blur();}"'+
+          ' onblur="libRename(\''+esc(id)+'\')">'+
       '</div>'+
       // The address is shown and is plainly not a field: renaming does not
       // touch it, and a rule is easier to trust when you can see what it
@@ -6748,9 +6847,11 @@ function rLibEdit(f){
     (LIB_TAGS.length
       ? '<div class="lib-fld">'+
           '<div class="lib-lbl">'+esc(TLIB_COPY.lblTags)+'</div>'+
-          '<div class="lib-tags" style="padding-top:0">'+LIB_TAGS.map(function(t){
-            var on=(f.tags||[]).indexOf(t.tagId)>-1;
-            return '<button type="button" class="lib-tag'+(on?' on':'')+'"'+
+          // [1.487] — same one row here as on a just-added item.
+          '<div class="lib-tags" style="padding-top:0">'+
+          _libTagChips(LIB_TAGS, f.fileName, f.tags||[]).map(function(c){
+            var t=c.t, on=(f.tags||[]).indexOf(t.tagId)>-1;
+            return '<button type="button" class="lib-tag'+(on?' on':(c.near?' near':''))+'"'+
               ' aria-pressed="'+(on?'true':'false')+'"'+
               ' onclick="libFileTag(\''+esc(id)+'\',\''+esc(t.tagId)+'\',this)">'+esc(t.name)+'</button>';
           }).join('')+'</div>'+

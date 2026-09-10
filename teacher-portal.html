@@ -8562,9 +8562,9 @@ function rPickButtons(composerId){
       ' aria-pressed="'+(PICK===kind?'true':'false')+'"'+
       ' onclick="pickOpen(\''+kind+'\',\''+esc(composerId)+'\')">'+esc(label)+'</button>';
   }
-  return b('file', TLIB_COPY.pickFile)+b('link', TLIB_COPY.pickLink)+
-    (PICK ? '<button type="button" class="btn btn-s" onclick="pickClose(\''+esc(composerId)+'\')">'+
-              esc(TLIB_COPY.editMessage)+'</button>' : '');
+  // [1.508] — Done moved into the picker's own footer, beside Manage Library.
+  // It is not repeated here: one control, one place.
+  return b('file', TLIB_COPY.pickFile)+b('link', TLIB_COPY.pickLink);
 }
 // The picker itself. One shape for both kinds: the new thing first, the
 // search, the two shelves holding only that kind, Manage Library last.
@@ -8593,7 +8593,19 @@ function rPickPanel(composerId){
     h+=rPickShelf(file?TLIB_COPY.mineFiles:TLIB_COPY.mineLinks, mine, composerId)+
        rPickShelf(TLIB_COPY.studio, studio, composerId);
   }
-  h+='<div class="lib-foot"><button type="button" class="lnk-btn" onclick="libraryOpen()">'+esc(TLIB_COPY.manageGo)+'</button></div>';
+  // ── [1.508] — Done lives HERE, with the panel it ends ──────────────────
+  //
+  // AC, 10 September 2026: *"The done button should be blue and next to the
+  // manage library button, not with the other buttons."*
+  //
+  // It was beside Send, which was right when [1.494] called it Edit Message and
+  // the job was getting back to the box. Now that it ENDS the picking, it
+  // belongs to the picker: the last control in the panel, primary, so the way
+  // out is the most prominent thing in the thing you are trying to leave.
+  // Manage Library stays a quiet link beside it — it goes somewhere else, and
+  // two primary buttons in one row would be two answers to one question.
+  h+='<div class="lib-foot"><button type="button" class="lnk-btn" onclick="libraryOpen()">'+esc(TLIB_COPY.manageGo)+'</button>'+
+     '<button type="button" class="btn btn-p" onclick="pickClose(\''+esc(composerId)+'\')">'+esc(TLIB_COPY.editMessage)+'</button></div>';
   return h+'</div>';
 }
 // A shelf with nothing on it draws nothing: there is nothing to pick.

@@ -777,175 +777,150 @@ input[type=checkbox]{width:13px;height:13px;padding:0;margin:0;border:0;border-r
 .att-x{background:none;border:0;font-size:14px;line-height:1;cursor:pointer;padding:2px 5px;
   color:var(--text4);font-family:inherit}
 .att-x:hover{color:var(--red)}
-/* ── [1.465] — the library picker, INSIDE the composer ──────────────────
-   AC's fourth saving: "it opens inside the composer, above the box, and a
-   file becomes a chip. Not a screen, not a dialog." So it is a panel in the
-   flow of the composer, and pressing a file leaves a chip the composer
-   already knows how to draw ([1.277]'s, with its × already on it).
-   Its own ground, DARKER than the panel it sits in — [1.451]'s finding: the
-   rows inside are white, so what makes a group of them read as contained is
-   the panel and not a border. */
-/* [1.474] — AC: "needs clearer visual organization... most likely using the
-   same lighter gray card against a slightly lighter gray background like the
-   rest of the tool." So the panel is the GROUND — a plain grey, darker than
-   what sits on it — and each shelf is one of the tool's own cards on top of it.
-   [1.451] found the same thing about admin's Parent/Teacher area: a group of
-   white rows reads as contained because of the panel behind them, never
-   because of a border. */
+/* ═══════════════════════════════════════════════════════════════════════
+   [1.484] — THE LIBRARY, REDESIGNED
+   AC: "really have a go at redesigning this though. It's a great start, but
+   this could be an amazing feature."
+
+   The panel does four jobs and they were stacked with equal weight in one
+   scrolling column: FIND something, SEND it, ADD something, TIDY it. The
+   redesign gives each its own place and its own volume.
+
+     1. A header that always says where you are, with the two ways IN as the
+        loudest thing on it.
+     2. A review step after adding — its own accent-edged block at the top,
+        with an instruction, because tagging is a thing you do ONCE and then
+        never think about.
+     3. Shelves that read as shelves: a band per kind carrying its count, and
+        rows whose NAME gets the width.
+     4. An edit card that is a form — labels, real buttons, destructive things
+        behind a rule.
+
+   The ladder from [1.477] is unchanged and everything below hangs off it:
+   panel ground, shelf card, band, row, white field. ═══════════════════════ */
 .lib-panel{margin:0 0 8px;padding:10px;border:1px solid var(--border2);
   border-radius:var(--rl);background:var(--bg3)}
 .lib-shelf{background:rgba(255,255,255,.45);border:1px solid var(--border);
   border-radius:var(--rl);padding:9px 10px;margin-top:8px}
 .lib-shelf:first-of-type{margin-top:0}
-/* [1.477] — AC: "include a separator between My Library and Keylab Master
-   Library." Two cards with air between them is a gap; a rule is a statement
-   that one shelf has ended and another begun. Drawn across the PANEL rather
-   than inside either card — the negative offsets reach past the card's own
-   padding — so it belongs to neither and separates both. Only ever between
-   two shelves, never above the first. */
-/* [1.477] — AC: "twice as thick. Increase padding and make them be equidistant
-   between the two sections." The arithmetic is written out because it is the
-   whole requirement: 22px of gap, a 4px rule, and (22 - 4) / 2 = 9px of air on
-   each side of it. The rule is placed from the LOWER card, so `top` is 22 - 9 =
-   13px above it and its 4px draws down to -9, leaving 9px underneath. Change
-   any one of the three and the other two have to move. */
 .lib-shelf + .lib-shelf{margin-top:22px;position:relative}
-/* [1.477] — AC: "thick black line." A hairline in the border grey was doing
-   what the air already did; this is the one place in the panel that says a
-   different KIND of thing begins here, so it is drawn in the text colour and at
-   twice the weight of every other rule on the screen. */
 .lib-shelf + .lib-shelf::before{content:"";position:absolute;left:-11px;right:-11px;top:-13px;
   border-top:4px solid var(--text)}
-.lib-hd{display:flex;align-items:center;gap:8px;margin-bottom:7px}
-.lib-hd-t{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;
-  color:var(--text2)}
-.lib-x{margin-left:auto;background:none;border:0;font-size:15px;line-height:1;cursor:pointer;
+
+/* The header: what this is, and the two ways in. */
+.lib-hd{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.lib-hd-t{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text2)}
+.lib-x{margin-left:auto;background:none;border:0;font-size:16px;line-height:1;cursor:pointer;
   padding:2px 5px;color:var(--text4);font-family:inherit}
 .lib-x:hover{color:var(--red)}
+/* Side by side. The portal's own .btn is a full-width block, which stacked the
+   two ways in and made the panel open on two big bars. */
+.lib-add-row{display:flex;flex-wrap:wrap;gap:6px}
+.lib-add-row .btn{flex:1 1 auto;width:auto;justify-content:center;text-align:center}
+
+/* ── The review step: what you just added, and the one thing to do to it ── */
+.lib-new{margin-top:9px;border:2px solid var(--acc);border-radius:var(--rl);
+  background:rgba(255,255,255,.55);overflow:hidden}
+.lib-new-hd{display:flex;flex-wrap:wrap;align-items:center;gap:8px;
+  padding:6px 10px;background:var(--acc);color:#fff}
+.lib-new-t{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em}
+.lib-new-n{font-size:11.5px;opacity:.85}
+.lib-new-body{padding:9px 10px}
+.lib-say{font-size:12px;color:var(--text3);line-height:1.45;margin-bottom:7px}
+.lib-new .lib-row{background:#fff}
+.lib-new .lib-row.sel{border-color:var(--acc);box-shadow:inset 3px 0 0 var(--acc)}
+
+/* ── Labelled form sections, used by the edit card and the review step ── */
+.lib-fld{margin-bottom:9px}
+.lib-fld:last-child{margin-bottom:0}
+.lib-lbl{font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--text4);margin-bottom:3px}
+.lib-fld-row{display:flex;gap:6px;align-items:center}
+.lib-fld-row input{flex:1;min-width:0;padding:6px 9px;border:1px solid var(--border2);
+  border-radius:var(--r);font-family:inherit;font-size:13px;background:#fff;color:var(--text)}
+.lib-fld-row input:focus{border-color:var(--acc);outline:none}
+.lib-foot{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:10px;
+  padding-top:9px;border-top:1px solid var(--border2)}
+
+/* ── Search, and it only appears when there is enough to search ────────── */
 .lib-search{width:100%;padding:6px 9px;border:1px solid var(--border2);border-radius:var(--r);
   font-family:inherit;font-size:12.5px;background:#fff}
-.lib-tags{display:flex;flex-wrap:wrap;gap:5px;padding:7px 0 0}
-.lib-tag{padding:3px 9px;border:1px solid var(--border2);border-radius:999px;background:#fff;
+.lib-tags{display:flex;flex-wrap:wrap;gap:5px;padding:7px 0 0;align-items:center}
+.lib-tag{padding:4px 10px;border:1px solid var(--border2);border-radius:999px;background:#fff;
   font-family:inherit;font-size:11.5px;cursor:pointer;color:var(--text2)}
+.lib-tag:hover{border-color:var(--acc);color:var(--acc)}
 .lib-tag.on{border-color:var(--acc);background:var(--acc);color:#fff;font-weight:600}
-.lib-tag.priv{border-style:dashed}
-/* [1.469] — SOME of the ticked files carry this tag. Neither on nor off, and
-   drawn as neither: an outline in the accent colour without the fill. */
+.lib-tag.on:hover{color:#fff}
 .lib-tag.some{border-color:var(--acc);color:var(--acc);font-weight:600}
-/* The clear is beside the tags it clears, and only while there is something to
-   clear — [1.465]'s "one press clears it". */
-.lib-clear{padding:3px 9px;border:1px solid var(--border2);border-radius:999px;
-  background:none;font-family:inherit;font-size:11.5px;cursor:pointer;color:var(--text4)}
+.lib-tag.priv{border-style:dashed}
+.lib-clear{padding:4px 10px;border:1px solid var(--border2);border-radius:999px;background:none;
+  font-family:inherit;font-size:11.5px;cursor:pointer;color:var(--text4)}
 .lib-clear:hover{color:var(--red)}
+
+/* ── The shelves ───────────────────────────────────────────────────────── */
 .lib-group{margin-top:0}
 .lib-group-hd{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;
   color:var(--text2);margin-bottom:4px}
-/* [1.471] — AC: "teachers will need a visual separation of files and site
-   links." A shelf's two groups, each with its own quieter heading, and a link
-   row given a look of its own so the separation survives somebody scrolling
-   past the heading. */
 .lib-sub{margin-top:6px}
-/* ── [1.477] — AC: "or use banners." ────────────────────────────────────
-   His own pattern, from [1.451]: *"A header band. The heading floated above the
-   rows, so it read as another zone label in the same column. On the panel's own
-   ground, edge to edge, it reads as the top of a thing."* Same fault here — a
-   10px label floating over a list is not a separation anybody's eye acts on.
-   The band does the separating; the row tint reinforces it once you are inside
-   the group. Edge to edge inside the card, which is why the negative margins
-   are there. */
-/* [1.477] — AC: "banners are ok, but should match family page banner styles,
-   bold, clear, defined." So it is built like the family portal's `.msg` band —
-   a full border on all four sides, real padding, its own radius — with that
-   file's `h2` doing the type: 12px, uppercase, .09em, in the accent. A band
-   with an edge on one side only was a heading wearing a stripe; this is an
-   object.
-   NOT the blue `.mi` variant, deliberately: --bbg with a blue border is what
-   this portal already uses for "working" ([1.404]), and a status colour on a
-   permanent label is how a screen teaches somebody the wrong thing. */
-/* [1.477] — AC: "the Files and Links banners are confusingly the same size and
-   shape as the files. They should be full width of the My Library and Keylab
-   Master Library sections. The files are not full width and stay as they are.
-   The banners can be thinner so there is more room for files."
-   So a BAND, not a card: it spans the shelf card edge to edge — the negative
-   margins cancel the card's own padding — takes a rule top and bottom instead
-   of a box, and carries no radius. **A row and a band must not be the same
-   shape**, or the heading reads as one more item in the list. Thinner with it,
-   because the vertical space it was taking is space for files. */
-/* [1.477] — AC: "they can be even thinner with Files and Links slightly smaller
-   font, not equal to the My Library and Keylab Master Library text." Which is
-   the hierarchy stated as a rule: the shelf heading says WHOSE, the band says
-   WHICH KIND, and the second is subordinate to the first — so it cannot be set
-   at the same size. Smaller type, and the band gets thinner with it. */
-.lib-sub-hd{font-size:9.5px;font-weight:700;letter-spacing:.09em;color:var(--acc);
-  text-transform:uppercase;margin:0 -10px 5px;padding:1px 11px;line-height:1.45;border-radius:0;
-  border-top:1px solid var(--border2);border-bottom:1px solid var(--border2);
-  background:var(--bg2)}
+.lib-sub-hd{display:flex;align-items:center;gap:6px;
+  font-size:9.5px;font-weight:700;letter-spacing:.09em;color:var(--acc);
+  text-transform:uppercase;margin:0 -10px 6px;padding:1px 11px;line-height:1.45;border-radius:0;
+  border-top:1px solid var(--border2);border-bottom:1px solid var(--border2);background:var(--bg2)}
 .lib-sub.links .lib-sub-hd{background:#D5DBE7;border-top-color:#9AA6BC;border-bottom-color:#9AA6BC}
-/* [1.477] — the link row is COOLED rather than dimmed, and its edge is solid
-   like every other row's. The dash it used to carry said "provisional", which
-   is the one thing a saved link is not — and with a colour doing the telling
-   apart, a second signal on the border was saying the same thing twice. */
+.lib-sub-n{margin-left:auto;font-weight:600;opacity:.75}
+.lib-list{max-height:230px;overflow-y:auto;display:flex;flex-direction:column;gap:6px}
+/* An OPEN editor is taller than the box that holds the list, so the buttons at
+   the bottom of it — Save name, Delete, Done — were scrolled out of sight
+   inside a container nobody would think to scroll. A list holding an open
+   editor stops clamping. */
+.lib-list.editing{max-height:none;overflow:visible}
+
+/* ── A row: the NAME gets the width, the small facts get the second line ─ */
+.lib-row{display:block;padding:7px 9px;border:1px solid var(--border2);
+  border-radius:var(--r);background:var(--row-file)}
 .lib-row.lib-link{background:var(--row-link);border-color:#9AA6BC}
 .lib-row.lib-link .lib-kind{border-color:var(--acc);color:var(--acc)}
-.lib-name-in{padding:3px 6px;border:1px solid var(--border2);border-radius:var(--r);
-  font-family:inherit;font-size:12.5px;background:#fff;min-width:0}
-/* [1.475] — AC: "just a little padding between files." At 3px the rows read as
-   one striped block; at 6px each is its own object, which is the whole point of
-   shading them in the first place. The row's own padding went up with it, or
-   the space between rows would be larger than the space inside one. */
-.lib-list{max-height:190px;overflow-y:auto;display:flex;flex-direction:column;gap:6px}
-/* [1.475] — AC: "the file cards themselves should be shaded in between the
-   darker background and the light My Library and Keylab Master Library cards."
-   So there are THREE tones and they read as depth rather than as decoration:
-   the panel is the ground, the shelf is the lightest thing on it, and a row
-   sits between the two. White is kept for the FIELDS inside a row — a box you
-   type in should be the brightest thing on the screen, and it cannot be if
-   everything around it is already white. */
-.lib-row{display:flex;align-items:center;gap:7px;padding:7px 9px;border:1px solid var(--border2);
-  border-radius:var(--r);background:var(--row-file)}
-.lib-pick{flex:1;display:flex;align-items:center;gap:7px;min-width:0;background:none;border:0;
-  padding:0;font-family:inherit;font-size:12.5px;text-align:left;cursor:pointer;color:var(--text)}
-.lib-pick:hover .lib-name{text-decoration:underline}
+.lib-pick{display:flex;align-items:flex-start;gap:7px;width:100%;background:none;border:0;
+  padding:0;font-family:inherit;font-size:13px;text-align:left;cursor:pointer;color:var(--text)}
+.lib-pick:disabled{cursor:default}
+.lib-pick:hover:not(:disabled) .lib-name{text-decoration:underline}
 .lib-kind{font-size:9.5px;font-weight:700;letter-spacing:.04em;color:var(--text4);
-  border:1px solid var(--border2);border-radius:3px;padding:1px 3px;flex:none}
-.lib-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
-.lib-meta{font-size:10.5px;color:var(--text5);flex:none}
-.lib-mini{background:none;border:0;padding:2px 5px;font-family:inherit;font-size:11px;
-  color:var(--text4);cursor:pointer}
-.lib-mini:hover{color:var(--acc)}
-.lib-mini.bad:hover{color:var(--red)}
-.lib-empty{font-size:12px;color:var(--text4);padding:3px 0}
-/* Managing one file: rename, tags, and the two removals. Inline under its own
-   row, because it is about that file and a second screen is a defect. */
-.lib-edit{margin-top:4px;padding:7px 8px;border:1px solid var(--border2);border-radius:var(--r);
+  border:1px solid var(--border2);border-radius:3px;padding:1px 4px;flex:none;margin-top:2px}
+/* Two lines before it gives up, and it gives up by wrapping rather than by
+   hiding — AC: "file names are also so compressed they are unusable." */
+.lib-name{font-weight:600;line-height:1.35;overflow:hidden;word-break:break-word;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.lib-row-foot{display:flex;align-items:center;gap:8px;margin-top:4px;padding-left:2px}
+.lib-meta{font-size:10.5px;color:var(--text5)}
+.lib-row-foot .lib-act{margin-left:auto;padding:2px 8px}
+.lib-empty{font-size:12px;color:var(--text4);padding:4px 2px;line-height:1.45}
+
+/* ── The edit card, and the delete question that replaces it ───────────── */
+.lib-edit{margin-top:6px;padding:9px 10px;border:1px solid var(--acc);border-radius:var(--r);
   background:var(--bg5)}
-.lib-edit input{width:100%;padding:5px 8px;border:1px solid var(--border2);border-radius:var(--r);
-  font-family:inherit;font-size:12.5px;background:#fff;margin-bottom:6px}
 .lib-edit-acts{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
-/* [1.474] — AC: "this is a bit messy also with the deselect all text link, and
-   these other functions over to the right. I think the master controls and css
-   could be improved."
-   One bar, on its own ground: what is SELECTED on the left, what you can do to
-   the selection on the right, and a rule between them and the rows below. The
-   controls are buttons rather than text links, because they do things. */
-.lib-bar{display:flex;flex-wrap:wrap;align-items:center;gap:6px;
-  padding:6px 8px;margin:0 0 7px;border:1px solid var(--border2);
-  border-radius:var(--r);background:var(--bg4)}
+.lib-warn{font-size:12px;color:var(--red);font-weight:600;margin-bottom:6px;line-height:1.4}
+.lib-name-in{padding:5px 8px;border:1px solid var(--border2);border-radius:var(--r);
+  font-family:inherit;font-size:13px;background:#fff;min-width:0;color:var(--text)}
+
+/* ── Controls that look like controls ──────────────────────────────────── */
+.lib-bar{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:6px 8px;margin:0 0 7px;
+  border:1px solid var(--border2);border-radius:var(--r);background:var(--bg4)}
 .lib-bar-n{font-size:11.5px;color:var(--text3);font-weight:600}
 .lib-bar-r{margin-left:auto;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
-.lib-act{padding:3px 9px;border:1px solid var(--border2);border-radius:var(--r);
-  background:#fff;font-family:inherit;font-size:11.5px;color:var(--text2);cursor:pointer}
+.lib-act{padding:4px 10px;border:1px solid var(--border2);border-radius:var(--r);
+  background:#fff;font-family:inherit;font-size:11.5px;color:var(--text2);cursor:pointer;font-weight:500}
 .lib-act:hover{border-color:var(--acc);color:var(--acc)}
 .lib-act.bad{color:var(--red)}
 .lib-act.bad:hover{border-color:var(--red);color:var(--red)}
 .lib-act[disabled]{opacity:.45;cursor:default}
-/* The box that narrows a long tag list, in the bar it belongs to. */
-/* [1.480] — the two ways IN, at the top of the panel and before anything a
-   teacher has to type. */
-.lib-add-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:2px}
-.lib-tagfind{padding:3px 7px;border:1px solid var(--border2);border-radius:var(--r);
-  font-family:inherit;font-size:11.5px;background:#fff;color:var(--text);width:110px}
-.lib-warn{font-size:11.5px;color:var(--red);font-weight:600;margin-top:5px}
+.lib-act[disabled]:hover{border-color:var(--border2);color:var(--text2)}
+.lib-mini{background:none;border:0;padding:2px 5px;font-family:inherit;font-size:11px;
+  color:var(--text4);cursor:pointer}
+.lib-mini:hover{color:var(--acc)}
+.lib-tagfind{padding:4px 8px;border:1px solid var(--border2);border-radius:var(--r);
+  font-family:inherit;font-size:11.5px;background:#fff;color:var(--text);width:118px}
+.lib-tick{width:15px;height:15px;flex:none;margin:2px 0 0 0}
 /* [1.465] — the button that opened the panel LOOKS pressed. A panel with no
    visible cause is the fault [1.178] names: something appeared and nothing on
    screen says why, or which control closes it again. */
@@ -1542,6 +1517,16 @@ function _renderBody(){
   // every poll re-render dropped the reader back to the top of the list.
   var _prevList=el.querySelector('.msg-list');
   var _prevListTop=_prevList?_prevList.scrollTop:null;
+  // [1.484] — AC: "when I click a tag to add, the screen jumps, but should
+  // not." The library's shelves scroll inside themselves, and render() replaces
+  // #app wholesale — so every press put every one of those lists back to the
+  // top while the reader was halfway down it. Remembered by INDEX, which is
+  // enough: the panel redraws the same lists in the same order, and a list that
+  // has gone is one whose scroll nobody wants back.
+  var _prevLibTops=[];
+  Array.prototype.forEach.call(el.querySelectorAll('.lib-list'), function(l){
+    _prevLibTops.push(l.scrollTop);
+  });
   // [1.221], AC: "composers are still jumpy, with unstable scrolling snaps."
   // The residue of 1.192/1.193, and it is the refocus that does it: focus()
   // scrolls the focused element into view, so every poll landing while the
@@ -1623,6 +1608,10 @@ function _renderBody(){
     var ml2=el.querySelector('.msg-list');
     if(ml2) ml2.scrollTop=_prevListTop;
   }
+  // [1.484] — the library's own lists, put back before the page is.
+  Array.prototype.forEach.call(el.querySelectorAll('.lib-list'), function(l, i){
+    if(_prevLibTops[i]) l.scrollTop=_prevLibTops[i];
+  });
   // [1.221] — and the page itself, last, after every other restore above has
   // had its say.
   var _nowWinY=window.pageYOffset||document.documentElement.scrollTop||0;
@@ -5413,7 +5402,11 @@ var TLIB_COPY={
   clear:'Clear filter',
   mine:'My Library',                    // AC's label, final
   studio:'Keylab Master Library',       // AC's label, final
-  emptyMine:'Nothing in your library yet. Add a file to a message and press Save to Library.',
+  // [1.480] — the old wording sent a teacher to a message to add anything,
+  // which stopped being true the moment Add file and Add link moved to the top
+  // of this panel. Corrected as a FACT, not as a style choice; AC's words when
+  // he has seen it.
+  emptyMine:'Nothing in your library yet. Use Add file or Add link above.',
   emptyStudio:'Nothing in the Keylab Master Library yet.',
   emptyFiltered:'No files match that.',
   attaching:'Attaching…',
@@ -5480,6 +5473,18 @@ var TLIB_COPY={
   linkDelSafe:'Messages you have already sent keep working \u2014 a link has no file to take away.',
   linkRenamed:'Renamed.',
   maybe:'Maybe:',
+  someRefused:'{n} of those are not yours to change.',
+  // ── [1.484] — the words the redesign added. PLACEHOLDERS, flagged. ────
+  newSay:'Give these a name and tags now, or press Done and edit them later.',
+  lblName:'Name',
+  lblTags:'Tags',
+  lblMine:'Your own tags',
+  saveName:'Save name',
+  doneEditing:'Done',
+  removeWord:'Remove this word',
+  noTagsYet:'Your studio has not added any tags yet. You can still use your own words below.',
+  addLinksPh:'https://\u2026 one per line',
+  cancel:'Cancel',
   gone:'That file is no longer in your library.'
 };
 
@@ -5537,7 +5542,7 @@ function _libFilterPrune(){
 // and waited five to ten seconds for a list that could have been fetched while
 // he was reading the thread. Both requests go out when the roster loads, so the
 // panel opens instantly — which is the whole promise of "no upload wait".
-function loadLibrary(force){
+function loadLibrary(force, shelvesOnly){
   if(force){ _libLoaded=false; _libInFlight=false; }
   if(_libLoaded || _libInFlight) return;
   _libInFlight=true;
@@ -5550,15 +5555,28 @@ function loadLibrary(force){
       LIB_STUDIO_LINKS=(r.studioLinks||[]).map(_libNormLink);
     }
     _libFilterPrune();
-    render();
+    // [1.485] — the panel, not the page. The shelves are the only thing this
+    // answer changes, and a poll landing at the same moment should not have the
+    // whole screen rebuilt twice.
+    _libRedraw();
   });
+  // [1.485] — only when the vocabulary could have changed. A shelf refresh
+  // after a rename does not need to ask AC's tag list again.
+  if(shelvesOnly && LIB_TAGS.length) return;
   api({action:'getTags', data:{teacherId:TEACHER_ID, teacherToken:TOKEN}}, function(e,r){
     if(!e && r && r.ok) LIB_TAGS=r.tags||[];
     _libFilterPrune();
-    render();
+    _libRedraw();
   });
 }
-function _libRefresh(){ loadLibrary(true); }
+// [1.485] — a refresh re-reads the SHELVES. It used to re-read the tag
+// vocabulary with them, which is a second request after every rename, every
+// save and every delete for a list that changes when AC edits Settings. The
+// tags are re-read when something could actually have changed them.
+function _libRefresh(){
+  _libLoaded=false; _libInFlight=false;
+  loadLibrary(false, true);
+}
 
 // ── [1.471] — one shape for a file and a link ───────────────────────────
 //
@@ -5656,13 +5674,60 @@ function libToggle(){
   render();
 }
 function libClose(){ LIB_OPEN=false; LIB_EDIT=''; LIB_DEL=''; render(); }
+
+// ── [1.485] — REDRAW THE PANEL, NOT THE PAGE ────────────────────────────
+//
+// **AC:** *"All of the buttons should be instantly responsive and saving
+// actions rendering etc should be kept to the most efficient pathway so that it
+// is smooth reliable and stable."*
+//
+// `render()` rebuilds #app — every thread, every roster row, every composer —
+// and then puts the caret, the message list and the shelves back. That is the
+// right price for a message arriving; it is a wild overpayment for ticking a
+// box. **This redraws the panel and nothing else**, keeping the two things a
+// rebuild takes: the scroll of each shelf, and the focus and caret of whatever
+// field is being typed in.
+//
+// Falls back to a full render when the panel is not on screen, so no caller
+// has to know which case it is in.
+function _libRedraw(){
+  var panel=document.getElementById('lib-panel');
+  if(!panel){ render(); return; }
+  var tops=[];
+  Array.prototype.forEach.call(panel.querySelectorAll('.lib-list'), function(l){ tops.push(l.scrollTop); });
+  var act=document.activeElement;
+  var actId=(act && panel.contains(act) && act.id) ? act.id : '';
+  var selStart=null, selEnd=null;
+  if(actId && act.setSelectionRange){
+    try{ selStart=act.selectionStart; selEnd=act.selectionEnd; }catch(e){}
+  }
+  var tmp=document.createElement('div');
+  tmp.innerHTML=rLibraryPanel(_libComposerId);
+  var fresh=tmp.firstChild;
+  if(!fresh){ render(); return; }
+  // The INNER html is swapped, so the node the browser is scrolling stays the
+  // same node and the scroll positions above are still about it.
+  panel.innerHTML=fresh.innerHTML;
+  Array.prototype.forEach.call(panel.querySelectorAll('.lib-list'), function(l, i){
+    if(tops[i]) l.scrollTop=tops[i];
+  });
+  if(actId){
+    var back=document.getElementById(actId);
+    if(back){
+      _focusNoScroll(back);
+      if(selStart!==null && back.setSelectionRange){
+        try{ back.setSelectionRange(selStart, selEnd); }catch(e){}
+      }
+    }
+  }
+}
 function libTag(v){
   var i=LIB_FILTER.indexOf(v);
   if(i>-1) LIB_FILTER.splice(i,1); else LIB_FILTER.push(v);
   _libFilterSave();
-  render();
+  _libRedraw();
 }
-function libClearFilter(){ LIB_FILTER=[]; LIB_Q=''; _libFilterSave(); render(); }
+function libClearFilter(){ LIB_FILTER=[]; LIB_Q=''; _libFilterSave(); _libRedraw(); }
 // The search box keeps its own value in JS and redraws only the LIST, never
 // itself — [1.17]'s Pattern B, and the reason is the same: a full render()
 // while somebody is typing takes the caret with it.
@@ -5782,7 +5847,7 @@ function rLibSave(attachmentId){
 // because they answer two different questions: taking a file off a shelf
 // withholds nothing from anybody, and deleting it takes it out of every
 // conversation it was ever sent to.
-function libEdit(id){ LIB_EDIT = (LIB_EDIT===id?'':id); LIB_DEL=''; render(); }
+function libEdit(id){ LIB_EDIT = (LIB_EDIT===id?'':id); LIB_DEL=''; _libRedraw(); }
 function libRename(id){
   var el=document.getElementById('lib-rn-'+id);
   var name=el?el.value:'';
@@ -5823,8 +5888,8 @@ function libUnshelve(id){
 // requirement, and the reason is the trade AC took knowingly: one file, so a
 // delete reaches every conversation it was ever sent to. A native confirm() is
 // not used anywhere in this portal ([1.34]) and would not be able to say this.
-function libAskDelete(id){ LIB_DEL=id; render(); }
-function libDelCancel(){ LIB_DEL=''; render(); }
+function libAskDelete(id){ LIB_DEL=id; _libRedraw(); }
+function libDelCancel(){ LIB_DEL=''; _libRedraw(); }
 function libDelete(id){
   if(_libIsLink(id)){
     actStart('lib:'+id, TLIB_COPY.saving);
@@ -5847,13 +5912,23 @@ function libDelete(id){
 }
 // Tags on one file. A studio tag is a tick; a private tag is a teacher's own
 // word, on their own file, invisible to everybody including admin.
-function libFileTag(id, tagId){
+// [1.484] — AC: *"when I click a tag to add, the screen jumps, but should
+// not."* Two causes, and this is the second: pressing a chip rebuilt the whole
+// page to change one class. **The chip is patched where it stands** — the model
+// updates, the button's own look and `aria-pressed` update, and nothing else on
+// screen moves. The server confirms behind it, as every other write here does.
+function libFileTag(id, tagId, el){
   var f=_libFind(id); if(!f) return;
   var tags=(f.tags||[]).slice();
   var i=tags.indexOf(tagId);
+  var on=i<0;
   if(i>-1) tags.splice(i,1); else tags.push(tagId);
   f.tags=tags;   // drawn from this immediately; the server confirms behind it
-  render();
+  if(el){
+    el.classList.toggle('on', on);
+    el.classList.remove('some');
+    el.setAttribute('aria-pressed', on?'true':'false');
+  } else { render(); }
   if(f.kind==='link'){
     api({action:'saveLibraryLink', data:{linkId:id, tags:tags,
          teacherId:TEACHER_ID, teacherToken:TOKEN}}, function(e,r){
@@ -5927,11 +6002,9 @@ var LIB_ADD_SEL={};
 var LIB_TAGFIND='';
 function libTagFind(v){
   LIB_TAGFIND=String(v||'');
-  render();
-  // The caret goes with the re-render, so it is put back where it was: this box
-  // is inside the panel and the panel is redrawn wholesale ([1.17]).
-  var el=document.getElementById('lib-tagfind');
-  if(el){ el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
+  // [1.485] — the panel only, and _libRedraw puts the caret back where it was
+  // rather than at the end: typing into the middle of a word used to jump it.
+  _libRedraw();
 }
 function _libTagsFiltered(){
   var q=LIB_TAGFIND.trim().toLowerCase();
@@ -6084,24 +6157,43 @@ function libAddUpload(file){
 //
 // Dismissed by hand, never by a timer: a group that vanished on its own would
 // take the only place those rows are gathered.
-function libAddedDone(){ LIB_ADDED=[]; LIB_ADD_SEL={}; render(); }
+// [1.485] — the paste box's open state. These two were lost in [1.484]'s
+// rewrite of the panel while the buttons that call them stayed, so Add link did
+// nothing at all: a handler named in markup and missing from the file fails
+// silently in the console and looks like a dead button. There is a check for
+// exactly this now.
+var LIB_ADD_LINK=false;
+function libAddLinkOpen(){
+  LIB_ADD_LINK=true;
+  _libRedraw();
+  var el=document.getElementById('lib-add-links');
+  if(el) _focusNoScroll(el);   // the box is open because somebody means to type in it
+}
+function libAddLinkClose(){ LIB_ADD_LINK=false; _libRedraw(); }
+function libAddedDone(){ LIB_ADDED=[]; LIB_ADD_SEL={}; _libRedraw(); }
 function libAddedSel(id){
   if(LIB_ADD_SEL[id]) delete LIB_ADD_SEL[id]; else LIB_ADD_SEL[id]=true;
-  render();
+  _libRedraw();   // [1.485] — a tick changes the panel and nothing else
 }
 // [1.470] — clears when ANYTHING is ticked, selects when nothing is. That is
 // what the button beside it says it will do, and it makes "deselect" one press
 // from any state rather than two from a half-ticked one.
+// [1.484] — keyed on `id`, not on `attachmentId`. A LINK has no attachmentId
+// ([1.471] gives it `id` and `linkId`), so every one of these read undefined and
+// **a pasted link could be shown ticked and still be left out of everything the
+// bar did to "the ticked files".** Found by rendering the panel against a
+// fixture with one file and one link in the batch: the header said "1 ticked"
+// with two boxes ticked on screen.
 function libAddedSelAll(){
   var files=_libAddedFiles();
-  var any=files.some(function(f){ return LIB_ADD_SEL[f.attachmentId]; });
+  var any=files.some(function(f){ return LIB_ADD_SEL[f.id]; });
   files.forEach(function(f){
-    if(any) delete LIB_ADD_SEL[f.attachmentId]; else LIB_ADD_SEL[f.attachmentId]=true;
+    if(any) delete LIB_ADD_SEL[f.id]; else LIB_ADD_SEL[f.id]=true;
   });
-  render();
+  _libRedraw();
 }
 function _libAddedSelected(){
-  return _libAddedFiles().filter(function(f){ return LIB_ADD_SEL[f.attachmentId]; });
+  return _libAddedFiles().filter(function(f){ return LIB_ADD_SEL[f.id]; });
 }
 function _libAddedFiles(){
   // Read through the real shelf every time, so a rename or a delete made while
@@ -6137,13 +6229,47 @@ function libAddedRename(id){
     render();
   });
 }
+// [1.485] — ONE request for the whole selection, not one per file.
+//
+// AC: *"saving actions rendering etc should be kept to the most efficient
+// pathway."* This used to call the single-row endpoint per file, so twenty
+// ticked files was twenty round trips at ~2s each and twenty chances to
+// half-fail. The model is patched first so the chips move on the press, and one
+// call carries the change.
 function libAddedTagAll(tagId){
   var files=_libAddedSelected();
   if(!files.length) return;
   var all=files.every(function(f){ return (f.tags||[]).indexOf(tagId)>-1; });
+  var atts=[], links=[];
   files.forEach(function(f){
     var has=(f.tags||[]).indexOf(tagId)>-1;
-    if(all===has) libFileTag(f.attachmentId, tagId);
+    if(all===has){
+      var tags=(f.tags||[]).slice();
+      if(all){ tags.splice(tags.indexOf(tagId),1); } else { tags.push(tagId); }
+      f.tags=tags;
+    }
+    if(f.kind==='link') links.push(f.id); else atts.push(f.id);
+  });
+  _libRedraw();
+  _libBulk({attachmentIds:atts, linkIds:links}, all?{removeTag:tagId}:{addTag:tagId});
+}
+
+// The one door to the bulk endpoint. A failure re-reads the shelf rather than
+// leaving the screen showing a change that did not land — the same rule every
+// optimistic write in this file follows.
+function _libBulk(ids, change){
+  var data={attachmentIds:ids.attachmentIds||[], linkIds:ids.linkIds||[],
+            teacherId:TEACHER_ID, teacherToken:TOKEN};
+  Object.keys(change).forEach(function(k){ data[k]=change[k]; });
+  api({action:'setLibraryTagsBulk', data:data}, function(e,r){
+    if(e||!r||!r.ok){
+      actFail('libadd',(r&&r.error)||TLIB_COPY.saveFailed);
+      _libRefresh();
+      return;
+    }
+    // Refused rows are named rather than swallowed: a selection that reached
+    // somebody else's file is a thing to know about.
+    if(r.refused) showMsg(TLIB_COPY.someRefused.replace('{n}', String(r.refused)),'e');
   });
 }
 // [1.469] — a teacher's OWN word, across the ticked files. **This reverses the
@@ -6161,17 +6287,17 @@ function libAddedTagAll(tagId){
 // wrongly tagged should not have to be corrected tag by tag.
 function libAddedClearTags(){
   var files=_libAddedSelected();
+  if(!files.length) return;
+  // [1.485] — one call for the lot. This was two requests per file with
+  // anything on it.
+  var atts=[], links=[];
   files.forEach(function(f){
-    if((f.tags||[]).length){
-      f.tags=[]; 
-      api({action:'setAttachmentTags', data:{attachmentId:f.attachmentId, tags:[],
-           teacherId:TEACHER_ID, teacherToken:TOKEN}}, function(e,r){
-        if(e||!r||!r.ok){ actFail('lib:'+f.attachmentId,(r&&r.error)||TLIB_COPY.saveFailed); _libRefresh(); }
-      });
-    }
-    if((f.privateTags||[]).length) _libSetPrivate(f.attachmentId, f, []);
+    f.tags=[]; f.privateTags=[];
+    if(f.kind==='link') links.push(f.id); else atts.push(f.id);
   });
-  render();
+  _libRedraw();
+  _libBulk({attachmentIds:atts, linkIds:links}, {clear:true});
+  _libFilterPrune();
 }
 // [1.470] — deleting the ticked files, one press, however many that is.
 //
@@ -6220,12 +6346,16 @@ function libAddedPrivateAll(){
   var files=_libAddedSelected();
   if(!files.length) return;
   if(el) el.value='';
+  // [1.485] — one call, and the words appear on the press.
+  var atts=[], links=[];
   files.forEach(function(f){
     var words=(f.privateTags||[]).slice();
-    if(words.indexOf(word)>-1) return;
-    words.push(word);
-    _libSetPrivate(f.attachmentId, f, words);
+    if(words.indexOf(word)<0){ words.push(word); f.privateTags=words; }
+    if(f.kind==='link') links.push(f.id); else atts.push(f.id);
   });
+  _libRedraw();
+  _libBulk({attachmentIds:atts, linkIds:links}, {privateWord:word});
+  _libFilterPrune();
 }
 // One group: a row that tags everything in it, a row per file, and Done. The
 // studio's vocabulary only — a teacher's PRIVATE words stay on Edit, where
@@ -6235,135 +6365,130 @@ function rLibraryAdded(){
   var files=_libAddedFiles();
   if(!files.length) return '';
   var sel=_libAddedSelected();
-  return '<div class="lib-edit" style="margin-top:8px">'+
-    // ── [1.474] — ONE master bar ────────────────────────────────────────
-    //
-    // AC: *"this is a bit messy also with the deselect all text link, and these
-    // other functions over to the right. I think the master controls and css
-    // could be improved."* And: *"if they both affect only files that are
-    // ticked, it can just say Delete Files and Remove Tags."* He is right on
-    // both counts — the word "all" was answering a question nobody asked, since
-    // everything here acts on the ticked rows and nothing else.
-    //
-    // What is SELECTED on the left, what can be DONE to it on the right, and
-    // the bar on its own ground so the rows below read as a list rather than as
-    // more controls.
-    '<div class="lib-bar">'+
-      '<span class="lib-group-hd" style="margin:0">'+esc(TLIB_COPY.justAdded)+' &middot; '+files.length+'</span>'+
-      '<button type="button" class="lib-act" onclick="libAddedSelAll()">'+
-        esc(sel.length?TLIB_COPY.selNone:TLIB_COPY.selAll)+'</button>'+
-      '<span class="lib-bar-n">'+esc(TLIB_COPY.ticked.replace('{n}', String(sel.length)))+'</span>'+
-      '<span class="lib-bar-r">'+
-        // Disabled rather than hidden while nothing is ticked: a control that
-        // vanishes is a control somebody has to learn twice ([1.444]'s rule).
+  // ── [1.484] — THE REVIEW STEP ─────────────────────────────────────────
+  //
+  // **AC:** *"Adding a link doesn't prompt me to add tags or anything at all
+  // when adding one... It should ask for tags, etc when adding, not after and
+  // then having to remember to edit. Offer the option when adding, allow
+  // editing later."*
+  //
+  // **It did land somewhere taggable — below both shelves, off the screen.**
+  // So the tagging existed and the prompt did not, which is the same as not
+  // having it. This block is now the first thing under the button that was
+  // pressed, edged in the accent so it reads as a step rather than as more
+  // list, and it SAYS what to do. Done closes it; nothing is lost if it is
+  // ignored, because everything here can be edited later from Edit.
+  return '<div class="lib-new">'+
+    '<div class="lib-new-hd">'+
+      '<span class="lib-new-t">'+esc(TLIB_COPY.justAdded)+'</span>'+
+      '<span class="lib-new-n">'+files.length+'</span>'+
+      '<span style="margin-left:auto;display:flex;gap:6px">'+
+        '<button type="button" class="lib-act" onclick="libAddedSelAll()">'+
+          esc(sel.length?TLIB_COPY.selNone:TLIB_COPY.selAll)+'</button>'+
+        '<button type="button" class="lib-act" onclick="libAddedDone()">'+esc(TLIB_COPY.addedDone)+'</button>'+
+      '</span>'+
+    '</div>'+
+    '<div class="lib-new-body">'+
+      '<div class="lib-say">'+esc(TLIB_COPY.newSay)+'</div>'+
+      // ── Tag the ticked ones. Labelled, so the row of chips is not a
+      // ── mystery, and the count says exactly what a press will reach.
+      '<div class="lib-fld">'+
+        '<div class="lib-lbl">'+
+          esc(sel.length?TLIB_COPY.tagsForSel.replace('{n}', String(sel.length)):TLIB_COPY.tagsForNone)+
+        '</div>'+
+        (LIB_TAGS.length
+          ? '<div class="lib-tags" style="padding-top:0">'+
+            (LIB_TAGS.length>8
+              ? '<input class="lib-tagfind" id="lib-tagfind" value="'+esc(LIB_TAGFIND)+'"'+
+                ' placeholder="'+esc(TLIB_COPY.tagFind)+'" aria-label="'+esc(TLIB_COPY.tagFind)+'"'+
+                ' oninput="libTagFind(this.value)">'
+              : '')+
+            _libTagsFiltered().map(function(t){
+              var all=sel.length && sel.every(function(f){ return (f.tags||[]).indexOf(t.tagId)>-1; });
+              var some=!all && sel.some(function(f){ return (f.tags||[]).indexOf(t.tagId)>-1; });
+              return '<button type="button" class="lib-tag'+(all?' on':(some?' some':''))+'"'+
+                ' aria-pressed="'+(all?'true':(some?'mixed':'false'))+'"'+
+                (sel.length?'':' disabled')+
+                ' onclick="libAddedTagAll(\''+esc(t.tagId)+'\')">'+esc(t.name)+'</button>';
+            }).join('')+'</div>'
+          : '<div class="lib-empty">'+esc(TLIB_COPY.noTagsYet)+'</div>')+
+      '</div>'+
+      // ── Their OWN word, with a field that looks like a field and a button
+      // ── that looks like a button. AC: "your own tag and add are subtle and
+      // ── hidden" — and then, of the same control: "there is also no option
+      // ── to save the tag here. It's genuinely not there."
+      '<div class="lib-fld">'+
+        '<div class="lib-lbl">'+esc(TLIB_COPY.lblMine)+'</div>'+
+        '<div class="lib-fld-row">'+
+          '<input id="lib-added-pt" placeholder="'+esc(TLIB_COPY.privateBulkPh)+'"'+
+            ' aria-label="'+esc(TLIB_COPY.privateBulkPh)+'"'+
+            ' onkeydown="if(event.key===\'Enter\'){event.preventDefault();libAddedPrivateAll();}">'+
+          '<button type="button" class="lib-act"'+(sel.length?'':' disabled')+
+            ' onclick="libAddedPrivateAll()">'+esc(TLIB_COPY.privateAdd)+'</button>'+
+        '</div>'+
+      '</div>'+
+      // ── The rows themselves: tick, name you can type in, its own tags.
+      '<div class="lib-list" style="max-height:none">'+files.map(function(f){
+        var _lk=f.kind==='link';
+        var _on=!!LIB_ADD_SEL[f.id];
+        return '<div class="lib-row'+(_lk?' lib-link':'')+(_on?' sel':'')+'">'+
+          '<div style="display:flex;align-items:flex-start;gap:8px">'+
+            '<input type="checkbox" class="lib-tick"'+(_on?' checked':'')+
+              ' onclick="libAddedSel(\''+esc(f.id)+'\')" aria-label="'+esc(f.fileName)+'">'+
+            '<span class="lib-kind">'+esc(_lk?_libLinkSite(f.url):_attKind(f.fileName))+'</span>'+
+            '<input class="lib-name-in" style="flex:1" id="lib-bn-'+esc(f.id)+'"'+
+              ' value="'+esc(f.fileName)+'" aria-label="'+esc(TLIB_COPY.lblName)+'"'+
+              ' onkeydown="if(event.key===\'Enter\'){event.preventDefault();this.blur();}"'+
+              ' onblur="libAddedRename(\''+esc(f.id)+'\')">'+
+          '</div>'+
+          (_lk?'<div class="lib-row-foot"><span class="lib-meta">'+esc(_libLinkHost(f.url))+'</span></div>':'')+
+          (LIB_TAGS.length
+            ? '<div class="lib-tags" style="padding-top:5px">'+LIB_TAGS.map(function(t){
+                var on=(f.tags||[]).indexOf(t.tagId)>-1;
+                return '<button type="button" class="lib-tag'+(on?' on':'')+'"'+
+                  ' aria-pressed="'+(on?'true':'false')+'"'+
+                  ' onclick="libFileTag(\''+esc(f.id)+'\',\''+esc(t.tagId)+'\',this)">'+esc(t.name)+'</button>';
+              }).join('')+'</div>'
+            : '')+
+          // [1.472] — the near matches, offered rather than applied.
+          (function(){
+            var near=_libNearSuggest(f.fileName, LIB_TAGS, f.tags||[]);
+            if(!near.length) return '';
+            return '<div class="lib-tags" style="padding-top:3px">'+
+              '<span class="lib-meta">'+esc(TLIB_COPY.maybe)+'</span>'+
+              near.map(function(tid){
+                return '<button type="button" class="lib-tag some" onclick="libFileTag(\''+
+                  esc(f.id)+'\',\''+esc(tid)+'\',this)">+ '+esc(_libTagName(tid))+'</button>';
+              }).join('')+'</div>';
+          })()+
+          ((f.privateTags||[]).length
+            ? '<div class="lib-tags" style="padding-top:3px">'+(f.privateTags||[]).map(function(w){
+                return '<button type="button" class="lib-tag priv on" title="'+esc(TLIB_COPY.removeWord)+'"'+
+                  ' onclick="libPrivateRemove(\''+esc(f.id)+'\',\''+esc(w)+'\')">'+esc(w)+' &#215;</button>';
+              }).join('')+'</div>'
+            : '')+
+        '</div>';
+      }).join('')+'</div>'+
+      // The bulk removals, behind a rule and last, as in the edit card.
+      '<div class="lib-foot">'+
         '<button type="button" class="lib-act bad"'+(sel.length?'':' disabled')+
           ' onclick="libAddedClearTags()">'+esc(TLIB_COPY.clearTags)+'</button>'+
         '<button type="button" class="lib-act bad"'+(sel.length?'':' disabled')+
           ' onclick="libAddedDeleteAsk()">'+esc(TLIB_COPY.delSel)+'</button>'+
-        '<button type="button" class="lib-act" onclick="libAddedDone()">'+esc(TLIB_COPY.addedDone)+'</button>'+
-      '</span>'+
+      '</div>'+
+      (LIB_ADD_DEL && sel.length
+        ? '<div class="lib-edit" style="margin-top:8px">'+
+            '<div class="lib-warn">'+esc(TLIB_COPY.delSelAsk.replace('{n}', String(sel.length)))+' '+
+              esc(sel.filter(function(f){ return f.reach; }).length
+                ? TLIB_COPY.delSelSent.replace('{n}', String(sel.filter(function(f){ return f.reach; }).length))
+                : TLIB_COPY.delReachNone)+'</div>'+
+            '<div class="lib-edit-acts">'+
+              '<button type="button" class="lib-act bad" onclick="libAddedDelete()">'+esc(TLIB_COPY.delSelGo)+'</button>'+
+              '<button type="button" class="lib-act" onclick="libAddedDeleteCancel()">'+esc(TLIB_COPY.delBack)+'</button>'+
+            '</div>'+
+          '</div>'
+        : '')+
     '</div>'+
-    // The tagging row, under the bar: it is the thing this screen is FOR, so it
-    // gets the space rather than sharing a line with Done.
-    '<div style="font-size:10.5px;color:var(--text4)">'+
-      esc(sel.length?TLIB_COPY.tagsForSel.replace('{n}', String(sel.length)):TLIB_COPY.tagsForNone)+'</div>'+
-    (LIB_TAGS.length
-      ? '<div class="lib-tags" style="padding-top:3px">'+
-        // ── [1.474] — narrowing the TAG LIST, which is AC's question ────
-        //
-        // *"Can the user use search and tags together to narrow down choices to
-        // add tags flexibly?"* Narrowing the FILES by tag and text was already
-        // built; this is the other half — narrowing the WORDS, for a studio
-        // whose vocabulary is longer than a line. It appears only when there is
-        // enough vocabulary to be worth searching.
-        (LIB_TAGS.length>8
-          ? '<input class="lib-tagfind" id="lib-tagfind" value="'+esc(LIB_TAGFIND)+'"'+
-            ' placeholder="'+esc(TLIB_COPY.tagFind)+'" aria-label="'+esc(TLIB_COPY.tagFind)+'"'+
-            ' oninput="libTagFind(this.value)">'
-          : '')+
-        _libTagsFiltered().map(function(t){
-          // ON only when EVERY ticked file carries it, so the row never claims
-          // something about the selection that is true of two files in it.
-          var all=sel.length && sel.every(function(f){ return (f.tags||[]).indexOf(t.tagId)>-1; });
-          // SOME of them is its own state and is drawn as one. A chip reading
-          // plainly OFF while three of the ticked files carry the tag is a
-          // control lying about what a press will do.
-          var some=!all && sel.some(function(f){ return (f.tags||[]).indexOf(t.tagId)>-1; });
-          return '<button type="button" class="lib-tag'+(all?' on':(some?' some':''))+'"'+
-            ' aria-pressed="'+(all?'true':(some?'mixed':'false'))+'"'+
-            ' onclick="libAddedTagAll(\''+esc(t.tagId)+'\')">'+esc(t.name)+'</button>';
-        }).join('')+'</div>'
-      : '')+
-    // A teacher's own word, over the same ticked files. Present whether or not
-    // the studio has a vocabulary — it needs nothing from AC.
-    '<div class="lib-edit-acts" style="margin-top:5px">'+
-      '<input id="lib-added-pt" placeholder="'+esc(TLIB_COPY.privateBulkPh)+'"'+
-        ' aria-label="'+esc(TLIB_COPY.privateBulkPh)+'" style="margin:0;flex:1"'+
-        ' onkeydown="if(event.key===\'Enter\'){event.preventDefault();libAddedPrivateAll();}">'+
-      '<button type="button" class="lib-act" onclick="libAddedPrivateAll()">'+esc(TLIB_COPY.privateAdd)+'</button>'+
-    '</div>'+
-    // [1.467]'s rule, one screen further in: the question REPLACES nothing and
-    // opens nothing — it appears in the row it was asked from, and Keep them
-    // takes it away again.
-    (LIB_ADD_DEL && sel.length
-      ? '<div class="lib-warn">'+esc(TLIB_COPY.delSelAsk.replace('{n}', String(sel.length)))+' '+
-          esc(sel.filter(function(f){ return f.reach; }).length
-            ? TLIB_COPY.delSelSent.replace('{n}', String(sel.filter(function(f){ return f.reach; }).length))
-            : TLIB_COPY.delReachNone)+
-        '</div>'+
-        '<div class="lib-edit-acts">'+
-          '<button type="button" class="lib-mini bad" onclick="libAddedDelete()">'+esc(TLIB_COPY.delSelGo)+'</button>'+
-          '<button type="button" class="lib-mini" onclick="libAddedDeleteCancel()">'+esc(TLIB_COPY.delBack)+'</button>'+
-        '</div>'
-      : '')+
-    '<div class="lib-list" style="margin-top:7px">'+files.map(function(f){
-      var _lk=f.kind==='link';
-      return '<div class="lib-row'+(_lk?' lib-link':'')+'" style="flex-wrap:wrap">'+
-        '<input type="checkbox"'+(LIB_ADD_SEL[f.id]?' checked':'')+
-          ' onclick="libAddedSel(\''+esc(f.id)+'\')" aria-label="'+esc(f.fileName)+'">'+
-        '<span class="lib-kind">'+esc(_lk?_libLinkSite(f.url):_attKind(f.fileName))+'</span>'+
-        // Renamed HERE, which is the moment a teacher is looking at what just
-        // landed — AC: "a teacher will want to customize each file", and the
-        // names that arrive are "Bionics 7 4 162.mp3" and "youtube.com".
-        '<input class="lib-name-in" id="lib-bn-'+esc(f.id)+'" value="'+esc(f.fileName)+'"'+
-          ' aria-label="'+esc(TLIB_COPY.renameGo)+'" style="flex:1;margin:0"'+
-          ' onkeydown="if(event.key===\'Enter\'){event.preventDefault();libAddedRename(\''+esc(f.id)+'\');}"'+
-          ' onblur="libAddedRename(\''+esc(f.id)+'\')">'+
-        // Nothing at all when the studio has no vocabulary yet — an empty row
-        // of controls under every filename is furniture, and a teacher whose
-        // studio has made no tags is exactly the person who cannot tell that
-        // from something broken.
-        (LIB_TAGS.length
-          ? '<div class="lib-tags" style="width:100%;padding-top:4px">'+LIB_TAGS.map(function(t){
-              var on=(f.tags||[]).indexOf(t.tagId)>-1;
-              return '<button type="button" class="lib-tag'+(on?' on':'')+'" aria-pressed="'+(on?'true':'false')+'"'+
-                ' onclick="libFileTag(\''+esc(f.attachmentId)+'\',\''+esc(t.tagId)+'\')">'+esc(t.name)+'</button>';
-            }).join('')+'</div>'
-          : '')+
-        (_lk?'<span class="lib-meta">'+esc(_libLinkHost(f.url))+'</span>':'')+
-        // [1.472] — the NEAR matches, offered rather than applied. A guess wears
-        // a + and does nothing until it is pressed, which is AC's "accept or
-        // deny" with no second control and nothing to dismiss.
-        (function(){
-          var near=_libNearSuggest(f.fileName, LIB_TAGS, f.tags||[]);
-          if(!near.length) return '';
-          return '<div class="lib-tags" style="width:100%;padding-top:2px">'+
-            '<span class="lib-meta" style="align-self:center">'+esc(TLIB_COPY.maybe)+'</span>'+
-            near.map(function(id){
-              return '<button type="button" class="lib-tag some" onclick="libFileTag(\''+
-                esc(f.id)+'\',\''+esc(id)+'\')">+ '+esc(_libTagName(id))+'</button>';
-            }).join('')+'</div>';
-        })()+
-        // Their own words on this file, removable here: a word applied to nine
-        // files at once has to be takeable off the one it does not suit.
-        ((f.privateTags||[]).length
-          ? '<div class="lib-tags" style="width:100%;padding-top:2px">'+(f.privateTags||[]).map(function(w){
-              return '<button type="button" class="lib-tag priv on" onclick="libPrivateRemove(\''+
-                esc(f.attachmentId)+'\',\''+esc(w)+'\')">'+esc(w)+' &#215;</button>';
-            }).join('')+'</div>'
-          : '')+
-      '</div>';
-    }).join('')+'</div>'+
   '</div>';
 }
 
@@ -6378,73 +6503,61 @@ function rLibraryButton(){
 }
 function rLibraryPanel(composerId){
   if(!LIB_OPEN && !LIB_STANDALONE) return '';
-  // [1.471] — WHICH composer this panel belongs to. Both composers in this
-  // portal are the same function called twice, and a link has to be inserted
-  // into the box the panel is sitting inside rather than into whichever one was
-  // opened last.
+  // [1.471] — WHICH composer this panel belongs to.
   if(composerId) _libComposerId=composerId;
-  return '<div class="lib-panel">'+
-    '<div class="lib-hd"><span class="lib-hd-t">'+
-      esc(LIB_STANDALONE?TLIB_COPY.manageHead:TLIB_COPY.head)+'</span>'+
-      // No × on the home page: the section's own heading closes it, and a
-      // second control that does the same thing is a second thing to learn.
+  var mine=_libFiltered(LIB_MINE), myLinks=_libFiltered(LIB_MY_LINKS);
+  var studio=_libFiltered(LIB_SHELF_STUDIO), studioLinks=_libFiltered(LIB_STUDIO_LINKS);
+  var total=LIB_MINE.length+LIB_MY_LINKS.length+LIB_SHELF_STUDIO.length+LIB_STUDIO_LINKS.length;
+  // ── [1.484] — the search box EARNS its place ─────────────────────────
+  //
+  // AC: *"It's not a pro design to have them search their files like this by
+  // just starting to type something."* Part of that was the order, fixed in
+  // [1.480]. The rest is that a search box over four files is furniture: it
+  // asks a question the eye has already answered. It appears once there is
+  // enough on the shelves to be worth narrowing.
+  var wantFind=(total>6)||LIB_Q||LIB_FILTER.length;
+  // [1.485] — the id is what lets a press redraw THIS and nothing else.
+  return '<div class="lib-panel" id="lib-panel">'+
+    '<div class="lib-hd">'+
+      '<span class="lib-hd-t">'+esc(LIB_STANDALONE?TLIB_COPY.manageHead:TLIB_COPY.head)+'</span>'+
       (LIB_STANDALONE?''
         :'<button type="button" class="lib-x" aria-label="'+esc(TLIB_COPY.close)+'"'+
          ' onclick="libClose()">&#215;</button>')+
     '</div>'+
-    // ── [1.480] — ADDING IS A BUTTON, and it comes first ─────────────────
-    //
-    // **AC:** *"The teacher should be able to click a button to add a file or a
-    // button to add a link here. It's not a pro design to have them search
-    // their files like this by just starting to type something. The correct
-    // flow is click button, choose to upload from device or drive, pick the
-    // file or files, then tags, etc."*
-    //
-    // **He is right about the order.** The search box was the first thing under
-    // the heading, so the panel opened by asking a teacher to type — which
-    // answers "find something I already have" and says nothing at all to
-    // somebody whose library is empty. Adding was a control at the BOTTOM,
-    // below both shelves, which on a phone is off the screen.
-    //
-    // Two buttons, at the top, before anything else: **Add file** opens the
-    // device's own picker; **Add link** opens the paste box. Both land in the
-    // batch below, where the tags are set — which is the rest of his sentence
-    // and was already built.
+    // The two ways IN, first and loudest ([1.480]).
     '<div class="lib-add-row">'+
       '<button type="button" class="btn btn-p" onclick="libAddFiles()">'+esc(TLIB_COPY.addGo)+'</button>'+
-      '<button type="button" class="btn btn-s" onclick="libAddLinkOpen()">'+esc(TLIB_COPY.addLinksGo)+'</button>'+
+      '<button type="button" class="btn btn-s'+(LIB_ADD_LINK?' lib-on':'')+'"'+
+        ' onclick="libAddLinkOpen()">'+esc(TLIB_COPY.addLinksGo)+'</button>'+
     '</div>'+
     '<input type="file" id="lib-add-file" class="att-input" multiple accept="'+_attAccept()+'"'+
       ' onchange="libAddChosen(this)">'+
-    // The paste box only when Add link has been pressed: a textarea sitting
-    // open above the shelves is the same clutter the search box was.
+    // The paste box, only once Add link has been pressed.
     (LIB_ADD_LINK
-      ? '<div class="lib-edit" style="margin-top:7px">'+
-          '<textarea id="lib-add-links" rows="2" style="width:100%;padding:6px 8px;'+
-            'border:1px solid var(--border2);border-radius:var(--r);font-family:inherit;'+
-            'font-size:12.5px" placeholder="'+esc(TLIB_COPY.addLinks)+'"'+
-            ' aria-label="'+esc(TLIB_COPY.addLinks)+'"></textarea>'+
-          '<div class="lib-edit-acts" style="margin-top:5px">'+
+      ? '<div class="lib-edit" style="margin-top:8px">'+
+          '<div class="lib-lbl">'+esc(TLIB_COPY.addLinks)+'</div>'+
+          '<textarea id="lib-add-links" rows="2" class="lib-search" style="resize:vertical"'+
+            ' placeholder="'+esc(TLIB_COPY.addLinksPh)+'" aria-label="'+esc(TLIB_COPY.addLinks)+'"></textarea>'+
+          '<div class="lib-edit-acts" style="margin-top:6px">'+
             '<button type="button" class="btn btn-p" onclick="libAddLinks()">'+esc(TLIB_COPY.addLinksGo)+'</button>'+
-            '<button type="button" class="lib-act" onclick="libAddLinkClose()">'+esc(TLIB_COPY.close)+'</button>'+
+            '<button type="button" class="lib-act" onclick="libAddLinkClose()">'+esc(TLIB_COPY.cancel)+'</button>'+
           '</div>'+
         '</div>'
       : '')+
     rAct('libadd')+
-    '<input id="lib-q" class="lib-search" type="search" value="'+esc(LIB_Q)+'"'+
-      ' placeholder="'+esc(TLIB_COPY.search)+'" aria-label="'+esc(TLIB_COPY.search)+'"'+
-      ' oninput="libSearch(this.value)" style="margin-top:8px">'+
-    rLibraryTags()+
-    '<div id="lib-body">'+rLibraryBody()+'</div>'+
-    // [1.468] — what just landed, where tagging happens. Below the shelves,
-    // because it is about the files that arrived rather than about finding one.
+    // ── The review step. AC: "it should ask for tags, etc when adding, not
+    // ── after and then having to remember to edit." So what just landed sits
+    // ── HERE, at the top where the press was, with the tagging on it.
     rLibraryAdded()+
+    (wantFind
+      ? '<input id="lib-q" class="lib-search" type="search" value="'+esc(LIB_Q)+'"'+
+          ' placeholder="'+esc(TLIB_COPY.search)+'" aria-label="'+esc(TLIB_COPY.search)+'"'+
+          ' oninput="libSearch(this.value)" style="margin-top:9px">'+
+        rLibraryTags()
+      : '')+
+    '<div id="lib-body" style="margin-top:9px">'+rLibraryBody()+'</div>'+
   '</div>';
 }
-// [1.480] — the paste box is opened by the Add link button and closed again.
-var LIB_ADD_LINK=false;
-function libAddLinkOpen(){ LIB_ADD_LINK=true; render(); }
-function libAddLinkClose(){ LIB_ADD_LINK=false; render(); }
 function rLibraryTags(){
   var offered=_libOffered();
   if(!offered.length && !LIB_FILTER.length) return '';
@@ -6498,9 +6611,17 @@ function rLibSub(head, items, mine, empty, showEmpty){
   // cooled together. Keyed off the heading rather than a fourth argument: there
   // are two kinds and the heading already says which.
   var links=(head===TLIB_COPY.linksHead);
-  return '<div class="lib-sub'+(links?' links':'')+'"><div class="lib-sub-hd">'+esc(head)+'</div>'+
+  // [1.484] — the count on the band. A shelf that says how much it holds is
+  // one somebody can decide about before scrolling it.
+  return '<div class="lib-sub'+(links?' links':'')+'"><div class="lib-sub-hd">'+esc(head)+
+      (items.length?'<span class="lib-sub-n">'+items.length+'</span>':'')+'</div>'+
     (items.length
-      ? '<div class="lib-list">'+items.map(function(f){ return rLibRow(f, mine); }).join('')+'</div>'
+      ? '<div class="lib-list'+
+          // [1.484] — while something in THIS list is open for editing, the
+          // list gives up its scroll box: an editor whose buttons are hidden
+          // inside a scroller is an editor with no buttons.
+          (items.some(function(f){ var _i=f.id||f.attachmentId; return _i===LIB_EDIT||_i===LIB_DEL; })?' editing':'')+
+          '">'+items.map(function(f){ return rLibRow(f, mine); }).join('')+'</div>'
       : '<div class="lib-empty">'+esc(empty)+'</div>')+
   '</div>';
 }
@@ -6530,19 +6651,31 @@ function rLibRow(f, mine){
   var _press=LIB_STANDALONE
     ? (mine?'libEdit(\''+esc(id)+'\')':'')
     : 'libAttach(\''+esc(id)+'\')';
+  // ── [1.484] — THE NAME GETS THE ROW ──────────────────────────────────
+  //
+  // **AC:** *"File names are also so compressed they are unusable."* True: the
+  // badge, the name, the size and Edit were one flex line inside a 300px panel,
+  // so the name — the only part anybody reads — was the part that gave way.
+  //
+  // Two lines now. The first is the badge and the NAME, with the whole width to
+  // itself and permission to wrap onto a second line before it is cut. The
+  // second carries the small facts and the controls, which can be small because
+  // they are the same on every row and nobody hunts for them.
   var h='<div class="lib-row'+(link?' lib-link':'')+'">'+
     '<button type="button" class="lib-pick"'+(_press?'':' disabled')+
       ' title="'+esc(link?f.url:f.fileName)+'"'+
       ' onclick="'+_press+'">'+
       '<span class="lib-kind">'+esc(link?_libLinkSite(f.url):_attKind(f.fileName))+'</span>'+
       '<span class="lib-name">'+esc(f.fileName)+'</span>'+
-      '<span class="lib-meta">'+esc(meta)+'</span></button>'+
-    // Editing is offered on a teacher's OWN files only. The Keylab Master
-    // Library is AC's shelf: a teacher sends from it and changes nothing on it,
-    // which is his own ruling — "teachers can only send from the master
-    // library" — and the server refuses it as well.
-    (mine?'<button type="button" class="lib-mini" onclick="libEdit(\''+esc(id)+'\')">'+
-       esc(TLIB_COPY.manage)+'</button>':'')+
+    '</button>'+
+    '<div class="lib-row-foot">'+
+      '<span class="lib-meta">'+esc(meta)+'</span>'+
+      // Editing is offered on a teacher's OWN files only. The Keylab Master
+      // Library is AC's shelf: a teacher sends from it and changes nothing on
+      // it — his own ruling, and the server refuses it as well.
+      (mine?'<button type="button" class="lib-act" onclick="libEdit(\''+esc(id)+'\')">'+
+         esc(TLIB_COPY.manage)+'</button>':'')+
+    '</div>'+
   '</div>';
   // ── [1.467] — ONE box, never three ──────────────────────────────────
   //
@@ -6575,38 +6708,81 @@ function rLibPanel(f){
 function rLibEdit(f){
   var id=f.id||f.attachmentId;
   var link=f.kind==='link';
+  // ── [1.484] — THE EDIT PANEL, REDESIGNED ─────────────────────────────
+  //
+  // **AC:** *"I click edit to add a tag but there is a mess of things to click
+  // with no instructions, and the layout is generally unhelpful here... Your
+  // own tag and add are subtle and hidden, like the other controls. The UX here
+  // has not been designed fully yet."* And: *"There is also no option to save
+  // the tag here. It's genuinely not there."*
+  //
+  // **The Add button WAS there, which makes his sentence the finding.** It was
+  // an 11px text link the colour of the small print, beside a bordered input —
+  // so the one thing on the panel that looked like a control was the box, and
+  // the thing that acted on it looked like a caption. A control nobody can see
+  // is not there.
+  //
+  // Rebuilt as three labelled sections and a separated footer, so the panel
+  // reads as a form rather than as a heap:
+  //
+  //   NAME              the field, and a Save button beside it
+  //   TAGS              the studio's words, pressed on and off
+  //   YOUR OWN TAGS     their words, with a real field and a real Add
+  //   ─────────────
+  //   removals          last, behind a rule, because they undo rather than edit
   return '<div class="lib-edit">'+
-    '<input id="lib-rn-'+esc(id)+'" value="'+esc(f.fileName)+'" aria-label="'+esc(TLIB_COPY.renameGo)+'">'+
-    // The ADDRESS is shown and is not editable here. AC's rule — renaming does
-    // not affect the address — is easier to trust when the address is visible
-    // and plainly not a field.
-    (link?'<div class="lib-meta" style="margin:-2px 0 6px">'+esc(f.url)+'</div>':'')+
-    '<div class="lib-edit-acts">'+
-      '<button type="button" class="lib-mini" onclick="libRename(\''+esc(id)+'\')">'+esc(TLIB_COPY.renameGo)+'</button>'+
-      // A link has no shelf to come off: it either exists in the library or it
-      // does not, so the two removals a file has are one here.
-      (link?''
-           :'<button type="button" class="lib-mini" onclick="libUnshelve(\''+esc(id)+'\')">'+esc(TLIB_COPY.unshelve)+'</button>')+
-      '<button type="button" class="lib-mini bad" onclick="libAskDelete(\''+esc(id)+'\')">'+
-        esc(link?TLIB_COPY.linkDel:TLIB_COPY.del)+'</button>'+
+    '<div class="lib-fld">'+
+      '<div class="lib-lbl">'+esc(TLIB_COPY.lblName)+'</div>'+
+      '<div class="lib-fld-row">'+
+        '<input id="lib-rn-'+esc(id)+'" value="'+esc(f.fileName)+'"'+
+          ' aria-label="'+esc(TLIB_COPY.lblName)+'"'+
+          ' onkeydown="if(event.key===\'Enter\'){event.preventDefault();libRename(\''+esc(id)+'\');}">'+
+        '<button type="button" class="lib-act" onclick="libRename(\''+esc(id)+'\')">'+
+          esc(TLIB_COPY.saveName)+'</button>'+
+      '</div>'+
+      // The address is shown and is plainly not a field: renaming does not
+      // touch it, and a rule is easier to trust when you can see what it
+      // protects.
+      (link?'<div class="lib-meta" style="margin-top:3px">'+esc(f.url)+'</div>':'')+
     '</div>'+
-    // The studio's vocabulary, as ticks. AC owns the words; anybody who may
-    // write to the shelf applies them.
     (LIB_TAGS.length
-      ? '<div class="lib-tags">'+LIB_TAGS.map(function(t){
-          var on=(f.tags||[]).indexOf(t.tagId)>-1;
-          return '<button type="button" class="lib-tag'+(on?' on':'')+'" aria-pressed="'+(on?'true':'false')+'"'+
-            ' onclick="libFileTag(\''+esc(id)+'\',\''+esc(t.tagId)+'\')">'+esc(t.name)+'</button>';
-        }).join('')+'</div>'
+      ? '<div class="lib-fld">'+
+          '<div class="lib-lbl">'+esc(TLIB_COPY.lblTags)+'</div>'+
+          '<div class="lib-tags" style="padding-top:0">'+LIB_TAGS.map(function(t){
+            var on=(f.tags||[]).indexOf(t.tagId)>-1;
+            return '<button type="button" class="lib-tag'+(on?' on':'')+'"'+
+              ' aria-pressed="'+(on?'true':'false')+'"'+
+              ' onclick="libFileTag(\''+esc(id)+'\',\''+esc(t.tagId)+'\',this)">'+esc(t.name)+'</button>';
+          }).join('')+'</div>'+
+        '</div>'
       : '')+
-    // And their own words, which nobody else ever sees — not even admin.
-    '<div class="lib-tags">'+(f.privateTags||[]).map(function(w){
-      return '<button type="button" class="lib-tag priv on" onclick="libPrivateRemove(\''+esc(id)+'\',\''+
-        esc(w)+'\')">'+esc(w)+' &#215;</button>';
-    }).join('')+
-      '<input id="lib-pt-'+esc(id)+'" style="width:auto;margin:0" placeholder="'+esc(TLIB_COPY.privatePh)+'"'+
-        ' aria-label="'+esc(TLIB_COPY.privatePh)+'" onkeydown="if(event.key===\'Enter\'){event.preventDefault();libPrivateAdd(\''+esc(id)+'\');}">'+
-      '<button type="button" class="lib-mini" onclick="libPrivateAdd(\''+esc(id)+'\')">'+esc(TLIB_COPY.privateAdd)+'</button>'+
+    '<div class="lib-fld">'+
+      '<div class="lib-lbl">'+esc(TLIB_COPY.lblMine)+'</div>'+
+      ((f.privateTags||[]).length
+        ? '<div class="lib-tags" style="padding-top:0;padding-bottom:5px">'+(f.privateTags||[]).map(function(w){
+            return '<button type="button" class="lib-tag priv on" title="'+esc(TLIB_COPY.removeWord)+'"'+
+              ' onclick="libPrivateRemove(\''+esc(id)+'\',\''+esc(w)+'\')">'+esc(w)+' &#215;</button>';
+          }).join('')+'</div>'
+        : '')+
+      '<div class="lib-fld-row">'+
+        '<input id="lib-pt-'+esc(id)+'" placeholder="'+esc(TLIB_COPY.privatePh)+'"'+
+          ' aria-label="'+esc(TLIB_COPY.privatePh)+'"'+
+          ' onkeydown="if(event.key===\'Enter\'){event.preventDefault();libPrivateAdd(\''+esc(id)+'\');}">'+
+        '<button type="button" class="lib-act" onclick="libPrivateAdd(\''+esc(id)+'\')">'+
+          esc(TLIB_COPY.privateAdd)+'</button>'+
+      '</div>'+
+    '</div>'+
+    // The two removals, last and behind a rule: they undo rather than edit, and
+    // a destructive control beside a text field is one a thumb finds by
+    // accident.
+    '<div class="lib-foot">'+
+      (link?''
+           :'<button type="button" class="lib-act" onclick="libUnshelve(\''+esc(id)+'\')">'+
+            esc(TLIB_COPY.unshelve)+'</button>')+
+      '<button type="button" class="lib-act bad" onclick="libAskDelete(\''+esc(id)+'\')">'+
+        esc(link?TLIB_COPY.linkDel:TLIB_COPY.del)+'</button>'+
+      '<button type="button" class="lib-act" style="margin-left:auto"'+
+        ' onclick="libEdit(\''+esc(id)+'\')">'+esc(TLIB_COPY.doneEditing)+'</button>'+
     '</div>'+
   '</div>';
 }

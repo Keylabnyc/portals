@@ -758,6 +758,18 @@ input[type=checkbox]{width:13px;height:13px;padding:0;margin:0;border:0;border-r
 .att-size{font-size:10.5px;color:var(--text5)}
 .bubble.mine .att-size{color:rgba(255,255,255,.7)}
 .att-input{display:none}
+/* [1.532] — the More menu. Anchored to its button so it cannot drift, and
+   above the row rather than below it: on a phone the row is near the bottom of
+   the screen and a menu opening downward would be off it. */
+.more-wrap{position:relative;display:inline-flex}
+.more-menu{position:absolute;bottom:calc(100% + 6px);left:0;z-index:60;
+  min-width:190px;display:flex;flex-direction:column;
+  background:var(--bg5);border:1px solid var(--border2);border-radius:var(--r);
+  box-shadow:0 8px 28px rgba(0,0,0,.18);padding:4px;gap:2px}
+.more-item{background:none;border:0;text-align:left;padding:10px 12px;border-radius:6px;
+  font-family:"Inter",sans-serif;font-size:13px;font-weight:600;color:var(--text2);cursor:pointer}
+.more-item:hover{background:rgba(0,0,0,.08);color:var(--text)}
+
 /* [1.516] — the composer says it will take a file, only while one is over it. */
 .cmp-drop.drop-hot{outline:2px dashed #1a4fc4;outline-offset:2px;background:rgba(26,79,196,.06)}
 
@@ -4449,12 +4461,19 @@ function rFamilyThread(){
       (_upBusy
         ? '<button class="btn btn-p" disabled title="'+esc(TCH_COPY.sendBlockedUploading)+'">Send</button>'
         : '<button class="btn btn-p" onclick="sendFamilyMessage()">Send</button>')+
-      // [1.371] — beside Send, not inside a menu. It is one of two ways to
-      // finish the message that is already written.
-      '<button type="button" class="btn btn-s" onclick="openSendLater()">'+esc(TCH_COPY.sendLater)+'</button>')+
-    // [1.359] — one press, straight to the thread with the office.
-    '<button type="button" class="btn btn-ask" onclick="askAdminAbout()">'+
-      esc(CMP_COPY.askAdmin)+'</button>'+
+      '')+
+    // ── [1.532] — the occasional actions live behind MORE ──────────────────
+    //
+    // ~~[1.371]: beside Send, not inside a menu.~~ **Reversed by AC's approved
+    // layout, 10 September 2026.** That call was made when the row held three
+    // buttons; it holds seven now and wraps to three lines on a phone, so Send —
+    // nearly every press — competes with six things that are almost none of
+    // them. Schedule Send, Ask Admin and End Conversation each cost as much
+    // width as Send and are a small share of presses.
+    //
+    // **Send is the only primary, always last, and never moves.** That is what
+    // the menu buys, and it is the whole point of the proposal AC approved.
+    _rMore(t, _cRow, _r)+
     '<span style="flex:1"></span>'+
     // [1.287] — nothing sent yet, so there is nothing to close. AC: "a
     // conversation that is opened but never started should not need to be
@@ -4463,7 +4482,7 @@ function rFamilyThread(){
     // to offer while a reply is owed: the server refuses it either way, and a
     // button that fails is worse than no button. The teacher is told why by
     // the row's own line, in AC's words.
-    (!(t.messages||[]).length || (_cRow&&Number(_cRow.waitingSince))
+    ((!(t.messages||[]).length || (_cRow&&Number(_cRow.waitingSince)) || !(_cRow&&_cRow.closed))
       ? ''
       : _cRow&&_cRow.closed
       // [1.347] — inside the OPEN thread the state still has to be said: this
@@ -4473,7 +4492,7 @@ function rFamilyThread(){
       // lives, rather than a third one.
       ? '<span class="closed-tag'+(_r&&_r.closedUnanswered?' unanswered':'')+'">'+
         esc(_r&&_r.closedUnanswered?TCH_COPY.endedUnanswered:'Archived')+'</span>'
-      : '<button type="button" class="btn btn-s" onclick="closeConversation()">'+esc(TCH_COPY.closeConversation)+'</button>');
+      : '');   // [1.532] — End Conversation is in the More menu now; only the Archived tag stays here.
   // BACKLOG 1.161 #4 — which child, asked only when a teacher has more than
   // one child in this family. One child and it is set automatically with
   // nothing on screen.
@@ -8176,6 +8195,8 @@ var TCH_COPY={
   // options"), and "Send later" is the name he approved in the plan.
   // [1.523] — AC's words, 10 September 2026. The button says what is happening
   // to it, in its own place.
+  // [1.532] — AC's approved layout. One word, and it is the standard one.
+  more:'More',
   sending:'Sending\u2026',
   sentOk:'Message sent',
   sendLater:'Schedule Send',
@@ -8334,6 +8355,93 @@ function _tbBtn(id,cmd,label,title){
 // list, which is the only indenting this tool has ever needed and is what every
 // mail client does. blockquote stays on the allowlist: a pasted quote still
 // keeps its bar, and the server still accepts one.
+// [1.532] — Add file / Add link on the toolbar. Same handler as before, same
+// pressed state; only the row it lives in changed.
+function _tbPick(id, kind, label){
+  return '<button type="button" class="cmp-tb-btn cmp-tb-pick'+(PICK===kind?' on':'')+'"'+
+    ' aria-pressed="'+(PICK===kind?'true':'false')+'"'+
+    ' onmousedown="event.preventDefault()"'+
+    ' onclick="pickOpen(\''+kind+'\',\''+esc(id)+'\')">'+esc(label)+'</button>';
+}
+
+// ── [1.532] — the More menu, AC's approved layout ────────────────────────
+//
+// AC, 10 September 2026: *"the button layout and functions work as proposed."*
+// The proposal sorted the composer's controls by WHEN they are used. This holds
+// the ones used occasionally, so the row itself holds only Send.
+//
+// **Every item does exactly what its button did** — same handlers, same guards,
+// same wording. Nothing here is new behaviour; it is the same controls in a
+// place that stops them competing with the one press that matters.
+//
+// It closes on choosing, on a second press, and on Escape, and it is drawn from
+// the same conditions the buttons carried: Schedule Send only when a send is
+// possible, End Conversation only when there is something to end and no reply
+// is owed ([1.287]/[1.309]/[1.312]).
+var MORE_OPEN = false;
+function moreToggle(){ MORE_OPEN=!MORE_OPEN; render(); }
+function moreClose(){ if(MORE_OPEN){ MORE_OPEN=false; render(); } }
+// Closed by a press anywhere else and by Escape, like every other menu on the
+// page — a menu that can only be closed by the button that opened it is a trap
+// on a phone, where the button is under the thumb that wants to dismiss it.
+document.addEventListener('click', function(){ moreClose(); });
+document.addEventListener('keydown', function(e){ if(e.key==='Escape') moreClose(); });
+function _moreDo(fn){
+  MORE_OPEN=false;
+  // **Rendered HERE, not left to the action.** The first version closed the
+  // menu in state and relied on whatever was chosen to redraw — which all three
+  // happen to do. Driven in a browser, the menu stayed on screen for an action
+  // that did not, and "they all happen to" is not a thing to build on. A second
+  // render costs nothing and the menu cannot survive a choice.
+  try{ fn(); }catch(e){}
+  render();
+}
+function _rMore(t, cRow, r){
+  var items=[];
+  items.push(['openSendLater()', TCH_COPY.sendLater]);
+  items.push(['askAdminAbout()', CMP_COPY.askAdmin]);
+  var canClose = (t.messages||[]).length && !(cRow&&Number(cRow.waitingSince)) && !(cRow&&cRow.closed);
+  if(canClose) items.push(['closeConversation()', TCH_COPY.closeConversation]);
+  var list=items.map(function(it){
+    return '<button type="button" class="more-item" onclick="_moreDo(function(){'+it[0]+'})">'+esc(it[1])+'</button>';
+  }).join('');
+  return '<span class="more-wrap">'+
+    '<button type="button" class="btn btn-s more-btn" aria-haspopup="true" aria-expanded="'+(MORE_OPEN?'true':'false')+'"'+
+      ' onclick="event.stopPropagation();moreToggle()">'+esc(TCH_COPY.more)+' \u25be</button>'+
+    (MORE_OPEN?'<span class="more-menu" onclick="event.stopPropagation()">'+list+'</span>':'')+
+  '</span>';
+}
+
+
+// ── [1.534] — one press means one press ──────────────────────────────────
+//
+// AC, 10 September 2026: *"When I click send, I only want to click it once"* —
+// said of Send, and true of every control that reaches the server.
+//
+// **These four already give instant confirmation**: the scheduled row leaves
+// the list on the press and the server catches up behind it, which is the
+// optimistic shape [1.496] settled. So they need no status LINE — [1.439]'s
+// rule is that where the change on screen IS the confirmation, a second one
+// beside the button is noise.
+//
+// **What they had no answer for was the second press.** Nothing stopped a
+// teacher pressing Cancel Send twice while the first was in flight, and the
+// second press acted on a row the first had already removed. That is the
+// likeliest cause of [1.440]'s *"sometimes needs pressing twice"* and
+// *"sometimes deletes the message entirely"* — not proven, and not claimed as
+// the fix, but this is the guard that would prevent it either way.
+//
+// Cleared on the answer AND after ten seconds, so a dropped connection cannot
+// leave a control dead for the rest of the session.
+var _ONCE = {};
+function _oncePress(key){
+  if(_ONCE[key]) return false;
+  _ONCE[key]=true;
+  setTimeout(function(){ delete _ONCE[key]; }, 10000);
+  return true;
+}
+function _onceDone(key){ delete _ONCE[key]; }
+
 function rComposerToolbar(id){
   return '<div class="cmp-tb">'+
     _tbBtn(id,'bold','<b>B</b>',CMP_COPY.bold)+
@@ -8343,10 +8451,22 @@ function rComposerToolbar(id){
     _tbBtn(id,'insertUnorderedList','• List',CMP_COPY.bullet)+
     _tbBtn(id,'insertOrderedList','1. List',CMP_COPY.number)+
     '<span class="cmp-div"></span>'+
-    // [1.494] — the Link button moved off this row to Add link beside Send,
-    // so the toolbar is formatting only: one control per job.
+    // ~~[1.494] — the Link button moved off this row… the toolbar is formatting
+    // only~~ — **REVERSED by [1.532], AC's approved layout, 10 September 2026.**
+    //
+    // *"the button layout and functions work as proposed."* The proposal sorted
+    // the composer's controls by WHEN they are used, and Add file / Add link
+    // are things you do **while writing** — which is what this row is. They sit
+    // beside the formatting controls now, and the actions row keeps only the
+    // things you do when you are FINISHED.
+    //
+    // [1.494]'s reasoning was "one control per job", and that still holds: this
+    // is the same one control, moved, not a second one.
     '<button type="button" class="cmp-tb-btn" title="'+esc(CMP_COPY.clear)+'" onmousedown="event.preventDefault()"'+
       ' onclick="_composerClearFmt(\''+id+'\')">✕</button>'+
+    '<span class="cmp-div"></span>'+
+    _tbPick(id,'file',TLIB_COPY.pickFile)+
+    _tbPick(id,'link',TLIB_COPY.pickLink)+
     // ── [1.434] — the merge tags, on the toolbar where a message is WRITTEN ──
     //
     // AC, 8 September 2026: "merge tags need to be typed in and can't be
@@ -9076,8 +9196,10 @@ function rPickButtons(composerId){
   // phone the panel is directly under these buttons, so the panel's own footer is
   // below the fold and Done belongs here, with everything else the thumb is on.
   // **One control either way — it is drawn in exactly one of the two places.**
-  return b('file', TLIB_COPY.pickFile)+b('link', TLIB_COPY.pickLink)+
-    ((PICK && _isPhone())
+  // [1.532] — Add file and Add link have moved to the TOOLBAR, where writing
+  // happens. This row keeps only what you press when you are finished, so Done
+  // is all that is left of the pair.
+  return ((PICK && _isPhone())
       ? '<button type="button" class="btn btn-p" onclick="pickClose(\''+esc(composerId)+'\')">'+esc(TLIB_COPY.editMessage)+'</button>'
       : '');
 }
@@ -9506,6 +9628,7 @@ function askDeleteScheduled(id){ SCHED={mode:'delete', messageId:id, at:''}; ren
 // nothing here that decides how a message is sent — only when.
 function doSendNow(id){
   var c=_amendCtx(); if(!c) return;
+  if(!_oncePress('sendnow:'+id)) return;   // [1.534]
   SCHED={mode:'', messageId:'', at:''};
   var keep=(c.t.scheduled||[]).slice();
   var row=null;
@@ -9521,6 +9644,7 @@ function doSendNow(id){
   _shouldScrollMsgList=true;
   render();
   api({action:'sendScheduledNow', data:Object.assign({}, c.req, {messageId:id})}, function(e,r){
+    _onceDone('sendnow:'+id);   // [1.534] — the answer releases it
     if(e||!r||!r.ok){
       c.t.scheduled=keep;
       c.t.messages=(c.t.messages||[]).filter(function(m){ return m.messageId!==id; });
@@ -9551,6 +9675,7 @@ function doSendNow(id){
 // either is [1.43]'s rule broken, on words they watched themselves type.
 function cancelSend(id){
   var c=_amendCtx(); if(!c) return;
+  if(!_oncePress('cancel:'+id)) return;   // [1.534]
   SCHED={mode:'', messageId:'', at:''};
   var keep=(c.t.scheduled||[]).slice();
   var row=null; keep.forEach(function(m){ if(m.messageId===id) row=m; });
@@ -9558,6 +9683,7 @@ function cancelSend(id){
   c.t.scheduled=keep.filter(function(m){ return m.messageId!==id; });
   render();
   api({action:'unscheduleMessage', data:Object.assign({}, c.req, {messageId:id})}, function(e,r){
+    _onceDone('cancel:'+id);   // [1.534] — the answer releases it
     if(e||!r||!r.ok){
       c.t.scheduled=keep;
       showMsg((r&&r.error)||'Could not cancel that send.','e');
@@ -9588,11 +9714,13 @@ function cancelSend(id){
 // nothing anybody can see, and no email.
 function deleteScheduled(id){
   var c=_amendCtx(); if(!c) return;
+  if(!_oncePress('del:'+id)) return;   // [1.534]
   SCHED={mode:'', messageId:'', at:''};
   var keep=(c.t.scheduled||[]).slice();
   c.t.scheduled=keep.filter(function(m){ return m.messageId!==id; });
   render();
   api({action:'retractMessage', data:Object.assign({}, c.req, {messageId:id})}, function(e,r){
+    _onceDone('del:'+id);   // [1.534] — the answer releases it
     if(e||!r||!r.ok){
       c.t.scheduled=keep;
       showMsg((r&&r.error)||'Could not cancel that message.','e');
@@ -9795,6 +9923,7 @@ function _plainToComposerHtml(text){
 }
 function saveEditMessage(){
   var c=_amendCtx(); if(!c || AMEND.kind!=='edit') return;
+  if(!_oncePress('edit:'+AMEND.messageId)) return;   // [1.534]
   var id=AMEND.messageId;
   var el=document.getElementById(c.composerId);
   var html=el?_composerClean(el):(c.t.draft||'');
@@ -10225,6 +10354,10 @@ function sendStaffMessage(sendAt){
   TPL_USED=null; TPL_NAMING=false;   // [1.127] — sent, so there is nothing left to offer to save
   _draftKeep(t, '');   // [1.336]
   // [1.531] — nothing to reset; the flag is gone from this portal.
+  // [1.533] — the same busy state [1.523] gave the FAMILY send. This is the
+  // day's pattern in miniature: one mechanism, built for one of two twins.
+  // Nothing said "Sending…" here either, and Send was never disabled.
+  actStart('send', TCH_COPY.sending);
   t._sendInFlight=true;
   _shouldScrollMsgList=true;
   // [1.371] — a scheduled reply does not answer anybody yet.
@@ -10234,6 +10367,7 @@ function sendStaffMessage(sendAt){
   api({action:'sendMessage', data:reqData}, function(e,r){
     if(!ACTIVE_STAFF_THREAD || ACTIVE_STAFF_THREAD.otherId!==t.otherId) return;
     t._sendInFlight=false;
+    if(!(e||!r||!r.ok)) actDone('send', TCH_COPY.sentOk);   // [1.533]
     if(e||!r||!r.ok){
       if(sendAt) t.scheduled=(t.scheduled||[]).filter(function(m){ return m!==pending; });
       else t.messages=t.messages.filter(function(m){ return m!==pending; });

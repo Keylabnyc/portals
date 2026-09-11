@@ -5920,13 +5920,16 @@ var TLIB_COPY={
   pickFile:'Add file',
   pickLink:'Add link',
   fromDevice:'Add from your device',
-  // PLACEHOLDER — flagged for AC, 10 September 2026. Teacher-facing.
+  // [1.560] — the PLACEHOLDER flag that stood here is REMOVED. AC supplied this
+  // line in [1.552] and the flag was left above it, so the same string said
+  // "his to write" and "his words, final" one line apart. Found in the backlog
+  // audit he asked for on 10 September.
   dropHint:'you can also drag and/or paste files directly into your message',   // [1.552] — AC's words, final
   searchFiles:'Search your saved files',
   searchLinks:'Search your saved links',
   fileAttached:'File attached',
   linkAdded:'Link added',
-  linkKind:'LINK',              // DERIVED — AC, 11 September: "simply list the file type instead" of the site
+  linkKind:'LINK',              // DERIVED — AC, 10 September: "simply list the file type instead" of the site
   linkSelected:'Selected',      // PLACEHOLDER — what a saved link's row says once it has filled the fields
   manageGo:'Manage Library',
   // [1.507] — AC, 10 September 2026: *"needs the done button there to clearly
@@ -6029,7 +6032,8 @@ var TLIB_COPY={
   // file told about "files" is [1.543]'s fault again, one string doing for two,
   // and the one-step card is only ever about one.
   addingOne:'Adding your file\u2026',
-  // [1.543] — its own word. PLACEHOLDER, flagged: teacher-facing.
+  // [1.543] — its own word. [1.560] — the PLACEHOLDER flag is removed: AC gave
+  // this string verbatim in [1.552], and the flag outlived the answer.
   addingLinks:'adding your links...',   // [1.552] — AC's words, verbatim
   added:'Added to your library.',
   addFailed:'That file could not be added.',
@@ -6076,7 +6080,11 @@ var TLIB_COPY={
   linkDelSafe:'Messages you have already sent keep working \u2014 a link has no file to take away.',
   linkRenamed:'Renamed.',
   someRefused:'{n} of those are not yours to change.',
-  // ── [1.484] — the words the redesign added. PLACEHOLDERS, flagged. ────
+  // ── [1.484] — the words the redesign added. PLACEHOLDERS **unless the line
+  // ── says otherwise**, and `newSay` below says otherwise.
+  // [1.560] — this header used to claim the whole block was AC's to write while
+  // the next line said his words were final. A blanket flag above a settled
+  // string asks him for copy he has already given.
   // AC's words, 10 September 2026. FINAL.
   newSay:'You can name your link or file and add tags. Tags help organize your library and make it searchable.',
   lblName:'Name',
@@ -6329,7 +6337,7 @@ function pickSearch(v){ PICK_Q=String(v||''); _pickRedraw(); }
 // the next one.
 function pickUse(id, composerId){
   var it=_pickFind(id); if(!it) return;
-  // AC, 11 September: a saved link FILLS the address and the text, so the
+  // AC, 10 September: a saved link FILLS the address and the text, so the
   // words can be edited, and Add link is what inserts it — like Gmail. The
   // text keeps whatever was highlighted; the link's name fills it otherwise.
   if(it.kind==='link'){
@@ -8537,7 +8545,7 @@ function _composerInsertLink(id, url, label){
 // commands; blockquote has no state to query, so it is resolved from the DOM.
 var _CMP_STATE_CMDS=['bold','italic','underline','insertUnorderedList','insertOrderedList'];
 
-// AC, 11 September 2026: "The link needs to be added directly where the
+// AC, 10 September 2026: "The link needs to be added directly where the
 // cursor currently is in the message, just like gmail." The caret was saved
 // once, when Add link was pressed, used once and forgotten — so a second link
 // landed at the START of the message. Now every keyup, mouseup and blur in
@@ -8828,8 +8836,15 @@ var TCH_COPY={
   // to it, in its own place.
   // [1.532] — AC's approved layout. One word, and it is the standard one.
   more:'More',
-  // [1.535] — PLACEHOLDER, flagged: teacher-facing, so it is AC's to write.
-  formatting:'Formatting',   // [1.552] — AC's word, final
+  // [1.535] — was flagged as mine to replace; [1.552] is AC answering it.
+  // [1.560] — the flag is removed rather than left contradicting the line it
+  // sits on.
+  // [1.561] — **and it was in the wrong object.** `rComposerToolbar` reads
+  // `CMP_COPY.formatting`; this lives in `TCH_COPY`, so the Aa button shipped
+  // with `title=""` and AC's own word never reached the screen. `esc(undefined)`
+  // is the empty string, which is why nothing looked broken. Kept here AND
+  // added to CMP_COPY, because both objects are read by live code and a moved
+  // string is a second silent hole waiting for the other caller.
   sending:'Sending\u2026',
   sentOk:'Message sent',
   sendLater:'Schedule Send',
@@ -8952,6 +8967,8 @@ var CMP_COPY={
   linkCancel:'Cancel',
   linkRejected:'That doesn’t look like a web address. Try something like keylab.nyc/lessons.',
   linkSharing:'Set sharing to “Anyone with the link” before you send, or ask admin for the parent’s email to share it privately.',
+  // [1.561] — the toolbar's own object, which is what `rComposerToolbar` reads.
+  formatting:'Formatting',   // [1.552] — AC's word, final
   bold:'Bold', italic:'Italic', underline:'Underline',
   // [1.332] — quote, indent and outdent went with their buttons. Tab and
   // Shift+Tab do the indenting now, inside a list.

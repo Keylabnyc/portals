@@ -1342,6 +1342,7 @@ var RESET_TOKEN = '';
 var _pollTimer = null;
 var _pendingOpenFamilyId = '';   // set by boot() from ?openFamilyId=, consumed once by loadFamilyThreads()
 var _lastPickState='';   // [1.512] — which picker was open on the previous render
+var _lastAttCount=0;     // [1.448] — how many files were on the composer on the previous render
 var _shouldScrollMsgList = false; // see render() — scroll-to-newest, set only when messages actually change
 // [1.235] — set when a conversation is opened FROM the Marked for review
 // section, cleared by the first render that has a thread to look in.
@@ -1828,7 +1829,27 @@ function _renderBody(){
   var _prevCmpTop=_prevCmp?_prevCmp.getBoundingClientRect().top:null;
   var _pickWas=_lastPickState;
   _lastPickState=PICK||'';
-  var _pickChanged=(_pickWas!==_lastPickState);
+  // ── [1.448] — AND THE SAME THING WHEN A FILE IS ATTACHED ───────────────
+  //
+  // **AC, 8 September 2026:** *"The screen jumps when a file is attached and
+  // sent."* Investigated on the 9th and left unbuilt, with the right diagnosis
+  // written down and no fix attached to it: *"attaching a file adds a chip row,
+  // which grows the composer, which reflows the page under a finger that is
+  // already somewhere."*
+  //
+  // **[1.512] had already solved that exact sentence, for a different cause.**
+  // A picker opening swaps a region of one height for a region of another, so
+  // restoring `pageYOffset` puts different content under the reader's eye and
+  // the composer slides down the screen. Its answer was to hold the COMPOSER
+  // still instead of the offset — and it was fenced to the picker render alone.
+  //
+  // **Attaching grows the composer by a chip row. Same cause, same fix, and it
+  // was one condition away.** Counted rather than watched for a flag: an upload
+  // starting, landing, failing and a chip being removed are four different
+  // paths and all four change the height.
+  var _attWas=_lastAttCount;
+  _lastAttCount=(typeof ATT_PENDING!=='undefined'&&ATT_PENDING)?ATT_PENDING.length:0;
+  var _pickChanged=(_pickWas!==_lastPickState)||(_attWas!==_lastAttCount);
   el.innerHTML=h;
   // [1.127] — an arrow-key reorder has to leave the focus ON THE ROW IT MOVED,
   // and that cannot be done at the call site: the save that follows re-renders

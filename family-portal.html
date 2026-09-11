@@ -4904,8 +4904,27 @@ function _klScheduleEvents(){
 }
 
 function _klDateRow(e, whenText, whoText){
+  // ── [1.345] — an absence needs its OWN badge ───────────────────────────
+  //
+  // **Found by looking at the real screen on a phone, which no test showed.**
+  // Every row here carries a badge, and the badge was decided by one question:
+  // is the studio closed? An absence answers no — so a parent read
+  // *"Leo — Teacher absence. Sam Ortiz is away."* with a green
+  // **Keylab is open** beside it.
+  //
+  // **Both halves of that are wrong.** It answers a question nobody asked (the
+  // studio being open is irrelevant when your child's lesson is off), and it is
+  // GREEN — the colour this portal uses for reassurance — sitting next to news
+  // that a lesson is cancelled.
+  //
+  // **`No lesson` is AC's own phrase**, from the wording he gave for the row
+  // itself, and it is the fact the badge should carry. Drawn in the same red as
+  // `Closed`, because to this family the outcome is the same: nothing happens
+  // that day.
   var tag = e.kind==='start'
     ? '<span class="kl-tag op">First lesson</span>'
+    : e.kind==='absence'
+    ? '<span class="kl-tag cl">No lesson</span>'
     : '<span class="kl-tag '+(e.closed?'cl':'op')+'">'+(e.closed?'Closed':'Keylab is open')+'</span>';
   return '<div class="kl-date"><div>'+
     '<div class="kl-who">'+esc(e.event)+'</div>'+
@@ -4922,6 +4941,16 @@ function rHomeDayFilteredDates(){
   var hits=[];
   _klScheduleEvents().forEach(function(e){
     if(e.kind==='start'){ hits.push({e:e, when:_fmtDateRange(e.startDate,e.endDate), who:''}); return; }
+    // [1.345] — an ABSENCE already belongs to one child and says so in its own
+    // words. The `who` column here answers "which of your children has a lesson
+    // on this weekday", which is the right question for a studio closure and
+    // the wrong one for a teacher's day off: a household with two children on
+    // the same weekday would read *"Leo — Teacher absence. Sam Ortiz is away."*
+    // labelled **Leo & Mia**, naming a child whose lesson is going ahead.
+    if(e.kind==='absence'){
+      hits.push({e:e, when:_fmtLessonDate(_parseYMD(e.startDate)), who:'', sort:_parseYMD(e.startDate).getTime()});
+      return;
+    }
     _klEventDates(e).forEach(function(d){
       var who=byDay[d.getDay()];
       if(!who) return;

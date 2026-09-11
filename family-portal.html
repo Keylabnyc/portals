@@ -372,7 +372,11 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 .bubble-row{display:flex;margin-top:2px}
 .bubble-row.run-start{margin-top:.6rem}
 .bubble-row.mine{justify-content:flex-end}
-.bubble{max-width:80%;background:rgba(255,255,255,.55);border:1px solid var(--border);border-radius:var(--rl);padding:.6rem .8rem}
+/* [1.563] — the same four steps as the teacher portal, and the same reason: a
+   tint is its backdrop plus milk, so one component was a different colour on
+   every screen. page --bg2 · thread --bg3 · composer --bg4 · bubble --bg5 ·
+   the text box #fff. */
+.bubble{max-width:80%;background:var(--bg5);border:1px solid var(--border);border-radius:var(--rl);padding:.6rem .8rem}
 .bubble.mine{background:var(--acc);border-color:var(--acc);color:#fff}
 .bubble-sender{font-size:11.5px;font-weight:600;letter-spacing:.02em;color:var(--acc);font-family:"Inter",sans-serif;margin-bottom:.25rem}
 /* 1.186, AC: "the dark blue bubble and current text css using small dark red
@@ -402,7 +406,7 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
    there is no URL to give anybody, which is the whole of the design. */
 .att-strip{display:flex;flex-wrap:wrap;gap:6px;margin:.45rem 0 .1rem}
 .att-tile{display:flex;align-items:center;gap:8px;max-width:100%;padding:5px 9px 5px 5px;
-  border:1px solid var(--border2);border-radius:var(--rl);background:rgba(255,255,255,.75);
+  border:1px solid var(--border2);border-radius:var(--rl);background:#fff;
   cursor:pointer;font-family:inherit;text-align:left;color:var(--text)}
 .att-tile:hover{background:#fff}
 /* [1.417] — the pair. AC: "Offer the option to view or download", and he
@@ -506,7 +510,7 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
    line. The box, then the rules, then the chips, then the action row. */
 .composer{display:flex;flex-direction:column;gap:0;align-items:stretch}
 .composer textarea{background:rgba(255,255,255,.45);border:1px solid var(--border2);color:var(--text);border-radius:var(--r);padding:9px 10px;font-family:"Inter",sans-serif;font-size:14px;width:100%;outline:none;resize:none;min-height:44px;max-height:120px}
-.composer textarea:focus{border-color:var(--acc);background:rgba(255,255,255,.65)}
+.composer textarea:focus{border-color:var(--acc)}
 .composer .btn{width:auto;flex:0 0 auto}
 /* The one horizontal row left: Add file and Send, together, under the box. */
 .kl-send-row{display:flex;gap:8px;align-items:center;padding-top:8px}
@@ -2745,7 +2749,8 @@ function rHomeMessages(){
 
   if(unreadTotal){
     h+='<div style="text-align:right;margin-bottom:.4rem">'+
-      '<button type="button" class="lnk-btn"  onclick="markAllHomeRead()">Mark all read</button></div>';
+      '<button type="button" class="lnk-btn"  onclick="markAllHomeRead()">Mark all read</button></div>'+
+      rAct('readall');   // [1.562] — beside the button, not in the corner
   }
   h+='<div class="kl-subhd">Your contacts</div>';
   h+=HOME_CONVOS.list.map(rHomeContactRow).join('');
@@ -2768,6 +2773,7 @@ function rHomeThreadView(){
       // portal is the outcome worth having. Saving a message for review is a
       // staff control and deliberately does not appear here.
       '<button type="button" class="lnk-btn" style="margin-left:6px" onclick="refreshHomeThread()">'+(t.refreshing?'<span class="spin">↻</span>':'↻ Refresh')+'</button>'+
+      rAct('thread')+   // [1.562] — loading and refreshing report here, together
     '</span></div>';
   h+='<div class="kl-thead">'+
     '<div class="kl-cav'+(t.teacherId==='admin'?' adm':'')+'">'+esc(t.teacherId==='admin'?'K':_klInitials(t.teacherName))+'</div>'+
@@ -2931,7 +2937,7 @@ function closeHomeThread(){
 
 function markAllHomeRead(){
   fapi('markAllRead', {}, function(e,r){
-    if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not update.','e'); return; }
+    if(e||!r||!r.ok){ actFail('readall',(r&&r.error)||KL_MSG_FAIL.markRead); return; }
     loadHomeConversations(true);
   });
 }
@@ -3202,7 +3208,9 @@ function toggleHomeThread(teacherId, teacherName){
     // `refreshHomeThread` opens with `if(!t||t.refreshing) return;` — so Refresh
     // did nothing at all, silently, for the rest of the session.
     HOME_EXPANDED.refreshing=false;
-    if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not load conversation.','e'); render(); return; }
+    // [1.562] — in the thread's own header, where Refresh reports, rather than
+    // in the corner of a parent's screen. Same rule, same twelve.
+    if(e||!r||!r.ok){ actFail('thread',(r&&r.error)||KL_MSG_FAIL.load); render(); return; }
     HOME_EXPANDED.messages=r.messages||[];
     KL_THREAD_CACHE[teacherId]=HOME_EXPANDED.messages;
     HOME_EXPANDED.lastSentAt=_maxSentAt(HOME_EXPANDED.messages);
@@ -3227,7 +3235,7 @@ function refreshHomeThread(){
     t.refreshing=false;
     if(!HOME_EXPANDED||HOME_EXPANDED.teacherId!==t.teacherId) return;
     HOME_EXPANDED.refreshing=false;
-    if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not refresh.','e'); render(); return; }
+    if(e||!r||!r.ok){ actFail('thread',(r&&r.error)||KL_MSG_FAIL.refresh); render(); return; }
     HOME_EXPANDED.messages=r.messages||[];
     KL_THREAD_CACHE[t.teacherId]=HOME_EXPANDED.messages;
     HOME_EXPANDED.lastSentAt=_maxSentAt(HOME_EXPANDED.messages);
@@ -5086,6 +5094,14 @@ function rHomeContactDetails(){
 // Enrollment tab) so the two can't drift into showing this two ways.
 // [1.421] — AC's wording, 8 September 2026, verbatim. The header and both
 // section names are his; they are the only new words in the restructure.
+// ── [1.562] — the family portal's messaging failures ─────────────────────
+// PLACEHOLDERS, flagged: family-facing, so AC's to write. They replace three
+// corner toasts — a parent reading a thread should be told at the thread.
+var KL_MSG_FAIL = {
+  load:'Could not load this conversation.',
+  refresh:'Could not refresh.',
+  markRead:'Could not mark those as read.'
+};
 var KL_ENR_COPY = {
   detailsHeader:   'Your Enrollment Proposal and Studio Policies',
   sectionProposal: 'Enrollment Proposal',

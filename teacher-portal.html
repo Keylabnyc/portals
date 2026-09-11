@@ -120,7 +120,7 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 .internal-tag{font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#7A4E00;margin-bottom:.3rem}
 .fwd-box{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);
   padding:10px 12px;margin-top:.6rem;font-size:12px}
-.msg-list{display:flex;flex-direction:column;gap:8px;margin-bottom:1rem;max-height:50vh;overflow-y:auto}
+.msg-list{display:flex;flex-direction:column;gap:8px;margin-bottom:1rem;max-height:50vh;overflow-y:auto;background:var(--bg3)}
 /* 1.190, AC: "NO HYPERLINK TEXT! Buttons only. For everyone." Every control
    that used to be a text link is this. Sized to be pressed, including on a
    phone, and readable at arm's length (1.186). */
@@ -166,7 +166,7 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 .bubble-row{display:flex;margin-top:2px}
 .bubble-row.run-start{margin-top:.6rem}
 .bubble-row.mine{justify-content:flex-end}
-.bubble{max-width:80%;background:rgba(255,255,255,.55);border:1px solid var(--border);border-radius:var(--rl);padding:.6rem .8rem}
+.bubble{max-width:80%;background:var(--bg5);border:1px solid var(--border);border-radius:var(--rl);padding:.6rem .8rem}
 .bubble.mine{background:var(--acc);border-color:var(--acc);color:#fff}
 .bubble-sender{font-size:11.5px;font-weight:600;letter-spacing:.02em;color:var(--acc);font-family:"Inter",sans-serif;margin-bottom:.25rem}
 /* 1.186, AC: "the dark blue bubble and current text css using small dark red
@@ -183,22 +183,39 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
    whatever width was left. Now the box gets the whole width and the buttons
    get their own line under it. The flex:1 spacer inside the button row still
    works exactly as it did — it pushes Close conversation to the right end. */
-.composer{display:flex;flex-direction:column;gap:8px;align-items:stretch}
+/* ── [1.563] — THE MESSAGING LAYERS, as named steps ──────────────────────
+   AC, 10 September 2026: *"Remember to use proper layered css to backgrounds to
+   distinguish main background from section background to tertiary area
+   background"* and *"text entry areas should not be the same color as the
+   immediate background layer behind them."*
+   **He gave both rules about the LIBRARY and they were applied there only**
+   ([1.555]/[1.556]). The messaging screens — where a teacher spends all their
+   time — were still twenty surfaces of `rgba(255,255,255,…)`, and the composer
+   had no ground at all, so the box a message is typed into and the panel behind
+   it were the same colour.
+   **A tint is its backdrop plus milk**, so each of these was a different colour
+   on every screen it appeared on. His four steps, applied here:
+     page       --bg2
+     thread     --bg3   the section the messages sit in
+     composer   --bg4   a form card, so its box has a step to stand on
+     bubble     --bg5   a card on the thread
+     the box    #fff    the text entry area, one clear step above the composer */
+.composer{display:flex;flex-direction:column;gap:8px;align-items:stretch;background:var(--bg4)}
 .composer-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-.composer textarea{background:rgba(255,255,255,.55);border:1px solid var(--border2);color:var(--text);border-radius:var(--r);padding:10px 11px;font-family:"Inter",sans-serif;font-size:14.5px;width:100%;outline:none;resize:none;min-height:72px;max-height:200px}
-.composer textarea:focus{border-color:var(--acc);background:rgba(255,255,255,.65)}
+.composer textarea{background:#fff;border:1px solid var(--border2);color:var(--text);border-radius:var(--r);padding:10px 11px;font-family:"Inter",sans-serif;font-size:14.5px;width:100%;outline:none;resize:none;min-height:72px;max-height:200px}
+.composer textarea:focus{border-color:var(--acc)}
 .composer .btn{width:auto;flex:0 0 auto}
 /* Formatting composer (BACKLOG 1.33). The contenteditable box deliberately
    reuses the textarea's exact look so the toolbar is the only visible change. */
 .composer-wrap{display:flex;flex-direction:column;gap:6px}
 .cmp-tb{display:flex;flex-wrap:wrap;gap:4px}
-.cmp-tb-btn{background:rgba(255,255,255,.45);border:1px solid var(--border2);color:var(--text3);border-radius:6px;min-width:32px;height:30px;padding:0 8px;font-size:12px;line-height:1;cursor:pointer;font-family:"Inter",sans-serif}
-.cmp-tb-btn:hover{background:rgba(255,255,255,.75);color:var(--text)}
+.cmp-tb-btn{background:var(--bg5);border:1px solid var(--border2);color:var(--text3);border-radius:6px;min-width:32px;height:30px;padding:0 8px;font-size:12px;line-height:1;cursor:pointer;font-family:"Inter",sans-serif}
+.cmp-tb-btn:hover{background:#fff;color:var(--text)}
 .cmp-tb-btn:active{background:var(--acc);color:#fff;border-color:var(--acc)}
 /* 1.192, AC: the box was "very small" to write in. One line of room is fine
    for a phone reply and wrong for anything considered. */
-.cmp-rich{background:rgba(255,255,255,.55);border:1px solid var(--border2);color:var(--text);border-radius:var(--r);padding:10px 11px;font-family:"Inter",sans-serif;font-size:14.5px;line-height:1.55;width:100%;outline:none;min-height:72px;max-height:200px;overflow-y:auto;text-align:left}
-.cmp-rich:focus{border-color:var(--acc);background:rgba(255,255,255,.65)}
+.cmp-rich{background:#fff;border:1px solid var(--border2);color:var(--text);border-radius:var(--r);padding:10px 11px;font-family:"Inter",sans-serif;font-size:14.5px;line-height:1.55;width:100%;outline:none;min-height:72px;max-height:200px;overflow-y:auto;text-align:left}
+.cmp-rich:focus{border-color:var(--acc)}
 .cmp-rich:empty:before{content:attr(data-ph);color:var(--text5)}
 .cmp-rich ul,.cmp-rich ol{margin:.25rem 0;padding-left:1.3rem}
 .cmp-rich blockquote{margin:.25rem 0;padding-left:.75rem;border-left:2px solid var(--border2)}
@@ -320,7 +337,7 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
    message card on the left." The row was a single non-wrapping line: a badge, a
    sentence and a button, in a pane that can be 180px wide. It wraps now, and
    the marks drop under the text rather than off the edge. */
-.thread-row{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:6px 8px;background:rgba(255,255,255,.45);border:1px solid var(--border);border-left:3px solid var(--age-rest);border-radius:var(--r);padding:.7rem .85rem;cursor:pointer;transition:background .12s}
+.thread-row{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:6px 8px;background:var(--bg5);border:1px solid var(--border);border-left:3px solid var(--age-rest);border-radius:var(--r);padding:.7rem .85rem;cursor:pointer;transition:background .12s}
 /* The ageing ladder — four stages, AC's own, cut from five and then given the
    nudge stage back. The two middle colours were tuned on screen over two
    passes (#D85A30→#E2703F→#E9865A and #E24B4A→#C93A39→#B32F2F): "go a little
@@ -344,7 +361,7 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 .thread-row.age-4h{border-left-color:var(--age-4h)}
 .thread-row.age-12h{border-left-color:var(--age-12h)}
 .thread-row.age-od{border-left-color:var(--age-od)}
-.thread-row:hover{background:rgba(255,255,255,.65)}
+.thread-row:hover{background:#fff}
 /* [1.310] — the text column takes the space, and the marks column takes only
    what it needs. Without the grow it stayed at its content width while the
    right-hand column pushed it aside. */
@@ -646,7 +663,7 @@ input[type=checkbox]{width:13px;height:13px;padding:0;margin:0;border:0;border-r
 /* The composer's picker. */
 .sched-panel{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:.5rem;
   padding:.55rem .6rem;border:1px solid var(--border);border-radius:var(--r);
-  background:rgba(255,255,255,.5)}
+  background:var(--bg4)}
 .sched-lbl{font-size:12px;color:var(--text2)}
 /* [1.415] — AC's preview line. The Schedule Message button below answers the
    question it asks; it is deliberately not a second confirm step. */
@@ -660,7 +677,7 @@ input[type=checkbox]{width:13px;height:13px;padding:0;margin:0;border:0;border-r
   color:var(--acc);padding:.4rem 0;cursor:pointer}
 .sched-caret{color:var(--text3);font-size:11px}
 .sched-list{display:flex;flex-direction:column;gap:4px;margin:0 0 .75rem}
-.sched-item{display:block;width:100%;text-align:left;background:rgba(255,255,255,.5);
+.sched-item{display:block;width:100%;text-align:left;background:var(--bg5);
   border:1px solid var(--border);border-radius:var(--r);padding:.45rem .6rem;
   font:inherit;cursor:pointer}
 .sched-item-hd{font-size:13px;font-weight:600;color:var(--text)}
@@ -734,7 +751,7 @@ input[type=checkbox]{width:13px;height:13px;padding:0;margin:0;border:0;border-r
    was sent to, whether to answer. */
 .att-strip{display:flex;flex-wrap:wrap;gap:6px;margin:.45rem 0 .1rem}
 .att-tile{display:flex;align-items:center;gap:8px;max-width:100%;padding:5px 9px 5px 5px;
-  border:1px solid var(--border2);border-radius:var(--rl);background:rgba(255,255,255,.75);
+  border:1px solid var(--border2);border-radius:var(--rl);background:#fff;
   cursor:pointer;font-family:inherit;text-align:left;color:var(--text)}
 .att-tile:hover{background:#fff}
 /* [1.417] — the pair. AC: "Offer the option to view or download", and he
@@ -4378,6 +4395,7 @@ function openFamilyThread(familyId, p1, p2, focusReview){
     ACTIVE_THREAD.scheduled=r.scheduled||[];
     THREAD_CACHE[_threadCacheKey(_req)]=ACTIVE_THREAD.messages;
     _applyPendingReviews(ACTIVE_THREAD);   // [1.231]
+    actClear('thread');   // [1.562] — a success clears the last failure rather than leaving it standing
     _shouldScrollMsgList=true; render();
     _markThreadRead(_req);   // [1.263] — after the thread is drawn, never before
   });
@@ -4394,7 +4412,7 @@ function refreshFamilyThread(){
   api({action:'getConversation', data:_req}, function(e,r){
     if(!ACTIVE_THREAD||ACTIVE_THREAD.familyId!==t.familyId) return;
     ACTIVE_THREAD.refreshing=false;
-    if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not refresh.','e'); render(); return; }
+    if(e||!r||!r.ok){ actFail('thread',(r&&r.error)||TCH_COPY.refreshFailed); render(); return; }
     ACTIVE_THREAD.messages=r.messages||[];
     // [1.371] — the sender's own scheduled messages for this thread, in their
     // own array. Never merged into messages: their sentAt is when they were
@@ -4402,6 +4420,7 @@ function refreshFamilyThread(){
     ACTIVE_THREAD.scheduled=r.scheduled||[];
     THREAD_CACHE[_threadCacheKey(_req)]=ACTIVE_THREAD.messages;
     _applyPendingReviews(ACTIVE_THREAD);   // [1.231]
+    actClear('thread');   // [1.562] — a success clears the last failure rather than leaving it standing
     _shouldScrollMsgList=true; render();
     _markThreadRead(_req);   // [1.263]
   });
@@ -4489,7 +4508,12 @@ function rFamilyThread(){
     '<div class="thread-hd" style="margin-bottom:0">'+esc(names)+'</div>'+
     ((_cRow && !_cRow.closed && _cRow.replyDueBy)
       ? '<span class="due-inline">'+esc(fmtDueFull(_cRow.replyDueBy))+'</span>' : '')+
-    '<button type="button" class="lnk-btn" style="margin-left:auto" onclick="refreshFamilyThread()">'+(t.refreshing?'<span class="spin">↻</span>':'↻ Refresh')+'</button></div>';
+    '<button type="button" class="lnk-btn" style="margin-left:auto" onclick="refreshFamilyThread()">'+(t.refreshing?'<span class="spin">↻</span>':'↻ Refresh')+'</button></div>'+
+    // [1.562] — a Refresh that FAILS says so here, on the row it is in. It used
+    // to throw the reason into the corner of the screen, seven hundred pixels
+    // from the button that caused it — [1.404]'s rule, and one of the twelve
+    // places that never got it.
+    rAct('thread');
   h+=rThreadKids(t.students);
   // [1.493] — the spinner stands where the messages will go; the composer
   // below is drawn either way, so a teacher can start typing at once.
@@ -5275,11 +5299,15 @@ function openStaffThread(contactType, otherId, otherName, focusReview){
   api({action:'getConversation', data:reqData}, function(e,r){
     if(!ACTIVE_STAFF_THREAD || ACTIVE_STAFF_THREAD.otherId!==otherId) return; // navigated away before this resolved
     ACTIVE_STAFF_THREAD.loading=false; ACTIVE_STAFF_THREAD.refreshing=false;
-    if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not load messages.','e'); render(); return; }
+    // [1.562] — in the thread's own header, where Refresh reports, rather than
+    // in the corner. Loading and refreshing are the same area and the same
+    // question, so they share one banner.
+    if(e||!r||!r.ok){ actFail('thread',(r&&r.error)||TCH_COPY.loadFailed); render(); return; }
     ACTIVE_STAFF_THREAD.messages=_mergeLoaded(r.messages||[], ACTIVE_STAFF_THREAD.messages);   // [1.493]
     ACTIVE_STAFF_THREAD.scheduled=r.scheduled||[];   // [1.371] — see openFamilyThread
     THREAD_CACHE[_threadCacheKey(reqData)]=ACTIVE_STAFF_THREAD.messages;
     _applyPendingReviews(ACTIVE_STAFF_THREAD);   // [1.231]
+    actClear('thread');   // [1.562] — a success clears the last failure rather than leaving it standing
     _shouldScrollMsgList=true; render();
     _markThreadRead(reqData);   // [1.263] — after the thread is drawn, never before
   });
@@ -5306,11 +5334,12 @@ function refreshStaffThread(){
   api({action:'getConversation', data:reqData}, function(e,r){
     if(!ACTIVE_STAFF_THREAD||ACTIVE_STAFF_THREAD.otherId!==t.otherId) return;
     ACTIVE_STAFF_THREAD.refreshing=false;
-    if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not refresh.','e'); render(); return; }
+    if(e||!r||!r.ok){ actFail('thread',(r&&r.error)||TCH_COPY.refreshFailed); render(); return; }
     ACTIVE_STAFF_THREAD.messages=r.messages||[];
     ACTIVE_STAFF_THREAD.scheduled=r.scheduled||[];   // [1.371] — see openFamilyThread
     THREAD_CACHE[_threadCacheKey(reqData)]=ACTIVE_STAFF_THREAD.messages;
     _applyPendingReviews(ACTIVE_STAFF_THREAD);   // [1.231]
+    actClear('thread');   // [1.562] — a success clears the last failure rather than leaving it standing
     _shouldScrollMsgList=true; render();
     _markThreadRead(reqData);   // [1.263]
   });
@@ -5329,7 +5358,8 @@ function rStaffThread(){
     'onclick="_openPane(&apos;&apos;);render()">\u2715</button></div>';
   h+='<div style="display:flex;justify-content:space-between;align-items:center">'+
     '<div class="thread-hd" style="margin-bottom:0">'+esc(t.otherName)+'</div>'+
-    '<button type="button" class="lnk-btn"  onclick="refreshStaffThread()">'+(t.refreshing?'<span class="spin">↻</span>':'↻ Refresh')+'</button></div>';
+    '<button type="button" class="lnk-btn"  onclick="refreshStaffThread()">'+(t.refreshing?'<span class="spin">↻</span>':'↻ Refresh')+'</button></div>'+
+    rAct('thread');   // [1.562] — beside the button, not in the corner
   // [1.493] — the spinner stands where the messages will go; the composer
   // below is drawn either way, so a teacher can start typing at once.
   var _spin=(t.loading && !t.messages.length);
@@ -8376,7 +8406,9 @@ function tplSaveAsDo(id){
   var next=(SAVED_TPLS||[]).map(function(t){ return {templateId:t.templateId, label:t.label, body:t.body}; })
     .concat([{templateId:'', label:name, body:body}]);
   api({action:'saveTeacherTemplates', data:{teacherToken:TOKEN, templates:next}}, function(e,r){
-    if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not save that template.','e'); return; }
+    // [1.562] — beside the template editor's own controls, which already draw
+    // rAct('tpl') for every other thing that can go wrong there.
+    if(e||!r||!r.ok){ actFail('tpl',(r&&r.error)||TCH_COPY.tplSaveFailed); return; }
     TPL_NAMING=false; TPL_NEWNAME='';
     // What is in the box is now a template they HAVE, so it becomes the new
     // yardstick and the offer goes.
@@ -8604,6 +8636,15 @@ function _composerStateClear(id){
 // family is shown is NOT here — it lives on the server (SEEN_NOTE_TEXT), so
 // the teacher and admin portals cannot ship two versions of the same promise.
 var TCH_COPY={
+  // ── [1.562] — the thread's own failures, in its own header ────────────
+  // PLACEHOLDERS, flagged: teacher-facing, so AC's to write. They replace two
+  // corner toasts.
+  refreshFailed:'Could not refresh.',
+  cancelSendFailed:'Could not cancel that send.',
+  tplSaveFailed:'Could not save that template.',
+  unsendFailed:'Could not unsend that message.',
+  editFailed:'Could not save that change.',
+  loadFailed:'Could not load messages.',
   // The section names are AC's. "New Messages" became "Messages" on 3 Sept,
   // once he settled that a conversation you have answered but not closed stays
   // in this section: it holds live conversations from arrival until you close
@@ -9229,7 +9270,8 @@ function rEditActions(){
   // a row he had already called crowded ([1.234]). WHICH message is being
   // edited is shown where it belongs — the dashed outline on the bubble.
   return '<button class="btn btn-p" onclick="saveEditMessage()">'+esc(TCH_COPY.saveEdit)+'</button>'+
-    '<button class="btn btn-s" onclick="cancelAmend()">'+esc(TCH_COPY.cancel)+'</button>';
+    '<button class="btn btn-s" onclick="cancelAmend()">'+esc(TCH_COPY.cancel)+'</button>'+
+    rAct('edit');   // [1.562] — the reason a save failed, beside the button that tried
 }
 function rComposer(id,draft,onInput,sendBtn){
   return '<div class="composer-wrap">'+
@@ -10353,7 +10395,7 @@ function cancelSend(id){
     _onceDone('cancel:'+id);   // [1.534] — the answer releases it
     if(e||!r||!r.ok){
       c.t.scheduled=keep;
-      showMsg((r&&r.error)||'Could not cancel that send.','e');
+      actFail('msg:'+id,(r&&r.error)||TCH_COPY.cancelSendFailed);   // [1.562] — on the bubble
       render();
       return;
     }
@@ -10548,7 +10590,7 @@ function unsendMessage(id){
   api({action:'retractMessage', data:data}, function(e,r){
     if(e||!r||!r.ok){
       c.t.messages=keep; _threadCacheWrite(c);
-      showMsg((r&&r.error)||'Could not unsend that message.','e');
+      actFail('msg:'+id,(r&&r.error)||TCH_COPY.unsendFailed);   // [1.562] — on the bubble
       render();
     }
   });
@@ -10590,6 +10632,7 @@ function _plainToComposerHtml(text){
 }
 function saveEditMessage(){
   var c=_amendCtx(); if(!c || AMEND.kind!=='edit') return;
+  actClear('edit');   // [1.562] — a second attempt does not sit under the first one's reason
   if(!_oncePress('edit:'+AMEND.messageId)) return;   // [1.534]
   var id=AMEND.messageId;
   var el=document.getElementById(c.composerId);
@@ -10617,7 +10660,15 @@ function saveEditMessage(){
       // the composer rather than being thrown away with the error.
       c.t.draft=html;
       _draftKeep(c.t, html);
-      showMsg((r&&r.error)||'Could not save that change.','e');
+      // ── [1.562] — on the EDIT's own row, not in the corner ────────────
+      //
+      // This was the worst of the twelve. The bubble visibly reverts to its old
+      // words — the revert two lines above is correct and has to happen — and
+      // the reason appeared seven hundred pixels away, while the eye was on the
+      // bubble that had just changed back under it. So the words come back into
+      // the box, the message goes back to what it was, AND the row that asked
+      // says why.
+      actFail('edit',(r&&r.error)||TCH_COPY.editFailed);
       render();
       return;
     }
@@ -10923,7 +10974,13 @@ function rMsgTools(m, mine){
       '<button type="button" class="lnk-btn" onclick="event.stopPropagation();unsendMessage(\''+esc(m.messageId)+'\')">'+
       esc(TCH_COPY.unsend)+'</button>';
   }
-  return h+'</div>';
+  // ── [1.562] — what a message's own controls say when they FAIL ────────
+  //
+  // Unsend, Edit and Cancel Send all reported into the corner of the screen,
+  // which is [1.404]'s rule broken on the three controls where the press and
+  // the thing pressed are most plainly in one place: a bubble. Keyed by the
+  // MESSAGE, so two bubbles cannot show each other's reason.
+  return h+rAct('msg:'+m.messageId)+'</div>';
 }
 
 // [1.189]. The teacher asked the office a question about this family; the

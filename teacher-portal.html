@@ -61,6 +61,36 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 .btn-p{background:#1a4fc4;color:#fff;border-color:#1a4fc4}.btn-p:hover{background:#1440a8;border-color:#1440a8}
 .btn-s{background:rgba(0,0,0,.12);color:var(--text2);border-color:var(--border2)}.btn-s:hover{background:rgba(0,0,0,.2);color:var(--text)}
 .btn:disabled{opacity:.35;cursor:not-allowed}
+/* ── [1.577] — a button reacts to being PRESSED, not only to a hover ──────
+   AC, 11 September 2026: *"All buttons should react when clicked or pressed."*
+
+   `.btn` carried `:hover` and `:disabled` and nothing else, in all three
+   portals. On a desktop that means a button lights up as the pointer arrives
+   and then does nothing at the moment it is actually pressed; **on a phone,
+   where there is no hover at all, it means every control in this tool was
+   silent to a touch.** The teacher and family portals are the mobile-first
+   ones, so the half with no feedback was the half most used on a phone.
+
+   **Written at the STYLE and against the ELEMENT, which is the whole point.**
+   [1.550] and [1.518] both had to be fixed this way after the same thing was
+   said three times, and this is a harder case than either: there are 48
+   button-shaped classes across these files, and a list of them would be
+   missing the one somebody adds next month. `button` catches every control in
+   the file whoever writes it, and `.btn` catches the handful of labels, spans
+   and anchors that wear the class instead.
+
+   Deliberately one visual answer for all of them rather than a pressed colour
+   per role: `transform` and `filter` compose with whatever background the
+   button already has, so a primary, a secondary, a danger button and the
+   accent-filled toolbar toggle all darken and sink by the same amount without
+   any of them needing a rule of their own. Instant, because the existing
+   `transition` on `.btn` names background, border and opacity and not these —
+   a press that eases in is a press that has not been felt yet.
+
+   `:not(:disabled)` for the obvious reason: a control that refuses the press
+   must not animate as though it took it. */
+button:active:not(:disabled),
+.btn:active:not(:disabled){transform:translateY(1px);filter:brightness(.92)}
 .spin{display:inline-block;animation:spin .9s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .remember-row{display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer;margin-bottom:.8rem}
@@ -162,6 +192,62 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
   font-family:"Inter",sans-serif;font-size:12.5px;font-weight:600;cursor:pointer;line-height:1.25}
 .lib-done:hover{background:#1440a8;border-color:#1440a8}
 
+/* ── [1.344] — messaging a whole day ──────────────────────────────────────
+   It lives in the THREAD pane, so it inherits that pane's width and scrolling
+   and needs no layout of its own. What is here is the panel's own furniture:
+   the day chips, the list of who it reaches, and the warning.
+
+   The chips reuse the tool's existing button roles rather than inventing a
+   fifth — [1.550]'s whole point — so a chosen day looks like every other
+   chosen thing in the tool, and a day with nobody on it is visibly present and
+   visibly unpressable rather than absent ([1.178]). */
+.day-open-row{margin:.15rem 0 .6rem}
+.day-send{padding:.25rem 0 1rem}
+/* `.btn` carries width:100%, which is right for the bars it was written for
+   and wrong for a control sitting in a row — the same trap [1.509b] recorded
+   when Done was "huge". The row constrains it rather than the button growing a
+   fourth variant. */
+.day-head{display:flex;align-items:center;gap:10px;margin-bottom:1rem;flex-wrap:wrap}
+.day-head .kl-backbtn{width:auto;flex:0 0 auto;padding:7px 13px;font-size:12.5px}
+.day-title{font-weight:700;font-size:15px;color:var(--text)}
+.day-sec{margin-bottom:1.1rem}
+.day-lbl{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--text3);margin-bottom:.4rem}
+.day-chips{display:flex;flex-wrap:wrap;gap:6px}
+.day-chip{font-size:12.5px;font-weight:600;padding:7px 13px;border-radius:20px;
+  border:1px solid var(--border2);background:rgba(0,0,0,.10);color:var(--text);
+  font-family:"Inter",sans-serif;cursor:pointer;line-height:1.2}
+.day-chip:hover:not(:disabled){background:rgba(0,0,0,.18);border-color:var(--text4)}
+.day-chip.on{background:#1a4fc4;border-color:#1a4fc4;color:#fff}
+.day-chip:disabled{opacity:.35;cursor:not-allowed}
+.day-chip b{font-weight:700;opacity:.85}
+/* The list is the check that stops one mistake being eight, so it is never
+   collapsed and never scrolled away to a count. */
+.day-who{border:1px solid var(--border2);border-radius:var(--r);overflow:hidden}
+.day-who-top{display:flex;justify-content:space-between;gap:10px;padding:8px 11px;
+  background:rgba(0,0,0,.10);font-size:12.5px;color:var(--text)}
+.day-who-top span{color:var(--text3)}
+.day-who-row{display:flex;justify-content:space-between;gap:10px;padding:7px 11px;
+  font-size:12.5px;color:var(--text2);border-top:1px solid var(--border2)}
+.day-who-row span:last-child{color:var(--text3);white-space:nowrap}
+.day-empty{color:var(--text3);font-size:13px;padding:.5rem 0}
+/* The tool's OWN amber, in the exact three-token combination [1.351] already
+   uses for "nothing is wrong yet, but read this" — `--abg` ground, `--amber`
+   edge, `--at` text. The first version of this rule invented `#8a5a00` and a
+   translucent tint, which is a colour AC never chose, on a screen where the
+   whole job of the line is to be noticed: a fourth amber would read as a
+   fourth meaning. Caught by looking at the rendered panel, not at the CSS. */
+.day-warn{border:1px solid var(--amber);background:var(--abg);color:var(--at);
+  border-radius:var(--r);padding:8px 11px;
+  font-size:12.5px;font-weight:600;margin-top:.6rem}
+.day-sent{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  flex-wrap:wrap;margin-top:.6rem;padding:9px 11px;border-radius:var(--r);
+  border:1px solid var(--border2);background:rgba(0,0,0,.10);font-size:12.5px}
+.day-note{font-size:11.5px;line-height:1.4;color:var(--at);background:var(--abg);
+  border:1px solid var(--amber);border-radius:var(--r);padding:5px 8px;margin-top:6px}
+.day-again{margin-top:.6rem}
+.day-unsend{width:auto;padding:6px 12px;font-size:12.5px;border-radius:var(--r);
+  font-family:"Inter",sans-serif;cursor:pointer}
 /* [1.413] — Messages-format runs, identical in all three portals. */
 .bubble-row{display:flex;margin-top:2px}
 .bubble-row.run-start{margin-top:.6rem}
@@ -1444,8 +1530,22 @@ var FAMILY_VIEW = 'list';
 function _openPane(kind){
   FAMILY_VIEW = (kind==='family') ? 'thread' : 'list';
   STAFF_VIEW  = (kind==='staff')  ? 'thread' : 'list';
+  // ── [1.344] — a THIRD thing that can claim the right-hand pane ──────────
+  //
+  // It goes through the one setter for [1.336]'s reason, which was found the
+  // hard way: two flags, two assignments scattered across the file, and a
+  // click that changed nothing on screen because the other pane had already
+  // claimed it. A third flag set anywhere else would bring that back with one
+  // more way to happen, so it is set here or nowhere — and the suite counts
+  // the assignments of all THREE now, not the two that existed in August.
+  DAY_VIEW    = (kind==='day')    ? 'panel'  : 'list';
   if(kind!=='family') ACTIVE_THREAD=null;
   if(kind!=='staff')  ACTIVE_STAFF_THREAD=null;
+  // The composed message goes with the panel. It is not a draft of anything —
+  // there is no conversation to keep it against — so leaving it behind would
+  // mean reopening the panel on a different day with last time's words in it.
+  if(kind!=='day') DAY_SEND={slot:'', tplId:'', draft:'', sending:false,
+                             batchId:'', sentAt:0, sentCount:0, sentTo:[], undone:false};
 }
 
 // BACKLOG 1.136. Delivered on the roster payload rather than a config call --
@@ -1474,6 +1574,64 @@ var MSG_SEARCH = {query:'', open:false, hits:{}, hitsFor:'', searching:false, _t
 // every staff contact including Admin ([1.260]), so the search on the roster
 // finds anybody and clicking them opens the thread. One screen.
 var ACTIVE_THREAD = null; // {familyId, parent1Name, parent2Name, messages, draft, sending, loading, notifyP1, notifyP2}
+
+// ── [1.344] — messaging every family on one day at once ──────────────────
+//
+// **AC, 6 September 2026**, asking for it. The case is a teacher who is ill at
+// 7am with eight lessons that day: sending it one thread at a time is how a
+// family gets missed, and it is eight round trips of watching a spinner while
+// unwell.
+//
+// **Everything here is drawn from what the page already has.** The roster
+// carries every family this teacher teaches ([1.172]) and every student on it
+// carries `day` and `time` ([1.249] draws them), so "everyone I teach on
+// Tuesday" is a filter over data already in memory — no new list, nothing to
+// keep in step, and no round trip to find out who is affected.
+//
+//   day       which weekday is chosen, '' until one is
+//   tplId     which studio template is chosen, '' for "write my own"
+//   draft     the composed message, exactly as the composer holds it
+//   batchId   set once a send lands — what Unsend pulls back
+//   sentTo    the families it reached, so the confirmation can name them
+var DAY_VIEW = 'list';   // 'list' | 'panel' — set ONLY by _openPane
+var DAY_SEND = {slot:'', tplId:'', draft:'', sending:false,
+                batchId:'', sentAt:0, sentCount:0, sentTo:[], undone:false};
+// The week, in the order a week runs. Saturday and Sunday are here because
+// the studio teaches them; a day with nobody on it is drawn with a zero and
+// cannot be chosen, rather than hidden — [1.178]'s rule, resting states
+// rather than controls that appear only when there is something to press.
+var DAY_NAMES = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+// The id of AC's built-in cancellation message. Not a templates-sheet row: see
+// daySendTpl for why the one message that matters here cannot be editable from
+// another screen.
+var DAY_TPL_CANCEL = '_cancel';
+// ── [1.344] — his message, with the day it is actually about ────────────
+//
+// **AC, 11 September 2026:** *"so this does need conditional today or tomorrow
+// language."*
+//
+// **DERIVED FROM HIS OWN SENTENCE, not written beside it.** The tomorrow
+// version is his message with the word `today` in it — and there is exactly one
+// word, in two places — standing for the day the message is actually about.
+// Nothing is rephrased, reordered or added.
+//
+// **One source, so the two cannot drift.** Storing a second copy would mean
+// that the day he rewrites the message, one of them silently stays on the old
+// wording — which is the fault these documents have recorded against every
+// duplicated string in this file. If a future version of his message never says
+// "today", this substitutes nothing and sends his words exactly as written,
+// which is the correct behaviour rather than a failure of it.
+//
+// `\btoday\b` catches `today's` as well, because an apostrophe is a word
+// boundary — which is why his *"a lesson reminder for today's lesson"* becomes
+// *"for tomorrow's lesson"* and not *"for tomorrow'slesson"*.
+function _dayCancelWords(slot){
+  var t=TCH_COPY.dayCancelTemplate;
+  return slot==='tomorrow' ? t.replace(/\btoday\b/g, TCH_COPY.dayTomorrowWord) : t;
+}
+// The panel's one closing tag, named so the two exits out of rDaySend share it
+// and the file's <div> count stays statically balanced.
+var _DAY_END = '</div>';
 
 // Login form state — single-screen email+password (not the family portal's
 // two-step flow) — confirmed with AC, see SPEC_MESSAGING_V1.md §4.
@@ -3236,9 +3394,11 @@ function rMessagesPage(){
   // exactly one setter and a second assignment anywhere is how the
   // both-panes-claim-the-screen bug comes back. The check suite pins that.
   if(MSG_LOCK.locked && FAMILY_VIEW==='thread') _openPane('');
-  var showThread = FAMILY_VIEW==='thread' || STAFF_VIEW==='thread';
+  // [1.344] — a third claimant, tested LAST so a conversation always wins.
+  var showThread = FAMILY_VIEW==='thread' || STAFF_VIEW==='thread' || DAY_VIEW==='panel';
   var thread = STAFF_VIEW==='thread' ? rStaffThread()
              : FAMILY_VIEW==='thread' ? rFamilyThread()
+             : DAY_VIEW==='panel' ? rDaySend()
              : '<div class="pane-empty">Choose a conversation to open it.</div>';
   // The notice sits ABOVE the roster, which now holds only Admin and staff —
   // see rSectionedRoster.
@@ -3259,6 +3419,20 @@ function rSectionedRoster(){
   // family the teacher teaches ([1.172]) and now every staff contact and Admin
   // ([1.260]), so a second screen offered nothing the search below does not.
   var h=rMsgSearch();
+  // ── [1.344] — the way in, on the screen a teacher is already on ─────────
+  //
+  // Not a section, not a tab and not a second page: one control above the
+  // roster, where the roster it filters already is. `PROCESS.md` rule 3 —
+  // *"everything a teacher needs is on one screen"* — and rule 2, which calls
+  // a second screen for something the first screen could do a defect.
+  //
+  // **Hidden only while family messaging is locked**, for [1.382]'s reason:
+  // the family rows go when the lock is on, and a control that opens a panel
+  // listing families who cannot be written to is a dead press.
+  if(!MSG_LOCK.locked){
+    h+='<div class="day-open-row"><button type="button" class="lnk-btn"'+
+       ' onclick="openDaySend()">'+esc(TCH_COPY.dayOpen)+'</button></div>';
+  }
   if(FAMILY_THREADS.loading && !FAMILY_THREADS.list.length){
     return h+'<div style="text-align:center;padding:2rem;color:var(--text3)"><span class="spin" style="font-size:20px">↻</span></div>';
   }
@@ -5282,6 +5456,503 @@ function sendFamilyMessage(sendAt){
   });
 }
 
+
+// ═══════════════════════════════════════════════════════════════════════
+// [1.344] — a teacher messages every family on one day at once
+// ═══════════════════════════════════════════════════════════════════════
+//
+// **It opens in the THREAD pane**, where a conversation opens, rather than as
+// a screen of its own. `PROCESS.md`: *"a second screen for something the first
+// screen could do is a defect"* — and on a desktop the roster stays beside it,
+// on a phone it behaves exactly like opening a thread, including Back. That is
+// also why it goes through `_openPane`: three things can now claim that pane
+// and exactly one of them may hold it.
+
+// Every family this teacher teaches who has a lesson on `day`, with the
+// children who actually have it. A family with two children on two days
+// appears once, carrying only the child whose lesson is that day — which is
+// the whole reason the merge tag can resolve.
+// ── [1.344] — today and tomorrow, and nothing else ──────────────────────
+//
+// **AC, 11 September 2026, in two messages:** *"This is only meant for same day
+// emergencies. Anything else will be handled by admin."* — then, correcting
+// himself: *"to be fair, it should be allowed for night before as well."*
+//
+// **The seven-day picker is gone.** It answered a question that is not really a
+// question — a teacher who cannot teach is cancelling now or tonight — and it
+// made "next Thursday" as easy to press as "today" on the one screen where a
+// mistake is eight mistakes. **A multi-day or multi-teacher send is admin's**,
+// by his first sentence, which is why his 7 September *"multi-filter by day and
+// teacher"* is not a gap in this screen.
+//
+// **Resolved from the clock every time, never stored.** A panel opened at 11pm
+// on Monday offers Monday and Tuesday; the same panel at 1am offers Tuesday and
+// Wednesday. `sendDayBatch` re-resolves it at the moment of sending too, so a
+// panel left open across midnight cannot send yesterday's answer.
+function _todayName(){ return DAY_NAMES[(new Date().getDay()+6)%7]; }
+function _tomorrowName(){ return DAY_NAMES[(new Date().getDay()+7)%7]; }
+function _daySlots(){
+  var counts=_dayCounts();
+  return [{slot:'today',    label:TCH_COPY.dayToday,    day:_todayName()},
+          {slot:'tomorrow', label:TCH_COPY.dayTomorrow, day:_tomorrowName()}]
+    .map(function(x){ x.count=counts[x.day]||0; return x; });
+}
+// ── [1.344] — "1 families" ───────────────────────────────────────────────
+//
+// Found by opening the panel on a day with ONE lesson on it, which is a
+// perfectly ordinary day. Every count on this screen read *"1 families · 1
+// students"* and *"Send to 1 families"*.
+//
+// **The nouns are tokens in the sentence rather than baked into it**, so the
+// sentences stay AC's to rewrite while the grammar is not something he has to
+// remember to handle. `{f}` and `{n}` are the numbers; `{families}`,
+// `{students}` and `{messages}` are the nouns, each with its own singular.
+function _dayWord(n, key){
+  return String(n)+' '+(Number(n)===1 ? TCH_COPY[key+'One'] : TCH_COPY[key]);
+}
+function _dayText(str, counts){
+  return String(str||'')
+    .replace(/\{f\}/g, String(counts.f==null?'':counts.f))
+    .replace(/\{n\}/g, String(counts.n==null?'':counts.n))
+    .replace(/\{families\}/g, _dayWord(counts.f!=null?counts.f:counts.n, 'wordFamilies'))
+    .replace(/\{students\}/g, _dayWord(counts.s, 'wordStudents'))
+    .replace(/\{messages\}/g, _dayWord(counts.n, 'wordMessages'));
+}
+
+function _daySlot(slot){
+  var got=null;
+  _daySlots().forEach(function(x){ if(x.slot===slot) got=x; });
+  return got;
+}
+
+function _dayFamilies(day){
+  if(!day) return [];
+  var out=[];
+  (FAMILY_THREADS.list||[]).forEach(function(t){
+    var kids=(t.students||[]).filter(function(st){
+      return String(st.day||'').trim().toLowerCase()===String(day).trim().toLowerCase();
+    });
+    if(!kids.length) return;
+    out.push({familyId:t.familyId, parent1Name:t.parent1Name, parent2Name:t.parent2Name,
+              students:t.students, kids:kids,
+              // Sorted by lesson time, because that is the order the teacher's
+              // day actually happens in and the order they will check it.
+              at:_dayMinutes(kids[0].time)});
+  });
+  out.sort(function(a,b){
+    if(a.at!==b.at) return a.at-b.at;
+    return String(a.parent1Name||'').localeCompare(String(b.parent1Name||''));
+  });
+  return out;
+}
+// "3:30pm" / "3:30 PM" / "15:30" as minutes past midnight, for ordering only.
+// Anything unparseable sorts last rather than first: an unknown time at the
+// top of a list of lesson times reads as an early lesson, which it is not.
+function _dayMinutes(t){
+  var m=String(t||'').trim().match(/^(\d{1,2})(?::(\d{2}))?\s*([ap]\.?m\.?)?$/i);
+  if(!m) return 99999;
+  var h=Number(m[1])||0, mi=Number(m[2]||0), ap=(m[3]||'').toLowerCase();
+  if(ap.charAt(0)==='p' && h<12) h+=12;
+  if(ap.charAt(0)==='a' && h===12) h=0;
+  return h*60+mi;
+}
+// How many families each weekday reaches, for the counts on the chips. Counted
+// once per render over a list already in memory.
+function _dayCounts(){
+  var out={};
+  DAY_NAMES.forEach(function(d){ out[d]=0; });
+  (FAMILY_THREADS.list||[]).forEach(function(t){
+    var seen={};
+    (t.students||[]).forEach(function(st){
+      var d=String(st.day||'').trim();
+      DAY_NAMES.forEach(function(n){
+        if(n.toLowerCase()===d.toLowerCase() && !seen[n]){ seen[n]=1; out[n]++; }
+      });
+    });
+  });
+  return out;
+}
+
+// ── The panel ────────────────────────────────────────────────────────────
+//
+// Four presses, and the third one is reading. Which day · who it reaches ·
+// what to say · send. Everything is on the one panel and nothing is behind a
+// disclosure, because the whole risk of this feature is somebody sending to
+// eight households without having looked at which eight.
+// ── [1.344] — today, or tomorrow. Nothing else ──────────────────────────
+//
+// **AC, 11 September 2026, in two messages:** *"This is only meant for same day
+// emergencies. Anything else will be handled by admin."* — and then, correcting
+// himself: *"to be fair, it should be allowed for night before as well."*
+//
+// **So the seven-day picker is gone and two choices replace it.** The row of
+// weekdays existed to answer a question that is not really a question: a
+// teacher who cannot teach is cancelling now or tonight. Seven chips made
+// "next Thursday" as easy to press as "today", on the one screen where a
+// mistake is eight mistakes.
+//
+// **A multi-day or multi-teacher send is ADMIN'S**, by his first sentence. His
+// 7 September ask — *"multi-filter by day and teacher to select any combo of
+// days and teachers"* — belongs there. That is why it is not a gap here.
+//
+// **Tomorrow is a real day, not a label.** It is resolved from the clock, so a
+// panel opened at 11pm on Monday offers Monday and Tuesday, and the same panel
+// at 1am offers Tuesday and Wednesday. The SEND re-resolves it as well — see
+// sendDayBatch — because a panel left open across midnight would otherwise send
+// yesterday's answer.
+function rDaySend(){
+  var h='<div class="day-send">';
+  h+='<div class="day-head">'+rBackBtn(TCH_COPY.dayBack,'closeDaySend()')+
+     '<div class="day-title">'+esc(TCH_COPY.dayTitle)+'</div></div>';
+
+  // ── Today or tomorrow ──────────────────────────────────────────────────
+  //
+  // Both are always drawn, and a day with nobody on it is disabled rather than
+  // hidden — [1.178]: a control that appears only when there is something to
+  // press makes the screen change shape between visits, and a teacher who
+  // teaches nobody tomorrow should see that fact rather than a missing button.
+  var when=_daySlots();
+  h+='<div class="day-sec"><div class="day-lbl">'+esc(TCH_COPY.dayWhich)+'</div>'+
+     '<div class="day-chips">';
+  when.forEach(function(sl){
+    h+='<button type="button" class="day-chip'+(DAY_SEND.slot===sl.slot?' on':'')+'"'+
+       (sl.count?'':' disabled')+' onclick="daySendPick(\''+sl.slot+'\')">'+
+       esc(sl.label)+' <b>'+sl.count+'</b></button>';
+  });
+  h+='</div></div>';
+
+  // ── Three exits, one closing tag ───────────────────────────────────────
+  //
+  // Each early return ends with `_DAY_END` rather than writing the panel's own
+  // closing tag again. The tag-balance check counts literal `</div>` text in the
+  // SOURCE — including, as it turns out, text inside a comment: deleting the
+  // paragraph that used to explain this changed the file's count by one and
+  // turned the check red. That is worth knowing rather than working around,
+  // because it means a renderer balanced only at runtime is one nothing can
+  // check, and the shared constant is what keeps this one balanced on paper.
+  var picked=_daySlot(DAY_SEND.slot);
+  if(!picked) return h+'<div class="day-empty">'+esc(TCH_COPY.dayPickFirst)+'</div>'+_DAY_END;
+  var fams=_dayFamilies(picked.day);
+  if(!fams.length) return h+'<div class="day-empty">'+esc(TCH_COPY.dayNobody)+'</div>'+_DAY_END;
+
+  // ── Who this reaches ────────────────────────────────────────────────────
+  //
+  // Named in full, in lesson order, before anything is written. This is the
+  // check that stops a mistake being eight mistakes, so it is not a count and
+  // not a summary — it is the list.
+  h+='<div class="day-sec"><div class="day-lbl">'+esc(TCH_COPY.dayWho)+'</div>'+
+     '<div class="day-who">'+
+     '<div class="day-who-top"><b>'+
+       _dayText(TCH_COPY.dayWhoCount,
+         {f:fams.length, s:fams.reduce(function(a,f){ return a+f.kids.length; },0)})+
+     '</b><span>'+esc(picked.label+' \u00b7 '+picked.day)+'</span></div>';
+  fams.forEach(function(f){
+    var names=f.kids.map(function(k){ return String(k.studentName||'').split(' ')[0]; })
+                    .filter(Boolean).join(', ');
+    h+='<div class="day-who-row"><span>'+esc(_rosterParentLine(f)||f.familyId)+
+       (names?' · '+esc(names):'')+'</span>'+
+       '<span>'+esc(String(f.kids[0].time||''))+'</span></div>';
+  });
+  h+='</div></div>';
+
+  // ── It has been sent: say so where the composer was ────────────────────
+  //
+  // Not a banner above a live composer — the thing that has happened replaces
+  // the thing that does it, which is the same reasoning as [1.496]'s *"the
+  // thread disappearing IS the confirmation"*. It also removes the state where
+  // the words, the day and a live Send button are all still sitting there one
+  // press from telling every family twice.
+  if(DAY_SEND.sentCount || DAY_SEND.undone){
+    // The UNSEND's answer belongs here too, and that is a fix rather than a
+    // tidy: clearing the count put the composer back and left "Pulled back all
+    // three" to render underneath it, below the fold. **That is the exact
+    // fault AC has reported three times** — [1.404]: *"status banners by the
+    // function buttons, not at the top of the screen"*, and *"it's very easy
+    // to miss these throughout the tool"*. The answer to a press belongs where
+    // the press was.
+    if(!DAY_SEND.undone){
+      h+='<div class="day-sent"><div><b>'+
+         esc(_dayText(TCH_COPY.daySentOk, {n:DAY_SEND.sentCount, f:DAY_SEND.sentCount}))+'</b></div>'+
+         (_dayCanUnsend()
+           ? '<button type="button" class="btn-danger day-unsend" onclick="unsendDayBatch()">'+
+             esc(TCH_COPY.dayUnsend)+'</button>'
+           : '')+
+       '</div>';
+    }
+    h+=rAct('daysend');
+    h+='<div class="day-again"><button type="button" class="lnk-btn" onclick="daySendAgain()">'+
+       esc(TCH_COPY.dayAgain)+'</button></div>';
+    return h+_DAY_END;
+  }
+
+  // ── What to say ─────────────────────────────────────────────────────────
+  //
+  // The studio's templates first, because AC's point in September was that a
+  // cancellation should be worded once by the studio rather than improvised at
+  // 7am by somebody who is ill.
+  var tpls=(STUDIO_TPLS||[]).concat(SAVED_TPLS||[]);
+  h+='<div class="day-sec"><div class="day-lbl">'+esc(TCH_COPY.dayMessage)+'</div>';
+  h+='<div class="day-chips day-tpls">';
+  // AC's own cancellation message first, always, whether or not the studio has
+  // templates. It is the reason the screen exists.
+  // [1.344] — no longer conditional. His message says "today" and this screen
+  // is only ever today, so the guard that stood here has nothing left to guard
+  // against. Removed rather than left switched permanently on: a condition that
+  // is always true is a condition somebody later has to work out was dead.
+  h+='<button type="button" class="day-chip'+(DAY_SEND.tplId===DAY_TPL_CANCEL?' on':'')+'"'+
+     ' onclick="daySendTpl(\''+DAY_TPL_CANCEL+'\')">'+esc(TCH_COPY.dayCancelLabel)+'</button>';
+  tpls.forEach(function(t){
+    h+='<button type="button" class="day-chip'+(DAY_SEND.tplId===t.templateId?' on':'')+'"'+
+       ' onclick="daySendTpl(\''+esc(t.templateId)+'\')">'+esc(t.label||'Template')+'</button>';
+  });
+  h+='</div>';
+  h+=rComposer('day-composer', DAY_SEND.draft, 'dayComposerIn()',
+       '<button class="btn btn-p" onclick="sendDayBatch()"'+
+       (DAY_SEND.sending||!fams.length?' disabled':'')+'>'+
+       esc(_dayText(TCH_COPY.daySend, {n:fams.length, f:fams.length}))+'</button>',
+       {noTemplates:true, noFiles:true});
+  h+='</div>';
+
+  // ── What the send is doing, then the warning ──────────────────────────
+  //
+  // [1.417]'s rule: the state goes on the thing it is about — so the status
+  // line sits directly under Send, ABOVE the warning, rather than one element
+  // further away from the button it belongs to.
+  //
+  // The count is on the BUTTON rather than in a sentence beside it, and the
+  // warning says the one thing the button cannot: that these are separate
+  // messages, and a mistake here is eight mistakes.
+  h+=rAct('daysend');
+  h+='<div class="day-warn">'+esc(_dayText(TCH_COPY.dayWarn, {n:fams.length}))+'</div>';
+  return h+_DAY_END;
+}
+
+function openDaySend(){
+  _openPane('day');
+  MSG_SEARCH.open=false;
+  render();
+}
+function closeDaySend(){ _openPane(''); render(); }
+// Back to a blank panel without leaving it. The DAY stays chosen — a teacher
+// who has just cancelled Tuesday is far more likely to write to Tuesday again
+// than to start from nothing — and everything that belongs to the send that
+// has happened goes.
+function daySendAgain(){
+  DAY_SEND.batchId=''; DAY_SEND.sentAt=0; DAY_SEND.sentCount=0; DAY_SEND.sentTo=[];
+  DAY_SEND.undone=false;
+  DAY_SEND.draft=''; DAY_SEND.tplId='';
+  actClear('daysend');
+  render();
+}
+function daySendPick(slot){
+  if(DAY_SEND.sending) return;
+  var was=DAY_SEND.slot;
+  // Pressing the chosen one again unchooses it, so there is a way back to
+  // "nothing chosen" that is not the Back button.
+  DAY_SEND.slot = (was===slot) ? '' : slot;
+  // ── His message follows the day it is about ──────────────────────────
+  //
+  // AC: *"so this does need conditional today or tomorrow language."* If his
+  // cancellation message is the one in the box, switching between today and
+  // tomorrow rewrites it — because the alternative is a teacher pressing
+  // Tomorrow and sending eight households a message about "today".
+  //
+  // **Only his message, and only while it is unedited.** A teacher's own words
+  // are theirs and are never touched: `tplId` is cleared the moment the box is
+  // typed in (see dayComposerIn), so this cannot reach into something written
+  // by hand.
+  if(DAY_SEND.tplId===DAY_TPL_CANCEL && DAY_SEND.slot){
+    DAY_SEND.draft=_dayCancelWords(DAY_SEND.slot);
+    var el=document.getElementById('day-composer');
+    if(el) el.innerHTML=DAY_SEND.draft;
+  }
+  render();
+}
+// A template fills the box. Same rule as the composer's own picker: it DROPS
+// IN rather than replacing, except that here there is nothing to preserve on
+// the first press, and a second press of the same chip clears back to blank.
+function daySendTpl(id){
+  if(DAY_SEND.sending) return;
+  var el=document.getElementById('day-composer');
+  if(DAY_SEND.tplId===id){
+    DAY_SEND.tplId=''; DAY_SEND.draft='';
+    if(el) el.innerHTML='';
+    render(); return;
+  }
+  // AC's cancellation message is BUILT IN rather than a row in the templates
+  // sheet, and deliberately. It is the message this feature exists to send, he
+  // wrote it for this screen, and a studio template can be edited or deleted
+  // from another page — which would leave the one button that matters here
+  // pointing at nothing on the morning somebody is ill.
+  var body = (id===DAY_TPL_CANCEL) ? _dayCancelWords(DAY_SEND.slot) : null;
+  if(body===null){
+    var t=null;
+    (STUDIO_TPLS||[]).concat(SAVED_TPLS||[]).forEach(function(x){ if(x.templateId===id) t=x; });
+    if(!t) return;
+    body=_ttplToText(t.body);
+  }
+  DAY_SEND.tplId=id;
+  // NOT merged here, deliberately, and this is the one place in the tool where
+  // that is right. A batch has eight different answers for [studentFirst], so
+  // there is no single value to substitute — the tags are merged PER FAMILY on
+  // the way out (see sendDayBatch). What the teacher is shown is the template
+  // as written, which is the honest preview of a message that will read
+  // differently for each household.
+  DAY_SEND.draft=body;
+  if(el) el.innerHTML=DAY_SEND.draft;
+  render();
+}
+function dayComposerIn(){
+  var el=document.getElementById('day-composer');
+  var now = el?_composerClean(el):'';
+  // Once a teacher edits the words they are THEIRS, and switching the day must
+  // not rewrite them. This is what keeps `daySendPick`'s substitution confined
+  // to AC's own untouched message.
+  if(DAY_SEND.tplId===DAY_TPL_CANCEL && now!==DAY_SEND.draft) DAY_SEND.tplId='';
+  DAY_SEND.draft = now;
+}
+
+// ── The send ─────────────────────────────────────────────────────────────
+//
+// ONE request carrying every family, for [1.565]'s measured reason: a request
+// costs ~2 seconds whatever it does, so eight of them is sixteen seconds of a
+// teacher watching a spinner while ill.
+//
+// The merge happens HERE, per family, because here is the only place that
+// knows both the words and which child each household's lesson is about. The
+// server refuses any tag that survives it ([1.454]'s backstop), so a family
+// can never be sent a raw bracket even if this is wrong.
+function sendDayBatch(){
+  if(DAY_SEND.sending) return;
+  if(!_oncePress('daysend')) return;   // [1.534] — one press means one press
+  // RE-RESOLVED HERE, not read off what the panel drew. A panel opened at 11pm
+  // and sent at 12:05am has a different "tomorrow" than the one on screen, and
+  // the eight families it would reach are a different eight. Cheap, and the
+  // alternative is the tool quietly sending yesterday's answer.
+  var picked=_daySlot(DAY_SEND.slot);
+  if(!picked){ _onceDone('daysend'); return; }
+  var fams=_dayFamilies(picked.day);
+  if(!fams.length){ _onceDone('daysend'); return; }
+  var el=document.getElementById('day-composer');
+  var html=el?_composerClean(el):(DAY_SEND.draft||'');
+  if(!_composerPlain(html)){ _onceDone('daysend'); actFail('daysend', TCH_COPY.dayNoWords); render(); return; }
+  // ── The words must be about the day that is actually being sent to ────
+  //
+  // The case the screen cannot cover: a panel opened at 11pm with Tomorrow
+  // chosen and his message in the box, sent at 12:05am. The slot still reads
+  // "tomorrow", but tomorrow has moved — so the words say one day and the
+  // families are another's. **Rebuilt from the slot at send time**, which
+  // costs nothing and is the only version of this that holds.
+  if(DAY_SEND.tplId===DAY_TPL_CANCEL){
+    var fresh=_dayCancelWords(DAY_SEND.slot);
+    if(_composerPlain(html)!==_composerPlain(fresh)) html=fresh;
+  }
+
+  var batch=[], unfilled={};
+  fams.forEach(function(f){
+    // One child per family per day is the ordinary case; a household with two
+    // lessons on the same day picks the FIRST by time, which is the one the
+    // teacher is standing in front of when they cancel. The tag resolves to a
+    // real child of that household either way, which is what [1.351]'s rule
+    // actually protects against — a name from a different family.
+    var stu=f.kids[0]||{};
+    var merged=_tplMergeWith(html, _tplValuesFor(f, stu.studentId));
+    _tplUnfilledTags(merged).forEach(function(tag){ unfilled[tag]=1; });
+    batch.push({familyId:f.familyId, studentId:stu.studentId||'',
+                messageText:_composerPlain(merged), messageHtml:merged});
+  });
+  // [1.454] — refused before it leaves, naming what could not be filled. On a
+  // batch this matters more than anywhere else: an unfillable tag would reach
+  // every household on the day at once.
+  var left=Object.keys(unfilled);
+  if(left.length){
+    _onceDone('daysend');
+    actFail('daysend', TCH_COPY.tagUnfilled.replace('{tags}',
+      left.map(function(x){ return TPL_TAG_LABELS[x]||x; }).join(', ')));
+    render(); return;
+  }
+
+  DAY_SEND.sending=true;
+  actStart('daysend', _dayText(TCH_COPY.daySending, {n:fams.length, f:fams.length}));
+  render();
+  api({action:'sendMessageBatch', data:{conversationType:'family_teacher',
+       teacherId:TEACHER_ID, teacherToken:TOKEN,
+       batch:batch, clientMsgId:_ktNewClientMsgId()}}, function(e,r){
+    // [1.539]'s rule, which cost a day: a state that disables a control is
+    // cleared on EVERY path out, including the ones that give up.
+    DAY_SEND.sending=false;
+    _onceDone('daysend');   // [1.534] — a refusal must be retryable at once, not in ten seconds
+    if(e||!r||!r.ok){
+      actFail('daysend', (r&&r.error)||TCH_COPY.dayNotSent);
+      render(); return;
+    }
+    actClear('daysend');
+    DAY_SEND.batchId=r.batchId||'';
+    DAY_SEND.sentAt=Date.now();
+    DAY_SEND.sentCount=Number(r.sent)||batch.length;
+    DAY_SEND.sentTo=fams.map(function(f){ return f.parent1Name||f.familyId; });
+    // ── Sent is not a draft any more, and the panel must not offer to send
+    // it again ──
+    //
+    // The ordinary composer empties itself on send ([1.336]) and this has to
+    // as well, for a sharper reason: the words left in the box, with the same
+    // day still chosen and Send still live, is one press away from every
+    // family on that day being told twice. **Found by sending in a browser
+    // and looking at what was left on the screen**, which no amount of running
+    // the function would have shown.
+    DAY_SEND.draft=''; DAY_SEND.tplId='';
+    // The rosters and every thread it wrote into are now out of date. Asking
+    // for them here rather than waiting for the 5s poll is the same courtesy
+    // the ordinary send pays: the teacher has this second created the thing
+    // the screen counts.
+    loadThreads(true);
+    // The unsend window is ten seconds and the panel has to stop offering it
+    // the moment it closes, exactly as a bubble does.
+    _amendTick(DAY_SEND.sentAt+MSG_UNSEND_WINDOW_MS);
+    render();
+  });
+}
+
+// ── Unsend, and it pulls back the whole batch ────────────────────────────
+//
+// **AC, 11 September 2026: *"batch all eight."*** One countdown, one button.
+// The alternative is ten seconds per thread across eight threads, which is a
+// promise that cannot be kept by hand.
+function _dayCanUnsend(){
+  if(!DAY_SEND.batchId || !DAY_SEND.sentAt) return false;
+  var until=DAY_SEND.sentAt+MSG_UNSEND_WINDOW_MS;
+  if(Date.now()>=until) return false;
+  if(!_amendTimer || until<_amendTimer.at) _amendTick(until);
+  return true;
+}
+function unsendDayBatch(){
+  var id=DAY_SEND.batchId;
+  if(!id) return;
+  if(!_oncePress('dayunsend')) return;
+  actStart('daysend', TCH_COPY.dayUnsending);
+  DAY_SEND.batchId='';   // the window is spent either way — one press, one chance
+  render();
+  api({action:'retractMessageBatch', data:{conversationType:'family_teacher',
+       teacherId:TEACHER_ID, teacherToken:TOKEN, batchId:id}}, function(e,r){
+    _onceDone('dayunsend');
+    if(e||!r||!r.ok){ actFail('daysend', (r&&r.error)||TCH_COPY.dayUnsendFailed); render(); return; }
+    // **Best effort, and it says so.** A parent who opened theirs inside the
+    // ten seconds keeps it — [1.276]'s rule, which a batch does not get to
+    // override — so the teacher is told the number rather than left to assume
+    // all eight came back.
+    var kept=Number(r.total||0)-Number(r.unsent||0);
+    // [1.544] — a destructive completion is not green. Taking eight messages
+    // back is a real act with a consequence, not a "carry on".
+    actGone('daysend', kept>0
+      ? TCH_COPY.dayUnsentSome.replace('{n}',String(r.unsent||0)).replace('{k}',String(kept))
+      : TCH_COPY.dayUnsentAll.replace('{n}',String(r.unsent||0)));
+    // NOT back to the composer. The teacher has just undone something and the
+    // answer to it has to stay in front of them; `daySendAgain` is the way on.
+    DAY_SEND.undone=true; DAY_SEND.sentCount=0; DAY_SEND.sentTo=[];
+    loadThreads(true);
+    render();
+  });
+}
 
 function loadStaffDirectory(){
   STAFF_PICKER.loading=true; render();
@@ -8264,13 +8935,25 @@ var TPL_TAG_LABELS = {studentFirst:'Student first name', parentFirst:'Parent fir
 function _tplFirstName(n){ return String(n||'').trim().split(/\s+/)[0]||''; }
 // What this conversation actually knows. A staff thread knows almost nothing,
 // and says so by resolving almost nothing.
-function _tplValues(){
-  var t=(HOME_TAB==='family') ? ACTIVE_THREAD : null;
+// ── [1.344] — the same values, asked of ANY conversation ─────────────────
+//
+// **Split out so the batch send can merge per family.** A teacher cancelling
+// Tuesday writes ONE message and eight families receive it, each with their own
+// child's name in it — which is the case merge tags were built for and the one
+// they had never met, because `_tplValues()` could only ever see the thread
+// that happened to be open.
+//
+// **A parameter, not a second copy.** The rules below are subtle enough that a
+// batch with its own version of them would resolve a different name from the
+// composer's preview within a week: no child chosen on a family with two is
+// deliberately left UNFILLED rather than guessed, and a single child needs no
+// choosing. Those are [1.351]'s and [1.454]'s rules and there is one of each.
+function _tplValuesFor(t, stuId){
   var v={ teacher:_tplFirstName(TEACHER_NAME) };
   if(!t) return v;
   v.parentFirst=_tplFirstName(t.parent1Name);
-  var id=_threadStudentId(t), st=null;
-  (t.students||[]).forEach(function(x){ if(x.studentId===id) st=x; });
+  var st=null;
+  (t.students||[]).forEach(function(x){ if(x.studentId===stuId) st=x; });
   // No child chosen and more than one on the family: nothing is filled in
   // rather than the first being guessed at. Guessing writes another child's
   // name into a message about this one.
@@ -8283,13 +8966,19 @@ function _tplValues(){
   }
   return v;
 }
-function _tplMerge(html){
-  var v=_tplValues();
+function _tplValues(){
+  var t=(HOME_TAB==='family') ? ACTIVE_THREAD : null;
+  return _tplValuesFor(t, t?_threadStudentId(t):'');
+}
+function _tplMergeWith(html, v){
   return String(html||'').replace(/\[([A-Za-z]+)\]/g, function(whole, tag){
     if(TPL_TAGS.indexOf(tag)===-1) return whole;
     var val=v[tag];
     return (val===undefined || val==='') ? whole : esc(val);
   });
+}
+function _tplMerge(html){
+  return _tplMergeWith(html, _tplValues());
 }
 // ── [1.454] — the gate, and it is the half that matters ──────────────────
 //
@@ -8657,6 +9346,74 @@ function _composerStateClear(id){
 // family is shown is NOT here — it lives on the server (SEEN_NOTE_TEXT), so
 // the teacher and admin portals cannot ship two versions of the same promise.
 var TCH_COPY={
+  // ── [1.344] — messaging a whole day ──────────────────────────────────
+  //
+  // **PLACEHOLDERS, flagged — every label here is teacher-facing and AC's to
+  // write.** They are deliberately plain rather than an attempt at his voice.
+  //
+  // **The ONE exception, and it is the message this whole feature exists to
+  // send:** `dayCancelTemplate` below is AC's own wording, supplied 11
+  // September 2026, stored word for word including the exclamation mark. It is
+  // NOT a placeholder and nothing may reword it.
+  dayOpen:'Message a whole day',
+  dayTitle:'Message a whole day',
+  dayBack:'Messages',
+  dayWhich:'When',
+  dayToday:'Today',
+  dayTomorrow:'Tomorrow',
+  // The word substituted into AC's own sentence for the night-before send.
+  // DERIVED from his message rather than written beside it — see _dayCancelWords.
+  dayTomorrowWord:'tomorrow',
+  dayNobody:'You have no lessons that day.',
+  dayWho:'Who this reaches',
+  dayWhoCount:'{families} · {students}',
+  // The nouns, so a count of one reads as one. See _dayWord.
+  wordFamilies:'families', wordFamiliesOne:'family',
+  wordStudents:'students',  wordStudentsOne:'student',
+  wordMessages:'separate messages', wordMessagesOne:'message',
+  dayMessage:'Message',
+  dayPickFirst:'Choose today or tomorrow to see who it reaches.',
+  daySend:'Send to {families}',
+  daySending:'Sending to {families}…',
+  dayWarn:'This sends {messages}. Check the list above before you send.',
+  dayNoWords:'Write a message first.',
+  dayNotSent:'Could not send to that day.',
+  daySentOk:'Sent to {families}.',
+  dayUnsend:'Unsend all',
+  dayAgain:'Write another message',
+  dayUnsending:'Unsending…',
+  dayUnsendFailed:'Could not unsend that send.',
+  dayUnsentAll:'Pulled back all {n}.',
+  // Best effort, said plainly. A parent who opened theirs inside the ten
+  // seconds keeps it — [1.276]'s rule, which a batch does not override — and
+  // the teacher is told the number rather than left to assume otherwise.
+  dayUnsentSome:'Pulled back {n}. {k} had already been read and could not be.',
+  // ── AC'S OWN WORDS, 11 September 2026. FINAL. NOT A PLACEHOLDER. ──────
+  //
+  // The message a parent reads when their child's lesson is called off.
+  // Stored verbatim. Three things it settles, read off his words rather than
+  // decided here:
+  //
+  //   • **It carries NO merge tag.** The drawing assumed one template naming
+  //     each family's own child; his is addressed to the household and speaks
+  //     for the teacher. Nothing may helpfully insert a name into it.
+  //   • **It promises a make-up credit and an official notification**, neither
+  //     of which is this feature's job. The message says they are coming; the
+  //     tool must not be built to think it sends them.
+  //   • **It says "today", twice.** He settled what that means on the same day:
+  //     *"This is only meant for same day emergencies"*, then *"to be fair, it
+  //     should be allowed for night before as well"*, then *"so this does need
+  //     conditional today or tomorrow language."* **The night-before version is
+  //     THIS sentence with that one word changed** — see `_dayCancelWords`,
+  //     which derives it rather than storing a second copy.
+  dayCancelTemplate:"I'm sorry but I'm not able to teach today and will be cancelling all of my lessons. "+
+    "A make-up credit will be added to your account, and you'll receive an official notification for the "+
+    "cancellation soon. If you receive a lesson reminder for today's lesson, please ignore that. If you "+
+    "need lesson support in the meantime, please send me a message and I'll get back to you as soon as "+
+    "possible!",
+  dayCancelLabel:'Lesson cancelled',
+  // On the bubble, beside who and when. PLACEHOLDER, flagged.
+  dayBatchMeta:'sent to {n} families at once',
   // ── [1.562] — the thread's own failures, in its own header ────────────
   // PLACEHOLDERS, flagged: teacher-facing, so AC's to write. They replace two
   // corner toasts.
@@ -9162,7 +9919,8 @@ function _oncePress(key){
 }
 function _onceDone(key){ delete _ONCE[key]; }
 
-function rComposerToolbar(id){
+function rComposerToolbar(id,opts){
+  opts=opts||{};
   // ── [1.535] — two rows at rest, and formatting is one of them only when asked
   //
   // AC, 10 September 2026: *"the formatting buttons can be hidden, including add
@@ -9211,8 +9969,10 @@ function rComposerToolbar(id){
       '<button type="button" class="cmp-tb-btn cmp-fmt-toggle'+(fmtOn?' on':'')+'"'+
         ' aria-expanded="'+(fmtOn?'true':'false')+'" title="'+esc(CMP_COPY.formatting)+'"'+
         ' onmousedown="event.preventDefault()" onclick="_cmpFmtToggle(\''+esc(id)+'\')">Aa</button>'+
-      _tbPick(id,'file',TLIB_COPY.pickFile)+
-      _tbPick(id,'link',TLIB_COPY.pickLink)+
+      // [1.344] — see rComposer's note: on the whole-day panel these two would
+      // accept a file the send cannot carry, and lose it without saying so.
+      (opts.noFiles?'':_tbPick(id,'file',TLIB_COPY.pickFile))+
+      (opts.noFiles?'':_tbPick(id,'link',TLIB_COPY.pickLink))+
     '</div>';
 }
 
@@ -9294,9 +10054,28 @@ function rEditActions(){
     '<button class="btn btn-s" onclick="cancelAmend()">'+esc(TCH_COPY.cancel)+'</button>'+
     rAct('edit');   // [1.562] — the reason a save failed, beside the button that tried
 }
-function rComposer(id,draft,onInput,sendBtn){
+// ── [1.344] — `opts`, and what it is NOT for ─────────────────────────────
+//
+// One argument, two flags, and both exist because the whole-day panel has a
+// control that would otherwise do nothing:
+//
+//   noTemplates  the panel offers its own template chips, so the composer's
+//                row would be a SECOND picker for one job on one screen —
+//                [1.455]'s doubled line in a different place.
+//   noFiles      a batch cannot carry an attachment yet. An uploaded file
+//                binds to ONE message id (`_bindAttachments_`), so eight rows
+//                cannot share one, and the send would drop it silently. **A
+//                control that quietly loses a teacher's file is worse than no
+//                control**, so it is not drawn. Logged as [1.344]'s named
+//                extension rather than half-built.
+//
+// It is deliberately NOT a way to make the composer configurable. Two flags
+// with a stated reason each; anything more and this becomes the second
+// composer the comment above swears it is not.
+function rComposer(id,draft,onInput,sendBtn,opts){
+  opts=opts||{};
   return '<div class="composer-wrap">'+
-    rComposerToolbar(id)+
+    rComposerToolbar(id,opts)+
     // [1.516] — the composer is the drop zone. Not the whole page: a drop
     // has to land somewhere a person can see it will be accepted, and the
     // window-level guard refuses everything outside this so a stray drop
@@ -9333,14 +10112,14 @@ function rComposer(id,draft,onInput,sendBtn){
       // 3 September, which was "beside Send" and still is.
       // [1.127] — the template picker, above the file row. It is the thing a
       // teacher reaches for BEFORE writing, so it sits closest to the box.
-      rTemplateRow(id)+
+      (opts.noTemplates?'':rTemplateRow(id))+
       // [1.277] — the chips sit between what is being written and the button
       // that sends it, which is where a file being added belongs.
-      rAttachRow()+
+      (opts.noFiles?'':rAttachRow())+
         // [1.520] — ON A PHONE the picker is drawn here, under the controls that
       // opened it, which is AC's own proposal. On a desktop this is empty and
       // the thread draws it in the message history's place ([1.507]).
-      (_isPhone()?rPickPanel(id):'')+
+      (opts.noFiles?'':(_isPhone()?rPickPanel(id):''))+
     // [1.404]/[1.428] — the status for this composer, beside its buttons.
     // ── [1.455] — ONE working line, not two ────────────────────────────
     //
@@ -10836,7 +11615,18 @@ function _readWho(){
 function _bubbleMeta(m){
   var who=String(m.senderName||'').trim();
   var when=fmtMsgTime(m.sentAt);
-  return [who?esc(who):'', when?esc(when):''].filter(Boolean).join(' \u00b7 ');
+  // ── [1.344] — one press wrote this, and seven others ──────────────────
+  //
+  // **Without it, a cancelled day reads as eight unexplained identical
+  // messages** — which is exactly how it looks to whoever opens the threads
+  // afterwards, admin most of all. It is one clause on the line that already
+  // says who and when, rather than a second line or a badge: the fact belongs
+  // to the message, and the message already has a place for facts about it.
+  //
+  // Drawn only when there was more than one. A batch of one is a message.
+  var n=Number(m.batchSize)||0;
+  var batch = n>1 ? TCH_COPY.dayBatchMeta.replace('{n}', String(n)) : '';
+  return [who?esc(who):'', when?esc(when):'', batch?esc(batch):''].filter(Boolean).join(' \u00b7 ');
 }
 
 // [1.237] — "a test parent received no email when a teacher sent them a

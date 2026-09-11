@@ -58,6 +58,36 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 .btn-d{background:rgba(0,0,0,.06);color:var(--rt);border-color:var(--red)}.btn-d:hover{background:rgba(150,32,32,.12)}
 .btn-g{background:var(--gbg);color:var(--gt);border-color:var(--green)}
 .btn:disabled{opacity:.35;cursor:not-allowed}
+/* ── [1.577] — a button reacts to being PRESSED, not only to a hover ──────
+   AC, 11 September 2026: *"All buttons should react when clicked or pressed."*
+
+   `.btn` carried `:hover` and `:disabled` and nothing else, in all three
+   portals. On a desktop that means a button lights up as the pointer arrives
+   and then does nothing at the moment it is actually pressed; **on a phone,
+   where there is no hover at all, it means every control in this tool was
+   silent to a touch.** The teacher and family portals are the mobile-first
+   ones, so the half with no feedback was the half most used on a phone.
+
+   **Written at the STYLE and against the ELEMENT, which is the whole point.**
+   [1.550] and [1.518] both had to be fixed this way after the same thing was
+   said three times, and this is a harder case than either: there are 48
+   button-shaped classes across these files, and a list of them would be
+   missing the one somebody adds next month. `button` catches every control in
+   the file whoever writes it, and `.btn` catches the handful of labels, spans
+   and anchors that wear the class instead.
+
+   Deliberately one visual answer for all of them rather than a pressed colour
+   per role: `transform` and `filter` compose with whatever background the
+   button already has, so a primary, a secondary, a danger button and the
+   accent-filled toolbar toggle all darken and sink by the same amount without
+   any of them needing a rule of their own. Instant, because the existing
+   `transition` on `.btn` names background, border and opacity and not these —
+   a press that eases in is a press that has not been felt yet.
+
+   `:not(:disabled)` for the obvious reason: a control that refuses the press
+   must not animate as though it took it. */
+button:active:not(:disabled),
+.btn:active:not(:disabled){transform:translateY(1px);filter:brightness(.92)}
 .btn-sm{padding:5px 11px;font-size:11px}
 .btn-xs{padding:3px 8px;font-size:10px}
 .btn-full{width:100%;justify-content:center}
@@ -268,6 +298,26 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
   #policy-pdf-print-block .kl-row{break-inside:avoid;page-break-inside:avoid}
   /* The Download PDF button must not be IN the PDF. */
   #policy-pdf-print-block .btn{display:none!important}
+  /* ── [1.578] — the policies were being CUT OFF in the downloaded PDF ────
+     AC, 11 September 2026, asking whether the PDF holds everything the screen
+     does: it held the enrollment facts, the pricing, the absences, both record
+     banners and both ticked boxes — and about a third of the policies.
+
+     `.tc-box` is `max-height:55vh; overflow-y:auto`, which is right on screen:
+     a long legal document inside a scrolling panel. **On paper there is no
+     scrolling, so the container simply clips** — measured in the rendered
+     print block at 693px of box around 2062px of text, losing 1369px of it
+     without a mark on the page to say so.
+
+     **That is the worst shape a bug can take here:** the document looks whole,
+     is signed, dated and ticked, and quietly stops in the middle of Tuition &
+     Billing. A family keeping it as their record would be keeping a third of
+     one.
+
+     Restated here for the same reason the colours above are: a rule written
+     for the screen is not automatically right for the page, and a print
+     stylesheet is the place that difference gets said. */
+  #policy-pdf-print-block .tc-box{max-height:none!important;overflow:visible!important}
 }
 /* Messaging (v1) */
 
@@ -5406,6 +5456,19 @@ function _klCurrentEnrollmentFactsHtml(s){
       '<div class="kl-when">'+esc(r[1])+'</div></div>';
   });
   h+=_fmtPriceBox({monthlyPrice:ce.monthlyPrice, lessonLocation:ce.lessonLocation}, false);
+  // ── [1.575] — the policies end THIS block too, not the caller ──────────
+  //
+  // Moved down from `_rHomeEnrDetailsToggle`, where it used to sit after the
+  // branch and therefore ran for both halves of it — while
+  // `_klEnrollmentFactsHtml` had grown its own copy at [1.421]. See the note
+  // on the toggle below: the rule now is that a facts function returns its
+  // WHOLE block, policies included, and the caller appends nothing.
+  //
+  // Still the snapshot rather than today's wording, and still keyed on the
+  // CURRENT enrollment's location rather than the pending proposal's: while a
+  // change is being offered, the in-home clauses a family agreed to are the
+  // ones their current enrollment carries.
+  h+=_klPolicySnapshotHtml(s, ce.lessonLocation==='in-home');
   return h;
 }
 
@@ -5421,10 +5484,30 @@ function _rHomeEnrDetailsToggle(s){
   var h='<div style="margin-top:.6rem">';
   h+='<p style="font-size:12px;color:var(--text3);margin-bottom:.4rem">Review '+esc(first)+'\u2019s enrollment details and studio policies.</p>';
   h+='<button class="btn btn-p btn-sm" onclick="_homeEnrOpen[&apos;'+esc(s.studentId)+'&apos;]=!_homeEnrOpen[&apos;'+esc(s.studentId)+'&apos;];render()">'+(open?'Hide Details':'Show Details')+'</button>';
-  if(open){
-    h+=isChange?_klCurrentEnrollmentFactsHtml(s):_klEnrollmentFactsHtml(s);
-    h+=_klPolicySnapshotHtml(s, (isChange?s.currentEnrollment.lessonLocation:s.lessonLocation)==='in-home');
-  }
+  // ── [1.575] — ONE call, because the policies were being drawn twice ─────
+  //
+  // AC, 11 September 2026, with a screenshot: *"Family page: policies are
+  // showing twice... This was ALL fixed and looks like it has now regressed
+  // and been broken even."*
+  //
+  // **It is [1.421]'s regression and it went live at @795.** This function has
+  // appended the policies since 26 August. On 9 September [1.421] rebuilt the
+  // block in AC's order and ended `_klEnrollmentFactsHtml` with the policies
+  // as well — his sentence ends there — and the line here was left standing.
+  // So an enrolled child got the policies, and then got them again.
+  //
+  // **Every check [1.421] wrote calls `_klEnrollmentFactsHtml` directly**, and
+  // that function is correct. Nothing has ever run the caller, which is what
+  // the screen actually calls. Same lesson as @796, in the same words: two
+  // halves each right on their own, and the thing they make is wrong.
+  //
+  // **The rule that replaces the bug, rather than a deletion:** a facts
+  // function returns the WHOLE block for its case, policies included, and this
+  // appends nothing to it. Deleting the line alone would have taken the
+  // policies off the Enrollment Change screen, where it was the only copy —
+  // so `_klCurrentEnrollmentFactsHtml` grew its own instead. Two branches, one
+  // call, and no later edit to either can put a second copy back.
+  if(open) h+=isChange?_klCurrentEnrollmentFactsHtml(s):_klEnrollmentFactsHtml(s);
   h+='</div>';
   return h;
 }

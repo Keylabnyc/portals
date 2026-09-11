@@ -4861,6 +4861,40 @@ function _klScheduleEvents(){
     out.push({ event:label, startDate:ymd, endDate:ymd, closed:false, kind:'start' });
   });
 
+  // ── [1.345] — THE DAYS THEIR OWN TEACHER IS AWAY ────────────────────────
+  //
+  // **AC, 6 September 2026 and again on the 10th:** *"Upcoming dates needs to
+  // list teacher absences also, not just dates included in the main admin
+  // settings panel."*
+  //
+  // **The list above is the studio's calendar** — closures, holidays, term
+  // dates — **so a family whose lesson was cancelled read a list saying the
+  // studio is open and nothing about their own missing lesson.**
+  //
+  // **Per ENROLLMENT, which is what makes AC's answer — *"only their own
+  // teacher's"* — work for a household with two children on two teachers.** The
+  // server sends each enrollment its own dates, already filtered to that
+  // child's lesson day and no earlier than their start date ([1.345] server
+  // side, through [1.339]'s single computation). Nothing here decides which
+  // dates a family may see; this only draws what arrived.
+  //
+  // **The child is named on every row** — AC's own format, and it is the half
+  // that tells a two-children household which lesson is gone. The teacher's
+  // name is the other half.
+  enrolled.forEach(function(s){
+    (s.absenceDates||[]).forEach(function(ab){
+      if(!ab || !ab.date) return;
+      var who=s.studentName?s.studentName.trim().split(' ')[0]:'';
+      out.push({
+        event: KL_ABSENCE_COPY.row(who, s.teacher||''),
+        startDate: ab.date, endDate: ab.date,
+        // NOT `closed`: the studio is open and every other teacher is working.
+        // Borrowing the closure flag would tell a family the building is shut.
+        closed:false, kind:'absence'
+      });
+    });
+  });
+
   return out.filter(function(e){
     var end=_parseYMD(e.endDate||e.startDate);
     return !isNaN(end.getTime()) && end>=today;
@@ -5097,6 +5131,57 @@ function rHomeContactDetails(){
 // ── [1.562] — the family portal's messaging failures ─────────────────────
 // PLACEHOLDERS, flagged: family-facing, so AC's to write. They replace three
 // corner toasts — a parent reading a thread should be told at the thread.
+// ── [1.345] — what a family reads on an absence row ──────────────────────
+//
+// **AC's words, verbatim.** First *"Mia - No lesson today. teacher name is
+// away"*, then, on being told the row sits beside a FUTURE date: *"you can say
+// no lesson on this date"*. His hyphen, his full stop, his phrasing.
+//
+// **The flag was worth raising and he answered it in five words** — "today" is
+// wrong on a row dated three weeks out, and "on this date" is right whether the
+// list is read in October or in June.
+//
+// **Then *"make it all consistent"*, then — told the proposal email says this
+// same thing in other words — *"can you just adapt the longer paragraph into a
+// short absence indicator in the upcoming dates?"*, and then, on seeing what
+// that produced: *"this seems really complicated. doesn't need to be this
+// complicated?"***
+//
+// **He was right and the correction is worth keeping.** I read "adapt the
+// paragraph" as "carry its whole vocabulary across" and produced
+// *"Mia — Teacher absence. Xavier Tombstone will be away and there will be no
+// lesson scheduled."* — **longer than the sentence he wrote himself two
+// messages earlier.** A short indicator that is longer than the thing it
+// shortened is not an adaptation; it is the paragraph with the punctuation
+// changed.
+//
+// **What the row takes from the email is its LABEL** — `Teacher absence`, which
+// is what the studio calls this — and nothing else. The rest is his own first
+// instruction, *"teacher name is away"*.
+//
+// **The em dash is the portal's**, from *"make it all consistent"*: it joins a
+// name to a clause everywhere here — `Self-release — Mia`.
+//
+// **Two of my own rules went with them, and both were mine rather than his:**
+//
+//  1. **The child is ALWAYS named now.** I had named them only where a
+//     household has more than one enrollment; his format leads with the child
+//     in the example he gave, and a rule he did not ask for is not a rule.
+//  2. **The reason is GONE.** The row used to append admin's reason in
+//     parentheses. His sentence has no room for one, and adding it back would
+//     be widening his words. **The reason is still on the record** — the server
+//     sends it and `_absenceDatesForSlot_` has always returned it — so it costs
+//     nothing to put back if he asks.
+//
+// The teacher's name is still in it, which matters for the two-children-two-
+// teachers case: it is the only thing on the row that says WHICH lesson.
+var KL_ABSENCE_COPY = {
+  row: function(childFirstName, teacherName){
+    var who = childFirstName || 'Your child';
+    var tch = teacherName || 'Your teacher';
+    return who + ' \u2014 Teacher absence. ' + tch + ' is away.';
+  }
+};
 var KL_MSG_FAIL = {
   load:'Could not load this conversation.',
   refresh:'Could not refresh.',

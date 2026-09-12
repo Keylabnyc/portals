@@ -1999,6 +1999,14 @@ function _renderBody(){
   // top while the reader was halfway down it. Remembered by INDEX, which is
   // enough: the panel redraws the same lists in the same order, and a list that
   // has gone is one whose scroll nobody wants back.
+  // ── [1.591] — and the MODAL itself, which nothing kept ─────────────────
+  //
+  // AC, 12 September 2026: *"teacher side is jumping too."* Same cause as
+  // admin's: the library overlay is its own scroller and `render()` rebuilds
+  // `#app` wholesale, so `scrollTop` went to 0 on every press. The shelves
+  // inside it have kept their place since [1.484] — the box holding them did
+  // not, which is why the shelf stayed put and the screen still moved.
+  var _prevModalTop=(function(){ var m=document.querySelector('.lib-modal'); return m?m.scrollTop:0; })();
   var _prevLibTops=[];
   Array.prototype.forEach.call(el.querySelectorAll('.lib-list'), function(l){
     _prevLibTops.push(l.scrollTop);
@@ -2136,6 +2144,13 @@ function _renderBody(){
   Array.prototype.forEach.call(el.querySelectorAll('.lib-list'), function(l, i){
     if(_prevLibTops[i]) l.scrollTop=_prevLibTops[i];
   });
+  // [1.591] — and the modal around them. A centring request ([1.590]) runs
+  // after this and wins on purpose: that is somebody asking to be taken
+  // somewhere, and this only asks not to be moved.
+  if(_prevModalTop){
+    var _m=el.querySelector('.lib-modal');
+    if(_m) _m.scrollTop=_prevModalTop;
+  }
   // [1.221] — and the page itself, last, after every other restore above has
   // had its say.
   // [1.512] — the composer wins on the render that swapped the region.

@@ -1031,6 +1031,12 @@ input[type=checkbox]{width:13px;height:13px;padding:0;margin:0;border:0;border-r
    two ways in and made the panel open on two big bars. */
 .lib-add-row{display:flex;flex-wrap:wrap;gap:6px}
 .lib-add-row .btn{flex:1 1 auto;width:auto;justify-content:center;text-align:center}
+/* [1.589] — ONE button in the row now that files and links are two sections,
+   and `flex:1 1 auto` on a lone button is a full-width blue bar. That is
+   [1.559]'s complaint exactly — *"way too big. Just regular size"* — arriving
+   through a layout change rather than a style one. A row with a single control
+   sizes it to its words. */
+.lib-add-row .btn:only-child{flex:0 0 auto}
 
 /* ── The review step: what you just added, and the one thing to do to it ── */
 /* [1.556] — AC, 10 September 2026: *"text entry areas should not be the same
@@ -1392,6 +1398,45 @@ input[type=checkbox]{width:13px;height:13px;padding:0;margin:0;border:0;border-r
 .lib-modal { position:fixed;top:4vh;left:50%;transform:translateX(-50%);width:min(680px,94vw);max-height:92vh;
   overflow-y:auto;background:var(--bg2);border:1px solid var(--border3);border-radius:var(--rl);padding:14px;
   box-shadow:0 18px 40px rgba(0,0,0,.35);z-index:61 }
+/* [1.585] — the file editor, above the library screen that opened it. Its own
+   z-index pair rather than reusing the first: with one pair the editor's scrim
+   lands under the library modal and swallows the clicks meant for the ×.
+   Admin's twin is [1.579]; these rules are deliberately identical. */
+/* [1.585] — a teacher's own tags, listed under the filter row they appear in. */
+.lib-mytags{margin-top:8px;padding-top:8px;border-top:1px solid var(--border2)}
+.lib-mytag-row{display:flex;align-items:center;gap:8px;padding:3px 0;flex-wrap:wrap}
+.lib-mytag-row .lib-act{margin-left:0}
+.lib-mytag-row .lib-meta{margin-right:auto}
+/* ── [1.589] — the four areas of the library, each under its own banner ────
+   **AC, 11 September 2026:** *"Use clear visually distinct full width of the
+   open library window header banners for each section with larger font for easy
+   id. MY TAGS, MY FILES, MY LINKS, MY TEMPLATES"* — and, separately: *"there is
+   no need to keep 'add files' and 'add links' together in the same edit area."*
+
+   A BAND, not a card heading: it spans the panel edge to edge on the negative
+   margin, so it separates rather than decorating what follows — the shape
+   [1.451] settled for the thread header and [1.558] reused for the shelves.
+   Larger than those on purpose; his word is "easy id", and these are the four
+   landmarks somebody scrolls between.
+
+   The section beneath sits on its own step ([1.556]'s ladder), so a banner
+   never looks like it is floating over the page background. */
+.lib-band{margin:14px -14px 10px;padding:9px 14px;background:var(--bg5);
+  border-top:1px solid var(--border2);border-bottom:1px solid var(--border2);
+  font-size:14px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--acc);font-family:"Inter",sans-serif;display:flex;align-items:center;gap:10px}
+.lib-band:first-child{margin-top:0}
+.lib-band .zcount{margin-left:auto;font-size:12px;color:var(--text4);letter-spacing:0}
+/* [1.589] — the body of a section, a step above the banner's ground so the
+   cards inside it have something to stand on. Same ladder as [1.563]. */
+.lib-section{background:var(--bg4);border:1px solid var(--border);border-radius:var(--r);
+  padding:10px;margin-bottom:4px}
+.lib-section .lib-add-row{margin-bottom:8px}
+/* [1.588] — a tag taken off the list is still drawn, and has to read as off. */
+.lib-tag.off{opacity:.5;border-style:dashed;text-decoration:line-through}
+.lib-scrim-2 { z-index:70 }
+.lib-modal-2 { z-index:71;width:min(520px,92vw);top:8vh }
+.lib-modal-2 .lib-edit { margin-top:0 }
 .lib-modal-hd { display:flex;align-items:center;margin-bottom:10px }
 .lib-modal-t { font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text2) }
 </style>
@@ -1890,7 +1935,7 @@ function _renderBody(){
   else if(PAGE==='login')    h+=rLogin();
   else if(PAGE==='forgotpw') h+=rForgotPassword();
   else if(PAGE==='setpw')    h+=rSetPassword();
-  else                       h+=rHome()+rLibraryOverlay();   // [1.495]
+  else                       h+=rHome()+rLibraryOverlay()+rLibEditOverlay();   // [1.495], [1.585]
   // render() replaces #app wholesale, so a message arriving mid-poll would
   // otherwise yank the teacher's cursor out of a half-typed message — the
   // teacher-side twin of the family bug fixed in 1.32.
@@ -2086,6 +2131,7 @@ function _renderBody(){
     var ml2=el.querySelector('.msg-list');
     if(ml2) ml2.scrollTop=_prevListTop;
   }
+  _libCentreRun();   // [1.590]
   // [1.484] — the library's own lists, put back before the page is.
   Array.prototype.forEach.call(el.querySelectorAll('.lib-list'), function(l, i){
     if(_prevLibTops[i]) l.scrollTop=_prevLibTops[i];
@@ -2154,6 +2200,40 @@ function _guideTo(sel){
   },0);
 }
 
+// ── [1.590] — opening an editor CENTRES it, instead of throwing the screen
+//    to the top ──────────────────────────────────────────────────────────
+//
+// **AC, 11 September 2026:** *"The screen is quite jumpy when I click add a new
+// file, link, or template. It jumps up to the top, but should center around the
+// open edit window so it's easy to use."*
+//
+// **The jump is not a scroll — it is a rebuild.** The library modal is its own
+// scroller (`max-height:92vh; overflow-y:auto`), and writing its innerHTML puts
+// `scrollTop` back to 0. The shelves inside it already keep their place
+// ([1.484]); the modal itself never did, so opening anything sent the whole
+// screen back to the banner at the top.
+//
+// **Restoring the old position would be the wrong fix.** What a person wants
+// after pressing Add is to SEE the thing that opened, wherever it is — so this
+// centres it rather than pretending nothing moved. `block:'center'`, not
+// `'start'`, because the form's own buttons are at its foot and a form pinned
+// to the top edge puts Save off-screen.
+//
+// Set by the press, run once after the render it caused. A flag rather than a
+// call inside each opener, because the element does not exist until the render
+// has happened.
+var _libCentreNext='';
+function libCentreOn(sel){ _libCentreNext=sel; }
+function _libCentreRun(){
+  if(!_libCentreNext) return;
+  var sel=_libCentreNext; _libCentreNext='';
+  setTimeout(function(){
+    var el=document.querySelector(sel);
+    if(!el || !el.scrollIntoView) return;
+    try{ el.scrollIntoView({block:'center', behavior:'smooth'}); }
+    catch(e){ try{ el.scrollIntoView(); }catch(e2){} }
+  },0);
+}
 function _focusNoScroll(el){
   try{ el.focus({preventScroll:true}); }catch(e){ try{ el.focus(); }catch(e2){} }
 }
@@ -2651,6 +2731,9 @@ var TTPL_COPY={
   blurb:'These are your custom templates. You can add, edit, or delete your own custom templates',
   // AC's wording, 6 September.
   empty:'No templates saved yet.',
+  // [1.585] — admin's word for the same control, so one act is not called two
+  // things in two places.
+  add:'Create a new template',
   nameLbl:'Template name', bodyLbl:'Message',
   namePh:'Template name here', bodyPh:'Type your message here',
   // AC's wording, 6 September, kept exactly. Worth noting what the buttons
@@ -2697,9 +2780,35 @@ function rTeacherTemplates(){
   // [1.404] — replaced by the shared note, which names the template back and
   // carries the failure case too. The old line said "✓ Saved" and nothing else,
   // which is what AC meant by "no banner ... confirming the name etc."
+  // ── [1.585] — a teacher can CREATE a template, which they could not ─────
+  //
+  // **AC, 11 September 2026:** *"Teachers and admin want to be able to add,
+  // edit, delete from this view for files links tags and templates... it's a
+  // master control area for all four."*
+  //
+  // **There was no add path at all.** A teacher's only route to a new template
+  // was Save-as from the composer, after USING one — so a teacher who had never
+  // used a template could never make one, and this list could only ever show
+  // rows that arrived some other way. Edit and Delete were both here; the one
+  // that starts the whole thing was missing.
+  //
+  // Admin's `admTplAdd`, in this portal's shapes. `.lnk-btn` is [1.550]'s
+  // secondary role, the same as admin's Create a new template.
+  h+='<div class="lnk-foot">'+
+     '<button type="button" class="lnk-btn" onclick="ttplAdd()">'+esc(TTPL_COPY.add)+'</button>'+
+     '</div>';
   h+=rAct('tpl');
   if(TSET.tplsErr) h+='<div style="color:var(--red);font-size:12px;margin-top:.4rem">'+esc(TSET.tplsErr)+'</div>';
   return h+'</div>';
+}
+// [1.585] — a blank row, opened for editing. `_txt` false because the body box
+// is the composer's editor now ([1.579]), so what comes out of it is already
+// markup and must not be escaped on save.
+function ttplAdd(){
+  libCentreOn('.lnk-form');   // [1.590]
+  TSET.tpls=(TSET.tpls||[]).concat([{templateId:'', label:'', body:'', _txt:false}]);
+  TSET.tplEdit=TSET.tpls.length-1; TSET.tplDel=-1; TSET.tplBackup=null;
+  render();
 }
 // Tags out AND ENTITIES DECODED. The second half was missing and it showed: a
 // template reading "Great lesson today — really solid work" was drawn as
@@ -2936,6 +3045,7 @@ function ttplLoad(){
   });
 }
 function ttplEdit(i){
+  libCentreOn('.lnk-form');   // [1.590]
   // A copy first, so Cancel is a real way back — the boxes write straight into
   // the list as they are typed ([1.338]).
   TSET.tplBackup=JSON.parse(JSON.stringify(TSET.tpls[i]||{}));
@@ -6619,7 +6729,31 @@ var TLIB_COPY={
   search:'Search your library',
   clear:'Clear filter',
   // [1.547] — AC's own word for the control that opens them.
+  // ── [1.589] — AC's own four labels, verbatim ──────────────────────────
+  // *"four distinct areas in the master library editor: MY TAGS, MY FILES,
+  // MY LINKS, MY TEMPLATES"*. Drawn uppercase by the band's own style, so the
+  // strings are stored as written.
+  bandTags:'My tags',
+  bandFiles:'My files',
+  bandLinks:'My links',
+  bandTemplates:'My templates',
   tagsHead:'Tags',
+  // ── [1.585] — PLACEHOLDERS, flagged. AC's to reword. ───────────────────
+  // [1.588] — AC's term, and it is the same word in both portals: *"'custom
+  // tags' (they should be called that in both portals) created by admin or
+  // teacher can be edited or deleted."*
+  myTagsHead:'Custom tags',
+  myTagOn:'on {n}',
+  myTagRename:'Rename',
+  myTagDelete:'Delete',
+  myTagSave:'Save',
+  myTagCancel:'Cancel',
+  myTagSaving:'Renaming\u2026',
+  myTagDeleting:'Deleting\u2026',
+  myTagSaved:'Saved.',
+  myTagDelAsk:'Delete \u201c{name}\u201d from {n} of your files and links?',
+  myTagDelYes:'Delete it',
+  myTagDelNo:'Keep it',
   mine:'My Links and Files',            // AC's label, 10 September 2026
   studio:'Keylab Master Library',       // AC's label, final
   // [1.480] — the old wording sent a teacher to a message to add anything,
@@ -7066,7 +7200,40 @@ function _pickRedraw(){
 // until somebody visited Settings, which is the tab it just left.
 function libraryOpen(){ LIBRARY_OPEN=true; LIB_EDIT=''; LIB_DEL=''; loadLibrary(); ttplLoad(); render(); }
 function libraryClose(){ LIBRARY_OPEN=false; LIB_EDIT=''; LIB_DEL=''; LIBADD=null; actClear('libadd'); render(); }
-document.addEventListener('keydown', function(ev){ if(ev.key==='Escape' && LIBRARY_OPEN) libraryClose(); });
+// [1.585] — the EDITOR first, then the library. Escape on a dialog stacked over
+// another has to close the top one, or a teacher correcting a filename loses
+// the whole screen with one key.
+document.addEventListener('keydown', function(ev){
+  if(ev.key!=='Escape') return;
+  if(LIB_EDIT||LIB_DEL) { libEditClose(); return; }
+  if(LIBRARY_OPEN) libraryClose();
+});
+// ── [1.585] — editing a file or link happens ON TOP, not inside the list ──
+//
+// Admin's twin is [1.579]; this is the same fix in the portal that was left
+// behind. Drawn on the body beside the library overlay rather than inside it:
+// it has to sit above that modal, and the same panel is drawn in the composer's
+// picker where there is no modal to sit inside.
+function rLibEditOverlay(){
+  var id=LIB_DEL||LIB_EDIT;
+  if(!id) return '';
+  var f=_libFind(id);
+  if(!f) return '';
+  var link=f.kind==='link';
+  return '<div class="lib-scrim lib-scrim-2" onclick="libEditClose()"></div>'+
+    '<div class="lib-modal lib-modal-2" role="dialog" aria-modal="true"'+
+      ' aria-label="'+esc(TLIB_COPY.manage)+'">'+
+      '<div class="lib-modal-hd"><span class="lib-modal-t">'+
+        esc(link?TLIB_COPY.linkKind:TLIB_COPY.manage)+' \u2014 '+esc(f.fileName||'')+'</span>'+
+        '<button type="button" class="modal-x" aria-label="'+esc(TLIB_COPY.close)+'"'+
+          ' onclick="libEditClose()">&#215;</button></div>'+
+      rLibPanel(f)+
+    '</div>';
+}
+// One way out, used by the scrim, the × and Escape. Clears the delete question
+// with it: an open "delete this for good?" left behind a closed dialog is how
+// the next press means something nobody read.
+function libEditClose(){ LIB_EDIT=''; LIB_DEL=''; render(); }
 function rLibraryOverlay(){
   if(!LIBRARY_OPEN) return '';
   LIB_STANDALONE=true;
@@ -7138,10 +7305,15 @@ function libClearFilter(){ LIB_FILTER=[]; LIB_Q=''; _libFilterSave(); _libRedraw
 // The search box keeps its own value in JS and redraws only the LIST, never
 // itself — [1.17]'s Pattern B, and the reason is the same: a full render()
 // while somebody is typing takes the caret with it.
+// [1.589] — two bodies to narrow now that files and links are two sections.
+// The wrappers hold ONLY the shelves, so a redraw here cannot wipe an add card
+// somebody is halfway through filling in.
 function libSearch(v){
   LIB_Q=String(v||'');
-  var el=document.getElementById('lib-body');
-  if(el) el.innerHTML=rLibraryBody();
+  var f=document.getElementById('lib-body-files');
+  if(f) f.innerHTML=rLibraryBodyFiles();
+  var l=document.getElementById('lib-body-links');
+  if(l) l.innerHTML=rLibraryBodyLinks();
 }
 
 function _libFind(id){
@@ -7269,7 +7441,7 @@ function libOpenLink(id){
   var it=_libFind(id); if(!it || !it.url) return;
   try{ window.open(it.url,'_blank','noopener'); }catch(e){}
 }
-function libEdit(id){ LIB_EDIT = (LIB_EDIT===id?'':id); LIB_DEL=''; _libRedraw(); }
+function libEdit(id){ libCentreOn('.lib-modal-2'); LIB_EDIT = (LIB_EDIT===id?'':id); LIB_DEL=''; _libRedraw(); }   // [1.590]
 // ── [1.488] — the name saves when you leave the field ────────────────────
 //
 // AC asked what could be condensed out of seven buttons, and told me to use my
@@ -7577,7 +7749,7 @@ function _libNear1(a, b){
   if(i<a.length || j<b.length) diff++;
   return diff<=1;
 }
-function libAddFiles(){ var el=document.getElementById('lib-add-file'); if(el) el.click(); }
+function libAddFiles(){ libCentreOn('#lib-sec-files'); var el=document.getElementById('lib-add-file'); if(el) el.click(); }   // [1.590]
 function libAddChosen(input){
   var files=input && input.files ? Array.prototype.slice.call(input.files) : [];
   input.value='';
@@ -7991,7 +8163,7 @@ function libAddUpload(file){
 // deleted rather than kept as a one-line forwarder** — the card's Cancel calls
 // `libAddClose` directly, and a function nothing calls is what the dead-code
 // check exists to find.
-function libAddLinkOpen(){ libAddOpen({kind:'link', at:'lib'}); }
+function libAddLinkOpen(){ libCentreOn('.lib-new'); libAddOpen({kind:'link', at:'lib'}); }   // [1.590]
 function libAddedDone(){ LIB_ADDED=[]; LIB_ADD_SEL={}; _libRedraw(); }
 function libAddedSel(id){
   if(LIB_ADD_SEL[id]) delete LIB_ADD_SEL[id]; else LIB_ADD_SEL[id]=true;
@@ -8342,34 +8514,26 @@ function rLibraryPanel(composerId){
   var wantFind=(total>6)||LIB_Q||LIB_FILTER.length;
   // [1.485] — the id is what lets a press redraw THIS and nothing else.
   // No heading of its own: the overlay carries the title and the ×.
+  // ── [1.589] — FOUR areas, each under its own banner ─────────────────────
+  //
+  // **AC, 11 September 2026:** *"there is no need to keep 'add files' and 'add
+  // links' together in the same edit area. They can now be separated so there
+  // are four distinct areas in the master library editor: MY TAGS, MY FILES,
+  // MY LINKS, MY TEMPLATES"* and *"Use clear visually distinct full width ...
+  // header banners for each section with larger font for easy id."*
+  //
+  // **The search stays above all four.** It narrows files and links together
+  // and always has; moving a copy into each would be two boxes doing one job
+  // and two places to clear a filter from.
+  //
+  // **Each way IN sits in the section it adds to.** Add files was next to Add
+  // links because they shared one area; they do not any more, and a button that
+  // adds a file belongs above the files.
   return '<div class="lib-panel" id="lib-panel">'+
-    // The two ways IN, first and loudest ([1.480]).
-    '<div class="lib-add-row">'+
-      '<button type="button" class="btn btn-p" onclick="libAddFiles()">'+esc(TLIB_COPY.addGo)+'</button>'+
-      '<button type="button" class="btn btn-s'+((LIBADD&&LIBADD.at==='lib')?' lib-on':'')+'"'+
-        ' onclick="libAddLinkOpen()">'+esc(TLIB_COPY.addLinksGo)+'</button>'+
-    '</div>'+
-    '<input type="file" id="lib-add-file" class="att-input" multiple accept="'+_attAccept()+'"'+
-      ' onchange="libAddChosen(this)">'+
-    // [1.553] — the one-step card, where the paste box used to be. Address,
-    // display text and tags together, and the press at the end is the only
-    // round trip.
-    rLibAddCard('lib')+
-    // The card draws its own status line, so this one is only for what the card
-    // is not doing — an upload, or a deletion from the shelves below.
-    ((LIBADD&&LIBADD.at==='lib')?'':rAct('libadd'))+
-    // ── The review step. AC: "it should ask for tags, etc when adding, not
-    // ── after and then having to remember to edit." So what just landed sits
-    // ── HERE, at the top where the press was, with the tagging on it.
-    rLibraryAdded()+
     (wantFind
       // [1.488] — the way OUT of a filter sits ON the filter. It was a
       // separate "Clear filter" button in the chip row below; the box is where
-      // a person looks for it, and one fewer control is on the panel. The words
-      // are kept as the label a screen reader reads and the tooltip a mouse
-      // finds. type="text", not "search": the browser's own × would clear the
-      // typing and leave the tag chips on, which is a different thing done by
-      // an identical-looking control.
+      // a person looks for it, and one fewer control is on the panel.
       ? '<div class="lib-find">'+
           '<input id="lib-q" class="lib-search" type="text" value="'+esc(LIB_Q)+'"'+
             ' placeholder="'+esc(TLIB_COPY.search)+'" aria-label="'+esc(TLIB_COPY.search)+'"'+
@@ -8378,10 +8542,48 @@ function rLibraryPanel(composerId){
             ? '<button type="button" class="lib-clear-x" onclick="libClearFilter()"'+
               ' aria-label="'+esc(TLIB_COPY.clear)+'" title="'+esc(TLIB_COPY.clear)+'">&#215;</button>'
             : '')+
-        '</div>'+
-        rLibraryTags()
+        '</div>'
       : '')+
-    '<div id="lib-body" style="margin-top:9px">'+rLibraryBody()+'</div>'+
+
+    // ── MY TAGS ───────────────────────────────────────────────────────────
+    '<div class="lib-band">'+esc(TLIB_COPY.bandTags)+'</div>'+
+    '<div class="lib-section">'+rLibraryTags()+'</div>'+
+
+    // ── MY FILES ──────────────────────────────────────────────────────────
+    '<div class="lib-band">'+esc(TLIB_COPY.bandFiles)+
+      '<span class="zcount">'+((LIB_MINE||[]).length+(LIB_SHELF_STUDIO||[]).length)+'</span></div>'+
+    '<div class="lib-section" id="lib-sec-files">'+
+      '<div class="lib-add-row">'+
+        '<button type="button" class="btn btn-p" onclick="libAddFiles()">'+esc(TLIB_COPY.addGo)+'</button>'+
+      '</div>'+
+      '<input type="file" id="lib-add-file" class="att-input" multiple accept="'+_attAccept()+'"'+
+        ' onchange="libAddChosen(this)">'+
+      // The review step. AC: "it should ask for tags, etc when adding, not
+      // after and then having to remember to edit." What just landed sits where
+      // the press was, with the tagging on it.
+      rLibraryAdded()+
+      ((LIBADD&&LIBADD.at==='lib')?'':rAct('libadd'))+
+      '<div id="lib-body-files">'+rLibraryBodyFiles()+'</div>'+
+    '</div>'+
+
+    // ── MY LINKS ──────────────────────────────────────────────────────────
+    '<div class="lib-band">'+esc(TLIB_COPY.bandLinks)+
+      '<span class="zcount">'+((LIB_MY_LINKS||[]).length+(LIB_STUDIO_LINKS||[]).length)+'</span></div>'+
+    '<div class="lib-section" id="lib-sec-links">'+
+      '<div class="lib-add-row">'+
+        '<button type="button" class="btn btn-p'+((LIBADD&&LIBADD.at==='lib')?' lib-on':'')+'"'+
+          ' onclick="libAddLinkOpen()">'+esc(TLIB_COPY.addLinksGo)+'</button>'+
+      '</div>'+
+      // [1.553] — the one-step card: address, display text and tags together,
+      // and the press at the end is the only round trip.
+      rLibAddCard('lib')+
+      '<div id="lib-body-links">'+rLibraryBodyLinks()+'</div>'+
+    '</div>'+
+
+    // ── MY TEMPLATES ──────────────────────────────────────────────────────
+    '<div class="lib-band">'+esc(TLIB_COPY.bandTemplates)+
+      '<span class="zcount">'+((TSET.tpls||[]).length)+'</span></div>'+
+    '<div class="lib-section" id="lib-sec-tpls">'+rTeacherTemplates()+'</div>'+
   '</div>'+
   // ── [1.579] — the TEMPLATES are on this screen too ──────────────────────
   //
@@ -8437,53 +8639,148 @@ function rLibraryTags(){
   }).join('')+
   // [1.488] — the clear used to be a button at the end of this row. It is now
   // an × on the search box, where a person looks for it.
-  '</div></div>';
+  '</div>'+rLibMyTagManager()+'</div>';
 }
-function rLibraryBody(){
+// ── [1.585] — a teacher's own tags, managed rather than only filtered ─────
+//
+// **AC, 11 September 2026:** *"Teachers and admin want to be able to add, edit,
+// delete from this view for files links tags and templates... it's a master
+// control area for all four."*
+//
+// **Tags was the one of the four that could only FILTER.** A teacher's private
+// words live ON their files and are gathered from them — which is what makes
+// them private, with no vocabulary anywhere to leak — and it also meant there
+// was nowhere to change one. Correcting "warmups" to "warm-ups" meant opening
+// every file that carried it, and until you had, both sat in this row looking
+// like duplicates.
+//
+// **Admin's shelf is deliberately NOT here.** AC settled the model: *"Admin can
+// add more global tags, teachers can add their own private tags."* A teacher
+// renaming a studio tag would rename it on every teacher's files, and the
+// server refuses it regardless — so the row above filters by both and this
+// manages only their own.
+//
+// **Adding is not a control here on purpose:** a word with no file on it is a
+// tag that filters to nothing, and the place to add one is the file you are
+// filing — which already has its own box ([1.469]). This is where a word that
+// EXISTS is corrected or dropped.
+var LIB_TAG_EDIT='', LIB_TAG_NEW='', LIB_TAG_DEL='';
+function _libMyWords(){
+  var seen={};
+  (LIB_MINE||[]).concat(LIB_MY_LINKS||[]).forEach(function(f){
+    (f.privateTags||[]).forEach(function(w){ seen[w]=(seen[w]||0)+1; });
+  });
+  return Object.keys(seen).sort().map(function(w){ return {word:w, n:seen[w]}; });
+}
+function rLibMyTagManager(){
+  var words=_libMyWords();
+  if(!words.length) return '';
+  return '<div class="lib-mytags">'+
+    '<div class="lib-lbl">'+esc(TLIB_COPY.myTagsHead)+'</div>'+
+    words.map(function(w){
+      if(LIB_TAG_DEL===w.word){
+        return '<div class="lnk-confirm">'+
+          '<span class="lnk-ask">'+esc(TLIB_COPY.myTagDelAsk.replace('{name}', w.word)
+            .replace('{n}', String(w.n)))+'</span>'+
+          '<button type="button" class="lnk-btn" onclick="libMyTagCancel()">'+
+            esc(TLIB_COPY.myTagDelNo)+'</button>'+
+          '<button type="button" class="btn btn-danger" style="width:auto;font-size:12px"'+
+            ' onclick="libMyTagDelete(\''+esc(w.word)+'\')">'+esc(TLIB_COPY.myTagDelYes)+'</button>'+
+          '</div>';
+      }
+      if(LIB_TAG_EDIT===w.word){
+        return '<div class="lib-fld-row" style="margin-bottom:6px">'+
+          '<input id="lib-tagrn" value="'+esc(LIB_TAG_NEW)+'"'+
+            ' aria-label="'+esc(TLIB_COPY.myTagRename)+'"'+
+            ' oninput="LIB_TAG_NEW=this.value"'+
+            ' onkeydown="if(event.key===\'Enter\'){event.preventDefault();libMyTagRename(\''+esc(w.word)+'\');}'+
+              'else if(event.key===\'Escape\'){event.preventDefault();libMyTagCancel();}">'+
+          '<button type="button" class="lnk-btn" onclick="libMyTagCancel()">'+esc(TLIB_COPY.myTagCancel)+'</button>'+
+          '<button type="button" class="lib-done" onclick="libMyTagRename(\''+esc(w.word)+'\')">'+
+            esc(TLIB_COPY.myTagSave)+'</button>'+
+          '</div>';
+      }
+      return '<div class="lib-mytag-row">'+
+        '<span class="lib-tag priv">'+esc(w.word)+'</span>'+
+        '<span class="lib-meta">'+esc(TLIB_COPY.myTagOn.replace('{n}', String(w.n)))+'</span>'+
+        '<button type="button" class="lib-act" onclick="libMyTagEdit(\''+esc(w.word)+'\')">'+
+          esc(TLIB_COPY.myTagRename)+'</button>'+
+        '<button type="button" class="lib-act bad" onclick="libMyTagDelAsk(\''+esc(w.word)+'\')">'+
+          esc(TLIB_COPY.myTagDelete)+'</button>'+
+        '</div>';
+    }).join('')+
+    rAct('mytag')+
+  '</div>';
+}
+function libMyTagEdit(w){ LIB_TAG_EDIT=w; LIB_TAG_NEW=w; LIB_TAG_DEL=''; _libRedraw();
+  var el=document.getElementById('lib-tagrn'); if(el){ el.focus(); try{ el.select(); }catch(e){} } }
+function libMyTagDelAsk(w){ LIB_TAG_DEL=w; LIB_TAG_EDIT=''; _libRedraw(); }
+function libMyTagCancel(){ LIB_TAG_EDIT=''; LIB_TAG_DEL=''; LIB_TAG_NEW=''; _libRedraw(); }
+// Both changes go through the BULK door, which applies them across every row
+// the teacher owns in one request — the whole point of the item. Applied
+// locally first so the row redraws at once, and put back if the server refuses.
+function _libMyTagApply(change, before, working){
+  var ids={attachmentIds:[], linkIds:[]};
+  (LIB_MINE||[]).forEach(function(f){ if((f.privateTags||[]).indexOf(before)>-1) ids.attachmentIds.push(f.attachmentId||f.id); });
+  (LIB_MY_LINKS||[]).forEach(function(f){ if((f.privateTags||[]).indexOf(before)>-1) ids.linkIds.push(f.linkId||String(f.id||'').replace(/^q:/,'')); });
+  actStart('mytag', working);
+  LIB_TAG_EDIT=''; LIB_TAG_DEL=''; LIB_TAG_NEW='';
+  var data={attachmentIds:ids.attachmentIds, linkIds:ids.linkIds,
+            teacherId:TEACHER_ID, teacherToken:TOKEN};
+  Object.keys(change).forEach(function(k){ data[k]=change[k]; });
+  api({action:'setLibraryTagsBulk', data:data}, function(e,r){
+    if(e||!r||!r.ok){ actFail('mytag',(r&&r.error)||TLIB_COPY.saveFailed); _libRefresh(); return; }
+    actDone('mytag', TLIB_COPY.myTagSaved);
+    _libRefresh();
+  });
+}
+function libMyTagRename(before){
+  var to=String(LIB_TAG_NEW||'').trim();
+  if(!to || to===before){ libMyTagCancel(); return; }
+  _libMyTagApply({renamePrivateFrom:before, renamePrivateTo:to}, before, TLIB_COPY.myTagSaving);
+}
+function libMyTagDelete(w){
+  _libMyTagApply({removePrivateWord:w}, w, TLIB_COPY.myTagDeleting);
+}
+
+// One shelf pair per kind. The count on a shelf heading counts only that kind,
+// which is what it is now the heading of — it used to add files and links
+// together because one heading covered both.
+// ── [1.589] — one shelf pair per kind ────────────────────────────────────
+//
+// **AC:** *"there is no need to keep 'add files' and 'add links' together in
+// the same edit area."* So FILES and LINKS are two sections, each with the
+// mine-versus-studio pair inside it — [1.471]'s split, which answers a
+// different question and stays.
+//
+// **"Nothing at all" and "nothing MATCHING" are two different facts**, and
+// telling them apart is the difference between *add a file* and *clear the
+// filter*. Each section answers it for itself now: a teacher filtering to
+// "piano" who has links but no piano links should read that about the LINKS,
+// not about the whole library.
+function _libEmptyNote(){
+  return (LIB_FILTER.length||LIB_Q)
+    ? '<div class="lib-empty">'+esc(TLIB_COPY.emptyFiltered)+'</div>' : '';
+}
+function rLibraryBodyFiles(){
   var mine=_libFiltered(LIB_MINE), studio=_libFiltered(LIB_SHELF_STUDIO);
+  if(!mine.length && !studio.length) return _libEmptyNote();
+  return _libShelf(TLIB_COPY.mine, 'mine', mine?mine.length:0,
+      rLibSub(TLIB_COPY.filesHead, mine, true, TLIB_COPY.emptyMine, true))+
+    _libShelf(TLIB_COPY.studio, 'studio', studio?studio.length:0,
+      rLibSub(TLIB_COPY.filesHead, studio, false, TLIB_COPY.emptyStudio, true));
+}
+function rLibraryBodyLinks(){
   var myLinks=_libFiltered(LIB_MY_LINKS), studioLinks=_libFiltered(LIB_STUDIO_LINKS);
-  // Nothing at all, versus nothing MATCHING: two different facts, and telling
-  // them apart is the difference between "add a file" and "clear the filter".
-  if(!mine.length && !studio.length && !myLinks.length && !studioLinks.length &&
-     (LIB_FILTER.length||LIB_Q)){
-    return '<div class="lib-empty">'+esc(TLIB_COPY.emptyFiltered)+'</div>';
-  }
-  // ── [1.471] — AC'S INSTRUCTION, and it overturned my own answer ──────
-  //
-  // I proposed ONE list with a badge per row and argued against splitting it.
-  // **AC:** *"Teachers will need a visual separation of files and site links.
-  // Otherwise, things will get confusing for users who need more visual support
-  // for organizing things."*
-  //
-  // So: a labelled group each, inside the shelf it belongs to. **A group with
-  // nothing in it draws nothing at all**, so a teacher with no links sees
-  // exactly what they saw before links existed — which is the only way this
-  // does not become four headings in a panel that had two.
-  // ── [1.529] — both shelves start SHUT ───────────────────────────────────
-  //
-  // AC, 10 September 2026: *"master library for teachers My library and keylab
-  // master library should be collapsed by default"*.
-  //
-  // **The same rule the side panel already follows** ([1.178]/[1.260]/[1.527]):
-  // a browsing area starts closed, and its COUNT stays visible while it is
-  // shut, so the heading says what it holds rather than looking empty. A
-  // teacher opening My Library to find one thing should see two headings and
-  // two numbers, not two walls of rows.
-  //
-  // Counted across BOTH groups inside the shelf — files and links together —
-  // because that is what the heading is the heading of.
-  var _mineN=(mine?mine.length:0)+(myLinks?myLinks.length:0);
-  var _studN=(studio?studio.length:0)+(studioLinks?studioLinks.length:0);
-  return _libShelf(TLIB_COPY.mine, 'mine', _mineN,
-      rLibSub(TLIB_COPY.filesHead, mine, true, TLIB_COPY.emptyMine, true)+
+  if(!myLinks.length && !studioLinks.length) return _libEmptyNote();
+  return _libShelf(TLIB_COPY.mine, 'minelinks', myLinks?myLinks.length:0,
       rLibSub(TLIB_COPY.linksHead, myLinks, true, '', false))+
-    _libShelf(TLIB_COPY.studio, 'studio', _studN,
-      rLibSub(TLIB_COPY.filesHead, studio, false, TLIB_COPY.emptyStudio, true)+
+    _libShelf(TLIB_COPY.studio, 'studiolinks', studioLinks?studioLinks.length:0,
       rLibSub(TLIB_COPY.linksHead, studioLinks, false, '', false));
 }
 // [1.529] — one shelf, with its own caret and its count. The count is drawn
 // whether it is open or shut; that is the whole point of collapsing it.
-var LIB_SHELF_OPEN = { mine:false, studio:false };
+var LIB_SHELF_OPEN = { mine:false, studio:false, minelinks:false, studiolinks:false };   // [1.589]
 function libShelfToggle(key){ LIB_SHELF_OPEN[key]=!LIB_SHELF_OPEN[key]; render(); }
 function _libShelf(label, key, n, body){
   // ── [1.546] — a SEARCH opens the shelves it found things in ─────────────
@@ -8596,8 +8893,17 @@ function rLibRow(f, mine){
       // Editing is offered on a teacher's OWN files only. The Keylab Master
       // Library is AC's shelf: a teacher sends from it and changes nothing on
       // it — his own ruling, and the server refuses it as well.
+      // ── [1.585] — Edit AND Delete, on the row ─────────────────────────
+      //
+      // **AC, 11 September 2026:** *"Teachers and admin want to be able to add,
+      // edit, delete from this view for files links tags and templates... it's
+      // a master control area for all four."* Delete was reachable only by
+      // opening Edit first, so removing a file was two presses and a panel.
+      // Admin's rows gained both in [1.579]; this is the same change.
       (mine?'<button type="button" class="lib-act" onclick="libEdit(\''+esc(id)+'\')">'+
-         esc(TLIB_COPY.manage)+'</button>':'')+
+         esc(TLIB_COPY.manage)+'</button>'+
+        '<button type="button" class="lib-act bad" onclick="libAskDelete(\''+esc(id)+'\')">'+
+         esc(link?TLIB_COPY.linkDel:TLIB_COPY.del)+'</button>':'')+
     '</div>'+
   '</div>';
   // ── [1.467] — ONE box, never three ──────────────────────────────────
@@ -8614,7 +8920,11 @@ function rLibRow(f, mine){
   // have to survive the panel closing.
   var st=ACT['lib:'+id];
   if(st && st.state!=='working') h+=rAct('lib:'+id);
-  if(mine && (LIB_EDIT===id || LIB_DEL===id)) h+=rLibPanel(f);
+  // [1.585] — the editor is an OVERLAY now, drawn on the body by
+  // rLibEditOverlay, not inside this row. `.lib-list` is a 230px scroller, so
+  // an editor opened on the fourth file of a shelf sat below the fold of a box
+  // inside a box — the same thing AC called *"hidden"* on the admin side, fixed
+  // there by [1.579] and left here.
   return h;
 }
 // The one panel, in its three states.
@@ -9238,6 +9548,28 @@ function libOfferNo(){ LINK_OFFER=null; render(); }
 // library. Two copies of an execCommand that writes an anchor into a message is
 // how the two end up producing different markup for the same act — and the
 // server's allowlist judges the markup, not the button that made it.
+  // ── [1.587] — shown where it is TRUE, not on every link ─────────────────
+  //
+  // **AC, 11 September 2026:** *"is the highlighted text ... necessary now that
+  // we're using the file attachment method we worked out?"*
+  //
+  // **Still necessary, and narrower than it was.** Attaching a FILE through the
+  // tool is covered — the tool owns that file and the parent can open it. But a
+  // teacher pasting a link to a Google Doc or a Drive folder still has to share
+  // it, and nothing in the attachment path touches that. The sentence is right;
+  // the placement was not.
+  //
+  // **It was drawn under every link**, so a teacher adding keylab.nyc/calendar
+  // read an instruction about sharing settings that address does not have —
+  // which is how a real warning becomes something people stop reading. It now
+  // appears once the address looks like Drive, Docs, Sheets or Slides, and not
+  // otherwise.
+  //
+  // **AC's words are untouched.** This changes when they are shown, nothing
+  // else. His 28 August substance still awaits his own pass.
+  function _cmpNeedsSharing(url){
+    return /(^|\/\/|\.)(drive|docs)\.google\.com/i.test(String(url||''));
+  }
 function _composerInsertLink(id, url, label){
   var el=document.getElementById(id); if(!el) return;
   el.focus();
@@ -9992,7 +10324,8 @@ function rComposerLinkRow(id){
     // has closed — otherwise "saved to library!" lands on a node that has just
     // been removed and nobody ever sees it.
     ((LIBADD && LIBADD.at==='link:'+id) ? '' : rAct('libadd:link'))+
-    '<div class="cmp-guide">'+esc(CMP_COPY.linkSharing)+'</div>'+
+    (_cmpNeedsSharing((_cmpLinkState(id)||{}).url)
+      ? '<div class="cmp-guide">'+esc(CMP_COPY.linkSharing)+'</div>' : '')+
   '</div>';
 }
 

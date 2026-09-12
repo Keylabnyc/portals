@@ -3342,10 +3342,32 @@ function rSectionedRoster(){
   // **Hidden only while family messaging is locked**, for [1.382]'s reason:
   // the family rows go when the lock is on, and a control that opens a panel
   // listing families who cannot be written to is a dead press.
-  if(!MSG_LOCK.locked){
-    h+='<div class="day-open-row"><button type="button" class="lnk-btn"'+
-       ' onclick="openDaySend()">'+esc(TCH_COPY.dayOpen)+'</button></div>';
-  }
+  // ── [1.584] — WITHDRAWN FROM THE TOOL, 11 September 2026. CODE KEPT. ────
+  //
+  // **AC:** *"I have rethought the teacher bulk family notification. This is a
+  // good idea, but I want to remove it from the tool but keep the code for a
+  // potential future addition into the tool."*
+  //
+  // **This button was the only way in.** `DAY_VIEW` becomes `'panel'` only
+  // through `_openPane('day')`, which only `openDaySend()` calls, which only
+  // this called — so removing it takes the feature out completely rather than
+  // hiding it. Everything else is untouched and still tested: `rDaySend`,
+  // `_daySlots`, `_dayFamilies`, `sendDayBatch`, the two slot chips, the
+  // conditional wording that follows the day, and the batch unsend all remain
+  // in this file exactly as they shipped at @797.
+  //
+  // **The server route is closed too**, in `Code.js` — a handler reachable by
+  // request is not a withdrawn feature, it is a hidden one. The handlers
+  // themselves stay.
+  //
+  // **To bring it back:** restore this button and the two dispatch cases. There
+  // is nothing else to do; the suite still covers the panel, so it will not have
+  // rotted in the meantime.
+  //
+  // if(!MSG_LOCK.locked){
+  //   h+='<div class="day-open-row"><button type="button" class="lnk-btn"'+
+  //      ' onclick="openDaySend()">'+esc(TCH_COPY.dayOpen)+'</button></div>';
+  // }
   if(FAMILY_THREADS.loading && !FAMILY_THREADS.list.length){
     return h+'<div style="text-align:center;padding:2rem;color:var(--text3)"><span class="spin" style="font-size:20px">↻</span></div>';
   }

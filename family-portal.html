@@ -4877,7 +4877,8 @@ function _klEventDates(ev){
 function _klScheduleEvents(){
   var today=new Date(); today.setHours(0,0,0,0);
   var out=(publicCfg.upcomingDates||[]).map(function(d){
-    return {event:d.event||'', startDate:d.startDate, endDate:d.endDate||d.startDate, closed:!!d.closed, kind:'calendar'};
+    return {event:d.event||'', startDate:d.startDate, endDate:d.endDate||d.startDate,
+            closed:!!d.closed, studioOpen:!!d.studioOpen, kind:'calendar'};   // [1.582]
   });
 
   // One entry per ENROLLMENT, not one per date (AC, 19 Aug). A family with two
@@ -4971,9 +4972,26 @@ function _klDateRow(e, whenText, whoText){
   // itself, and it is the fact the badge should carry. Drawn in the same red as
   // `Closed`, because to this family the outcome is the same: nothing happens
   // that day.
+  // ── [1.582] — a day with no lessons on it is not always a shut building ──
+  //
+  // **AC, 11 September 2026:** *"needs to be clear for families taking lessons
+  // (no lessons that day) and also taking band class (band class is on)."*
+  //
+  // The badge had two states and the day he is describing is neither.
+  // **Closed** would tell a band family the building is shut on a day their
+  // class runs; **Keylab is open** would tell a lessons family their lesson is
+  // going ahead. So a third state, on the flag the studio now sets per date.
+  //
+  // **The words are AC's own and already in this file** — `No lesson`, settled
+  // for teacher absences in [1.345] and drawn in the same red, because to the
+  // family reading it the outcome is identical: their child's lesson is not
+  // happening. What is DIFFERENT about the day is in the entry's own sentence,
+  // which is his to write and is drawn directly above this badge.
   var tag = e.kind==='start'
     ? '<span class="kl-tag op">First lesson</span>'
     : e.kind==='absence'
+    ? '<span class="kl-tag cl">No lesson</span>'
+    : (e.closed && e.studioOpen)
     ? '<span class="kl-tag cl">No lesson</span>'
     : '<span class="kl-tag '+(e.closed?'cl':'op')+'">'+(e.closed?'Closed':'Keylab is open')+'</span>';
   return '<div class="kl-date"><div>'+

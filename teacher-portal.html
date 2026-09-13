@@ -7003,7 +7003,16 @@ var TLIB_COPY={
   fileAttached:'File attached',
   linkAdded:'Link added',
   linkKind:'LINK',              // DERIVED — AC, 10 September: "simply list the file type instead" of the site
-  linkSelected:'Selected',      // PLACEHOLDER — what a saved link's row says once it has filled the fields
+  // ── [1.622] — `linkSelected` and `linkSelectedDo` are REMOVED ──────────
+  //
+  // Both belonged to one state: a saved link sitting in the address and text
+  // fields, waiting for Insert link. **A tick inserts now**, so nothing can set
+  // it. `linkSelected` was my placeholder — asking AC for a word nobody will
+  // ever see is noise on his list — and `linkSelectedDo` was HIS sentence,
+  // which is why it is not simply deleted: it is recorded in
+  // `SPEC_MESSAGING_V1.md` section 9 as supplied and since withdrawn, with the
+  // reason. **Copy he wrote belongs in the document that tracks copy, not in
+  // the code as a string nothing draws.**
   manageGo:'Manage Library',
   // [1.507] — AC, 10 September 2026: *"needs the done button there to clearly
   // end the adding of files"*. It was `Edit Message`, his own word on the 10th,
@@ -11485,7 +11494,6 @@ var CMP_COPY={
   // renamed that button to `Insert link` and left this sentence naming the old
   // label, so the instruction pointed at a control that no longer existed under
   // that name. An instruction that names the wrong button is worse than none.
-  linkSelectedDo:'Click "Insert link" to add the link to your message',
   linkCancel:'Cancel',
   linkRejected:'That doesn’t look like a web address. Try something like keylab.nyc/lessons.',
   linkSharing:'Set sharing to “Anyone with the link” before you send, or ask admin for the parent’s email to share it privately.',

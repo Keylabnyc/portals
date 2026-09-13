@@ -1427,7 +1427,12 @@ input[type=checkbox]{width:13px;height:13px;padding:0;margin:0;border:0;border-r
 
    The section beneath sits on its own step ([1.556]'s ladder), so a banner
    never looks like it is floating over the page background. */
-.lib-band{margin:14px -14px 10px;padding:9px 14px;background:var(--bg5);
+/* [1.605] — the negative margin has to MATCH the panel's own padding, which is
+   10px. It was -14px, tuned for a container this band no longer sits in, so the
+   band overhung the panel by 4px on each side and the panel's own rounded
+   background showed through as a step between every pair of bands. Measured in
+   the real modal at 375px, not eyeballed. */
+.lib-band{margin:14px -10px 10px;padding:9px 14px;background:var(--bg5);
   border-top:1px solid var(--border2);border-bottom:1px solid var(--border2);
   font-size:14px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
   color:var(--acc);font-family:"Inter",sans-serif;display:flex;align-items:center;gap:10px}
@@ -1438,6 +1443,27 @@ input[type=checkbox]{width:13px;height:13px;padding:0;margin:0;border:0;border-r
    portals each defining the same component differently is the fault [1.558]
    exists to catch, and the check compares them rule for rule. */
 .lib-band-row{flex-wrap:wrap;gap:8px;padding-top:8px;padding-bottom:8px}
+/* [1.600] — the tag band is a BUTTON, so it has to lose the browser's own
+   button styling and keep the band's. Full width, left aligned, and the caret
+   reads the same as the shelves' inside it. */
+/* [1.605] — the band is a real BUTTON now, and it has to keep the band's exact
+   full-bleed geometry. A button does not stretch the way the div did, so the
+   band stays the wrapper (its negative margins are what reach the card's edge)
+   and the button fills it and carries the padding. Measured rather than
+   eyeballed: the first version was 259px inside a 295px card. */
+.lib-band-wrap{padding:0}
+.lib-band-btn{width:100%;display:flex;align-items:center;gap:10px;padding:9px 14px;
+  background:none;border:0;cursor:pointer;text-align:left;
+  font:inherit;color:inherit;letter-spacing:inherit;text-transform:inherit}
+.lib-band-btn .caret{font-size:11px;opacity:.7}
+/* [1.605] — the controls sit INSIDE the section now, so they lose the band's
+   full-bleed edges and keep only its layout. AC: "have these all collapsed the
+   way the tags are. On a phone that will be really helpful." */
+.lib-ctl-row{margin:0 0 9px;padding:0;background:none;border:0;color:inherit;
+  text-transform:none;letter-spacing:0;font-weight:400;font-size:13px}
+/* [1.601] — the question the add card asks before it shows any tags. */
+.lib-ask{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:9px}
+.lib-ask-q{font-size:13px;font-weight:600;color:var(--text2)}
 .lib-band-t{flex:0 0 auto}
 .lib-band-row .zcount{margin-left:0}
 .lib-band-q{flex:1 1 150px;min-width:120px;padding:5px 9px;font-size:12.5px;
@@ -1967,16 +1993,53 @@ function render(){
   _rendering=true;
   try{ _renderBody(); } finally { _rendering=false; }
 }
+// ── [1.607] — the two overlays live in their OWN container ───────────────
+//
+// **The fault this fixes, found by driving the real page:** pressing Edit or
+// Delete on a library row set the state and drew nothing. `libEdit` and
+// `libAskDelete` call `_libRedraw()`, which rewrites `#lib-panel` — and the
+// editor is an OVERLAY, drawn by `_renderBody` OUTSIDE that panel since [1.585]
+// moved it there. So the press did nothing until the next poll tick happened to
+// call `render()`, a second or two later, which reads as a dead button followed
+// by a box appearing on its own.
+//
+// **Admin has not had this bug**, because `_admOverlaySync` has kept its two
+// overlays in a container of their own since [1.495] and every path that draws
+// goes through it. **This is that, in the teacher portal** — the same shape in
+// both, which is the whole point: the alternative was making two callers say
+// `render()` and leaving the trap armed for the third.
+//
+// **It is also what lets `_libRedraw` stay cheap.** A full `render()` from these
+// two would have rebuilt the page and lost the modal's scroll position, which is
+// the jump [1.591] fixed.
+function _libOverlaySync(){
+  var ov=document.getElementById('lib-overlay');
+  if(!ov){ ov=document.createElement('div'); ov.id='lib-overlay'; document.body.appendChild(ov); }
+  // [1.591]'s rule: the modal is its own scroller, so keep its place across a
+  // rewrite. A centring request ([1.590]) runs after and deliberately wins.
+  var m=ov.querySelector('.lib-modal');
+  var top=m?m.scrollTop:0;
+  var want=(PAGE==='boot'||PAGE==='login'||PAGE==='forgotpw'||PAGE==='setpw')
+    ? '' : rLibraryOverlay()+rLibEditOverlay();
+  if(ov.innerHTML!==want){
+    ov.innerHTML=want;
+    if(top){
+      var m2=ov.querySelector('.lib-modal');
+      if(m2) m2.scrollTop=top;
+    }
+  }
+}
 function _renderBody(){
   var el=document.getElementById('app');
   if(!el) return;
+  _libOverlaySync();   // [1.607]
   var h='';
   if(MSG.m) h+='<div class="msg m'+esc(MSG.t)+'">'+esc(MSG.m)+'</div>';
   if(PAGE==='boot')          h+=rBoot();
   else if(PAGE==='login')    h+=rLogin();
   else if(PAGE==='forgotpw') h+=rForgotPassword();
   else if(PAGE==='setpw')    h+=rSetPassword();
-  else                       h+=rHome()+rLibraryOverlay()+rLibEditOverlay();   // [1.495], [1.585]
+  else                       h+=rHome();   // [1.607] — the overlays are synced below
   // render() replaces #app wholesale, so a message arriving mid-poll would
   // otherwise yank the teacher's cursor out of a half-typed message — the
   // teacher-side twin of the family bug fixed in 1.32.
@@ -2826,14 +2889,43 @@ var TTPL_COPY={
 //
 // So this panel is not where templates are MADE. It is where they are renamed,
 // reworded and thrown away afterwards — the tidying, not the writing.
-// [1.594] — the template list, narrowed by the section header's own tag filter.
-var TTPL_TAGFILTER='';
-function ttplTagFilter(v){ TTPL_TAGFILTER=String(v||''); render(); }
+// ── [1.603] — templates are narrowed by the SAME filter as everything else ──
+//
+// **AC:** *"Files, links, and Templates should have the same search functions."*
+// They had a tag dropdown of their own, which is a second vocabulary control on
+// one screen and a second thing to clear. They read `LIB_FILTER` and `LIB_Q`
+// now, exactly as the files and links do — one filter, one x that clears it.
+//
+// **A template has no private words**, so only the studio's tags are matched;
+// the search matches the template's name and its tag names, which is the same
+// haystack rule `_libMatch` uses for a file.
+function _ttplMatch(t){
+  for(var i=0;i<LIB_FILTER.length;i++){
+    var v=LIB_FILTER[i];
+    if(v.indexOf('p:')===0) return false;            // a private word cannot be on a template
+    if((t.tags||[]).indexOf(v)<0) return false;
+  }
+  var q=String(LIB_Q||'').trim().toLowerCase();
+  if(!q) return true;
+  var hay=String(t.label||'');
+  (t.tags||[]).forEach(function(id){ hay+=' '+_libTagName(id); });
+  return hay.toLowerCase().indexOf(q)>-1;
+}
+// [1.603] — and sorted by the header's own menu. "Your order" is the order the
+// teacher dragged them into, which is the order the composer's picker uses.
 function _ttplFiltered(){
-  var f=TTPL_TAGFILTER;
-  return (TSET.tpls||[]).filter(function(t){ return !f || (t.tags||[]).indexOf(f)>-1; });
+  var rows=(TSET.tpls||[]).filter(_ttplMatch);
+  if(LIB_SORT.templates==='name'){
+    rows=rows.slice().sort(function(a,b){
+      return String(a.label||'').localeCompare(String(b.label||'')); });
+  }
+  return rows;
 }
 // [1.594] — local only; the save carries the whole list, as it always has.
+// [1.601] — the question the template form asks, and it is per OPEN editor:
+// closing one and opening another asks again, which is right, because it is a
+// different template.
+function ttplTagsAsk(yes){ TSET.tplTagsAsked=!!yes; render(); }
 function ttplTag(i, tagId){
   var t=(TSET.tpls||[])[i]; if(!t) return;
   t.tags=(t.tags||[]).slice();
@@ -2889,6 +2981,7 @@ function rTeacherTemplates(){
 // markup and must not be escaped on save.
 function ttplAdd(){
   libCentreOn('.lnk-form');   // [1.590]
+  TSET.tplTagsAsked=false;    // [1.601] — a new one is asked about like any other
   TSET.tpls=(TSET.tpls||[]).concat([{templateId:'', label:'', body:'', _txt:false}]);
   TSET.tplEdit=TSET.tpls.length-1; TSET.tplDel=-1; TSET.tplBackup=null;
   render();
@@ -2933,10 +3026,15 @@ function rTtplItem(i,t){
     // used on a phone between lessons; pointer events cover both. And a button
     // can be reached by keyboard, so the arrow keys move a row for anyone who
     // cannot drag — the same reorder, not a lesser one.
-    '<button type="button" class="lnk-grip" aria-label="'+esc(TTPL_COPY.grip)+' '+esc(nm)+'"'+
-      ' onpointerdown="ttplGrab(event,'+i+')" onpointermove="ttplDragMove(event)"'+
-      ' onpointerup="ttplDrop()" onpointercancel="ttplDrop()"'+
-      ' onkeydown="ttplGripKey(event,'+i+')">⠿</button>'+
+    // [1.603] — the handle is offered only while the list is in the teacher's
+    // OWN order. A list sorted A-Z that still invites a drag is two orders
+    // arguing, and the drop would appear to do nothing.
+    (LIB_SORT.templates==='order'
+      ? '<button type="button" class="lnk-grip" aria-label="'+esc(TTPL_COPY.grip)+' '+esc(nm)+'"'+
+        ' onpointerdown="ttplGrab(event,'+i+')" onpointermove="ttplDragMove(event)"'+
+        ' onpointerup="ttplDrop()" onpointercancel="ttplDrop()"'+
+        ' onkeydown="ttplGripKey(event,'+i+')">⠿</button>'
+      : '')+
     '<button type="button" class="lnk-open" aria-expanded="'+(open?'true':'false')+'"'+
       ' aria-label="Edit '+esc(nm)+'"'+
       ' onclick="'+(open?'ttplCancel()':'ttplEdit('+i+')')+'">'+
@@ -3001,15 +3099,40 @@ function rTtplForm(i,t){
   // vocabulary across all three, so a filter means the same thing wherever it
   // is used. The studio's tags only: a private word lives ON a file and is
   // gathered from the files, and there is no template shelf to gather from.
-  h+='<div class="lnk-lb">'+esc(TTPL_COPY.tplTags)+'</div>'+
-     '<div class="lib-tags" style="padding-top:0">'+
-       (LIB_TAGS||[]).filter(function(t){ return !t.off; }).map(function(t){
-         var on=(((TSET.tpls||[])[i]||{}).tags||[]).indexOf(t.tagId)>-1;
-         return '<button type="button" class="lib-tag'+(on?' on':'')+'"'+
-           ' aria-pressed="'+(on?'true':'false')+'"'+
-           ' onclick="ttplTag('+i+',\''+esc(t.tagId)+'\')">'+esc(t.name)+'</button>';
-       }).join('')+
-     '</div>';
+  // ── [1.601] — and the TEMPLATE asks too ────────────────────────────────
+  //
+  // **AC:** *"Tags should not be sitting there in the file or links or templates
+  // area and should appear when needed."* The last clause is the one most
+  // easily dropped, and it was: the file and link cards learned to ask and this
+  // form went on listing every tag to somebody writing a message.
+  //
+  // **A template that already carries tags shows them**, because that is not a
+  // list sitting there — it is what this template is filed under, and somebody
+  // who opened the editor is editing it. The question is for the one that has
+  // none.
+  //
+  // **No dismisses the question rather than saving**, which is the one place it
+  // differs from the add card: this form has its own Save and No here means
+  // "not this time", not "save it now".
+  var _tpl=((TSET.tpls||[])[i]||{});
+  var _tplTags=(_tpl.tags||[]);
+  h+= (_tplTags.length || TSET.tplTagsAsked)
+    ? '<div class="lnk-lb">'+esc(TTPL_COPY.tplTags)+'</div>'+
+      '<div class="lib-tags" style="padding-top:0">'+
+        (LIB_TAGS||[]).filter(function(t){ return !t.off; }).map(function(t){
+          var on=_tplTags.indexOf(t.tagId)>-1;
+          return '<button type="button" class="lib-tag'+(on?' on':'')+'"'+
+            ' aria-pressed="'+(on?'true':'false')+'"'+
+            ' onclick="ttplTag('+i+',\''+esc(t.tagId)+'\')">'+esc(t.name)+'</button>';
+        }).join('')+
+      '</div>'
+    : '<div class="lib-ask">'+
+        '<span class="lib-ask-q">'+esc(TLIB_COPY.tagsAsk)+'</span>'+
+        '<button type="button" class="lib-done" onclick="ttplTagsAsk(true)">'+
+          esc(TLIB_COPY.tagsAskYes)+'</button>'+
+        '<button type="button" class="lnk-btn" onclick="ttplTagsAsk(false)">'+
+          esc(TLIB_COPY.tagsAskNo)+'</button>'+
+      '</div>';
   h+='<div class="lnk-lb tpl-lb">'+esc(TTPL_COPY.tagsLbl)+'</div>'+
      '<div class="tpl-tags">'+TPL_TAGS_OFFERED.map(function(tag){
        return '<button type="button" class="tpl-tag" onmousedown="event.preventDefault()"'+
@@ -3143,14 +3266,14 @@ function ttplLoad(){
     TSET.tpls=(!e&&r&&r.ok&&r.templates)||[]; render();
   });
 }
-function ttplEdit(i){
+function ttplEdit(i){ TSET.tplTagsAsked=false;
   libCentreOn('.lnk-form');   // [1.590]
   // A copy first, so Cancel is a real way back — the boxes write straight into
   // the list as they are typed ([1.338]).
   TSET.tplBackup=JSON.parse(JSON.stringify(TSET.tpls[i]||{}));
   TSET.tplEdit=i; TSET.tplDel=-1; render();
 }
-function ttplCancel(){
+function ttplCancel(){ TSET.tplTagsAsked=false;
   var i=TSET.tplEdit;
   if(i>=0 && TSET.tpls && TSET.tpls[i] && TSET.tplBackup) TSET.tpls[i]=TSET.tplBackup;
   TSET.tplEdit=-1; TSET.tplBackup=null; render();
@@ -3201,9 +3324,27 @@ function ttplSave(){
   render();
   api({action:'saveTeacherTemplates', data:{teacherToken:TOKEN, templates:payload}}, function(e,r){
     if(e||!r||!r.ok){ TSET.tplsErr=(r&&r.error)||'Could not save.'; actFail('tpl',(r&&r.error)||'Could not save.'); render(); return; }
-    TSET.tpls=null; TSET.tplEdit=-1; TSET.tplDel=-1; TSET.tplBackup=null; ttplLoad();
-    // The COMPOSER's copy is stale the moment this saves.
-    SAVED_TPLS=[]; _savedTplsLoaded=false; _savedTplsInFlight=false; loadSavedTpls();
+    // ── [1.608] — the server's own rows, drawn. No refetch ────────────────
+    //
+    // **This threw the list away and asked for it again, and so did the
+    // composer's copy** — measured at FOUR round trips for one save, roughly
+    // eight seconds on this backend ([1.565]): the save, the panel's reload, the
+    // composer's reload of the same rows, and the studio list which a teacher's
+    // own save cannot have changed.
+    //
+    // The server returns what it wrote ([1.576]'s fix for admin, never done
+    // here), so both copies are set from it. **The studio templates are not
+    // refetched at all**, because saving a teacher's own row cannot change AC's.
+    var rows=(r.templates && r.templates.length!==undefined) ? r.templates : null;
+    if(rows){
+      TSET.tpls=rows; SAVED_TPLS=rows; _savedTplsLoaded=true; _savedTplsInFlight=false;
+    } else {
+      // A server that still answers with a count: fall back to the old path
+      // rather than drawing an empty list.
+      TSET.tpls=null; ttplLoad();
+      SAVED_TPLS=[]; _savedTplsLoaded=false; _savedTplsInFlight=false; loadSavedTpls();
+    }
+    TSET.tplEdit=-1; TSET.tplDel=-1; TSET.tplBackup=null;
     actDone('tpl', _name ? TCH_COPY.savedTemplateNamed.replace('{name}', _name) : TCH_COPY.savedTemplate);
     render();
   });
@@ -6847,17 +6988,42 @@ var TLIB_COPY={
   tagsHead:'Tags',
   // ── [1.595] — the strings the section header needs ────────────────────
   //
-  // **AC's words, 12 September 2026, given for the admin side and the same
-  // controls here.** *"Browse files"* and *"Browse links"* were his choice over
-  // See, and the tick-box line is his verbatim. FINAL, not placeholders — and
-  // deliberately the identical strings admin uses, because one control named
+  // **AC's words. The tick-box line is his verbatim.** FINAL, not placeholders —
+  // and deliberately the identical strings admin uses, because one control named
   // two ways in two portals is the drift [1.558] exists to stop.
-  seeFiles:'Browse files', seeLinks:'Browse links', hideFiles:'Hide',
+  //
+  // ── [1.603] — "Browse files" and "Add files" are WITHDRAWN ─────────────
+  //
+  // **AC, 12 September 2026, testing @802:** *"Change buttons from 'Browse
+  // files' and 'Add files' to Browse and Add. Have them be independent, not the
+  // same button, and no need for a separate conditional hide button."*
+  //
+  // He chose "Browse" over "See" that morning and shortened it that night, once
+  // he had the header in front of him: **the band directly above already says
+  // MY FILES**, so the button said the kind twice. And Browse turned into Hide
+  // while it was open, which is the conditional he is naming — it keeps its
+  // word now and shows that it is pressed.
+  //
+  // *"Change buttons from 'Browse files' and 'Add files' to Browse and Add.
+  // Have them be independent, not the same button, and no need for a separate
+  // conditional hide button."*
+  //
+  // **The old pair said the kind twice** — the band directly above already says
+  // MY FILES — and Browse turned into Hide when it was open, which is the
+  // conditional he is naming. It keeps its word and shows that it is pressed.
+  // AC's words, 12 September. FINAL.
+  browse:'Browse', addNew:'Add',
   tickHint:'Select for bulk actions like updating tags or deleting them',
   // [1.597] — AC settled the control, so these are settled too: A-Z, Newest
   // first, Type. Size is gone; nobody opening a library wants their biggest
   // files.
   sortBy:'Sort by', sort_name:'A\u2013Z', sort_new:'Newest first', sort_type:'Type',
+  // [1.603] — templates have no upload time and no file type, so Newest and
+  // Type mean nothing for them. The other option they DO have is the order the
+  // teacher dragged them into, which is the order the composer's picker uses —
+  // so it is the default, and the drag handle is only offered while it is on.
+  // Sorting a list A-Z and still offering to drag it is two orders arguing.
+  sort_order:'Your order',
   tagFilter:'Filter by tag',
   // [1.596] — what a press on a bulk chip will do, said on the chip.
   // PLACEHOLDERS.
@@ -6869,7 +7035,20 @@ var TLIB_COPY={
   // [1.588] — AC's term, and it is the same word in both portals: *"'custom
   // tags' (they should be called that in both portals) created by admin or
   // teacher can be edited or deleted."*
+  // ── [1.601] — PLACEHOLDERS, flagged, except the question, which is his ──
+  // AC, 12 September 2026: *"the system should prompt the admin or teacher with
+  // 'Assign tags?'"* — his words, verbatim. The two answers are mine and are
+  // his to reword.
+  tagsAsk:'Assign tags?', tagsAskYes:'Yes', tagsAskNo:'No',
   myTagsHead:'Custom tags',
+  // ── [1.600] — PLACEHOLDERS, flagged, AC's to reword ────────────────────
+  // His instruction is that a teacher may take a studio tag off their own list
+  // and never delete it. The two button words have to say that difference on
+  // the button, because "Remove" is the word his admin screen uses for a
+  // different act.
+  studioTagsHead:'Studio tags',
+  studioTagsBlurb:'Keylab\u2019s tags. You can take one off your own list at any time \u2014 nothing is deleted, and your files keep it.',
+  tagHide:'Hide', tagShow:'Show',
   myTagOn:'on {n}',
   myTagRename:'Rename',
   myTagDelete:'Delete',
@@ -7099,7 +7278,7 @@ function loadLibrary(force, shelvesOnly){
   // after a rename does not need to ask AC's tag list again.
   if(shelvesOnly && LIB_TAGS.length) return;
   api({action:'getTags', data:{teacherId:TEACHER_ID, teacherToken:TOKEN}}, function(e,r){
-    if(!e && r && r.ok) LIB_TAGS=r.tags||[];
+    if(!e && r && r.ok){ LIB_TAGS=r.tags||[]; LIB_TAGS_HIDDEN=r.hiddenTagIds||[]; }   // [1.600]
     _libFilterPrune();
     _libRedraw();
   });
@@ -7171,6 +7350,10 @@ function _libOffered(){
   var all=_libAllItems();
   var out=[];
   LIB_TAGS.forEach(function(t){
+    // [1.600] — a tag this teacher has taken off their list is not offered as a
+    // filter. Its files are untouched and still on the shelf; the word is just
+    // not one of theirs any more.
+    if(_libTagHidden(t.tagId)) return;
     if(LIB_FILTER.indexOf(t.tagId)>-1){ out.push({v:t.tagId, name:t.name, priv:false}); return; }
     var next=LIB_FILTER.concat([t.tagId]);
     for(var i=0;i<all.length;i++){
@@ -7421,6 +7604,10 @@ function _libRedraw(){
       }
     }
   }
+  // [1.607] — and the overlays, which are NOT inside this panel. Without this,
+  // every caller that redraws the panel alone leaves the editor and the delete
+  // question showing whatever they showed before the press.
+  _libOverlaySync();
 }
 function libTag(v){
   var i=LIB_FILTER.indexOf(v);
@@ -7998,6 +8185,9 @@ var LIBADD=null;
 var _LIBADD_SEQ=0;
 function libAddOpen(o){
   LIBADD={kind:'link', at:'lib', url:'', text:'', name:'', tags:[], priv:[],
+          // [1.601] — the card opens ASKING. AC: the tag list should not just
+          // be there; the question comes first and No is a real answer.
+          tagsAsked:false,
           attachmentId:'', tempId:'', uploading:false, waiting:false, seq:++_LIBADD_SEQ};
   if(o) for(var k in o) if(o.hasOwnProperty.call(o,k)) LIBADD[k]=o[k];
   // ── The status line's key, and why it is not one key for all three ──────
@@ -8046,6 +8236,15 @@ function libAddNameIn(el){ if(LIBADD) LIBADD.name=el.value; }
 // Selecting a tag IS adding it — AC's *"as simple as selecting it before
 // saving"*. Nothing is written until the one press at the end, so a tag pressed
 // by mistake costs a second press and no round trip.
+// [1.601] — Yes opens the tags on the card that is already open; No is a real
+// answer and saves at once, which is what makes it a button rather than a
+// collapsed section a teacher has to notice and ignore.
+function libAddTagsAsk(yes){
+  if(!LIBADD) return;
+  if(yes){ LIBADD.tagsAsked=true; _libRedraw(); return; }
+  LIBADD.tags=[]; LIBADD.priv=[];
+  libAddGo();
+}
 function libAddTag(tagId){
   if(!LIBADD) return;
   var i=LIBADD.tags.indexOf(tagId);
@@ -8184,9 +8383,26 @@ function rLibAddCard(at){
             '<input id="libadd-name" value="'+esc(LIBADD.name)+'"'+
               ' aria-label="'+esc(TLIB_COPY.lblName)+'" oninput="libAddNameIn(this)">'+
           '</div>')+
-      // ── The tags, PRESSED BEFORE IT SAVES. AC: *"adding a tag should be as
-      // ── simple as selecting it before saving the link into the library."*
-      '<div class="lib-fld">'+
+      // ── [1.601] — the tags are ASKED FOR, not sitting there ────────────
+      //
+      // **AC, 12 September 2026, testing @802:** *"It is unclear what to do when
+      // adding a file. The tag list is just there, but it should not be. After
+      // selecting the file to add, the system should prompt the admin or teacher
+      // with 'Assign tags?' if they click yes, they can assign the tags that pop
+      // up. If they select no, the system saves the file without tags."*
+      //
+      // **This is not a reversal of his *"i need a 1 step process!"*** and the
+      // distinction matters, because a later session reading both will otherwise
+      // pick one. That sentence was about not having to SAVE a file and then go
+      // and find it again to tag it. This is about eleven chips being presented
+      // to somebody who has just pressed Add. The card still saves in one press
+      // either way — the question is what it shows before they get there.
+      //
+      // **No is a real answer and saves immediately**, which is why it is a
+      // button rather than a collapsed section: a teacher adding a file in the
+      // thirty seconds between lessons presses No and is done.
+      (LIBADD.tagsAsked
+        ? '<div class="lib-fld">'+
         '<div class="lib-lbl">'+esc(TLIB_COPY.lblTags)+'</div>'+
         (LIB_TAGS.length
           // [1.472]'s near-match, on the card: a tag the name nearly says is
@@ -8201,8 +8417,16 @@ function rLibAddCard(at){
                 ' onclick="libAddTag(\''+esc(t.tagId)+'\')">'+esc(t.name)+'</button>';
             }).join('')+'</div>'
           : '<div class="lib-empty">'+esc(TLIB_COPY.noTagsYet)+'</div>')+
-      '</div>'+
-      '<div class="lib-fld">'+
+      '</div>'
+        : '<div class="lib-ask">'+
+            '<span class="lib-ask-q">'+esc(TLIB_COPY.tagsAsk)+'</span>'+
+            '<button type="button" class="lib-done" onclick="libAddTagsAsk(true)">'+
+              esc(TLIB_COPY.tagsAskYes)+'</button>'+
+            '<button type="button" class="lnk-btn" onclick="libAddTagsAsk(false)">'+
+              esc(TLIB_COPY.tagsAskNo)+'</button>'+
+          '</div>')+
+      (LIBADD.tagsAsked
+        ? '<div class="lib-fld">'+
         '<div class="lib-lbl">'+esc(TLIB_COPY.lblMine)+'</div>'+
         (LIBADD.priv.length
           ? '<div class="lib-tags" style="padding-top:0;padding-bottom:4px">'+LIBADD.priv.map(function(w){
@@ -8216,7 +8440,8 @@ function rLibAddCard(at){
             ' onkeydown="if(event.key===\'Enter\'){event.preventDefault();libAddPriv();}">'+
           '<button type="button" class="lib-act" onclick="libAddPriv()">'+esc(TLIB_COPY.privateAdd)+'</button>'+
         '</div>'+
-      '</div>'+
+      '</div>'
+        : '')+
       '<div class="lib-edit-acts">'+
         '<button type="button" class="btn btn-p"'+(busy?' disabled':'')+
           ' onclick="libAddGo()">'+esc(TLIB_COPY.addToLib)+'</button>'+
@@ -8661,17 +8886,34 @@ function rLibraryAdded(){
 // - **A teacher's own words are chips in the bulk row too.** Admin has no
 //   private words; a teacher's ARE their vocabulary, and the same door takes
 //   them ([1.585] taught it `privateWord` and `removePrivateWord`).
-var LIB_SEE={files:false, links:false};
-var LIB_SORT={files:'name', links:'name'};
+// [1.603] — THREE kinds, one header, one set of controls. AC: *"Files, links,
+// and Templates should have the same search functions: Tag, A-Z dropdown with
+// other options, browse, add."*
+var LIB_SEE={tags:false, files:false, links:false, templates:false};
+var LIB_SORT={files:'name', links:'name', templates:'order'};
 var LIB_SEL={};
-function libSee(which){ LIB_SEE[which]=!LIB_SEE[which]; _libRedraw(); }
-function libSort(which, v){ LIB_SORT[which]=v; _libRedraw(); }
+// [1.603] — Browse opens the section AND the shelves inside it. **AC kept both
+// levels deliberately** — the shelves still open and shut on their own — but
+// pressing Browse and being shown two collapsed headings is two presses to see
+// a file, which is the *"as few steps as possible"* he has asked for twice. The
+// carets still work; they just do not start shut inside a section somebody has
+// just asked to see.
+var LIB_SHELVES_OF={files:['mine','studio'], links:['minelinks','studiolinks']};
+function libSee(which){
+  LIB_SEE[which]=!LIB_SEE[which];
+  if(LIB_SEE[which]) (LIB_SHELVES_OF[which]||[]).forEach(function(k){ LIB_SHELF_OPEN[k]=true; });
+  _libRedraw();
+}
+function libSort(which, v){ LIB_SORT[which]=v; render(); }
 // [1.480] — one gate, in one place. A teacher does not meet a search box on a
 // library with nothing in it; the box appears once there is enough on the
 // shelves to be worth narrowing. It used to be computed inline in the panel,
 // which is why the section headers could have been drawn without it.
 function _libWantFind(){
-  var total=LIB_MINE.length+LIB_MY_LINKS.length+LIB_SHELF_STUDIO.length+LIB_STUDIO_LINKS.length;
+  // [1.603] — templates are one of the three sections the box now sits on, so
+  // they count towards whether there is enough to be worth narrowing.
+  var total=LIB_MINE.length+LIB_MY_LINKS.length+LIB_SHELF_STUDIO.length+LIB_STUDIO_LINKS.length+
+            (TSET.tpls||[]).length;
   return (total>6)||!!LIB_Q||!!LIB_FILTER.length;
 }
 // [1.597] — A-Z, Newest first, Type. The tag filter is `LIB_FILTER`, applied by
@@ -8711,18 +8953,77 @@ function _libSortKind(list, which){
 function _libSeen(which){
   if(LIB_SEE[which]) return true;
   if(!String(LIB_Q||'').trim() && !LIB_FILTER.length) return false;
-  return (which==='files')
-    ? (_libFiltered(LIB_MINE).length+_libFiltered(LIB_SHELF_STUDIO).length)>0
-    : (_libFiltered(LIB_MY_LINKS).length+_libFiltered(LIB_STUDIO_LINKS).length)>0;
+  if(which==='files') return (_libFiltered(LIB_MINE).length+_libFiltered(LIB_SHELF_STUDIO).length)>0;
+  if(which==='links') return (_libFiltered(LIB_MY_LINKS).length+_libFiltered(LIB_STUDIO_LINKS).length)>0;
+  return _ttplFiltered().length>0;   // [1.603] — templates answer for themselves too
 }
+// [1.603] — the sort options each kind actually HAS. Templates carry no upload
+// time and no file type, so Newest and Type would be two dead menu entries; what
+// they do have is the order the teacher dragged them into.
+var LIB_SORTS={files:['name','new','type'], links:['name','new','type'], templates:['order','name']};
+var LIB_BANDS={files:'bandFiles', links:'bandLinks', templates:'bandTemplates'};
+function _libCount(which){
+  if(which==='files') return (LIB_MINE||[]).length+(LIB_SHELF_STUDIO||[]).length;
+  if(which==='links') return (LIB_MY_LINKS||[]).length+(LIB_STUDIO_LINKS||[]).length;
+  return (TSET.tpls||[]).length;
+}
+function libAddFor(which){
+  if(which==='files') return libAddFiles();
+  if(which==='links') return libAddLinkOpen();
+  return ttplAdd();
+}
+// ── [1.600] — the tag area collapses ─────────────────────────────────────
+//
+// **AC, 12 September 2026:** *"The tag area itself does not need to be this big.
+// It should also be collapsible for admin and teacher."*
+//
+// A band that opens and shuts, with the count of what it holds visible while it
+// is shut — the rule [1.529] set for the shelves and [1.547] for the tag row,
+// for the same reason: a section left closed must still say what is in it.
+// **Closed by default**, because a teacher opening their library is going to a
+// file, not to their vocabulary.
+function rLibBandToggle(which, label, n){
+  var open=!!LIB_SEE[which];
+  return '<div class="lib-band lib-band-wrap">'+
+    '<button type="button" class="lib-band-btn"'+
+      ' aria-expanded="'+(open?'true':'false')+'" onclick="libSee(\''+which+'\')">'+
+      '<span class="caret">'+(open?'\u25be':'\u25b8')+'</span>'+esc(label)+
+      '<span class="zcount">'+n+'</span></button>'+
+  '</div>';
+}
+// [1.604] — a section's card exists only when it holds something. An empty
+// `.lib-section` is a large grey box saying nothing, and three of them under
+// four banners is what AC saw.
+function _libSection(which, inner){
+  return String(inner||'').trim()
+    ? '<div class="lib-section" id="lib-sec-'+which+'">'+inner+'</div>'
+    : '';
+}
+// ── [1.605] — ALL FOUR collapse, the way the tags do ─────────────────────
+//
+// **AC, 12 September 2026, looking at the mockups:** *"Doesn't it make sense to
+// have these all collapsed the way the tags are? On a phone that will be really
+// helpful I think."*
+//
+// **He is right, and it answers a thing I had built around rather than fixed.**
+// The header row carries five controls; at 375px those stack to five full-width
+// rows, so three sections was most of a phone screen before a single file. Four
+// one-line bands is the whole library on one screen, and you open the one you
+// came for.
+//
+// **Browse is GONE as a separate button, and the band IS it.** He asked for
+// Browse by name yesterday, when the band was not a control — now that it opens
+// the section, a Browse button beside it would be two controls doing one job,
+// which is the fault he has reported twice (two search boxes, Browse-becoming-
+// Hide). Said to him in one line rather than done quietly.
+//
+// **The controls go INSIDE**, so a closed band is a band and nothing else.
 function rLibSectionHead(which){
-  var files=(which==='files');
-  var n=files?((LIB_MINE||[]).length+(LIB_SHELF_STUDIO||[]).length)
-             :((LIB_MY_LINKS||[]).length+(LIB_STUDIO_LINKS||[]).length);
   var seen=_libSeen(which);
-  return '<div class="lib-band lib-band-row">'+
-    '<span class="lib-band-t">'+esc(files?TLIB_COPY.bandFiles:TLIB_COPY.bandLinks)+'</span>'+
-    '<span class="zcount">'+n+'</span>'+
+  return rLibBandToggle(which, TLIB_COPY[LIB_BANDS[which]], _libCount(which));
+}
+function rLibSectionControls(which){
+  return '<div class="lib-band-row lib-ctl-row">'+
     (_libWantFind()
       ? '<span class="lib-find lib-band-find">'+
           '<input class="lib-search lib-band-q" type="text" id="lib-q-'+which+'" value="'+esc(LIB_Q)+'"'+
@@ -8739,16 +9040,27 @@ function rLibSectionHead(which){
       : '')+
     '<select class="lib-band-sel" aria-label="'+esc(TLIB_COPY.sortBy)+'"'+
       ' onchange="libSort(\''+which+'\',this.value)">'+
-      ['name','new','type'].map(function(k){
+      LIB_SORTS[which].map(function(k){
         return '<option value="'+k+'"'+(LIB_SORT[which]===k?' selected':'')+'>'+
           esc(TLIB_COPY['sort_'+k])+'</option>';
       }).join('')+
     '</select>'+
-    '<button type="button" class="lib-act'+(seen?' on':'')+'" onclick="libSee(\''+which+'\')">'+
-      esc(seen?TLIB_COPY.hideFiles:(files?TLIB_COPY.seeFiles:TLIB_COPY.seeLinks))+'</button>'+
-    '<button type="button" class="lib-done" onclick="'+
-      (files?'libAddFiles()':'libAddLinkOpen()')+'">'+
-      esc(files?TLIB_COPY.addGo:TLIB_COPY.addLinksGo)+'</button>'+
+    // ── [1.603] — the TAG control, with the rest of them ─────────────────
+    //
+    // **AC:** *"Files, links, and Templates should have the same search
+    // functions: Tag, A-Z dropdown with other options, browse, add."*
+    //
+    // **It is not a dropdown.** [1.597] is his own settled decision: a menu that
+    // picks one tag at a time is the confusing part, and the stacking chips are
+    // what let him press Piano then Scales. This is the control that OPENS those
+    // chips, and it carries the count of what is on — [1.547]'s rule, so a
+    // filter can never be left on with nothing saying so.
+    '<button type="button" class="lib-act'+(LIB_TAGS_OPEN||LIB_FILTER.length?' on':'')+'"'+
+      ' aria-expanded="'+(LIB_TAGS_OPEN?'true':'false')+'" onclick="libTagsOpen(\''+which+'\')">'+
+      esc(TLIB_COPY.tagsHead)+
+      (LIB_FILTER.length?'<span class="zcount">'+LIB_FILTER.length+'</span>':'')+'</button>'+
+    '<button type="button" class="lib-done" onclick="libAddFor(\''+which+'\')">'+
+      esc(TLIB_COPY.addNew)+'</button>'+
   '</div>';
 }
 // ── [1.596] — ticking a group, then a group within it ────────────────────
@@ -8938,61 +9250,59 @@ function rLibraryPanel(composerId){
     // [1.595] — the VOCABULARY, and only that. The filter chips moved down to
     // the two lists they filter; this band is what admin's is — the place a
     // word is corrected or dropped.
-    '<div class="lib-band">'+esc(TLIB_COPY.bandTags)+'</div>'+
-    '<div class="lib-section">'+rLibMyTagManager()+'</div>'+
+    // [1.600] — and it collapses, closed by default.
+    // The count is what the band HOLDS, which is the studio's live vocabulary
+    // plus this teacher's own words — not their words alone, which read as 0
+    // over a section listing two tags.
+    rLibBandToggle('tags', TLIB_COPY.bandTags,
+      (LIB_TAGS||[]).filter(function(t){ return !t.off; }).length+_libMyWords().length)+
+    _libSection('tags', LIB_SEE.tags ? rLibMyTagManager() : '')+
+
+    // ── [1.604] — A CLOSED SECTION DRAWS NOTHING ──────────────────────────
+    //
+    // **AC, 12 September 2026, with the screenshot:** *"teacher library
+    // functions, headers, etc are all out of whack."*
+    //
+    // **Four banners over three empty boxes**, one of them announcing 11 files
+    // and showing none: with Browse shut the section still drew its full card
+    // holding nothing but a collapsed Tags row. **A section's card is drawn only
+    // when it HAS something** — the list, an add card in progress, or a note
+    // about what just happened — and the tag filter goes inside it with the list
+    // it filters rather than being the only thing in an open box.
+    //
+    // The file input is invisible and lives on the panel, because `libAddFiles`
+    // clicks it by id and it must survive a section being shut.
+    '<input type="file" id="lib-add-file" class="att-input" multiple accept="'+_attAccept()+'"'+
+      ' onchange="libAddChosen(this)">'+
 
     // ── MY FILES ──────────────────────────────────────────────────────────
-    //
-    // [1.595] — Add files is ON the header row now, not in a strip of its own
-    // below it: AC's *"there really is no need for using extra space for the
-    // add files button."* The file input stays here because it is invisible and
-    // has to survive the header being redrawn.
+    // [1.605] — the band is the disclosure; the controls live inside it, so a
+    // closed section is one line on a phone rather than five.
     rLibSectionHead('files')+
-    '<div class="lib-section" id="lib-sec-files">'+
-      rLibraryTags()+   // [1.597] — the filter, beside the list it filters
-      '<input type="file" id="lib-add-file" class="att-input" multiple accept="'+_attAccept()+'"'+
-        ' onchange="libAddChosen(this)">'+
+    _libSection('files', !_libSeen('files') ? '' :
+      rLibSectionControls('files')+
       // The review step. AC: "it should ask for tags, etc when adding, not
       // after and then having to remember to edit." What just landed sits where
       // the press was, with the tagging on it.
       rLibraryAdded()+
       ((LIBADD&&LIBADD.at==='lib')?'':rAct('libadd'))+
-      (_libSeen('files')
-        ? '<div id="lib-body-files">'+rLibraryBodyFiles()+rLibBulkRow('files')+'</div>'
-        : '')+
-    '</div>'+
+      rLibraryTags()+   // [1.597] — the filter, with the list it filters
+      '<div id="lib-body-files">'+rLibraryBodyFiles()+rLibBulkRow('files')+'</div>')+
 
     // ── MY LINKS ──────────────────────────────────────────────────────────
     rLibSectionHead('links')+
-    '<div class="lib-section" id="lib-sec-links">'+
-      rLibraryTags()+   // [1.597]
+    _libSection('links', !_libSeen('links') ? '' :
+      rLibSectionControls('links')+
       // [1.553] — the one-step card: address, display text and tags together,
       // and the press at the end is the only round trip.
       rLibAddCard('lib')+
-      (_libSeen('links')
-        ? '<div id="lib-body-links">'+rLibraryBodyLinks()+rLibBulkRow('links')+'</div>'
-        : '')+
-    '</div>'+
+      rLibraryTags()+   // [1.597]
+      '<div id="lib-body-links">'+rLibraryBodyLinks()+rLibBulkRow('links')+'</div>')+
 
     // ── MY TEMPLATES ──────────────────────────────────────────────────────
-    //
-    // [1.594] — AC: *"My templates needs a way to search by tag also."* The same
-    // control as the other two sections, on the same header shape, with Create
-    // where Add files is.
-    '<div class="lib-band lib-band-row">'+
-      '<span class="lib-band-t">'+esc(TLIB_COPY.bandTemplates)+'</span>'+
-      '<span class="zcount">'+((TSET.tpls||[]).length)+'</span>'+
-      '<select class="lib-band-sel" aria-label="'+esc(TLIB_COPY.tagFilter)+'"'+
-        ' onchange="ttplTagFilter(this.value)">'+
-        '<option value="">'+esc(TTPL_COPY.tplFilterAll)+'</option>'+
-        (LIB_TAGS||[]).filter(function(t){ return !t.off; }).map(function(t){
-          return '<option value="'+esc(t.tagId)+'"'+(TTPL_TAGFILTER===t.tagId?' selected':'')+'>'+
-            esc(t.name)+'</option>';
-        }).join('')+
-      '</select>'+
-      '<button type="button" class="lib-done" onclick="ttplAdd()">'+esc(TTPL_COPY.add)+'</button>'+
-    '</div>'+
-    '<div class="lib-section" id="lib-sec-tpls">'+rTeacherTemplates()+'</div>'+
+    rLibSectionHead('templates')+
+    _libSection('templates', !_libSeen('templates') ? '' :
+      rLibSectionControls('templates')+rTeacherTemplates())+
   '</div>';
 // ── [1.595] — the templates were drawn TWICE, and it is [1.575]'s fault again
 //    in a different file ─────────────────────────────────────────────────
@@ -9026,18 +9336,44 @@ function rLibraryPanel(composerId){
 // that moves. **The count of what is ON stays visible while it is shut**, which
 // is the same rule the shelves ([1.529]) and the side panel ([1.527]) follow —
 // otherwise a filter could be left on with nothing saying so.
+// [1.600] — the studio tags this teacher has taken off their own list. Never a
+// delete: the tag and every file under it are untouched, and putting it back
+// brings the whole shelf with it.
+var LIB_TAGS_HIDDEN=[];
+function _libTagHidden(id){ return LIB_TAGS_HIDDEN.indexOf(id)>-1; }
+function libTagHide(id, hide){
+  // Applied here first so the row answers the press, and put back if the server
+  // refuses — the same shape every other library toggle uses.
+  var at=LIB_TAGS_HIDDEN.indexOf(id);
+  if(hide){ if(at<0) LIB_TAGS_HIDDEN.push(id); } else if(at>-1) LIB_TAGS_HIDDEN.splice(at,1);
+  // A hidden tag must not go on filtering the shelf it is no longer offered on.
+  var f=LIB_FILTER.indexOf(id);
+  if(hide && f>-1){ LIB_FILTER.splice(f,1); _libFilterSave(); }
+  actStart('tagshow', TLIB_COPY.myTagSaving);
+  _libRedraw();
+  api({action:'setTeacherTagHidden', data:{tagId:id, hidden:!!hide,
+       teacherId:TEACHER_ID, teacherToken:TOKEN}}, function(e,r){
+    if(e||!r||!r.ok){ actFail('tagshow',(r&&r.error)||TLIB_COPY.saveFailed); loadLibrary(true); return; }
+    LIB_TAGS_HIDDEN=r.hiddenTagIds||LIB_TAGS_HIDDEN;
+    actDone('tagshow', TLIB_COPY.myTagSaved);
+    _libRedraw();
+  });
+}
 var LIB_TAGS_OPEN=false;
-function libTagsToggle(){ LIB_TAGS_OPEN=!LIB_TAGS_OPEN; render(); }
+// [1.603] — from the header: opens the chips AND the list they filter, because
+// a filter you can press over a list you cannot see answers nothing.
+function libTagsOpen(which){
+  LIB_TAGS_OPEN=!LIB_TAGS_OPEN;
+  if(LIB_TAGS_OPEN) LIB_SEE[which]=true;
+  _libRedraw();
+}
 function rLibraryTags(){
   var offered=_libOffered();
   if(!offered.length && !LIB_FILTER.length) return '';
-  var n=LIB_FILTER.length;
-  var hd='<button type="button" class="lib-tags-hd'+(n?' on':'')+'"'+
-    ' aria-expanded="'+(LIB_TAGS_OPEN?'true':'false')+'" onclick="libTagsToggle()">'+
-    '<span class="caret">'+(LIB_TAGS_OPEN?'\u25be':'\u25b8')+'</span>'+esc(TLIB_COPY.tagsHead)+
-    (n?'<span class="zcount">'+n+'</span>':'')+'</button>';
-  if(!LIB_TAGS_OPEN) return '<div class="lib-tags-wrap">'+hd+'</div>';
-  return '<div class="lib-tags-wrap">'+hd+'<div class="lib-tags">'+offered.map(function(t){
+  // [1.603] — the disclosure moved ONTO the section header, which is where AC
+  // listed it. A second copy of it here would be two controls for one state.
+  if(!LIB_TAGS_OPEN) return '';
+  return '<div class="lib-tags-wrap"><div class="lib-tags">'+offered.map(function(t){
     var on=LIB_FILTER.indexOf(t.v)>-1;
     return '<button type="button" class="lib-tag'+(on?' on':'')+(t.priv?' priv':'')+'"'+
       ' aria-pressed="'+(on?'true':'false')+'"'+
@@ -9092,10 +9428,48 @@ function _libMyWords(){
   });
   return Object.keys(seen).sort().map(function(w){ return {word:w, n:seen[w]}; });
 }
+// ── [1.600] — the STUDIO's tags, on the teacher's own list ───────────────
+//
+// **AC, 12 September 2026:** *"The teachers can remove them if they want, but
+// they are never deleted, just hidden and not included in their list if they
+// choose."*
+//
+// A teacher had no say in the studio's vocabulary at all: every one of AC's tags
+// was in their filter row whether they teach that instrument or not. **This is a
+// view preference and nothing else** — the tag stays, its files stay, and
+// putting it back brings the whole shelf with it.
+//
+// **Rename and Delete are not offered and the server refuses them anyway.** The
+// studio's words are AC's; only the teacher's own custom words below can be
+// changed.
+function rLibStudioTagList(){
+  var tags=(LIB_TAGS||[]).filter(function(t){ return !t.off; });
+  if(!tags.length) return '';
+  return '<div class="lib-mytags">'+
+    '<div class="lib-lbl">'+esc(TLIB_COPY.studioTagsHead)+'</div>'+
+    '<p class="lib-blurb">'+esc(TLIB_COPY.studioTagsBlurb)+'</p>'+
+    tags.map(function(t){
+      var hid=_libTagHidden(t.tagId);
+      return '<div class="lib-mytag-row">'+
+        '<span class="lib-tag'+(hid?' off':'')+'">'+esc(t.name)+'</span>'+
+        '<span class="lib-meta">'+esc(TLIB_COPY.myTagOn.replace('{n}', String(_libTagUseCount(t.tagId))))+'</span>'+
+        '<button type="button" class="lib-act" onclick="libTagHide(\''+esc(t.tagId)+'\','+(hid?'false':'true')+')">'+
+          esc(hid?TLIB_COPY.tagShow:TLIB_COPY.tagHide)+'</button>'+
+        '</div>';
+    }).join('')+
+    rAct('tagshow')+
+  '</div>';
+}
+function _libTagUseCount(tagId){
+  var n=0;
+  _libAllItems().forEach(function(f){ if((f.tags||[]).indexOf(tagId)>-1) n++; });
+  return n;
+}
 function rLibMyTagManager(){
   var words=_libMyWords();
-  if(!words.length) return '';
-  return '<div class="lib-mytags">'+
+  var studio=rLibStudioTagList();
+  if(!words.length) return studio;
+  return studio+'<div class="lib-mytags">'+
     '<div class="lib-lbl">'+esc(TLIB_COPY.myTagsHead)+'</div>'+
     words.map(function(w){
       if(LIB_TAG_DEL===w.word){
@@ -9226,7 +9600,10 @@ function _libShelf(label, key, n, body){
   // **Only while there is something typed**, and only for a shelf with matches:
   // opening an empty shelf to show nothing is a worse answer than the count.
   // Clearing the box puts both back to however the teacher had them.
-  var searching=!!String(LIB_Q||'').trim();
+  // [1.603] — a TAG filter is the same act as a search, and [1.546] covered only
+  // the typed one. With the Tag control on the header, pressing Piano opened the
+  // chips over a shelf that was still shut — chips, and nothing to see.
+  var searching=!!String(LIB_Q||'').trim() || LIB_FILTER.length>0;
   var open=(searching && n>0) || !!LIB_SHELF_OPEN[key];
   return '<div class="lib-shelf">'+
     '<div class="lib-group-hd lib-shelf-hd" onclick="libShelfToggle(\''+esc(key)+'\')">'+
@@ -9882,8 +10259,17 @@ function tplSaveAsDo(id){
     // answered — and none is needed: it is only used to prefill the name box,
     // which a save that has just happened does not need.
     TPL_USED={templateId:'', html:live, source:body};
-    SAVED_TPLS=[]; _savedTplsLoaded=false; _savedTplsInFlight=false; loadSavedTpls();
-    TSET.tpls=null;   // the settings panel's copy, stale the moment this saves
+    // [1.608] — the server returns what it wrote, so both copies are set from
+    // it rather than thrown away and refetched. This path had the same three
+    // extra round trips the panel's save had, and it runs at the moment a
+    // teacher is mid-message, which is the worst moment to spend them.
+    var rows=(r.templates && r.templates.length!==undefined) ? r.templates : null;
+    if(rows){
+      SAVED_TPLS=rows; _savedTplsLoaded=true; _savedTplsInFlight=false; TSET.tpls=rows;
+    } else {
+      SAVED_TPLS=[]; _savedTplsLoaded=false; _savedTplsInFlight=false; loadSavedTpls();
+      TSET.tpls=null;   // the settings panel's copy, stale the moment this saves
+    }
     showMsg(TTPL_COPY.savedToast,'s');
     render();
   });

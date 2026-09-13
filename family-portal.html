@@ -51,6 +51,10 @@ textarea{resize:vertical;min-height:80px;line-height:1.55}
 label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:.08em;display:block;font-family:"Inter",sans-serif}
 .field{margin-bottom:1rem}
 .hint{font-size:11px;color:var(--text4);margin-top:3px;line-height:1.5}
+/* [1.599] — AC's sentence about what the list covers. It sits under the dates
+   and above the buttons, which is where somebody looks after reading them and
+   before deciding they are missing something. */
+.kl-datenote{font-size:11px;color:var(--text3);line-height:1.5;margin:.5rem 0 0}
 .req{color:var(--rt);margin-left:2px}
 .btn{padding:6px 14px;border-radius:var(--r);font-size:12px;cursor:pointer;border:1px solid transparent;font-family:"Inter",sans-serif;transition:background .1s,opacity .1s;display:inline-flex;align-items:center;gap:5px;font-weight:600;line-height:1;letter-spacing:.01em;white-space:nowrap}
 .btn-p{background:var(--acc);color:#fff;border-color:var(--acc)}.btn-p:hover{background:#162C53;border-color:#162C53}
@@ -2078,6 +2082,62 @@ function doEditChild(i){
   render();
 }
 
+// ── [1.609] — BACK, and REMOVE THIS CHILD ────────────────────────────────
+//
+// **AC, 12 September 2026:** *"When a family goes to register if they click add
+// a second child accidentally and try to back out of it they can't. There should
+// be an option to remove second child or to back out of that process so that you
+// can complete the registration for the first and only child."* And, settling
+// the two: *"Clicking back should save the information that they've entered
+// already without submitting. Remove on the child remove some completely."*
+//
+// **The trap was closed on three sides.** `doAddAnotherChild` pushes a blank
+// child; nothing removed one; `doCompleteRegistration` refuses while any child
+// is unfinished; and `doSaveChildEdits` — the only route back to the review list
+// — validates first, so a blank child could not be saved out of either. The only
+// escape was reloading the page, which loses everything typed.
+//
+// **BACK DOES NOT VALIDATE. That is the whole point of it**, and it is the one
+// line that makes this fix work: a family stepping off a child they have barely
+// started must not be told to finish it first.
+//
+// It keeps what they typed — in the form, never on the server — and the snapshot
+// is what puts the child into the review list at all, since that list draws a
+// child only when `RF.availData` has an entry for it. **A blank child had no
+// entry, so it was named in the submit error and drawn nowhere.**
+function doBackFromChild(){
+  SC.submitError='';
+  // Snapshotted, NOT marked complete: it may well not be, and claiming
+  // otherwise would let an unfinished child through the submit.
+  RF.availData[RF.availIndex]=_scSnapshot();
+  RF.reviewMode=true;
+  SC.submitAttempted=false;
+  _shouldScrollTop=true;
+  render();
+}
+// **Removed completely**, which is AC's word. The three arrays are one record
+// per child and all three have to lose the same index, or a child's name would
+// keep somebody else's availability.
+//
+// **Never the last child.** A registration with no children is not a state this
+// form has, and the button is not offered there — this is the guard behind it,
+// because a control that is merely undrawn is one a later screen can call.
+function doRemoveChild(i){
+  if(!RF.students||RF.students.length<2) return;
+  if(i<0||i>=RF.students.length) return;
+  SC.submitError='';
+  RF.students.splice(i,1);
+  RF.availData.splice(i,1);
+  RF.childComplete.splice(i,1);
+  // Back to the list, which is where somebody who has just removed a child is
+  // deciding what to do next. The open child is the last one left, so the form
+  // has a valid child under it whichever way it is drawn.
+  RF.availIndex=Math.max(0, Math.min(RF.availIndex, RF.students.length-1));
+  RF.reviewMode=true;
+  SC.submitAttempted=false;
+  _shouldScrollTop=true;
+  render();
+}
 // Save this child's edits and return to the review list (AC, 22 Aug: landing
 // back inside another child's half-filled form "seems like a useless
 // choice"). Validates first -- this is the one place a child is marked
@@ -4170,6 +4230,11 @@ var KL_ATT_ADD='Add file';
 var KL_ATT_TIP='Add a file';
 var KL_ATT_HINT='Send a file. 10 MB limit. Maximum 5 files.';
 var KL_ATT_FORMATS='Accepted file types';
+// [1.609] — AC's words, 12 September 2026. FINAL. "Remove this child" is his
+// own phrasing, and it is what makes the button safe to press: it names what
+// goes, on the screen the child is on.
+var REG_BACK_LBL='Back';
+var REG_REMOVE_LBL='Remove this child';
 var KL_ATT_REMOVE='Remove';
 var KL_ATT_TOO_MANY='You can add 5 files to one message.';
 // [1.513] — the server's own wording, reused rather than invented.
@@ -4797,28 +4862,13 @@ function _klEnrolled(){
 // The weekdays this family actually has lessons on, and which child each
 // belongs to. Used to answer "which closures cost us a lesson" — the filter
 // AC asked for. Returns e.g. {1:['Mia'], 3:['Leo']}.
-// BACKLOG 1.85 — the button used to read "All Holidays & Studio Closure
-// Dates" while the list behind it is filtered to the family's own lesson
-// days. AC: that misleads a parent into thinking the dates shown are the only
-// closures there are. Naming the day(s) makes the filter visible in the
-// control itself. Falls back to the unqualified label when no lesson day is
-// known, so it can never render "All  Holidays".
-var KL_DAYNAMES=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-function _klLessonDayNames(){
-  var byDay=_klLessonDays();
-  return Object.keys(byDay)
-    .map(function(k){ return Number(k); })
-    .sort(function(a,b){ return a-b; })
-    .map(function(idx){ return KL_DAYNAMES[idx]; })
-    .filter(Boolean);
-}
-function _klAllDatesLabel(){
-  var names=_klLessonDayNames();
-  if(!names.length) return 'All Holidays &amp; Studio Closure Dates';
-  var joined=names.length===1?names[0]
-    :names.slice(0,-1).join(', ')+' &amp; '+names[names.length-1];
-  return 'All '+joined+' Holidays &amp; Studio Closure Dates';
-}
+// ── [1.606] — the day-aware button label is WITHDRAWN ────────────────────
+//
+// BACKLOG 1.85 named the button after the family's own lesson days — *"All
+// Thursday Holidays & Studio Closure Dates"* — which was accurate and is not
+// what AC asked for on 12 September. His words are two fixed strings, and a
+// label built from data is one more thing that can disagree with them.
+
 function _klLessonDays(){
   var byDay={};
   var enrolled=_klEnrolled();
@@ -5003,9 +5053,12 @@ function _klDateRow(e, whenText, whoText){
 // Every event that lands on a day this family has a lesson, with the specific
 // date that lands — not the range's start, which for Winter Recess would name
 // a day that may not be their lesson day at all.
-function rHomeDayFilteredDates(){
+// [1.599] — ONE list, built once. The summary and the expanded view are two
+// views of it now, so they cannot disagree about which dates matter — which is
+// exactly how they came to disagree in the first place.
+function _klDayFilteredHits(){
   var byDay=_klLessonDays();
-  if(!Object.keys(byDay).length) return '<p class="hint">We don’t have a lesson day on file yet.</p>';
+  if(!Object.keys(byDay).length) return [];
   var hits=[];
   _klScheduleEvents().forEach(function(e){
     if(e.kind==='start'){ hits.push({e:e, when:_fmtDateRange(e.startDate,e.endDate), who:''}); return; }
@@ -5025,10 +5078,31 @@ function rHomeDayFilteredDates(){
       hits.push({e:e, when:_fmtLessonDate(d), who:who.join(' & '), sort:d.getTime()});
     });
   });
+  return hits;
+}
+function rHomeDayFilteredDates(){
+  var byDay=_klLessonDays();
+  if(!Object.keys(byDay).length) return '<p class="hint">We don’t have a lesson day on file yet.</p>';
+  var hits=_klDayFilteredHits();
   if(!hits.length) return '<p class="hint">No closures fall on your lesson days.</p>';
   return hits.map(function(hit){ return _klDateRow(hit.e, hit.when, hit.who); }).join('');
 }
 
+// ── [1.599] — AC's sentence, 12 September 2026. SUPPLIED AND FINAL ───────
+//
+// *"Only dates occurring on your lesson day are listed. See Keylab Google
+// calendar for full studio schedule"* — his words, verbatim, and the reason the
+// filter is not silent: a list that quietly leaves things out is the fault this
+// item exists for.
+var KL_DATE_NOTE='Only dates occurring on your lesson day are listed. See Keylab Google calendar for full studio schedule';
+// [1.606] — AC's heading and his two button words, 12 September 2026. FINAL.
+// **He wrote the note a second time with two typos** ("occuring", "Gooble");
+// the spelling here is his own from the first time he gave it, an hour earlier.
+// Corrected rather than shipped, and said to him in one line — a slip in a
+// message is not a voice choice.
+var KL_DATES_HEAD='Upcoming Important Dates';
+var KL_DATES_ALL='All Important Dates';
+var KL_DATES_HIDE='Hide Dates';
 function toggleAllDates(){ _klAllDatesOpen=!_klAllDatesOpen; render(); }
 var _klAllDatesOpen=false;
 
@@ -5076,17 +5150,58 @@ function rHomeSchedule(){
   if(events.length){
     // Expanded REPLACES the summary rather than appending under it — otherwise
     // the same three dates appear twice, one set directly beneath the other.
+    // ── [1.599] — the summary is filtered the way the full list is ────────
+    //
+    // **AC, 12 September 2026, correcting my own diagnosis of his report:**
+    // *"I realize what is happening here. It's originally showing Monday dates
+    // that aren't relevant, and THEN show the correct thursday dates. Only the
+    // important upcoming dates on their day of the week are needed here."*
+    //
+    // **Two rules were answering one question.** The summary took the next three
+    // events with no filter at all; the expanded list keeps only dates that fall
+    // on a day this family has a lesson. So a Thursday family read *Yom Kippur —
+    // Closed* and *Indigenous Peoples Day — Closed*, pressed the button to see
+    // everything, and found both gone.
+    //
+    // **The expanded list was right.** A Monday closure is not an important date
+    // for a family who never has a Monday lesson, and the summary is the one
+    // that adopts the rule — which is the smaller change and the opposite of
+    // what I first wrote down.
+    //
+    // **And the family is told what the list covers**, in AC's own sentence: a
+    // list that silently omits things is the fault this item exists for, and
+    // filtering it without saying so would only move that fault.
+    // ── [1.606] — AC's heading, his two buttons, and his order ────────────
+    //
+    // **AC, 12 September 2026, after the mockup**, giving the whole block:
+    // *text "Upcoming Important Dates" / Buttons below: All Important Dates /
+    // "Only dates occurring on your lesson day are listed..." / Hide Dates /
+    // See your child's full lesson schedule / Keylab Google calendar*
+    //
+    // **One heading, both states.** He gave one, so the expanded view uses it
+    // too rather than keeping the old expanded one — a second heading here would
+    // be a string he did not write.
+    //
+    // **The note sits under the button**, which is where he put it in his list,
+    // and it is what makes the filtering honest rather than silent.
+    //
+    // **The old day-aware label is gone with the old button text.** It built
+    // *"All Thursday Holidays & Studio Closure Dates"* out of the family's own
+    // lesson days, which was accurate and is not what he asked for.
+    var shown=_klDayFilteredHits();
+    h+='<div class="kl-subhd">'+esc(KL_DATES_HEAD)+'</div>';
     if(_klAllDatesOpen){
-      h+='<div class="kl-subhd">All dates on your lesson days</div>';
       h+=rHomeDayFilteredDates();
-    } else {
-      h+='<div class="kl-subhd">Upcoming dates</div>';
-      events.slice(0,3).forEach(function(e){
-        h+=_klDateRow(e, _fmtDateRange(e.startDate,e.endDate), '');
+    } else if(shown.length){
+      shown.slice(0,3).forEach(function(hit){
+        h+=_klDateRow(hit.e, hit.when, hit.who);
       });
+    } else {
+      h+='<p class="hint">No closures fall on your lesson days.</p>';
     }
     h+='<div style="margin-top:.5rem"><button class="btn btn-s btn-sm" onclick="toggleAllDates()">'+
-      (_klAllDatesOpen?'Hide dates':_klAllDatesLabel())+'</button></div>';
+      esc(_klAllDatesOpen?KL_DATES_HIDE:KL_DATES_ALL)+'</button></div>';
+    h+='<p class="kl-datenote">'+esc(KL_DATE_NOTE)+'</p>';
   }
 
   // "See your child's full lesson schedule" (BACKLOG 1.62) — same destination
@@ -6893,6 +7008,22 @@ function rSchedForm(forReg){
       h+='<button id="sch-add-child-btn" class="btn btn-p btn-full" style="margin-bottom:.75rem" onclick="doAddAnotherChild()">+ Add Another Child</button>';
     }
     h+='<button id="sch-submit-btn" class="btn btn-p btn-full" onclick="doCompleteRegistration()">Complete Registration</button>';
+    // ── [1.609] — the two ways OFF this child ─────────────────────────
+    //
+    // Drawn only when there is more than one child, because with one there is
+    // no list to go back to and nothing that may be removed.
+    //
+    // **On the child's own screen, which is where the accidental add lands.**
+    // A family who does not know the review list exists still has a way out —
+    // and "this child" only means anything here, which is AC's own wording.
+    if(RF.students.length>1){
+      h+='<div style="margin-top:.75rem;display:flex;gap:.5rem;flex-wrap:wrap">'+
+         '<button class="btn btn-s btn-sm" style="flex:1 1 auto" onclick="doBackFromChild()">'+
+           esc(REG_BACK_LBL)+'</button>'+
+         '<button class="btn btn-d btn-sm" style="flex:1 1 auto" onclick="doRemoveChild('+RF.availIndex+')">'+
+           esc(REG_REMOVE_LBL)+'</button>'+
+         '</div>';
+    }
   } else {
     h+='<button id="sch-submit-btn" class="btn btn-p btn-full" onclick="doSubmitSched()">'+submitLbl+'</button>';
   }

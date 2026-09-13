@@ -1438,12 +1438,24 @@ input[type=checkbox]{width:13px;height:13px;padding:0;margin:0;border:0;border-r
    band overhung the panel by 4px on each side and the panel's own rounded
    background showed through as a step between every pair of bands. Measured in
    the real modal at 375px, not eyeballed. */
-.lib-band{margin:14px -10px 10px;padding:9px 14px;background:var(--bg5);
-  border-top:1px solid var(--border2);border-bottom:1px solid var(--border2);
+/* ── [1.619] — the four areas are INVERTED, the shelves inside them are not ──
+   AC, 13 September 2026: *"The header banners for tags files links and
+   templates are the same color as the sub-header banners for 'keylab master
+   library' but would be better as inverted with a dark navy background and
+   white text to help more easily visually separate the areas."*
+   A hierarchy drawn in one tone is not a hierarchy: both levels were a pale
+   ground with accent text, so MY FILES and KEYLAB MASTER LIBRARY read as
+   siblings when one contains the other. The accent becomes the GROUND here and
+   stays as ink on the shelf header below, which is the whole distinction. */
+.lib-band{margin:14px -10px 10px;padding:9px 14px;background:var(--acc);
+  border-top:1px solid var(--acc);border-bottom:1px solid var(--acc);
   font-size:14px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
-  color:var(--acc);font-family:"Inter",sans-serif;display:flex;align-items:center;gap:10px}
+  color:#fff;font-family:"Inter",sans-serif;display:flex;align-items:center;gap:10px}
 .lib-band:first-child{margin-top:0}
-.lib-band .zcount{margin-left:auto;font-size:12px;color:var(--text4);letter-spacing:0}
+/* [1.619] — the count rides the dark ground with the title. `--text4` on navy
+   is unreadable, which is the one thing an inversion has to be checked for. */
+.lib-band .zcount{margin-left:auto;font-size:12px;color:#fff;letter-spacing:0;
+  background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.45)}
 /* [1.595] — the section header carries its own controls, and these rules are
    admin's, copied declaration for declaration rather than rewritten. Two
    portals each defining the same component differently is the fault [1.558]
@@ -1458,6 +1470,31 @@ input[type=checkbox]{width:13px;height:13px;padding:0;margin:0;border:0;border-r
    and the button fills it and carries the padding. Measured rather than
    eyeballed: the first version was 259px inside a 295px card. */
 .lib-band-wrap{padding:0}
+/* ── [1.618] — the selection bar, seen ───────────────────────────────────
+   AC: *"Selection bar needs to be seen when using. If it's at the bottom of the
+   screen and the user doesn't see it, it won't be useful."*
+   Sticky to the top of the modal's scroller — the panel is inside it and sets
+   no overflow of its own, so a sticky child pins to the top of whatever the
+   teacher is looking at. Full-bleed to the panel's edges with the same -10px
+   the bands use, so it reads as a bar across the screen rather than a card in
+   the list. Accent ground, because it is the one thing on screen that is
+   temporarily true. */
+.lib-selbar{position:sticky;top:0;z-index:6;margin:-10px -10px 10px;padding:8px 12px;
+  background:var(--acc);color:#fff;border-bottom:1px solid var(--acc);
+  box-shadow:0 4px 10px rgba(0,0,0,.18)}
+.lib-selbar-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.lib-selbar-n{font-size:12px;font-weight:600;letter-spacing:.02em}
+.lib-selbar-r{margin-left:auto;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.lib-selbar-b{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.5);
+  color:#fff;border-radius:var(--r);padding:3px 9px;font-size:12px;cursor:pointer;
+  font-family:"Inter",sans-serif;line-height:1.3}
+.lib-selbar-b:hover{background:rgba(255,255,255,.26)}
+.lib-selbar-b.on{background:#fff;color:var(--acc);border-color:#fff}
+.lib-selbar-b.bad{border-color:#F3B0B0;color:#FFE2E2}
+.lib-selbar-b.bad:hover{background:rgba(255,255,255,.2)}
+/* The panels it opens sit on their own ground: chips and a delete question are
+   read, not glanced at, and white text on navy is not the place for either. */
+.lib-selbar-p{margin:8px -12px -8px;padding:8px 12px;background:var(--bg3);color:var(--text)}
 .lib-band-btn{width:100%;display:flex;align-items:center;gap:10px;padding:9px 14px;
   background:none;border:0;cursor:pointer;text-align:left;
   font:inherit;color:inherit;letter-spacing:inherit;text-transform:inherit}
@@ -3046,6 +3083,15 @@ function rTtplItem(i,t){
         ' onpointerdown="ttplGrab(event,'+i+')" onpointermove="ttplDragMove(event)"'+
         ' onpointerup="ttplDrop()" onpointercancel="ttplDrop()"'+
         ' onkeydown="ttplGripKey(event,'+i+')">⠿</button>'
+      : '')+
+    // [1.621] — the tick, on a SAVED template. A row being typed has no id yet
+    // and nothing may act on it in bulk; offering a box that does nothing is
+    // worse than no box.
+    (t.templateId
+      ? '<input type="checkbox" class="lib-tick"'+(LIB_SEL['t:'+t.templateId]?' checked':'')+
+        ' onclick="event.stopPropagation();libSel(\'t:'+esc(t.templateId)+'\')"'+
+        ' title="'+esc(TLIB_COPY.tickHint)+'"'+
+        ' aria-label="'+esc(TLIB_COPY.tickHint)+': '+esc(nm)+'">'
       : '')+
     '<button type="button" class="lnk-open" aria-expanded="'+(open?'true':'false')+'"'+
       ' aria-label="Edit '+esc(nm)+'"'+
@@ -7059,8 +7105,28 @@ var TLIB_COPY={
   // the button, because "Remove" is the word his admin screen uses for a
   // different act.
   studioTagsHead:'Studio tags',
-  studioTagsBlurb:'Keylab\u2019s tags. You can take one off your own list at any time \u2014 nothing is deleted, and your files keep it.',
+  // ── [1.617] — AC's description, supplied in full and used verbatim ──────
+  //
+  // **AC, 13 September 2026:** *"Teachers can't add custom tags without first
+  // choosing to edit something. This isn't inherently bad, but instructions
+  // should be mentioned in the description at the top of the tag area"* — and
+  // then the description itself, which is what follows.
+  //
+  // **The line it replaces said a fifth of it**: *"Keylab's tags. You can take
+  // one off your own list at any time — nothing is deleted, and your files keep
+  // it."* True, and silent about where a custom tag comes from, what the small
+  // × does, and that ticking boxes tags several things at once.
+  //
+  // **His spelling of the quotes is not his spelling.** The straight quotes
+  // around "x" are typed, not chosen — every other quoted word in these portals
+  // is curled, and [1.606] settled that a slip in a message is not a voice
+  // choice. Nothing else is touched.
+  studioTagsBlurb:'These are admin added tags. You can\u2019t delete these permanently, but you can add or remove them from your master list. Add them back any time. Custom tags are tags that you create when adding a file, link, or template. These can be deleted permanently. Click the small \u201cx\u201d on a tag to remove it from an item. Bulk add tags to multiple files, links, and templates at the same time by ticking the checkbox on the items.',
   lblUrl:'Web address',   // [1.615]
+  // [1.622] — the box says what it is for, in a title and an aria-label, the
+  // same as the library's own ([1.596]). Two kinds, two verbs: a file is
+  // attached to the message, a link goes into the words.
+  pickTickFile:'Attach to this message', pickTickLink:'Add to this message',
   // [1.612] — hiding a tag said 'Renaming\u2026'. `myTagSaving` belongs to the
   // CUSTOM tag rename beneath it; this control renames nothing in either
   // direction, and it is the one AC is about to use most on this screen. Found
@@ -7073,6 +7139,13 @@ var TLIB_COPY={
   // [1.474]'s `delSel`, which both portals already carry, rather than a second
   // word for the same control.
   bulkTags:'Tags',
+  // [1.618] — AC found a bar that acted on files and links and named neither.
+  // Singular and plural rather than "3 item(s)": [1.557] settled that one string
+  // doing for two is how a teacher gets told they have "1 files".
+  selSummary:'{what} selected',
+  selFile:'{n} file', selFiles:'{n} files',
+  selLink:'{n} link', selLinks:'{n} links',
+  selTpl:'{n} template', selTpls:'{n} templates',
   // [1.612] — AC: *"hiding a tag should put it in a hidden tag area. Click to
   // add back to the list."* The blurb is his second sentence, because it is the
   // instruction and nothing else on the chip says it.
@@ -7486,29 +7559,44 @@ function pickSearch(v){ PICK_Q=String(v||''); _pickRedraw(); }
 // a link goes into the words through the same insertion the paste row uses.
 // Either way the ROW says so — see rPickRow — and the picker stays open for
 // the next one.
-function pickUse(id, composerId){
+// ── [1.622] — one press ADDS it, both kinds ──────────────────────────────
+//
+// **AC:** *"there needs to be a checkbox to tick to add it so the teacher can
+// bulk add files and/or links."* A file attaches; a link goes into the words.
+//
+// **What this replaces, and why the loss is not one.** `pickUse` FILLED the
+// address and the display-text fields for a saved link and left Add link to
+// insert it — AC's own design, *"like Gmail"*, from 10 September. It cost two
+// presses per link and could not be a bulk anything. **[1.520] existed only
+// because of it**: he reported that on a phone the fields it filled were above
+// the fold — *"it's very easy to get lost on mobile without helpful
+// guidance"* — and `_guideTo` was built to scroll to them. **Inserting
+// directly removes the cause rather than regressing the fix.**
+//
+// **The link's own name becomes the wording**, which is what the fields were
+// pre-filled with anyway; a teacher who wants different words edits them in the
+// message, or types the link into the row above with any text they like.
+function pickAdd(id, composerId){
   var it=_pickFind(id); if(!it) return;
-  // AC, 10 September: a saved link FILLS the address and the text, so the
-  // words can be edited, and Add link is what inserts it — like Gmail. The
-  // text keeps whatever was highlighted; the link's name fills it otherwise.
   if(it.kind==='link'){
     var cid=composerId||_libComposerId;
-    var st=_cmpLinkState(cid);
-    st.url=it.url; st.bad=false;
-    if(!st.text) st.text=it.label||it.fileName||'';
-    LINK_SELECTED=id;
+    _composerInsertLink(cid, it.url, it.label||it.fileName||it.url);
+    LINK_ADDED[id]=true;
     _pickRedraw();
-    var t=document.getElementById(cid+'-linktext');
-    if(t){ _focusNoScroll(t); try{ t.setSelectionRange(t.value.length, t.value.length); }catch(e){} }
-    // [1.520] — AC: *"adding a link from the library on mobile doesn't jump up
-    // to the link address and name and 'add link' button... it's very easy to
-    // get lost on mobile without helpful guidance."* The fields are ABOVE the
-    // list on a phone, so tapping a saved link fills something the person
-    // cannot see. This takes them to it, and only on a phone.
-    _guideTo('.cmp-linkrow');
     return;
   }
   libAttach(id, composerId);
+}
+// [1.622] — and the NAME opens it, which is [1.613]'s rule reaching the one row
+// it could not reach while pressing that row was the only way to attach.
+function pickOpen(id){
+  var it=_pickFind(id); if(!it) return;
+  if(it.kind==='link'){
+    if(!it.url) return;
+    try{ window.open(it.url,'_blank','noopener'); }catch(e){}
+    return;
+  }
+  openAttachment(it.attachmentId||id, _attCanView(it.mimeType, it.fileName)?'view':'download');
 }
 // The picker's items. Files: the two shelves' files. Links: the two shelves'
 // links, plus a teacher's older quick links ([1.338], a separate sheet) that
@@ -7680,9 +7768,9 @@ function libSearch(v){
   // a word the box beside it denies.
   _libSyncSearch();
   var f=document.getElementById('lib-body-files');
-  if(f) f.innerHTML=rLibraryBodyFiles()+rLibBulkRow('files');
+  if(f) f.innerHTML=rLibraryBodyFiles();
   var l=document.getElementById('lib-body-links');
-  if(l) l.innerHTML=rLibraryBodyLinks()+rLibBulkRow('links');
+  if(l) l.innerHTML=rLibraryBodyLinks();
   // A section that was shut has to open to show what was found, and a body that
   // was not drawn at all has no node for the two lines above to write into.
   if((!f && _libSeen('files')) || (!l && _libSeen('links'))) _libRedraw();
@@ -7697,7 +7785,48 @@ function _libSyncSearch(){
 function _libFind(id){
   var all=_libAllItems();
   for(var i=0;i<all.length;i++) if(all[i].id===id) return all[i];
+  // [1.621] — a ticked TEMPLATE resolves here too, through the same door, so
+  // every caller that already asks "what is this id" keeps working.
+  if(String(id||'').indexOf('t:')===0){
+    var tpls=_libTplItems();
+    for(var j=0;j<tpls.length;j++) if(tpls[j].id===id) return tpls[j];
+  }
   return null;
+}
+// ── [1.621] — a template, in the shape the selection already understands ──
+//
+// **AC, 13 September 2026:** *"You shoudl be able to tag templates too. This
+// was requested previously."* He is right that it was: [1.595] built
+// per-template tags and [1.596] built the bulk selection, and nobody joined
+// them, so `_libTableItems` — the one list select-all, the bar and the bulk
+// apply all read — has always been files and links only.
+//
+// **An adapter rather than a third code path.** A template is given `id`,
+// `kind`, `fileName` and `tags`, which is every field the selection machinery
+// reads; the `t:` prefix is the same trick a link's `q:` already uses. So the
+// bar counts it, select-all ticks it, and the bulk apply finds it without any
+// of them learning what a template is.
+//
+// **Only a SAVED template.** A row being typed has no id yet, and ticking one
+// would hand the bulk save a row the server has never seen.
+function _libTplItems(){
+  return (TSET.tpls||[]).filter(function(t){ return !!String(t.templateId||'').trim(); })
+    .map(function(t){
+      return { id:'t:'+t.templateId, kind:'template', templateId:t.templateId,
+               fileName:t.label||'', tags:t.tags||[], privateTags:[] };
+    });
+}
+// What is ON SCREEN in the templates section — the same list it draws, so
+// select-all cannot reach a template the filter is hiding ([1.470]'s rule).
+function _libTplVisible(){
+  var seen={};
+  _ttplFiltered().forEach(function(t){ if(t.templateId) seen[String(t.templateId)]=true; });
+  return _libTplItems().filter(function(x){ return seen[String(x.templateId)]; });
+}
+// [1.621] — everything a tick can reach, in one list, because select-all, the
+// bar's count and both bulk actions have to agree about what is selectable.
+function _libSelectable(){
+  return _libTableItems().concat(_libSeen('templates')?_libTplVisible():[]);
 }
 function _libIsLink(id){ var it=_libFind(id); return !!(it && it.kind==='link'); }
 
@@ -7895,22 +8024,49 @@ function libBulkDelete(){
   var ids=_libSelIds();
   LIB_BULK_DEL=false;
   if(!ids.length){ _libRedraw(); return; }
+  // [1.621] — a ticked TEMPLATE is deleted with the rest. It is not a request
+  // of its own: the list is saved whole, so removing three rows and saving is
+  // one call however many were ticked.
+  var tplGone=0;
+  var keep=[], drop={};
+  ids.forEach(function(id){ if(String(id).indexOf('t:')===0) drop[String(id).slice(2)]=true; });
+  if(Object.keys(drop).length){
+    (TSET.tpls||[]).forEach(function(t){
+      if(t.templateId && drop[String(t.templateId)]){ tplGone++; return; }
+      keep.push(t);
+    });
+  }
+  var rowIds=ids.filter(function(id){ return String(id).indexOf('t:')!==0; });
+  var left=rowIds.length+(tplGone?1:0);
+  var done=0, failed=0;
+  if(!left){ _libRedraw(); return; }
   actStart('libbulk', TLIB_COPY.saving);
   _libRedraw();
-  var left=ids.length, done=0, failed=0;
-  ids.forEach(function(id){
+  var finish=function(){
+    if(--left) return;
+    if(failed) actFail('libbulk', TLIB_COPY.delSelPartial.replace('{n}', String(done)).replace('{f}', String(failed)));
+    else actDone('libbulk', TLIB_COPY.delSelDone.replace('{n}', String(done)));
+    _libBulkReset();
+    LIB_EDIT=''; LIB_DEL='';
+    _libRefresh();
+  };
+  if(tplGone){
+    var before=(TSET.tpls||[]).slice();
+    TSET.tpls=keep;
+    _ttplSaveQuiet(function(err){
+      if(err){ TSET.tpls=before; failed+=tplGone; }
+      else { done+=tplGone; Object.keys(drop).forEach(function(k){ delete LIB_SEL['t:'+k]; }); }
+      finish();
+    });
+  }
+  rowIds.forEach(function(id){
     var isLink=_libIsLink(id);
     var req=isLink
       ? {action:'deleteLibraryLink', data:{linkId:id, teacherId:TEACHER_ID, teacherToken:TOKEN}}
       : {action:'deleteLibraryFile', data:{attachmentId:id, teacherId:TEACHER_ID, teacherToken:TOKEN}};
     api(req, function(e,r){
       if(!e && r && r.ok){ done++; delete LIB_SEL[id]; } else { failed++; }
-      if(--left) return;
-      if(failed) actFail('libbulk', TLIB_COPY.delSelPartial.replace('{n}', String(done)).replace('{f}', String(failed)));
-      else actDone('libbulk', TLIB_COPY.delSelDone.replace('{n}', String(done)));
-      _libBulkReset();
-      LIB_EDIT=''; LIB_DEL='';
-      _libRefresh();
+      finish();
     });
   });
 }
@@ -7993,19 +8149,22 @@ function libFileTag(id, tagId, el){
     el.classList.toggle('on', on);
     el.classList.remove('some');
     el.setAttribute('aria-pressed', on?'true':'false');
-  } else { render(); }
+  } else { _libRedraw(); }   // [1.620] — the PANEL, not the page
   if(f.kind==='link'){
     api({action:'saveLibraryLink', data:{linkId:id, tags:tags,
          teacherId:TEACHER_ID, teacherToken:TOKEN}}, function(e,r){
       if(e||!r||!r.ok){ actFail('lib:'+id,(r&&r.error)||TLIB_COPY.saveFailed); _libRefresh(); return; }
-      f.tags=r.tags||tags; render();
+      // [1.620] — the answer carries nothing the screen does not already show,
+      // so it is checked for failure and otherwise not redrawn at all. A second
+      // render here is the reflow AC called "reposition in an awkward way".
+      f.tags=r.tags||tags;
     });
     return;
   }
   api({action:'setAttachmentTags', data:{attachmentId:id, tags:tags,
        teacherId:TEACHER_ID, teacherToken:TOKEN}}, function(e,r){
     if(e||!r||!r.ok){ actFail('lib:'+id,(r&&r.error)||TLIB_COPY.saveFailed); _libRefresh(); return; }
-    f.tags=r.tags||tags; render();
+    f.tags=r.tags||tags;   // [1.620] — no second draw; see the link branch above
   });
 }
 function libPrivateAdd(id){
@@ -8022,7 +8181,7 @@ function libPrivateRemove(id, word){
   _libSetPrivate(id, f, (f.privateTags||[]).filter(function(w){ return w!==word; }));
 }
 function _libSetPrivate(id, f, words){
-  f.privateTags=words; render();
+  f.privateTags=words; _libRedraw();   // [1.620] — the PANEL, not the page
   var req = f.kind==='link'
     ? {action:'saveLibraryLink', data:{linkId:id, privateTags:words,
        teacherId:TEACHER_ID, teacherToken:TOKEN}}
@@ -8032,8 +8191,11 @@ function _libSetPrivate(id, f, words){
     if(e||!r||!r.ok){ actFail('lib:'+id,(r&&r.error)||TLIB_COPY.saveFailed); _libRefresh(); return; }
     f.privateTags=r.privateTags||words;
     // A word that has just been added is a word the filter can now offer, and
-    // one that has just gone may be one it is still filtering by.
-    _libFilterPrune(); render();
+    // one that has just gone may be one it is still filtering by. [1.620] — the
+    // panel, and only when the prune actually changed the filter.
+    var _was=LIB_FILTER.length;
+    _libFilterPrune();
+    if(_was!==LIB_FILTER.length) _libRedraw();
   });
 }
 
@@ -9201,7 +9363,7 @@ function _libTableItems(){
     .concat(_libSortKind(_libFiltered(LIB_MY_LINKS), 'links'));
 }
 function _libSelIds(){
-  return _libTableItems().filter(function(f){ return LIB_SEL[f.id]; })
+  return _libSelectable().filter(function(f){ return LIB_SEL[f.id]; })
                          .map(function(f){ return f.id; });
 }
 function libSel(id){
@@ -9210,7 +9372,7 @@ function libSel(id){
   _libRedraw();
 }
 function libSelAll(){
-  var vis=_libTableItems();
+  var vis=_libSelectable();   // [1.621] — templates included
   // [1.470]'s rule — one press clears a half-ticked list, which is what the
   // button beside it says it will do. And only what is ON SCREEN: a select-all
   // that quietly ticked rows hidden by the filter is how a bulk change reaches
@@ -9223,46 +9385,134 @@ function libSelAll(){
 // The bar is drawn ONCE, in the open section holding the first ticked row —
 // two copies of one control on one screen is the *"placement is confusing"*
 // this item exists to fix, from the other direction.
-function _libBulkAt(which){
-  if(!_libSelIds().length) return false;
-  var has={files:false, links:false};
-  _libSelIds().forEach(function(id){
-    var f=_libFind(id); if(!f) return;
-    has[f.kind==='link'?'links':'files']=true;
-  });
-  var order=['files','links'];
-  for(var i=0;i<order.length;i++){
-    if(has[order[i]] && _libSeen(order[i])) return order[i]===which;
-  }
-  return false;
-}
+// [1.618] — `_libBulkAt` REMOVED. It answered "which section should draw the
+// bar", and there is one bar now with one place to be.
 // **One request for the whole selection, and it takes LINKS.** The single-row
 // door ([1.465]) is one call per row: twenty ticked files at roughly two
 // seconds each ([1.565]) is most of a minute for one press, and a ticked link
 // would have been left untagged in silence.
+// ── [1.620] — the bulk change happens on screen FIRST, and says nothing ──
+//
+// **AC, 13 September 2026:** *"adding and removing tags is working nicely, but
+// there is no need to have a progress banner or saving indicator. THey should
+// update instantly optimistically without screen jumps or odd tag behaviors
+// (sometimes the tags reappear briefly and then finally disapper when deleting,
+// and sometimes the tags reposition in an awkward way)"*
+//
+// **He described this function from the outside, exactly.** It changed nothing
+// on screen, raised a banner, waited a round trip and then called
+// `_libRefresh()` — which clears `_libLoaded` and fetches the whole library
+// again. So the tag being removed stayed on screen for the entire request —
+// *"the tags reappear briefly and then finally disappear"* — and the re-fetch
+// redrew every shelf, which is *"reposition in an awkward way"*. The single-row
+// path has been optimistic since [1.485]; this one never was.
+//
+// **Safe to trust the local change, and the reason is already written down.**
+// [1.485] built this door idempotent by construction: adding a tag a row
+// already has writes nothing. The client knows precisely what it asked for, so
+// there is nothing the answer could tell it that it does not already know —
+// which is why the answer is checked for FAILURE and otherwise not read.
+//
+// **A failure still speaks and still puts it back.** [1.98]'s rule: an
+// optimistic change the server refuses has to be visible and reverted, or the
+// screen is lying about what the studio holds.
 function libBulkApply(v, on){
   var ids=_libSelIds();
   if(!ids.length || !v) return;
-  var atts=[], links=[];
+  var priv=(v.indexOf('p:')===0), word=priv?v.slice(2):'';
+  var atts=[], links=[], tplIds=[], undo=[];
   ids.forEach(function(id){
     var f=_libFind(id); if(!f) return;
-    if(f.kind==='link') links.push(f.linkId||String(id).replace(/^q:/,''));
-    else atts.push(f.attachmentId||id);
+    // The state to go back to if the server refuses it, per row, taken before
+    // anything is changed.
+    undo.push({ f:f, tags:(f.tags||[]).slice(), priv:(f.privateTags||[]).slice() });
+    if(f.kind==='template'){
+      // A template carries the studio's words only — it has no private tags,
+      // and a bulk private word simply does not apply to one.
+      if(!priv) tplIds.push(f.templateId);
+    } else if(f.kind==='link'){ links.push(f.linkId||String(id).replace(/^q:/,'')); }
+    else { atts.push(f.attachmentId||id); }
+    _libApplyTagLocal(f, v, on);
   });
-  var data={attachmentIds:atts, linkIds:links, teacherId:TEACHER_ID, teacherToken:TOKEN};
-  // A teacher's own word travels by its own pair of fields; the studio's
-  // vocabulary by tag id. `p:` is the same prefix the filter uses.
-  if(v.indexOf('p:')===0){
-    if(on) data.removePrivateWord=v.slice(2); else data.privateWord=v.slice(2);
-  } else {
-    if(on) data.removeTag=v; else data.addTag=v;
-  }
-  actStart('libbulk', TLIB_COPY.saving);
   _libRedraw();
-  api({action:'setLibraryTagsBulk', data:data}, function(e,r){
-    if(e||!r||!r.ok){ actFail('libbulk',(r&&r.error)||TLIB_COPY.saveFailed); return; }
-    actDone('libbulk', TLIB_COPY.bulkDone.replace('{n}', String(ids.length)));
-    _libRefresh();
+
+  var revert=function(msg){
+    undo.forEach(function(u){ _libSetTags(u.f, u.tags); u.f.privateTags=u.priv; });
+    actFail('libbulk', msg||TLIB_COPY.saveFailed);
+    _libRedraw();
+  };
+  // Files and links in one request, templates in another, sent together rather
+  // than one after the other: a selection spanning all three is one press and
+  // must not cost two round trips end to end ([1.565]).
+  if(atts.length || links.length){
+    var data={attachmentIds:atts, linkIds:links, teacherId:TEACHER_ID, teacherToken:TOKEN};
+    if(priv){ if(on) data.removePrivateWord=word; else data.privateWord=word; }
+    else { if(on) data.removeTag=v; else data.addTag=v; }
+    api({action:'setLibraryTagsBulk', data:data}, function(e,r){
+      if(e||!r||!r.ok){ revert((r&&r.error)); return; }
+    });
+  }
+  if(tplIds.length){
+    _ttplSaveQuiet(function(err){ if(err) revert(err); });
+  }
+}
+// [1.620] — one place that decides what a press means, so the row, the bar and
+// anything added later cannot disagree about it.
+//
+// ── [1.621] — and it writes THROUGH, which is the whole of the adapter ──
+//
+// **`_libTplItems()` builds a fresh object every call**, so the row `_libFind`
+// hands back for a template is a copy: setting `tags` on it changed nothing and
+// the next render read the untouched template. **The first build of this did
+// exactly that and the suite went green** — the checks asserted that a
+// write-back function existed and that it touched `TSET.tpls`, which was true,
+// while the data never reached it. **Found by pressing the chip in a browser
+// and reading the model back**, which is the only thing that could have.
+//
+// A file and a link need none of this: `_libFind` returns the real row out of
+// `LIB_MINE` and mutating it IS the model.
+function _libTplRow(templateId){
+  var list=TSET.tpls||[];
+  for(var i=0;i<list.length;i++){
+    if(String(list[i].templateId||'')===String(templateId)) return list[i];
+  }
+  return null;
+}
+function _libApplyTagLocal(f, v, on){
+  if(v.indexOf('p:')===0){
+    if(f.kind==='template') return;              // a template has no private words
+    var w=v.slice(2), list=(f.privateTags||[]).slice(), at=list.indexOf(w);
+    if(on){ if(at>-1) list.splice(at,1); } else if(at<0) list.push(w);
+    f.privateTags=list;
+    return;
+  }
+  var tags=(f.tags||[]).slice(), i=tags.indexOf(v);
+  if(on){ if(i>-1) tags.splice(i,1); } else if(i<0) tags.push(v);
+  _libSetTags(f, tags);
+}
+// The one writer. A template's tags land on the TEMPLATE, not on the copy that
+// stands for it in the selection.
+function _libSetTags(f, tags){
+  f.tags=tags;
+  if(f.kind==='template'){
+    var row=_libTplRow(f.templateId);
+    if(row) row.tags=tags.slice();
+  }
+}
+// [1.620] — the template list save with no banner and no re-fetch, for the
+// bulk path. `ttplSave` is the EDITOR's save and keeps its own reporting: it is
+// pressed deliberately, on one row, and its "Saved" line is the answer to a
+// press on a Save button.
+function _ttplSaveQuiet(done){
+  var payload=(TSET.tpls||[]).map(function(t){
+    return {templateId:t.templateId, label:t.label, tags:(t.tags||[]),
+            body: t._txt ? esc(_ttplToText(t.body)).replace(/\n/g,'<br>') : t.body};
+  });
+  api({action:'saveTeacherTemplates', data:{teacherToken:TOKEN, templates:payload}}, function(e,r){
+    if(e||!r||!r.ok){ done((r&&r.error)||TLIB_COPY.saveFailed); return; }
+    if(r.templates) TSET.tpls=r.templates;
+    done('');
+    _libRedraw();
   });
 }
 // Every tag a ticked row could carry, the studio's and the teacher's own.
@@ -9318,70 +9568,108 @@ function _libBulkSent(ids){
   ids.forEach(function(id){ var f=_libFind(id); if(f && f.reach) n++; });
   return n;
 }
-function rLibBulkRow(which){
-  if(!_libBulkAt(which)){ return ''; }
-  var sel=_libSelIds();
-  var chips=_libBulkChips();
-  return '<div class="lib-bar">'+
-      '<button type="button" class="lib-act" onclick="libSelAll()">'+
-        esc(sel.length?TLIB_COPY.selNone:TLIB_COPY.selAll)+'</button>'+
-      '<span class="lib-bar-n">'+esc(TLIB_COPY.ticked.replace('{n}', String(sel.length)))+'</span>'+
-      // The two actions in ONE right-hand group, which is `lib-bar-r` and is
-      // what admin's bar has always used. Pushed individually they separate
-      // when the bar wraps — at 375px Tags stayed on the first line and Delete
-      // dropped to a line of its own, which is [1.614]'s fault in a second
-      // place. Seen by opening the panel at phone width.
-      '<span class="lib-bar-r">'+
-        (chips.length
-          ? '<button type="button" class="lib-act'+(LIB_BULK_TAGS?' on':'')+'"'+
-            ' aria-expanded="'+(LIB_BULK_TAGS?'true':'false')+'"'+
-            ' onclick="libBulkTags()">'+esc(TLIB_COPY.bulkTags)+'</button>'
-          : '')+
-        '<button type="button" class="lib-act bad"'+
-          ' onclick="libBulkDelAsk()">'+esc(TLIB_COPY.delSel)+'</button>'+
-      '</span>'+
-    '</div>'+
-    // The question is the one the just-added batch already asks, word for word
-    // and shaped the same — two multi-deletes in one portal wording the same
-    // warning two ways is how one of them stops saying what it costs.
-    (LIB_BULK_DEL
-      ? '<div class="lib-edit" style="margin-top:8px">'+
-          '<div class="lib-warn">'+esc(TLIB_COPY.delSelAsk.replace('{n}', String(sel.length)))+' '+
-            esc(_libBulkSent(sel)
-              ? TLIB_COPY.delSelSent.replace('{n}', String(_libBulkSent(sel)))
-              : TLIB_COPY.delReachNone)+'</div>'+
-          '<div class="lib-edit-acts">'+
-            '<button type="button" class="lib-act bad" onclick="libBulkDelete()">'+esc(TLIB_COPY.delSelGo)+'</button>'+
-            '<button type="button" class="lib-act" onclick="libBulkDelCancel()">'+esc(TLIB_COPY.delBack)+'</button>'+
-          '</div>'+
-        '</div>'
-      : '')+
-    ((LIB_BULK_TAGS && chips.length)
-      ? '<div class="lib-tags" style="padding-top:0;padding-bottom:6px">'+
-        (chips.length>8
-          ? '<input class="lib-tagfind" id="lib-tagfind-b" value="'+esc(LIB_TAGFIND)+'"'+
-            ' placeholder="'+esc(TLIB_COPY.tagFind)+'" aria-label="'+esc(TLIB_COPY.tagFind)+'"'+
-            ' oninput="libTagFind(this.value)">'
-          : '')+
-        chips.map(function(t){
-          var have=0;
-          sel.forEach(function(id){
-            var f=_libFind(id); if(!f) return;
-            var on=(t.priv
-              ? (f.privateTags||[]).indexOf(t.name)>-1
-              : (f.tags||[]).indexOf(t.v)>-1);
-            if(on) have++;
-          });
-          var all=(have===sel.length), some=(have>0 && !all);
-          return '<button type="button" class="lib-tag'+(all?' on':(some?' part':''))+(t.priv?' priv':'')+'"'+
-            ' aria-pressed="'+(all?'true':'false')+'"'+
-            ' title="'+esc((all?TLIB_COPY.bulkOff:TLIB_COPY.bulkOn).replace('{n}', String(sel.length)))+'"'+
-            ' onclick="libBulkApply(\''+esc(t.v)+'\','+(all?'true':'false')+')">'+
-            esc(t.name)+(some?' <span class="lib-part-n">'+have+'/'+sel.length+'</span>':'')+'</button>';
-        }).join('')+'</div>'
-      : '')+
-    rAct('libbulk');
+// ── [1.618] — ONE bar, at the TOP, naming what it holds ─────────────────
+//
+// **AC, 13 September 2026:** *"the bulk tag editor appears at the bottom of the
+// file area, but nowhere else, and seems to add any files or links ticked. It's
+// working, but is hidden. It should be visually distinct."*
+//
+// **Both halves of that were right.** `_libBulkAt(which)` picked the first OPEN
+// section holding a ticked row, so the bar lived under files whenever files
+// were open and under links only when they were not — one control with two
+// possible homes and no fixed address. And it has acted on the whole selection
+// since [1.596] while being drawn inside one part of it and saying nothing
+// about the rest.
+//
+// **It is at the top, and that is AC's correction to my own proposal.** The
+// first plan pinned it to the bottom of the panel; he answered before a line of
+// it existed: *"Selection bar needs to be seen when using. If it's at the bottom
+// of the screen and the user doesn't see it, it won't be useful."* It is sticky
+// to the top of the panel, which sits inside the modal's scroller, so it is on
+// screen from the moment anything is ticked however far down that was.
+//
+// **And it says what it holds** — *"2 files, 1 link, 1 template selected"* —
+// because a bar acting on three kinds while naming none of them is the fault he
+// found, not just its position.
+function _libSelWords(sel){
+  var n={file:0, link:0, template:0};
+  sel.forEach(function(id){
+    var f=_libFind(id); if(!f) return;
+    n[f.kind==='link'?'link':(f.kind==='template'?'template':'file')]++;
+  });
+  var parts=[];
+  if(n.file) parts.push((n.file===1?TLIB_COPY.selFile:TLIB_COPY.selFiles).replace('{n}', String(n.file)));
+  if(n.link) parts.push((n.link===1?TLIB_COPY.selLink:TLIB_COPY.selLinks).replace('{n}', String(n.link)));
+  if(n.template) parts.push((n.template===1?TLIB_COPY.selTpl:TLIB_COPY.selTpls).replace('{n}', String(n.template)));
+  return TLIB_COPY.selSummary.replace('{what}', parts.join(', '));
 }
+function rLibBulkBar(){
+  var sel=_libSelIds();
+  if(!sel.length){ return ''; }
+  var chips=_libBulkChips();
+  return '<div class="lib-selbar">'+
+      '<div class="lib-selbar-row">'+
+        '<span class="lib-selbar-n">'+esc(_libSelWords(sel))+'</span>'+
+        '<span class="lib-selbar-r">'+
+          (chips.length
+            ? '<button type="button" class="lib-selbar-b'+(LIB_BULK_TAGS?' on':'')+'"'+
+              ' aria-expanded="'+(LIB_BULK_TAGS?'true':'false')+'"'+
+              ' onclick="libBulkTags()">'+esc(TLIB_COPY.bulkTags)+'</button>'
+            : '')+
+          '<button type="button" class="lib-selbar-b bad" onclick="libBulkDelAsk()">'+
+            esc(TLIB_COPY.delSel)+'</button>'+
+          // [1.470]'s toggle, unchanged and deliberately so: one press clears a
+          // half-ticked list. On THIS bar it always reads "Deselect all",
+          // because the bar exists only while something is ticked — which is
+          // also true of the bar it replaced, so select-all has never been
+          // reachable from here and nothing was lost by moving it.
+          '<button type="button" class="lib-selbar-b" onclick="libSelAll()">'+
+            esc(sel.length?TLIB_COPY.selNone:TLIB_COPY.selAll)+'</button>'+
+        '</span>'+
+      '</div>'+
+      // The question is the one the just-added batch asks, word for word and
+      // shaped the same — two multi-deletes wording one warning two ways is how
+      // one of them stops saying what it costs.
+      (LIB_BULK_DEL
+        ? '<div class="lib-selbar-p">'+
+            '<div class="lib-warn">'+esc(TLIB_COPY.delSelAsk.replace('{n}', String(sel.length)))+' '+
+              esc(_libBulkSent(sel)
+                ? TLIB_COPY.delSelSent.replace('{n}', String(_libBulkSent(sel)))
+                : TLIB_COPY.delReachNone)+'</div>'+
+            '<div class="lib-edit-acts">'+
+              '<button type="button" class="lib-act bad" onclick="libBulkDelete()">'+esc(TLIB_COPY.delSelGo)+'</button>'+
+              '<button type="button" class="lib-act" onclick="libBulkDelCancel()">'+esc(TLIB_COPY.delBack)+'</button>'+
+            '</div>'+
+          '</div>'
+        : '')+
+      ((LIB_BULK_TAGS && chips.length)
+        ? '<div class="lib-selbar-p"><div class="lib-tags" style="padding-top:0">'+
+          (chips.length>8
+            ? '<input class="lib-tagfind" id="lib-tagfind-b" value="'+esc(LIB_TAGFIND)+'"'+
+              ' placeholder="'+esc(TLIB_COPY.tagFind)+'" aria-label="'+esc(TLIB_COPY.tagFind)+'"'+
+              ' oninput="libTagFind(this.value)">'
+            : '')+
+          chips.map(function(t){
+            var have=0;
+            sel.forEach(function(id){
+              var f=_libFind(id); if(!f) return;
+              var on=(t.priv
+                ? (f.privateTags||[]).indexOf(t.name)>-1
+                : (f.tags||[]).indexOf(t.v)>-1);
+              if(on) have++;
+            });
+            var all=(have===sel.length), some=(have>0 && !all);
+            return '<button type="button" class="lib-tag'+(all?' on':(some?' part':''))+(t.priv?' priv':'')+'"'+
+              ' aria-pressed="'+(all?'true':'false')+'"'+
+              ' title="'+esc((all?TLIB_COPY.bulkOff:TLIB_COPY.bulkOn).replace('{n}', String(sel.length)))+'"'+
+              ' onclick="libBulkApply(\''+esc(t.v)+'\','+(all?'true':'false')+')">'+
+              esc(t.name)+(some?' <span class="lib-part-n">'+have+'/'+sel.length+'</span>':'')+'</button>';
+          }).join('')+'</div></div>'
+        : '')+
+      rAct('libbulk')+
+    '</div>';
+}
+
 function rLibraryPanel(composerId){
   // [1.495] — the MANAGER, and it is drawn in one place only: the My Library
   // overlay. The composer draws rPickPanel instead.
@@ -9426,6 +9714,10 @@ function rLibraryPanel(composerId){
   // **The x came with it**, so [1.488] still holds: the way out of a filter
   // sits on the filter.
   return '<div class="lib-panel" id="lib-panel">'+
+    // [1.618] — FIRST, and sticky. The panel sits inside the modal's scroller,
+    // so a sticky child of it pins to the top of what the teacher is looking at
+    // rather than to the bottom of a list they may be nowhere near.
+    rLibBulkBar()+
 
     // ── MY TAGS ───────────────────────────────────────────────────────────
     // [1.595] — the VOCABULARY, and only that. The filter chips moved down to
@@ -9468,7 +9760,7 @@ function rLibraryPanel(composerId){
       rLibraryAdded()+
       ((LIBADD&&LIBADD.at==='lib')?'':rAct('libadd'))+
       rLibraryTags()+   // [1.597] — the filter, with the list it filters
-      '<div id="lib-body-files">'+rLibraryBodyFiles()+rLibBulkRow('files')+'</div>')+
+      '<div id="lib-body-files">'+rLibraryBodyFiles()+'</div>')+
 
     // ── MY LINKS ──────────────────────────────────────────────────────────
     rLibSectionHead('links')+
@@ -9478,7 +9770,7 @@ function rLibraryPanel(composerId){
       // and the press at the end is the only round trip.
       rLibAddCard('lib')+
       rLibraryTags()+   // [1.597]
-      '<div id="lib-body-links">'+rLibraryBodyLinks()+rLibBulkRow('links')+'</div>')+
+      '<div id="lib-body-links">'+rLibraryBodyLinks()+'</div>')+
 
     // ── MY TEMPLATES ──────────────────────────────────────────────────────
     rLibSectionHead('templates')+
@@ -10625,10 +10917,12 @@ function _composerLinkInsert(id){
   // A link already on either shelf is not offered either — the same address
   // twice is a picker with two identical rows, which is what the server's own
   // duplicate rule exists to prevent.
-  if(!LINK_SELECTED && !_libHasUrl(url)) LINK_OFFER={composerId:id, url:url, text:label};
+  // [1.622] — `LINK_SELECTED` is gone from the condition: a library link is
+  // inserted by `_composerInsertLink` straight from the tick and never reaches
+  // this function, so the shelf check is the whole of the question now.
+  if(!_libHasUrl(url)) LINK_OFFER={composerId:id, url:url, text:label};
   // [1.494] — the picker stays open for the next link; the fields clear.
   var st=_cmpLinkState(id); st.url=''; st.text=''; st.bad=false;
-  if(LINK_SELECTED){ LINK_ADDED[LINK_SELECTED]=true; LINK_SELECTED=''; }   // the saved link that filled the fields is now in the message
   render();
 }
 // Is this address already on a shelf? Asked before the offer is made, over both
@@ -11444,7 +11738,15 @@ function rComposerLinkRow(id){
     // a corner toast was rejected for this in [1.494]. It replaces the
     // placeholder "Selected" that used to appear on the row instead: the row
     // said something had happened, and this says what to do about it.
-    (LINK_SELECTED ? '<div class="cmp-guide cmp-guide-do">'+esc(CMP_COPY.linkSelectedDo)+'</div>' : '')+
+    // ── [1.622] — WITHDRAWN with the gesture it described ──────────────────
+    //
+    // [1.510] drew this once a saved link had filled the fields: AC's *"there
+    // should be a tooltip after clicking a link to add: 'Click \"Add link\" to
+    // add the link to your message'"*. **A saved link no longer fills the
+    // fields** — its tick inserts it — so nothing can set the state this read,
+    // and a sentence telling somebody to do a thing they have already done is
+    // worse than no sentence. The copy key stays: it is AC's wording and the
+    // row it belonged to could return.
     // [1.553] — the offer, and then the card it opens, both in the row the
     // link was typed into. Neither is drawn until the link is in the message.
     ((LINK_OFFER && LINK_OFFER.composerId===id)
@@ -12239,24 +12541,53 @@ function rPickShelf(label, items, composerId){
 function rPickRow(f, composerId){
   var id=f.id||f.attachmentId;
   var link=f.kind==='link';
-  var said='';
+  var said='', rec=null;
   if(link){
+    // [1.622] — `LINK_SELECTED` said "this link is sitting in the fields waiting
+    // for Add link". Nothing sets it now: a tick inserts. The state is removed
+    // rather than left drawn and unreachable.
     if(LINK_ADDED[id]) said='<span class="lib-said">&#10003; '+esc(TLIB_COPY.linkAdded)+'</span>';
-    else if(LINK_SELECTED===id) said='<span class="lib-said working">'+esc(TLIB_COPY.linkSelected)+'</span>';
   } else {
-    var rec=ATT_PENDING.filter(function(a){ return a.fromLibrary===id; })[0];
+    rec=ATT_PENDING.filter(function(a){ return a.fromLibrary===id; })[0];
     if(rec){
       said = rec.uploading ? '<span class="lib-said working"><span class="spin">&#8635;</span> '+esc(TLIB_COPY.attaching)+'</span>'
            : rec.failed    ? '<span class="lib-said bad">'+esc(rec.error||TLIB_COPY.attachFailed)+'</span>'
            :                 '<span class="lib-said">&#10003; '+esc(TLIB_COPY.fileAttached)+'</span>';
     }
   }
+  // ── [1.622] — the TICK adds it; the NAME opens it ──────────────────────
+  //
+  // **AC, 13 September 2026:** *"Throughout the library, clicking on the name of
+  // a file or link should open it. Clicking edit allows editing. When attaching
+  // a file in the composer for teacher, there needs to be a checkbox to tick to
+  // add it so the teacher can bulk add files and/or links. Currently the only
+  // way for a teacher to add is to click the title, which should only open the
+  // file or link."*
+  //
+  // **[1.613] made the name open the item everywhere EXCEPT here**, because
+  // this row's press was the only way to attach and taking it away would have
+  // left no way at all. The box is that way, and it is the same box the library
+  // screen already uses — so one gesture means "several of these" on both
+  // screens.
+  //
+  // **Ticked and disabled once it is in**, beside the ✓ the row already says.
+  // Taking a file back out is the composer's own job: the attachment sits under
+  // the message with its own remove, and a second control for that would be two
+  // answers to one question.
+  var _on=link ? !!LINK_ADDED[id] : !!(rec && !rec.failed);
+  var _busy=!!(rec && rec.uploading);
   return '<div class="lib-row'+(link?' lib-link':'')+'">'+
-    '<button type="button" class="lib-pick" title="'+esc(link?f.url:f.fileName)+'"'+
-      ' onclick="pickUse(\''+esc(id)+'\',\''+esc(composerId)+'\')">'+
-      '<span class="lib-kind">'+esc(link?TLIB_COPY.linkKind:_attKind(f.fileName))+'</span>'+
-      '<span class="lib-name">'+esc(f.fileName)+'</span>'+
-    '</button>'+
+    '<div style="display:flex;align-items:flex-start;gap:8px">'+
+      '<input type="checkbox" class="lib-tick"'+(_on?' checked':'')+((_on||_busy)?' disabled':'')+
+        ' onclick="event.stopPropagation();pickAdd(\''+esc(id)+'\',\''+esc(composerId)+'\')"'+
+        ' title="'+esc(link?TLIB_COPY.pickTickLink:TLIB_COPY.pickTickFile)+'"'+
+        ' aria-label="'+esc(link?TLIB_COPY.pickTickLink:TLIB_COPY.pickTickFile)+': '+esc(f.fileName)+'">'+
+      '<button type="button" class="lib-pick" title="'+esc(link?f.url:f.fileName)+'"'+
+        ' onclick="pickOpen(\''+esc(id)+'\')">'+
+        '<span class="lib-kind">'+esc(link?TLIB_COPY.linkKind:_attKind(f.fileName))+'</span>'+
+        '<span class="lib-name">'+esc(f.fileName)+'</span>'+
+      '</button>'+
+    '</div>'+
     '<div class="lib-row-foot"><span class="lib-meta">'+esc(link?_libLinkHost(f.url):_attSize(f.sizeBytes))+'</span>'+said+'</div>'+
   '</div>';
 }

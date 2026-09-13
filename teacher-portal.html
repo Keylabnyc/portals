@@ -1159,7 +1159,13 @@ input[type=checkbox]{width:13px;height:13px;padding:0;margin:0;border:0;border-r
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 .lib-row-foot{display:flex;align-items:center;gap:8px;margin-top:4px;padding-left:2px}
 .lib-meta{font-size:10.5px;color:var(--text5)}
-.lib-row-foot .lib-act{margin-left:auto;padding:2px 8px}
+/* [1.614] — AC: *"The edit and delete buttons ... should be side by side on the
+   right side of the item."* This rule said `margin-left:auto` for EVERY button
+   in the foot, so each of the two got its own push and they ended up spaced
+   across the whole row with the size or the address stranded between them.
+   Only the FIRST one pushes; the second sits against it. */
+.lib-row-foot .lib-act{padding:2px 8px}
+.lib-row-foot .lib-act:first-of-type{margin-left:auto}
 .lib-empty{font-size:12px;color:var(--text4);padding:4px 2px;line-height:1.45}
 
 /* ── The edit card, and the delete question that replaces it ───────────── */
@@ -1491,6 +1497,12 @@ input[type=checkbox]{width:13px;height:13px;padding:0;margin:0;border:0;border-r
 .lib-section .lib-add-row{margin-bottom:8px}
 /* [1.588] — a tag taken off the list is still drawn, and has to read as off. */
 .lib-tag.off{opacity:.5;border-style:dashed;text-decoration:line-through}
+/* [1.612] — a HIDDEN tag waiting to come back. Dashed like `.off` because it is
+   not on the list, but never struck through: a strike says gone, and AC's whole
+   finding was that a struck-out tag reads the same as a shown one. The + says
+   what the press does. */
+.lib-tag.back{opacity:1;border-style:dashed;color:var(--text3);cursor:pointer}
+.lib-tag.back:hover{border-color:var(--acc);color:var(--acc)}
 /* [1.596] — SOME of the selected carry it. Its own state, not a dimmer ON: a
    chip that looks half-on and acts like a toggle has to say which half. */
 .lib-tag.part{border-style:dashed;border-color:var(--acc);color:var(--acc)}
@@ -7048,7 +7060,24 @@ var TLIB_COPY={
   // different act.
   studioTagsHead:'Studio tags',
   studioTagsBlurb:'Keylab\u2019s tags. You can take one off your own list at any time \u2014 nothing is deleted, and your files keep it.',
+  lblUrl:'Web address',   // [1.615]
+  // [1.612] — hiding a tag said 'Renaming\u2026'. `myTagSaving` belongs to the
+  // CUSTOM tag rename beneath it; this control renames nothing in either
+  // direction, and it is the one AC is about to use most on this screen. Found
+  // by pressing it in a browser, which is the only way a wrong sentence on a
+  // working control is ever found.
+  tagListSaving:'Updating your list\u2026', tagListSaved:'Saved.',
   tagHide:'Hide', tagShow:'Show',
+  // [1.613] — the two things a selection is for, in AC's own order:
+  // *"for reassigning / editing tags, or multi-delete."* The delete label is
+  // [1.474]'s `delSel`, which both portals already carry, rather than a second
+  // word for the same control.
+  bulkTags:'Tags',
+  // [1.612] — AC: *"hiding a tag should put it in a hidden tag area. Click to
+  // add back to the list."* The blurb is his second sentence, because it is the
+  // instruction and nothing else on the chip says it.
+  hiddenTagsHead:'Hidden tags', hiddenTagsBlurb:'Click one to add it back to your list.',
+  tagBack:'Add {name} back to your list', studioTagsAllHidden:'Every studio tag is hidden.',
   myTagOn:'on {n}',
   myTagRename:'Rename',
   myTagDelete:'Delete',
@@ -7111,16 +7140,37 @@ var TLIB_COPY={
   tagsForSel:'Tags for the {n} ticked',
   tagsForNone:'Tick a file to tag it',
   clearTags:'Remove Tags',
+  // [1.616] — UNUSED, and left alone rather than tidied inside a copy change
+  // AC asked for. Nothing has read it since [1.585] moved the control it named.
   delSelShort:'Delete Files',
   selAll:'Select all',
   selNone:'Deselect all',
-  delSel:'Delete Files',
-  delSelAsk:'Delete {n} file(s) for good?',
+  // ── [1.616] — AC, 13 September 2026: *"fix the delete files to be more
+  //    generic to just delete all"* ──────────────────────────────────────
+  //
+  // **This reverses his own [1.474] label**, which was *"it can just say Delete
+  // Files and Remove Tags"* and was right when the selection held files.
+  // **[1.596] made it hold LINKS too**, and the label went on naming half of
+  // what it deletes; it was raised with him rather than widened, and this is
+  // his answer.
+  //
+  // **"Delete", not "Delete All".** His sentence is about being generic and the
+  // count sits beside it — *"3 ticked"* — so "Delete" already means all of
+  // them. **"Delete All" next to "Deselect all" would read as the whole
+  // library**, which is not what the button does and is the one misreading a
+  // destructive control must not invite.
+  //
+  // **The question and the result lose "file(s)" with it.** A generic button
+  // leading to *"Delete 3 file(s) for good?"* is half a fix, and the question is
+  // the part that actually warns. It reads correctly for a batch of files as
+  // well, which is the other list that asks it.
+  delSel:'Delete',
+  delSelAsk:'Delete {n} selected for good?',
   delSelSent:'{n} of them have already been sent to a family.',
   tagFind:'Find a tag',
   ticked:'{n} ticked',
   delSelGo:'Delete them',
-  delSelDone:'Deleted {n} file(s).',
+  delSelDone:'Deleted {n}.',
   delSelPartial:'Deleted {n}. {f} could not be deleted.',
   addedDone:'Done',
   privateBulkPh:'Your own tag for the ticked files',
@@ -7765,6 +7815,17 @@ function rLibSave(attachmentId){
 // conversation it was ever sent to.
 // [1.545] — the destination, in a new tab. `noopener` because the page being
 // opened is one a teacher pasted and nothing here has vouched for it.
+// [1.613] — one door for "open this", so a row, a keyboard press and anything
+// added later cannot disagree about what opening means for each kind.
+function libOpenItem(id){
+  if(_libIsLink(id)){ libOpenLink(id); return; }
+  var f=_libFind(id);
+  if(!f) return;
+  // [1.417]'s rule, not a second copy of it: the tool does the likely thing for
+  // the type in one press, and a file a browser cannot render downloads rather
+  // than opening a tab that shows nothing.
+  openAttachment(id, _attCanView(f.mimeType, f.fileName)?'view':'download');
+}
 function libOpenLink(id){
   var it=_libFind(id); if(!it || !it.url) return;
   try{ window.open(it.url,'_blank','noopener'); }catch(e){}
@@ -7815,6 +7876,66 @@ function libRename(id){
     // drawn — not what was typed.
     it.fileName=r.fileName||r.label||name;
     if(it.kind==='link') it.label=it.fileName;
+    _libRedraw();
+  });
+}
+// ── [1.613] — deleting a SELECTION ───────────────────────────────────────
+//
+// **AC:** *"Clicking the checkbox is for multi-select only, for reassigning /
+// editing tags, or multi-delete."* The second half had never been built on this
+// side; a teacher deleted one row at a time.
+//
+// **One call per row, deliberately, and NOT a bulk door.** `setLibraryTagsBulk`
+// is one request for a whole selection because tagging is idempotent and safe
+// to retry ([1.485]); deleting is neither, and a half-failed batch behind one
+// request cannot say which half. So each row reports for itself, and the line
+// at the end says how many actually went — [1.470]'s rule on admin's side, and
+// the reason it is worded as *"Deleted 5"* only when five went.
+function libBulkDelete(){
+  var ids=_libSelIds();
+  LIB_BULK_DEL=false;
+  if(!ids.length){ _libRedraw(); return; }
+  actStart('libbulk', TLIB_COPY.saving);
+  _libRedraw();
+  var left=ids.length, done=0, failed=0;
+  ids.forEach(function(id){
+    var isLink=_libIsLink(id);
+    var req=isLink
+      ? {action:'deleteLibraryLink', data:{linkId:id, teacherId:TEACHER_ID, teacherToken:TOKEN}}
+      : {action:'deleteLibraryFile', data:{attachmentId:id, teacherId:TEACHER_ID, teacherToken:TOKEN}};
+    api(req, function(e,r){
+      if(!e && r && r.ok){ done++; delete LIB_SEL[id]; } else { failed++; }
+      if(--left) return;
+      if(failed) actFail('libbulk', TLIB_COPY.delSelPartial.replace('{n}', String(done)).replace('{f}', String(failed)));
+      else actDone('libbulk', TLIB_COPY.delSelDone.replace('{n}', String(done)));
+      _libBulkReset();
+      LIB_EDIT=''; LIB_DEL='';
+      _libRefresh();
+    });
+  });
+}
+// [1.615] — the address, saved exactly as the name beside it is: drawn from the
+// model first so it changes under the finger, and the request is the only thing
+// that waits ([1.485]). The server normalises, so what comes back is drawn
+// rather than what was typed — https:// supplied, a refusal reported.
+function libLinkUrl(id){
+  var el=document.getElementById('lib-url-'+id);
+  var it=_libFind(id);
+  if(!el || !it) return;
+  var url=String(el.value||'').trim();
+  if(!url || url===it.url){ el.value=it.url||''; return; }
+  var was=it.url;
+  it.url=url;
+  _libRedraw();
+  api({action:'saveLibraryLink', data:{linkId:id, url:url,
+       teacherId:TEACHER_ID, teacherToken:TOKEN}}, function(e,r){
+    if(e||!r||!r.ok){
+      it.url=was;
+      actFail('lib:'+id,(r&&r.error)||TLIB_COPY.saveFailed);
+      _libRedraw();
+      return;
+    }
+    it.url=r.url||url;
     _libRedraw();
   });
 }
@@ -9085,6 +9206,7 @@ function _libSelIds(){
 }
 function libSel(id){
   if(LIB_SEL[id]) delete LIB_SEL[id]; else LIB_SEL[id]=true;
+  if(!_libSelIds().length) _libBulkReset();   // [1.613]
   _libRedraw();
 }
 function libSelAll(){
@@ -9095,6 +9217,7 @@ function libSelAll(){
   // something nobody was looking at.
   var any=vis.some(function(f){ return LIB_SEL[f.id]; });
   vis.forEach(function(f){ if(any) delete LIB_SEL[f.id]; else LIB_SEL[f.id]=true; });
+  if(!_libSelIds().length) _libBulkReset();   // [1.613]
   _libRedraw();
 }
 // The bar is drawn ONCE, in the open section holding the first ticked row —
@@ -9166,16 +9289,74 @@ function _libBulkChips(){
 // ... no clear idea of what to do"*, and PART is its own state rather than a
 // dimmer ON: a chip that looks half-on and behaves like a toggle has to say
 // which half.
+// ── [1.613] — the tick SELECTS; it does not open the vocabulary ──────────
+//
+// **AC, 13 September 2026:** *"clicking a checkbox on a file opens up tag picker
+// at the bottom with no prompt... Clicking the checkbox is for multi-select
+// only, for reassigning / editing tags, or multi-delete."*
+//
+// **One tick used to unroll every tag in the studio under the list**, with no
+// heading over it and nothing said about what it was for — [1.603] taught the
+// ADD card to ask *"Assign tags?"* before showing chips and this bar never
+// learned it. **So the bar now states the selection and offers the two things a
+// selection is for**, and the chips arrive when Tags is pressed.
+//
+// **Delete is the second of his two, and the teacher portal had none.** Admin
+// has had `_alibDeleteFiles` since [1.470] — *"can you deselect, delete, tag
+// all?"* — and a teacher could only delete one row at a time.
+var LIB_BULK_TAGS=false, LIB_BULK_DEL=false;
+function libBulkTags(){ LIB_BULK_TAGS=!LIB_BULK_TAGS; LIB_BULK_DEL=false; _libRedraw(); }
+function libBulkDelAsk(){ LIB_BULK_DEL=true; LIB_BULK_TAGS=false; _libRedraw(); }
+function libBulkDelCancel(){ LIB_BULK_DEL=false; _libRedraw(); }
+// The selection is cleared when it empties, so neither panel is left open over
+// nothing — the state [1.467] calls one box saying one thing at a time.
+function _libBulkReset(){ LIB_BULK_TAGS=false; LIB_BULK_DEL=false; }
+// How many of the ticked rows a family has already been sent — the one fact
+// that makes this delete different from tidying an unsent shelf ([1.465]).
+function _libBulkSent(ids){
+  var n=0;
+  ids.forEach(function(id){ var f=_libFind(id); if(f && f.reach) n++; });
+  return n;
+}
 function rLibBulkRow(which){
-  if(!_libBulkAt(which)) return '';
+  if(!_libBulkAt(which)){ return ''; }
   var sel=_libSelIds();
   var chips=_libBulkChips();
   return '<div class="lib-bar">'+
       '<button type="button" class="lib-act" onclick="libSelAll()">'+
         esc(sel.length?TLIB_COPY.selNone:TLIB_COPY.selAll)+'</button>'+
       '<span class="lib-bar-n">'+esc(TLIB_COPY.ticked.replace('{n}', String(sel.length)))+'</span>'+
+      // The two actions in ONE right-hand group, which is `lib-bar-r` and is
+      // what admin's bar has always used. Pushed individually they separate
+      // when the bar wraps — at 375px Tags stayed on the first line and Delete
+      // dropped to a line of its own, which is [1.614]'s fault in a second
+      // place. Seen by opening the panel at phone width.
+      '<span class="lib-bar-r">'+
+        (chips.length
+          ? '<button type="button" class="lib-act'+(LIB_BULK_TAGS?' on':'')+'"'+
+            ' aria-expanded="'+(LIB_BULK_TAGS?'true':'false')+'"'+
+            ' onclick="libBulkTags()">'+esc(TLIB_COPY.bulkTags)+'</button>'
+          : '')+
+        '<button type="button" class="lib-act bad"'+
+          ' onclick="libBulkDelAsk()">'+esc(TLIB_COPY.delSel)+'</button>'+
+      '</span>'+
     '</div>'+
-    (chips.length
+    // The question is the one the just-added batch already asks, word for word
+    // and shaped the same — two multi-deletes in one portal wording the same
+    // warning two ways is how one of them stops saying what it costs.
+    (LIB_BULK_DEL
+      ? '<div class="lib-edit" style="margin-top:8px">'+
+          '<div class="lib-warn">'+esc(TLIB_COPY.delSelAsk.replace('{n}', String(sel.length)))+' '+
+            esc(_libBulkSent(sel)
+              ? TLIB_COPY.delSelSent.replace('{n}', String(_libBulkSent(sel)))
+              : TLIB_COPY.delReachNone)+'</div>'+
+          '<div class="lib-edit-acts">'+
+            '<button type="button" class="lib-act bad" onclick="libBulkDelete()">'+esc(TLIB_COPY.delSelGo)+'</button>'+
+            '<button type="button" class="lib-act" onclick="libBulkDelCancel()">'+esc(TLIB_COPY.delBack)+'</button>'+
+          '</div>'+
+        '</div>'
+      : '')+
+    ((LIB_BULK_TAGS && chips.length)
       ? '<div class="lib-tags" style="padding-top:0;padding-bottom:6px">'+
         (chips.length>8
           ? '<input class="lib-tagfind" id="lib-tagfind-b" value="'+esc(LIB_TAGFIND)+'"'+
@@ -9349,13 +9530,13 @@ function libTagHide(id, hide){
   // A hidden tag must not go on filtering the shelf it is no longer offered on.
   var f=LIB_FILTER.indexOf(id);
   if(hide && f>-1){ LIB_FILTER.splice(f,1); _libFilterSave(); }
-  actStart('tagshow', TLIB_COPY.myTagSaving);
+  actStart('tagshow', TLIB_COPY.tagListSaving);   // [1.612]
   _libRedraw();
   api({action:'setTeacherTagHidden', data:{tagId:id, hidden:!!hide,
        teacherId:TEACHER_ID, teacherToken:TOKEN}}, function(e,r){
     if(e||!r||!r.ok){ actFail('tagshow',(r&&r.error)||TLIB_COPY.saveFailed); loadLibrary(true); return; }
     LIB_TAGS_HIDDEN=r.hiddenTagIds||LIB_TAGS_HIDDEN;
-    actDone('tagshow', TLIB_COPY.myTagSaved);
+    actDone('tagshow', TLIB_COPY.tagListSaved);   // [1.612]
     _libRedraw();
   });
 }
@@ -9442,21 +9623,54 @@ function _libMyWords(){
 // **Rename and Delete are not offered and the server refuses them anyway.** The
 // studio's words are AC's; only the teacher's own custom words below can be
 // changed.
+// ── [1.612] — a hidden tag LEAVES the list ───────────────────────────────
+//
+// **AC, 13 September 2026:** *"hiding a tag should put it in a hidden tag area.
+// Click to add back to the list. This screenshot shows it just crossed out,
+// which is the same as showing it, so no use for the function that way."*
+//
+// **He is right, and it was built to the letter of [1.600] rather than to its
+// point.** He asked for a tag *"not included in their list"*; it was drawn in
+// the list in a dashed grey outline with a Show button beside it, so hiding
+// Guitar & Drums cost the teacher the same row to scan and gained them nothing.
+//
+// **The hidden area is CHIPS, not rows.** A row carries a count and a control
+// because those decide something; a hidden tag has one thing left to say — its
+// name — and one thing to do, which is come back. So the chip IS the button:
+// *"Click to add back to the list."*
+//
+// **It is drawn only when there is something in it.** An empty Hidden heading
+// is furniture, and this panel is already four areas deep ([1.604] took the
+// same decision for a section holding nothing).
 function rLibStudioTagList(){
   var tags=(LIB_TAGS||[]).filter(function(t){ return !t.off; });
   if(!tags.length) return '';
+  var shown=tags.filter(function(t){ return !_libTagHidden(t.tagId); });
+  var hidden=tags.filter(function(t){ return _libTagHidden(t.tagId); });
   return '<div class="lib-mytags">'+
     '<div class="lib-lbl">'+esc(TLIB_COPY.studioTagsHead)+'</div>'+
     '<p class="lib-blurb">'+esc(TLIB_COPY.studioTagsBlurb)+'</p>'+
-    tags.map(function(t){
-      var hid=_libTagHidden(t.tagId);
-      return '<div class="lib-mytag-row">'+
-        '<span class="lib-tag'+(hid?' off':'')+'">'+esc(t.name)+'</span>'+
-        '<span class="lib-meta">'+esc(TLIB_COPY.myTagOn.replace('{n}', String(_libTagUseCount(t.tagId))))+'</span>'+
-        '<button type="button" class="lib-act" onclick="libTagHide(\''+esc(t.tagId)+'\','+(hid?'false':'true')+')">'+
-          esc(hid?TLIB_COPY.tagShow:TLIB_COPY.tagHide)+'</button>'+
-        '</div>';
-    }).join('')+
+    (shown.length
+      ? shown.map(function(t){
+          return '<div class="lib-mytag-row">'+
+            '<span class="lib-tag">'+esc(t.name)+'</span>'+
+            '<span class="lib-meta">'+esc(TLIB_COPY.myTagOn.replace('{n}', String(_libTagUseCount(t.tagId))))+'</span>'+
+            '<button type="button" class="lib-act" onclick="libTagHide(\''+esc(t.tagId)+'\',true)">'+
+              esc(TLIB_COPY.tagHide)+'</button>'+
+            '</div>';
+        }).join('')
+      : '<div class="lib-empty">'+esc(TLIB_COPY.studioTagsAllHidden)+'</div>')+
+    (hidden.length
+      ? '<div class="lib-lbl" style="margin-top:.7rem">'+esc(TLIB_COPY.hiddenTagsHead)+'</div>'+
+        '<p class="lib-blurb">'+esc(TLIB_COPY.hiddenTagsBlurb)+'</p>'+
+        '<div class="lib-tags" style="padding-top:0">'+
+        hidden.map(function(t){
+          return '<button type="button" class="lib-tag back"'+
+            ' title="'+esc(TLIB_COPY.tagBack.replace('{name}', t.name))+'"'+
+            ' aria-label="'+esc(TLIB_COPY.tagBack.replace('{name}', t.name))+'"'+
+            ' onclick="libTagHide(\''+esc(t.tagId)+'\',false)">+ '+esc(t.name)+'</button>';
+        }).join('')+'</div>'
+      : '')+
     rAct('tagshow')+
   '</div>';
 }
@@ -9672,8 +9886,25 @@ function rLibRow(f, mine){
   // In a MESSAGE the row still attaches, for both kinds: that is the whole
   // point of the picker and AC has not changed it. This is the standalone
   // library only.
+  // ── [1.613] — the NAME opens the ITEM, on all three kinds ──────────────
+  //
+  // **AC, 13 September 2026:** *"clicking the file, link, or template name
+  // should open up the item."*
+  //
+  // **This is [1.545]'s rule, which he set for links a week ago, reaching the
+  // other two:** *"Instead of opening up the link to edit, if I click the link
+  // in the library, it should take me to the link destination in my browser.
+  // Edit is the only way to edit."* [1.481] had made a file's row open the
+  // editor because a file on the home page had nothing to attach to — but it
+  // has always had something to DO, which is open, and `openAttachment` is the
+  // door the message tiles have used all along. No new request and no new
+  // server work.
+  //
+  // **A STUDIO file opens too**, which it could not before: the row was inert
+  // for a teacher because there was nothing on it they were allowed to edit.
+  // Reading AC's file is not editing it.
   var _press=LIB_STANDALONE
-    ? (link ? 'libOpenLink(\''+esc(id)+'\')' : (mine?'libEdit(\''+esc(id)+'\')':''))
+    ? 'libOpenItem(\''+esc(id)+'\')'
     : 'libAttach(\''+esc(id)+'\')';
   // ── [1.484] — THE NAME GETS THE ROW ──────────────────────────────────
   //
@@ -9821,11 +10052,28 @@ function rLibEdit(f){
           ' onkeydown="if(event.key===\'Enter\'){event.preventDefault();this.blur();}"'+
           ' onblur="libRename(\''+esc(id)+'\')">'+
       '</div>'+
-      // The address is shown and is plainly not a field: renaming does not
-      // touch it, and a rule is easier to trust when you can see what it
-      // protects.
-      (link?'<div class="lib-meta" style="margin-top:3px">'+esc(f.url)+'</div>':'')+
     '</div>'+
+    // ── [1.615] — and the ADDRESS, which used to be a read-only line ───────
+    //
+    // **AC:** *"Editing a link should allow me to edit the name, the link, and
+    // the tags."* [1.471] drew it as grey text with a note saying a rule is
+    // easier to trust when you can see what it protects — the rule it protected
+    // was his, and he has withdrawn it. **A mistyped address cost a delete and
+    // a re-add.**
+    //
+    // Its own labelled field under the name, saved the same way the name is:
+    // Enter leaves the field, leaving the field saves ([1.488]).
+    (link
+      ? '<div class="lib-fld">'+
+          '<div class="lib-lbl">'+esc(TLIB_COPY.lblUrl)+'</div>'+
+          '<div class="lib-fld-row">'+
+            '<input id="lib-url-'+esc(id)+'" value="'+esc(f.url||'')+'" style="flex:1"'+
+              ' aria-label="'+esc(TLIB_COPY.lblUrl)+'" inputmode="url" spellcheck="false"'+
+              ' onkeydown="if(event.key===\'Enter\'){event.preventDefault();this.blur();}"'+
+              ' onblur="libLinkUrl(\''+esc(id)+'\')">'+
+          '</div>'+
+        '</div>'
+      : '')+
     (LIB_TAGS.length
       ? '<div class="lib-fld">'+
           '<div class="lib-lbl">'+esc(TLIB_COPY.lblTags)+'</div>'+
@@ -11016,7 +11264,28 @@ function _tbPick(id, kind, label){
 var MORE_OPEN = false;
 // [1.535] — per composer, so the staff and family boxes do not share a state.
 var CMP_FMT_OPEN = {};
-function _cmpFmtToggle(id){ CMP_FMT_OPEN[id]=!CMP_FMT_OPEN[id]; render(); }
+function _cmpFmtToggle(id){ CMP_FMT_OPEN[id]=!_cmpFmtIsOpen(id); render(); }
+// ── [1.615] — a TEMPLATE editor opens with its formatting showing ─────────
+//
+// **AC, 13 September 2026:** *"Editing a template should allow me to use html
+// editor and merge tags."* **Both are already there** — bold, italic,
+// underline, bullets, numbers and clear formatting — behind `Aa`, closed when
+// the editor opens, which is why his screenshot of the editor shows a toolbar
+// reading *"Aa · Add file · Add link"* and why he reports having no editor.
+//
+// **[1.484]'s finding on a different control:** *"A control nobody can see is
+// not there."* The answer is not a label on `Aa` but the resting state: a
+// MESSAGE is usually typed plain and asks for the row when it is wanted, and a
+// TEMPLATE is a written-once document where formatting is the point.
+//
+// Keyed off the composer's id rather than a flag threaded through four
+// functions: the template boxes are the only ones called `ttpl-b*`, and the
+// toggle goes on working from there — a teacher who closes the row keeps it
+// closed for that box.
+function _cmpFmtDefault(id){ return /^a?ttpl-b/.test(String(id||'')); }
+function _cmpFmtIsOpen(id){
+  return CMP_FMT_OPEN.hasOwnProperty(id) ? !!CMP_FMT_OPEN[id] : _cmpFmtDefault(id);
+}
 function moreToggle(){ MORE_OPEN=!MORE_OPEN; render(); }
 function moreClose(){ if(MORE_OPEN){ MORE_OPEN=false; render(); } }
 // Closed by a press anywhere else and by Escape, like every other menu on the
@@ -11111,7 +11380,7 @@ function rComposerToolbar(id,opts){
   // against two. [1.434] put them here because a teacher writing an ordinary
   // message had no other way to reach them; AC has since decided an ordinary
   // message does not need them.
-  var fmtOn = !!CMP_FMT_OPEN[id];
+  var fmtOn = _cmpFmtIsOpen(id);   // [1.615]
   var fmt = fmtOn
     ? '<div class="cmp-tb cmp-tb-fmt">'+
         _tbBtn(id,'bold','<b>B</b>',CMP_COPY.bold)+

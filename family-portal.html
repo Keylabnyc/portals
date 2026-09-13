@@ -2523,7 +2523,12 @@ function _saveNextRegisteredChild(studentIds, idx, done){
       // the registration itself succeeded and they are already signed in, so
       // this is "your details are saved, the email didn't go" — never a
       // suggestion that anything was lost.
-      if(e||!r||!r.ok||!r.sentFamily){
+      // [1.610] — `alreadySent` is a SUCCESS. The server now refuses to send
+      // this family's summary twice, and a refusal arrives here looking exactly
+      // like a send that delivered nothing: ok, with sentFamily 0. Without this
+      // clause the second delivery of a doubled request would put [1.98]'s
+      // "we could not email you" line in front of a family whose email went.
+      if(e||!r||!r.ok||(!r.sentFamily && !r.alreadySent)){
         _regEmailFailed=true;
       }
       // BACKLOG 1.95 — the loop above leaves SC.studentId pointing at

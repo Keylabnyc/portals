@@ -925,8 +925,6 @@ input[type=checkbox]{width:13px;height:13px;padding:0;margin:0;border:0;border-r
    reads as "nothing is happening", which is the opposite of what it says. */
 /* [1.434] — the merge-tag pills, distinct from the formatting buttons beside
    them: they insert words rather than change them. */
-.cmp-tag{font-family:"Inter",sans-serif;font-size:11.5px;font-weight:600;
-  color:var(--acc);border-style:dashed}
 /* [1.436] — the way through from a nudge. On its own line under the sentence,
    because it is an action and the sentence around it is not. */
 .note-goto{display:inline-block;margin-top:.4rem;padding:4px 10px;border-radius:var(--r);
@@ -1097,6 +1095,17 @@ input[type=checkbox]{width:13px;height:13px;padding:0;margin:0;border:0;border-r
 .lib-search{width:100%;padding:6px 9px;border:1px solid var(--border2);border-radius:var(--r);
   font-family:inherit;font-size:12.5px;background:#fff}
 .lib-tags{display:flex;flex-wrap:wrap;gap:5px;padding:7px 0 0;align-items:center}
+/* [1.631] — the tag, made in the same step. Its own row under the name so the
+   two questions are not competing for one line on a narrow pane, and the words
+   already in use sit under it as chips. */
+.tpl-tagrow{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:6px 0 0}
+.tpl-tagrow input{flex:1 1 140px;min-width:120px}
+.tpl-tagchips{display:flex;flex-wrap:wrap;gap:5px;padding:6px 0 0}
+/* [1.568] — the row above the search, the same shape and the same two controls
+   as admin's ([1.558]): the thing this page is for, then the library door. */
+.tch-msg-acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-start}
+.tch-msg-acts .btn{width:auto;flex:0 0 auto}
+.tch-new-msg{font-size:12px;margin-bottom:.5rem}
 .lib-tag{padding:4px 10px;border:1px solid var(--border2);border-radius:999px;background:#fff;
   font-family:inherit;font-size:11.5px;cursor:pointer;color:var(--text2)}
 .lib-tag:hover{border-color:var(--acc);color:var(--acc)}
@@ -2927,6 +2936,9 @@ var TTPL_COPY={
   delAsk:'Delete this template?', delYes:'Delete', delNo:'Cancel',
   // [1.594] — PLACEHOLDERS, flagged, and the same two strings admin uses.
   tplTags:'Tags',
+  // The same string admin's copy of this row uses, so one control is not called
+  // two things in two places.
+  tagsPh:'add one or more tags. Separate multiple tags by placing a comma after each tag',   // [1.631] — AC's words, final, 13 September 2026
   tplFilterAll:'All tags'
 };
 
@@ -3747,7 +3759,37 @@ function rSectionedRoster(){
   // page." The same is true here, and more so: this roster already lists every
   // family the teacher teaches ([1.172]) and now every staff contact and Admin
   // ([1.260]), so a second screen offered nothing the search below does not.
-  var h=rMsgSearch();
+  // ── [1.568] — a visible way to START one ───────────────────────────────
+  //
+  // **AC:** *"If composer is open, there is no clear way to set the recipient.
+  // The relationship between search, composer, and student list needs to be
+  // reviewed."*
+  //
+  // **The reaching was never broken.** The search below finds every student and
+  // every family by either parent ([1.408]), so a teacher can already write to
+  // anybody. **What was missing is any sign that it can.** [1.261] removed the
+  // old "+ New Conversation" button — correctly, because it opened a second
+  // screen and a list that took seconds to load — and nothing replaced it, so a
+  // teacher who does not already know that the search box reaches people they
+  // have never written to has no way to find out.
+  //
+  // **So this is a button that does not go anywhere.** It puts the cursor in
+  // the search box and opens its menu, which is the gesture it is teaching.
+  // Deliberately NOT the second screen [1.261] removed.
+  // [[lesson_resting_states]] — the control is always drawn, in every state of
+  // the roster beneath it.
+  //
+  // **Admin's twin carries a Manage Library button beside it ([1.558]) and this
+  // one deliberately does not.** The teacher's My Library already has its own
+  // row further down this panel, in the position AC ordered in [1.528]; a second
+  // door above the search would be the same control twice on one screen. The
+  // suite caught the first draft of this doing exactly that — the order check
+  // anchors My Library on its opener, and found two.
+  var h='<div class="tch-msg-acts">'+
+    '<button type="button" class="btn btn-p tch-new-msg" onclick="tchNewMessage()">'+
+      esc(TCH_COPY.newMessage)+'</button>'+
+    '</div>';
+  h+=rMsgSearch();
   // ── [1.344] — the way in, on the screen a teacher is already on ─────────
   //
   // Not a section, not a tab and not a second page: one control above the
@@ -4052,6 +4094,16 @@ function rMsgSearch(){
   return h+'</div>';
 }
 
+// [1.568] — the button's whole job: put the teacher in the box that finds
+// people, with its menu open, so the next keystroke is the useful one.
+function tchNewMessage(){
+  MSG_SEARCH.open=true;
+  render();
+  setTimeout(function(){
+    var el=document.getElementById('msg-search');
+    if(el){ el.focus(); try{ el.select(); }catch(e){} }
+  },0);
+}
 function onMsgSearch(v){
   MSG_SEARCH.query=v; MSG_SEARCH.open=true; render();
   // ── [1.348] — searching what was SAID, not only who it was said to ──────
@@ -7598,7 +7650,16 @@ function pickAdd(id, composerId){
 }
 // [1.622] — and the NAME opens it, which is [1.613]'s rule reaching the one row
 // it could not reach while pressing that row was the only way to attach.
-function pickOpen(id){
+//
+// **`pickOpenItem`, not `pickOpen` — [1.627].** [1.622] called this `pickOpen`,
+// which is also the name of the composer's picker opener 76 lines above. Both
+// are top-level declarations in one script block, so the later one won and Add
+// file and Add link silently called this instead, looked up an item whose id was
+// the string "file", found nothing and returned. **The admin portal named its
+// pair `admPickOpen` / `admPickOpenItem` the same evening and was never broken**;
+// this is that naming, and `check.js` now refuses a duplicate top-level function
+// name in any app file so the next one cannot ship.
+function pickOpenItem(id){
   var it=_pickFind(id); if(!it) return;
   if(it.kind==='link'){
     if(!it.url) return;
@@ -10464,6 +10525,36 @@ var TPL_USED=null;
 // styled, cannot be corrected, and drops the sender out of the page they are
 // writing on.
 var TPL_NAMING=false, TPL_NEWNAME='';
+// [1.631] — the tags for the template being made, typed in the same step.
+var TPL_NEWTAGS='';
+// Every tag already on one of this teacher's templates, so a new one is typed
+// deliberately. The words live ON the rows and are gathered from them ([1.585]),
+// which is why "create a tag" is "type one that is new".
+function _ttplTagVocab(){
+  var seen={}, out=[];
+  (SAVED_TPLS||[]).forEach(function(t){
+    (t.tags||[]).forEach(function(x){
+      var v=String(x||'').trim(); if(!v) return;
+      var k=v.toLowerCase(); if(seen[k]) return; seen[k]=1; out.push(v);
+    });
+  });
+  return out.sort(function(a,b){ return a.toLowerCase().localeCompare(b.toLowerCase()); });
+}
+function _ttplParseTags(str){
+  var seen={}, out=[];
+  String(str||'').split(',').forEach(function(x){
+    var v=String(x||'').trim(); if(!v) return;
+    var k=v.toLowerCase(); if(seen[k]) return; seen[k]=1; out.push(v);
+  });
+  return out;
+}
+function tplTagToggle(tag){
+  var cur=_ttplParseTags(TPL_NEWTAGS);
+  var i=-1; cur.forEach(function(x,n){ if(x.toLowerCase()===String(tag).toLowerCase()) i=n; });
+  if(i>-1) cur.splice(i,1); else cur.push(tag);
+  TPL_NEWTAGS=cur.join(', ');
+  render();
+}
 
 function loadSavedTpls(){
   if(_savedTplsLoaded || _savedTplsInFlight) return;
@@ -10543,6 +10634,48 @@ function _tplOfferHtml(id){
        '<button type="button" class="btn btn-s" style="font-size:12px" onclick="tplSaveAsCancel()">'+
          esc(TTPL_COPY.saveAsCancel)+'</button>'+
        '</div>';
+    // ── [1.635] — the refusal lands where the press was ──────────────────
+    //
+    // **`actFail('tpl', …)` was written from HERE and drawn only on the library
+    // screen** — `rAct('tpl')` appears in the templates list and the template
+    // form, and in neither composer. So a save-as that was refused, for a
+    // duplicate name or by the server, wrote its reason into a key nothing on
+    // this screen renders. **Quieter than the corner toast [1.562] replaced:
+    // invisible.** Press Save, nothing happens, no reason, no template.
+    //
+    // **[1.562]'s own check could not see it.** It asserts that every key a
+    // failure is written into is a key something DRAWS — and something does
+    // draw this one, on a different screen. A key can be drawn somewhere and
+    // still be nowhere the reader is standing.
+    h+=rAct('tpl');
+    // ── [1.631] — the tag is made HERE, not afterwards ──────────────────
+    //
+    // **AC, 13 September 2026:** *"When creating a template, the teacher should
+    // be able to create a new tag when saving as a new template right in that
+    // step, not afterwards."*
+    //
+    // A tag is not a record anywhere — it is a word that lives ON the rows and
+    // is gathered from them ([1.585]) — so creating one IS typing one that is
+    // new, and all this needed was somewhere to type it at the moment the
+    // template is being made. **The words already in use are offered too**,
+    // because typing blind is how "warmups" and "warm-ups" end up side by side,
+    // which is the mess [1.585] exists to clean up.
+    h+='<div class="tpl-tagrow">'+
+       '<span class="lnk-ask">'+esc(TTPL_COPY.tplTags)+'</span>'+
+       '<input id="tpl-newtags" type="text" value="'+esc(TPL_NEWTAGS)+'"'+
+         ' placeholder="'+esc(TTPL_COPY.tagsPh)+'"'+
+         ' aria-label="'+esc(TTPL_COPY.tplTags)+'"'+
+         ' oninput="TPL_NEWTAGS=this.value" onkeydown="tplNameKey(event,\''+esc(id)+'\')">'+
+       '</div>';
+    var vocab=_ttplTagVocab();
+    if(vocab.length){
+      var on=_ttplParseTags(TPL_NEWTAGS).map(function(x){ return x.toLowerCase(); });
+      h+='<div class="tpl-tagchips">'+vocab.map(function(t){
+        return '<button type="button" class="lib-tag'+(on.indexOf(t.toLowerCase())>-1?' on':'')+'"'+
+          ' aria-pressed="'+(on.indexOf(t.toLowerCase())>-1?'true':'false')+'"'+
+          ' onmousedown="event.preventDefault()" onclick="tplTagToggle(\''+esc(t)+'\')">'+esc(t)+'</button>';
+      }).join('')+'</div>';
+    }
   }
   return h;
 }
@@ -10767,11 +10900,14 @@ function tplSaveAsAsk(){
   var src=null;
   (STUDIO_TPLS||[]).concat(SAVED_TPLS||[]).forEach(function(x){ if(TPL_USED && x.templateId===TPL_USED.templateId) src=x; });
   TPL_NEWNAME=src?String(src.label||''):'';
+  // [1.631] — the source's own tags come with its name: a variant of a template
+  // is almost always filed the same way.
+  TPL_NEWTAGS=src?((src.tags||[]).join(', ')):'';
   render();
   var box=document.getElementById('tpl-newname');
   if(box){ box.focus(); try{ box.select(); }catch(e){} }
 }
-function tplSaveAsCancel(){ TPL_NAMING=false; TPL_NEWNAME=''; render(); }
+function tplSaveAsCancel(){ TPL_NAMING=false; TPL_NEWNAME=''; TPL_NEWTAGS=''; render(); }
 function tplNameKey(e,id){
   if(e.key==='Enter'){ e.preventDefault(); tplSaveAsDo(id); }
   else if(e.key==='Escape'){ e.preventDefault(); tplSaveAsCancel(); }
@@ -10780,6 +10916,17 @@ function tplSaveAsDo(id){
   var name=String(TPL_NEWNAME||'').trim();
   if(!name){ var b=document.getElementById('tpl-newname'); if(b) b.focus(); return; }
   var el=document.getElementById(id); if(!el) return;
+  // ── [1.635] — the refusal ttplSave has always given, given here too ─────
+  //
+  // The library panel's own save refuses a name already in use ([1.580]) and
+  // this one did not, so the same teacher was refused in one place and not the
+  // other — and the second copy arrived silently, two rows with one name and
+  // nothing saying why. Admin's copy of this has refused it since [1.632].
+  var _clash='';
+  (SAVED_TPLS||[]).forEach(function(t){
+    if(String(t.label||'').trim().toLowerCase()===name.toLowerCase()) _clash=name;
+  });
+  if(_clash){ actFail('tpl', TCH_COPY.tplDuplicate.replace('{name}', _clash)); render(); return; }
   // The tags go back in, or the template would greet every family by this
   // one's name — see _tplUnmerge.
   // null when they wrote this themselves — every tag is eligible then.
@@ -10793,12 +10940,19 @@ function tplSaveAsDo(id){
   // every other template the teacher owns.
   var next=(SAVED_TPLS||[]).map(function(t){
       return {templateId:t.templateId, label:t.label, body:t.body, tags:(t.tags||[])}; })
-    .concat([{templateId:'', label:name, body:body, tags:[]}]);
+    // [1.631] — the tags typed in the naming step, which is where they are made.
+    .concat([{templateId:'', label:name, body:body, tags:_ttplParseTags(TPL_NEWTAGS)}]);
+  // [1.635] — said BEFORE the request, not after it. Admin's copy of this save
+  // has done so since it was written; this one fired and showed nothing at all,
+  // so on a slow round trip Save appeared to do nothing and the obvious next
+  // move is to press it again.
+  actStart('tpl', TCH_COPY.savingTemplate);   // the string ttplSave already uses — one act, one wording
+  render();
   api({action:'saveTeacherTemplates', data:{teacherToken:TOKEN, templates:next}}, function(e,r){
     // [1.562] — beside the template editor's own controls, which already draw
     // rAct('tpl') for every other thing that can go wrong there.
     if(e||!r||!r.ok){ actFail('tpl',(r&&r.error)||TCH_COPY.tplSaveFailed); return; }
-    TPL_NAMING=false; TPL_NEWNAME='';
+    TPL_NAMING=false; TPL_NEWNAME=''; TPL_NEWTAGS='';
     // What is in the box is now a template they HAVE, so it becomes the new
     // yardstick and the offer goes.
     //
@@ -11158,6 +11312,9 @@ var TCH_COPY={
   sectionStudents:'My Students',
   noStudents:'No students assigned to you yet.',
   searchPlaceholder:'Search by student or parent, or type a name to start\u2026',
+  // [1.568] — AC's own word for admin's twin of this control, so one thing is
+  // not called two things in two seats.
+  newMessage:'New Message',
   guideTitle:'How to use Messages',
   // AC's copy, 3 September 2026 — his draft, his headings, his wording. Two
   // things were corrected with him before it went in and both are noted where
@@ -11584,7 +11741,20 @@ function _cmpFmtToggle(id){ CMP_FMT_OPEN[id]=!_cmpFmtIsOpen(id); render(); }
 // functions: the template boxes are the only ones called `ttpl-b*`, and the
 // toggle goes on working from there — a teacher who closes the row keeps it
 // closed for that box.
-function _cmpFmtDefault(id){ return /^a?ttpl-b/.test(String(id||'')); }
+// **`/^(ttpl|atpl)-b/`, corrected 14 September 2026 by [1.634]'s check.** This
+// read `/^a?ttpl-b/`, which matches `ttpl-b` and `attpl-b` — and `attpl-b` is an
+// id that exists nowhere. The optional `a` was written for admin's template
+// boxes, which are called `atpl-b`, with ONE t. It never matched them.
+//
+// **Harmless until the moment it was not:** admin had no Aa toggle, so nothing
+// read this. [1.634] gave admin the toggle and the default immediately decided
+// the wrong thing — an admin template editor opening with its formatting
+// hidden, which is EXACTLY the report [1.615] exists to answer: AC looked at a
+// toolbar reading "Aa" and said he had no editor.
+//
+// Found by rendering both toolbars rather than reading them. Both portals carry
+// this function and [1.634] fails if the two ever disagree.
+function _cmpFmtDefault(id){ return /^(ttpl|atpl)-b/.test(String(id||'')); }
 function _cmpFmtIsOpen(id){
   return CMP_FMT_OPEN.hasOwnProperty(id) ? !!CMP_FMT_OPEN[id] : _cmpFmtDefault(id);
 }
@@ -12298,7 +12468,19 @@ function _attFail(rec, msg){
   rec.uploading=false;
   rec.failed=true;
   rec.error=msg||TCH_COPY.attachFailed;
-  ATT_BUSY--; showMsg(msg,'e'); render();
+  // ── [1.635] — ONE line, not two ────────────────────────────────────────
+  //
+  // `showMsg(msg,'e')` was here, putting the reason in the CORNER while the
+  // chip below already draws `a.error` beside the file it belongs to. **AC's
+  // rule, given three times ([1.404], [1.562]): beside the control that caused
+  // it, never in the corner** — and [1.455] is the same finding in this exact
+  // place, two banners for one failure.
+  //
+  // **[1.562]'s sweep could not reach it.** That sweep reads every call inside
+  // an `on*` attribute; this one is two levels down, in the callback of a
+  // function a control calls. The chip is the one that stays: it names WHICH
+  // file failed, which a corner toast cannot.
+  ATT_BUSY--; render();
 }
 function _attAnyUploading(){ return ATT_PENDING.some(function(x){ return x.uploading; }); }
 function _attAnyFailed(){ return ATT_PENDING.some(function(x){ return x.failed; }); }
@@ -12591,7 +12773,7 @@ function rPickRow(f, composerId){
         ' title="'+esc(link?TLIB_COPY.pickTickLink:TLIB_COPY.pickTickFile)+'"'+
         ' aria-label="'+esc(link?TLIB_COPY.pickTickLink:TLIB_COPY.pickTickFile)+': '+esc(f.fileName)+'">'+
       '<button type="button" class="lib-pick" title="'+esc(link?f.url:f.fileName)+'"'+
-        ' onclick="pickOpen(\''+esc(id)+'\')">'+
+        ' onclick="pickOpenItem(\''+esc(id)+'\')">'+
         '<span class="lib-kind">'+esc(link?TLIB_COPY.linkKind:_attKind(f.fileName))+'</span>'+
         '<span class="lib-name">'+esc(f.fileName)+'</span>'+
       '</button>'+

@@ -863,8 +863,7 @@ var SC = {
   teachersError:'',
   splitLesson:false,
   splitChild:{name:'',age:'',instrument:'',instrumentOther:'',notes:''},
-  source:'',
-  waitlist:null // null = unanswered, true/false = family's choice, only relevant when the selected instrument currently has no teacher
+  source:''
 };
 
 // sibling nudge: studentId of next unsubmitted sibling after a successful submit, or ''
@@ -906,7 +905,6 @@ function _scResetBlank() {
   SC.origInstrument = ''; SC.origDurations = []; SC.origLocations = [];
   SC.teacherPref = ''; SC.pendingChanges = false; SC.submitError = ''; SC.justSubmitted = false;
   SC.submitAttempted = false;
-  SC.waitlist = null;
   SC.splitLesson = false;
   SC.splitChild = {name:'', age:'', instrument:'', instrumentOther:'', notes:''};
 }
@@ -937,7 +935,6 @@ function _scSnapshot() {
     street: SC.street, apt: SC.apt, city: SC.city, state: SC.state, zip: SC.zip,
     notes: SC.notes, teacherPref: SC.teacherPref,
     slots: SC.slots.filter(function(s,i){ return !SC.slotDeleted[i]; }).map(function(s){ return Object.assign({}, s); }),
-    waitlist: SC.waitlist,
     splitLesson: SC.splitLesson, splitChild: Object.assign({}, SC.splitChild)
   };
 }
@@ -950,7 +947,6 @@ function _scRestore(snap) {
   SC.street = snap.street||''; SC.apt = snap.apt||''; SC.city = snap.city||''; SC.state = snap.state||'NY'; SC.zip = snap.zip||'';
   SC.notes = snap.notes||''; SC.teacherPref = snap.teacherPref||'';
   SC.slots = (snap.slots&&snap.slots.length) ? snap.slots.map(function(s){ return Object.assign({}, s); }) : [blankSlot(), blankSlot(), blankSlot()];
-  SC.waitlist = snap.waitlist!==undefined ? snap.waitlist : null;
   SC.splitLesson = !!snap.splitLesson; SC.splitChild = Object.assign({name:'',age:'',instrument:'',instrumentOther:'',notes:''}, snap.splitChild||{});
 }
 
@@ -1002,11 +998,12 @@ function _famTeacherWorksAnyDay(teacher,days){
 // Instrument AND day filtered -- used only for the teacher-preference
 // dropdown (rViewTchOpts()) and its save-time sanitization. The
 // instrument-only _famAvailableTeachers() above remains untouched and is
-// still what drives the separate "no teacher for this instrument at all,
-// join the waitlist?" logic everywhere that already uses it -- a day
-// mismatch is a different, much softer situation (someone teaches this
-// instrument, just maybe not on the family's specific days) and shouldn't
-// trigger that same permanent-sounding prompt.
+// still what drives the separate "nobody teaches this instrument at all"
+// note everywhere that already uses it. A day mismatch is a different,
+// softer situation (someone teaches this instrument, just maybe not on the
+// family's specific days) and gets its own note -- the two read almost the
+// same to a family, and deliberately so, but only one of them means the
+// studio has nobody for the subject.
 function _famAvailableTeachersForPref(instrument){
   var days=_famSelectedDays();
   return _famAvailableTeachers(instrument).filter(function(t){ return _famTeacherWorksAnyDay(t,days); });
@@ -4344,11 +4341,10 @@ function loadSchedTeachers(){
     } else {
       // Previously silent -- SC.teachers stayed empty with no indication
       // anything went wrong, which quietly disabled the teacher-preference
-      // dropdown AND the "no teacher for this instrument, join the
-      // waitlist?" prompt (both are gated on SC.teachers being non-empty).
-      // A family could submit for an instrument nobody teaches and never
-      // be asked about the waitlist, simply because this background load
-      // failed. Surfaced now so it's visible and retry-able.
+      // dropdown AND the "nobody teaches this instrument" note (both are
+      // gated on SC.teachers being non-empty). A family could submit for an
+      // instrument nobody teaches and never be told, simply because this
+      // background load failed. Surfaced now so it's visible and retry-able.
       SC.teachersError='We couldn\u2019t load teacher information.';
       render();
     }
@@ -5537,6 +5533,21 @@ function _klAdjustmentsHtml(s){
     '</div>';
 }
 
+// ── [1.626] — the same block, before acceptance ──────────────────────────
+//
+// AC, 13 September 2026, asking whether a proposal carries everything the
+// parent sees in the email. It did not: the proposal email's adjustments block
+// opens with the teacher-absence sentence, and this page had no absence line
+// at all until the family had already accepted.
+//
+// Deliberately routed THROUGH _klAdjustmentsHtml rather than beside it -- one
+// renderer, one set of escaping, and no second copy to drift. The server sends
+// the text the family was actually emailed (see doGetFamilyData's
+// proposalAdjustmentsText).
+function _klProposalAdjustmentsHtml(s){
+  return _klAdjustmentsHtml({acceptedAdjustmentsText:(s&&s.proposalAdjustmentsText)||''});
+}
+
 // rHomeEnrollmentRecord(), rHomePolicyRecords() and
 // openAdminThreadFromSupport() were all removed 26 Aug, along with "Your
 // enrollment details", "Read the studio policies" and "Contact admin"
@@ -6499,7 +6510,13 @@ function rSchedViewMode(){
         return '<option value="'+esc(x)+'"'+(SC.instrument===x?' selected':'')+'>'+esc(x)+'</option>';
       }).join('')+
       '</select>';
-    if(_instrChanged){
+    if(SC.instrument==='Other'){
+      // Same box, same requirement, different question -- "why the change?"
+      // is the wrong thing to ask somebody who has just asked for a subject
+      // the list doesn't carry and hasn't said what it is yet.
+      h+='<div class="field" style="margin-top:.5rem"><label>Please let us know more about what instrument or musical subject you want your child to learn about<span class="req">*</span></label>'+
+        '<textarea oninput="SC.instrumentNote=this.value" style="min-height:50px">'+esc(SC.instrumentNote)+'</textarea></div>';
+    } else if(_instrChanged){
       h+='<div class="field" style="margin-top:.5rem"><label>Why the change?<span class="req">*</span></label>'+
         '<textarea oninput="SC.instrumentNote=this.value" style="min-height:50px" placeholder="Let us know what changed">'+esc(SC.instrumentNote)+'</textarea></div>';
     }
@@ -6673,8 +6690,11 @@ function _schMissingState(){
   var locNoteMissing=SC.locations.length>1&&!SC.locationNote.trim();
   var inHomeAddrMissing=SC.locations.indexOf('in-home')>-1&&!SC.street.trim();
   var _availTchs2=_famAvailableTeachers(SC.instrument);
-  var _noTeacherForInstrument2=!!SC.instrument&&SC.teachers.length>0&&_availTchs2.length===0;
-  var waitlistMissing=_noTeacherForInstrument2&&SC.waitlist===null;
+  var _noTeacherForInstrument2=!!SC.instrument&&SC.instrument!=='Other'&&SC.teachers.length>0&&_availTchs2.length===0;
+  // "Other" is a request for a subject the studio's list doesn't carry, so it
+  // has to say what. Required the same way a second duration or a second
+  // location is.
+  var otherNoteMissing=SC.instrument==='Other'&&!SC.instrumentNote.trim();
   var hasCompleteSlot=false,missingEndTime=false,missingStartTime=false;
   SC.slots.forEach(function(slot,i){
     if(SC.slotDeleted[i])return;
@@ -6682,10 +6702,10 @@ function _schMissingState(){
     if(slot.day&&slot.start&&!slot.end)missingEndTime=true;
     if(slot.day&&!slot.start&&slot.end)missingStartTime=true;
   });
-  var missingRequired=instMissing||durMissing||locMissing||durNoteMissing||locNoteMissing||inHomeAddrMissing||waitlistMissing||!hasCompleteSlot||missingEndTime||missingStartTime;
+  var missingRequired=instMissing||durMissing||locMissing||durNoteMissing||locNoteMissing||inHomeAddrMissing||otherNoteMissing||!hasCompleteSlot||missingEndTime||missingStartTime;
   return {instMissing:instMissing,durMissing:durMissing,locMissing:locMissing,
     durNoteMissing:durNoteMissing,locNoteMissing:locNoteMissing,inHomeAddrMissing:inHomeAddrMissing,
-    noTeacherForInstrument:_noTeacherForInstrument2,waitlistMissing:waitlistMissing,
+    noTeacherForInstrument:_noTeacherForInstrument2,otherNoteMissing:otherNoteMissing,
     hasCompleteSlot:hasCompleteSlot,missingEndTime:missingEndTime,missingStartTime:missingStartTime,
     missingRequired:missingRequired};
 }
@@ -6726,7 +6746,7 @@ function _schMissingList(forReg){
   if(m.locMissing) out.push('Please select a lesson location.');
   if(m.locNoteMissing) out.push('You selected more than one location. Tell us more about your location preferences.');
   if(m.inHomeAddrMissing) out.push('Please enter your home address for in-home lessons.');
-  if(m.waitlistMissing) out.push('Please let us know whether you’d like to join the waitlist.');
+  if(m.otherNoteMissing) out.push('Please let us know more about what instrument or musical subject you want your child to learn about.');
   if(!m.hasCompleteSlot) out.push('Please add at least one time window with a day, start time, end time, and priority.');
   else if(m.missingEndTime) out.push('Please select an end time for each time window.');
   else if(m.missingStartTime) out.push('Please select a start time for each time window.');
@@ -6815,8 +6835,18 @@ function rSchedForm(forReg){
   if(instMissing&&SC.submitAttempted){
     h+='<div class="aw">Please select an instrument.</div>';
   }
-  h+='<div class="field" style="margin-top:.5rem"><label>Instrument or subject notes (optional)</label>'+
-    '<input type="text" placeholder="e.g. piano main instrument but also wants to explore drums" value="'+esc(SC.instrumentNote)+'" oninput="SC.instrumentNote=this.value"></div>';
+  // Picking "Other" turns this same box into a required one rather than
+  // adding a second: two fields asking about the instrument would be one more
+  // thing to read, not one more thing to say. No inline warning here -- the
+  // asterisk marks it and the outstanding list at the bottom names it, which
+  // is how the in-home address field already behaves.
+  if(SC.instrument==='Other'){
+    h+='<div class="field" style="margin-top:.5rem"><label>Please let us know more about what instrument or musical subject you want your child to learn about<span class="req">*</span></label>'+
+      '<input type="text" value="'+esc(SC.instrumentNote)+'" oninput="SC.instrumentNote=this.value;_schRefreshSubmit()"></div>';
+  } else {
+    h+='<div class="field" style="margin-top:.5rem"><label>Instrument or subject notes (optional)</label>'+
+      '<input type="text" placeholder="e.g. piano main instrument but also wants to explore drums" value="'+esc(SC.instrumentNote)+'" oninput="SC.instrumentNote=this.value"></div>';
+  }
   h+='</div>';
 
   // Step 2: Duration
@@ -6928,40 +6958,38 @@ function rSchedForm(forReg){
 
   // Step 4: Teacher preference — filtered to teachers who actually teach the
   // selected instrument AND are generally available on at least one of the
-  // days just entered above. If nobody currently teaches the instrument at
-  // all, this becomes a waitlist prompt instead of a dropdown (that check
-  // stays instrument-only, see _famAvailableTeachers -- a day mismatch is a
-  // softer, different situation and gets its own note below instead).
+  // days just entered above. Two softer situations replace the dropdown with
+  // a note: nobody carries the subject at all, and nobody who does works the
+  // days entered. Both say the same thing — we'll review it and come back to
+  // you — because from the family's side they are the same situation.
+  //
+  // "Other" skips this card entirely. It is a request for something the
+  // studio's list doesn't carry, so there is no teacher list to filter and
+  // nothing to express a preference between; the required note under the
+  // instrument dropdown is where that request gets made.
   var _availTchs=_famAvailableTeachers(SC.instrument);
-  var _noTeacherForInstrument=!!SC.instrument&&SC.teachers.length>0&&_availTchs.length===0;
+  var _isOtherInstrument=SC.instrument==='Other';
+  var _noTeacherForInstrument=!!SC.instrument&&!_isOtherInstrument&&SC.teachers.length>0&&_availTchs.length===0;
   var _availTchsForPref=_famAvailableTeachersForPref(SC.instrument);
-  var _noTeacherForDays=!_noTeacherForInstrument&&_availTchs.length>0&&_famSelectedDays().length>0&&_availTchsForPref.length===0;
-  h+='<div class="card">';
-  if(SC.teachersError){
-    h+='<div class="aw" style="margin-bottom:.5rem">'+esc(SC.teachersError)+' Teacher-preference options and waitlist prompts may not be accurate right now. <button type="button" class="lnk-btn" onclick="loadSchedTeachers()" >Try again</button></div>';
-  }
-  if(_noTeacherForInstrument){
-    h+='<h2 style="margin-bottom:.15rem">We don\u2019t currently have a teacher for '+esc(SC.instrument)+'</h2>';
-    h+='<p style="font-size:13px;color:var(--text3);margin-bottom:.75rem">Would you like to be placed on a waitlist for '+esc(SC.instrument)+' lessons? We\u2019ll reach out as soon as a teacher becomes available.</p>';
-    h+='<div class="dur-row">'+
-      '<button class="db'+(SC.waitlist===true?' on':'')+'" onclick="SC.waitlist=true;render()">Yes, add me to the waitlist</button>'+
-      '<button class="db'+(SC.waitlist===false?' on':'')+'" onclick="SC.waitlist=false;render()">No thanks</button>'+
-      '</div>';
-    if(SC.waitlist===null){
-      h+='<div class="aw" style="margin-top:.5rem">Please let us know if you\u2019d like to be added to the waitlist.</div>';
-    } else if(SC.waitlist===false){
-      h+='<div class="note" style="margin-top:.65rem">No problem — we\u2019ll still process the rest of your submission, and we\u2019ll follow up with you directly about '+esc(SC.instrument)+' lessons.</div>';
+  var _noTeacherForDays=!_isOtherInstrument&&!_noTeacherForInstrument&&_availTchs.length>0&&_famSelectedDays().length>0&&_availTchsForPref.length===0;
+  if(!_isOtherInstrument){
+    h+='<div class="card">';
+    if(SC.teachersError){
+      h+='<div class="aw" style="margin-bottom:.5rem">'+esc(SC.teachersError)+' Teacher-preference options may not be accurate right now. <button type="button" class="lnk-btn" onclick="loadSchedTeachers()" >Try again</button></div>';
     }
-  } else {
-    h+='<h2 style="margin-bottom:.15rem">Do you have a teacher preference?</h2>';
-    h+='<p style="font-size:13px;color:var(--text3);margin-bottom:.5rem">If you have a teacher preference, let us know. Leave this blank if you do not have a preference. Teacher assignments are not guaranteed, but we\u2019ll do our best to place you with your requested teacher.</p>';
-    h+='<a class="btn btn-p btn-sm" href="https://keylab.nyc/our-teachers" target="_blank" style="margin-bottom:.75rem">View our teachers</a>';
-    if(_noTeacherForDays){
-      h+='<div class="note" style="margin-bottom:.65rem">None of our current '+esc(SC.instrument)+' teachers generally work on the day(s) you selected, so we can\u2019t show a specific preference here \u2014 that\u2019s okay, go ahead and submit and we\u2019ll do our best to find a fit.</div>';
+    if(_noTeacherForInstrument){
+      h+='<div class="note" style="margin-bottom:0">We do have teachers for this instrument, but most of them are booked up at the moment. We’ll review your request and be in touch soon with an update.</div>';
+    } else {
+      h+='<h2 style="margin-bottom:.15rem">Do you have a teacher preference?</h2>';
+      h+='<p style="font-size:13px;color:var(--text3);margin-bottom:.5rem">If you have a teacher preference, let us know. Leave this blank if you do not have a preference. Teacher assignments are not guaranteed, but we’ll do our best to place you with your requested teacher.</p>';
+      h+='<a class="btn btn-p btn-sm" href="https://keylab.nyc/our-teachers" target="_blank" style="margin-bottom:.75rem">View our teachers</a>';
+      if(_noTeacherForDays){
+        h+='<div class="note" style="margin-bottom:.65rem">We do have teachers for this instrument, but nobody is currently available on your requested days. We’ll review your request and be in touch soon with an update.</div>';
+      }
+      h+='<select onchange="SC.teacherPref=this.value;render()" style="margin-bottom:0">'+rViewTchOpts()+'</select>';
     }
-    h+='<select onchange="SC.teacherPref=this.value;render()" style="margin-bottom:0">'+rViewTchOpts()+'</select>';
+    h+='</div>';
   }
-  h+='</div>';
 
   // Split lesson section (below time windows)
   h+=rSplitLessonSection();
@@ -7139,7 +7167,6 @@ function loadSchedSubmission(){
       SC.instrumentNote=sub.instrumentNote||''; SC.notes=sub.notes||'';
       SC.teacherPref=sub.teacherPref||'';
       SC.submittedAt=sub.submittedAt||'';
-      SC.waitlist=isTruthy(sub.instrumentUnavailable)?isTruthy(sub.instrumentWaitlist):null;
       SC.submitted=true;
       SC.isFirstSubmission=false;
       SC.editMode=false;
@@ -7215,7 +7242,11 @@ function _saveSlotsAndDetails(cb,isNewRegistration,suppressEmails){
     }
   });
   var _saveAvailTchs=_famAvailableTeachers(SC.instrument);
-  var _saveNoTeacher=!!SC.instrument&&SC.teachers.length>0&&_saveAvailTchs.length===0;
+  // "Other" counts as unstaffed regardless of the teacher list: a teacher can
+  // tick "Other" with their own free text, and matching a family who wants
+  // bagpipes to a teacher whose "Other" is harp would be worse than no match.
+  var _saveIsOther=SC.instrument==='Other';
+  var _saveNoTeacher=!!SC.instrument&&(_saveIsOther||(SC.teachers.length>0&&_saveAvailTchs.length===0));
   // If SC.teacherPref no longer matches any teacher who teaches the
   // currently-selected instrument AND is available on the currently-selected
   // days (e.g. the family picked a teacher, then changed instrument or
@@ -7226,9 +7257,9 @@ function _saveSlotsAndDetails(cb,isNewRegistration,suppressEmails){
   // mismatched pairing they never had a chance to notice or correct. Uses
   // the day-aware list, not _saveAvailTchs above -- that one stays
   // instrument-only on purpose, since it also drives the separate
-  // no-teacher-for-instrument/waitlist flag below.
+  // no-teacher-for-instrument flag below.
   var _saveAvailTchsForPref=_famAvailableTeachersForPref(SC.instrument);
-  var _saveTeacherPref=(SC.teacherPref&&_saveAvailTchsForPref.some(function(t){return t.teacherName===SC.teacherPref;}))?SC.teacherPref:'';
+  var _saveTeacherPref=(!_saveIsOther&&SC.teacherPref&&_saveAvailTchsForPref.some(function(t){return t.teacherName===SC.teacherPref;}))?SC.teacherPref:'';
   fapi('saveFamilyAvailability', {
     studentId:SC.studentId, duration:SC.durations.join(','), location:SC.locations.join(','),
     street:SC.street, apt:SC.apt, city:SC.city, state:SC.state, zip:SC.zip,
@@ -7237,7 +7268,6 @@ function _saveSlotsAndDetails(cb,isNewRegistration,suppressEmails){
     teacherAcknowledged:false,
     teacherPref:_saveTeacherPref,
     instrumentUnavailable:_saveNoTeacher,
-    instrumentWaitlist:_saveNoTeacher&&SC.waitlist===true,
     isNewRegistration:!!isNewRegistration,
     // Registration sends ONE combined email at the end instead of one per
     // child (BACKLOG 1.84). Set for every child in a registration, including
@@ -7294,6 +7324,10 @@ function _validateSchedForm(){
   if(SC.durations.length>1&&!SC.durationNote.trim()) return 'Please add context on your duration preference.';
   if(SC.locations.length>1&&!SC.locationNote.trim()) return 'Please add context on your location preference.';
   if(SC.locations.indexOf('in-home')>-1&&!SC.street.trim()) return 'Please enter your street address for in-home lessons.';
+  // Ahead of the changed-instrument check below on purpose: both read the
+  // same note field, and a family who has just picked "Other" needs to be
+  // asked what they want, not why they changed.
+  if(SC.instrument==='Other'&&!SC.instrumentNote.trim()) return 'Please let us know more about what instrument or musical subject you want your child to learn about.';
   // Changed-from-original-submission checks -- only meaningful once a prior
   // submission actually exists to compare against (AC-requested, this
   // session). A first-time submission has nothing to have "changed" from.
@@ -7302,8 +7336,6 @@ function _validateSchedForm(){
     if(!_arraysEqualAsSets(SC.durations,SC.origDurations)&&!SC.durationNote.trim()) return 'Please tell us why you\u2019re changing your duration preference.';
     if(!_arraysEqualAsSets(SC.locations,SC.origLocations)&&!SC.locationNote.trim()) return 'Please tell us why you\u2019re changing your location preference.';
   }
-  var _noTeach=!!SC.instrument&&SC.teachers.length>0&&_famAvailableTeachers(SC.instrument).length===0;
-  if(_noTeach&&SC.waitlist===null) return 'Please let us know if you\u2019d like to be added to the waitlist.';
   var activeSlots=SC.slots.filter(function(s,i){ return !SC.slotDeleted[i]; });
   var hasSlot=activeSlots.some(function(s){return s.day&&s.start&&s.end;});
   if(!hasSlot) return 'Please add at least one complete time window (day, start time, and end time).';
@@ -7554,6 +7586,7 @@ function rEnrollment(scopeStudentId){
         h+='<div class="prop-row"><span class="prop-lbl">'+esc(row[0])+'</span><span class="prop-val">'+esc(row[1])+'</span></div>';
       });
       if(hasPrice) h+=_fmtPriceBox(s);
+      h+=_klProposalAdjustmentsHtml(s);
       // Acceptance form
       var tc=_tcState(sid);
       h+='<div style="margin-top:1rem;border-top:1px solid var(--border);padding-top:1rem">';
@@ -7608,6 +7641,7 @@ function rEnrollment(scopeStudentId){
       });
       if(hasPrice&&!(isAccepted||isFullyEnrolled)){
         h+=_fmtPriceBox(s);
+        h+=_klProposalAdjustmentsHtml(s);
       }
       // ── Welcome/status line + What Happens Next + Review Policies button + self-release (in display order) ──
       // Required order: (1) welcome/status line (2) What Happens Next (3) Review Policies button (4) policies content (5) Tuition Details (6) self-release
@@ -8186,6 +8220,11 @@ function boot(){
       if(r.keylabCalendarUrl) publicCfg.keylabCalendarUrl=r.keylabCalendarUrl;
       if(r.instruments){
         var _fInstr=r.instruments.split(',').map(function(x){return x.trim();}).filter(Boolean);
+        // The studio's list replaces the built-in one wholesale and does not
+        // carry "Other" -- the admin portal appends it to its own copy the
+        // same way. Without this a family had no way to ask for anything off
+        // the list, because the built-in list that did carry it was gone.
+        if(_fInstr.length&&_fInstr.indexOf('Other')===-1) _fInstr.push('Other');
         if(_fInstr.length) INSTRUMENTS=_fInstr;
       }
       render();

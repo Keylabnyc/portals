@@ -995,18 +995,26 @@ function _famTeacherWorksAnyDay(teacher,days){
   return days.some(function(d){ return !!da[d]; });
 }
 
-// Instrument AND day filtered -- used only for the teacher-preference
-// dropdown (rViewTchOpts()) and its save-time sanitization. The
-// instrument-only _famAvailableTeachers() above remains untouched and is
-// still what drives the separate "nobody teaches this instrument at all"
-// note everywhere that already uses it. A day mismatch is a different,
-// softer situation (someone teaches this instrument, just maybe not on the
-// family's specific days) and gets its own note -- the two read almost the
-// same to a family, and deliberately so, but only one of them means the
-// studio has nobody for the subject.
+// The teachers the teacher-preference dropdown offers (rViewTchOpts()) and
+// its save-time sanitization accepts.
+//
+// [1.667] — EVERY teacher listed for the instrument. AC, 17 September 2026:
+// *"teachers who are listed for an instrument should be listed in the
+// dropdown."* This used to leave out anyone who does not work one of the days
+// the family had entered, which hid a teacher a family may be asking for by
+// name. (Inactive teachers never reach this page at all: the server leaves
+// them out.) The day match still decides one thing, the softer note below.
 function _famAvailableTeachersForPref(instrument){
+  return _famAvailableTeachers(instrument);
+}
+// Someone teaches this instrument, but nobody who does works any of the days
+// the family entered. Its own note -- it reads almost the same as "nobody
+// teaches this", deliberately, but only that one means the studio has nobody
+// for the subject.
+function _famNobodyOnDays(instrument){
   var days=_famSelectedDays();
-  return _famAvailableTeachers(instrument).filter(function(t){ return _famTeacherWorksAnyDay(t,days); });
+  var list=_famAvailableTeachers(instrument);
+  return days.length>0&&list.length>0&&!list.some(function(t){ return _famTeacherWorksAnyDay(t,days); });
 }
 
 // tc — keyed by studentId
@@ -1057,43 +1065,88 @@ function timesForDay(day){
 // Per-day, per-teacher, per-duration estimates shown inline on each slot.
 // Discount (pct and/or dollar) sourced from student record loaded at login.
 // ============================================================
-var EST_RATES = {30:65, 45:91, 60:115};
-var EST_TAX_RATE = (6.2+1.45+0.6+3.4+0.4)/100;
-var EST_TEACHER_HOURLY = 50;
-var EST_SUB_MONTHS = 10;
+// [1.659] — the estimate is the pricing calculator's own arithmetic now, with
+// the studio's Settings and school year sent by the server (getPublicConfig).
+// It used typed-in rates, counted every lesson from 14 September whatever the
+// date, divided by ten months, and added payroll tax on a teacher's WHOLE pay:
+// $20-30 high for most teachers, $70-120 low for one at $80 an hour.
 // Populated live from the server (getPublicConfig) on load — never hardcoded.
 // See _rebuildClosures analog in EnrollmentAdmin.html for the same pattern.
 var EST_CLOSURES = {};
-var EST_DIDX = {Monday:1,Tuesday:2,Wednesday:3,Thursday:4,Friday:5,Saturday:6};
-
-function estLessonCount(day){
-  var ti = EST_DIDX[day];
-  if(!ti) return 0;
-  var ys = new Date(2026,8,14), ye = new Date(2027,5,18);
-  var d = new Date(ys);
-  while(d.getDay() !== ti) d.setDate(d.getDate()+1);
-  var count = 0;
-  while(d <= ye){
-    var ds = d.getFullYear()+'-'+(d.getMonth()<9?'0':'')+(d.getMonth()+1)+'-'+(d.getDate()<10?'0':'')+d.getDate();
-    if(!EST_CLOSURES[ds]) count++;
-    d.setDate(d.getDate()+7);
+// [1.659] — THE ESTIMATE, word for word the same in EnrollmentAdmin.html,
+// EnrollmentFamily.html and Code.js: check.js fails if the three copies differ,
+// and fails if this disagrees with the pricing calculator. It is the
+// calculator's own arithmetic for the plain case (a studio lesson with no
+// travel, prep or discount) starting with the first lesson on that day after
+// today: the base rate for the length, plus the teacher's premium per lesson
+// hour; every lesson left in the year, less closures; the payment months for
+// the month those lessons start in, a first month of fewer than three lessons
+// taken out and charged on its own; the monthly figure rounded up. It returns
+// that monthly figure, or null when it has nothing to go on.
+function klEstimateMonthly(o) {
+  var dur = parseInt(o.duration, 10) || 0;
+  var rates = o.rates || {};
+  var r30 = parseFloat(rates[30]), r45 = parseFloat(rates[45]), r60 = parseFloat(rates[60]);
+  if (!dur || !r30 || !r45 || !r60 || !o.today || !o.yearStart || !o.yearEnd) return null;
+  var base;
+  if (dur <= 30) base = r30;
+  else if (dur <= 45) base = r30 + (dur - 30) / 15 * (r45 - r30);
+  else if (dur <= 60) base = r45 + (dur - 45) / 15 * (r60 - r45);
+  else base = r60 + (dur - 60) / 15 * (r60 - r45);
+  var perLesson = base + (dur / 60) * (parseFloat(o.premium) || 0);
+  var want = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].indexOf(o.day);
+  if (want < 1) return null;
+  var DAY = 864e5;
+  var utc = function (ymd) { var p = String(ymd).split('-'); return Date.UTC(+p[0], +p[1] - 1, +p[2]); };
+  var ymdOf = function (t) { return new Date(t).toISOString().slice(0, 10); };
+  var t = Math.max(utc(o.today) + DAY, utc(o.yearStart));
+  while (new Date(t).getUTCDay() !== want) t += DAY;
+  // [1.661] — the year's last day is a lesson day, as in the calculator: a
+  // Friday's 18 June is counted. Change both together or neither.
+  var dates = [], end = utc(o.yearEnd), closed = o.closures || {};
+  for (; t <= end; t += 7 * DAY) { if (!closed[ymdOf(t)]) dates.push(ymdOf(t)); }
+  if (!dates.length) return null;
+  var first = dates[0].slice(0, 7);
+  // [1.665] — no payment months for a first lesson in June: AC, 17 September
+  // 2026, a June start "would not be an enrollment", so there is no estimate.
+  var months = ({ 9: 10, 10: 9, 11: 8, 12: 7, 1: 6, 2: 5, 3: 4, 4: 3, 5: 2 })[+first.slice(5, 7)];
+  if (!months) return null;
+  var inFirst = dates.filter(function (x) { return x.slice(0, 7) === first; }).length;
+  var year = perLesson * dates.length;
+  var rnd = parseFloat(o.rounding) || 10;
+  if (inFirst < 3) {
+    year = year - year * (inFirst / dates.length);
+    months = Math.max(1, months - 1);
   }
-  return count;
+  return Math.ceil(year / months / rnd) * rnd;
 }
-
-// Returns raw monthly estimate before discounts, rounded up to $10
-function estimatePrice(duration, day, teacherHourlyRate){
-  var dur = parseInt(duration)||0;
-  if(!dur) return null;
-  var baseRate = EST_RATES[dur] || (dur<=30?EST_RATES[30]:dur<=45?EST_RATES[45]:EST_RATES[60]);
-  var tHourly = (teacherHourlyRate && parseFloat(teacherHourlyRate)) || EST_TEACHER_HOURLY;
-  var lessonPay = (dur/60)*tHourly;
-  var payrollTax = lessonPay*EST_TAX_RATE;
-  var perLesson = baseRate + payrollTax;
-  var lessonCount = day ? estLessonCount(day) : estLessonCount('Monday');
-  var annual = perLesson * lessonCount;
-  var monthly = annual / EST_SUB_MONTHS;
-  return Math.ceil(monthly/10)*10;
+function _estTodayYMD(){
+  var d=new Date();
+  return d.getFullYear()+'-'+(d.getMonth()<9?'0':'')+(d.getMonth()+1)+'-'+(d.getDate()<10?'0':'')+d.getDate();
+}
+// Returns raw monthly estimate before discounts, or null before the studio's
+// figures have arrived. `premium` is the teacher's, per lesson hour — the
+// server sends that, never a teacher's pay.
+function estimatePrice(duration, day, premium){
+  var est = publicCfg.estimate;
+  if(!est) return null;
+  return klEstimateMonthly({duration:duration, day:day||'Monday', premium:premium||0,
+    rates:est.rates, rounding:est.rounding, closures:_estOmittedDates(), today:_estTodayYMD(),
+    yearStart:publicCfg.schoolYearStart, yearEnd:publicCfg.schoolYearEnd});
+}
+// [1.668] — the dates an estimate leaves out: the studio's closures, and, when
+// the family has picked a teacher, the days that teacher is away. AC, 18
+// September 2026, asked whether estimates should factor teacher absences "at
+// least if the data is available" — it is, once a teacher is chosen, and a
+// proposal from that teacher leaves the same dates out.
+function _estOmittedDates(){
+  var t=_prefTeacherRow();
+  var away=(t&&Array.isArray(t.awayDates))?t.awayDates:[];
+  if(!away.length) return EST_CLOSURES;
+  var out={};
+  for(var k in EST_CLOSURES){ if(Object.prototype.hasOwnProperty.call(EST_CLOSURES,k)) out[k]=EST_CLOSURES[k]; }
+  away.forEach(function(d){ out[d]=1; });
+  return out;
 }
 
 // Apply pct then dollar discount, round up to $10
@@ -1106,11 +1159,17 @@ function applyDiscounts(raw, discPct, discDollar){
   return Math.ceil(v/10)*10;
 }
 
-function activeTeacherRate(){
+// [1.659] — the preferred teacher's premium per lesson hour, as the server
+// works it out. The teacher list no longer carries anyone's pay.
+function activeTeacherPremium(){
+  var t=_prefTeacherRow();
+  return t?(parseFloat(t.estPremium)||0):0;
+}
+// The preferred teacher's row from the public list, or null.
+function _prefTeacherRow(){
   if(!SC.teacherPref) return null;
   for(var i=0;i<SC.teachers.length;i++){
-    if(SC.teachers[i].teacherName===SC.teacherPref && SC.teachers[i].hourlyRate)
-      return parseFloat(SC.teachers[i].hourlyRate)||null;
+    if(SC.teachers[i].teacherName===SC.teacherPref) return SC.teachers[i];
   }
   return null;
 }
@@ -1131,7 +1190,7 @@ var EST_DISCLAIMER = 'Pricing shown is an estimate to help families budget for t
 // Shows all selected durations as rows, priced for this specific day + teacher
 function rSlotPricing(day){
   if(!SC.durations.length || !day) return '';
-  var tRate = activeTeacherRate();
+  var tPremium = activeTeacherPremium();
   var disc = currentStudentDiscounts();
   var hasDisc = disc.pct>0 || disc.dollar>0;
   var hd = 'Estimated monthly tuition';
@@ -1140,8 +1199,11 @@ function rSlotPricing(day){
   if(SC.splitLesson){
     splitFee = SC.durations.indexOf('60')>-1 ? 30 : 20;
   }
+  // Nothing to show until the studio's figures have arrived.
+  if(SC.durations.every(function(d){ return estimatePrice(d, day, tPremium)==null; })) return '';
   var rows = SC.durations.map(function(d){
-    var raw = estimatePrice(d, day, tRate);
+    var raw = estimatePrice(d, day, tPremium);
+    if(raw==null) return '';
     var final = hasDisc ? applyDiscounts(raw, disc.pct, disc.dollar) : raw;
     var splitLine = splitFee ? '<div class="est-row" style="font-size:11px;color:var(--text4)"><span class="est-dur">Split lesson fee</span><span class="est-amt">+$'+splitFee+'/mo</span></div>' : '';
     var totalLine = splitFee ? '<div class="est-row" style="font-weight:600"><span class="est-dur">Total</span><span class="est-amt">~$'+(final+splitFee)+'/mo</span></div>' : '';
@@ -1352,7 +1414,23 @@ function showMsg(m, t){
   setTimeout(function(){ MSG={m:'',t:''}; render(); }, 7000);
 }
 
-function phaseLabel(phase, avSubmitted, avOpen, tcAcceptedAt, needsManualInvoice){
+// [1.651] — AN EXPIRED PROPOSAL. AC, 17 September 2026: *"After a proposal
+// start date has passed (the first lesson scheduled) the proposal should
+// expire and a new one would need to be created."* The server says which ones
+// have (proposalExpired) and refuses to accept them; this page says so and
+// offers nothing to accept.
+// PLACEHOLDER COPY, flagged: family-facing, so AC's to write.
+var KL_EXPIRED_COPY = {
+  chip:'Proposal expired',
+  note:'This proposal has expired because its start date has passed. We\u2019ll be in touch with an updated proposal.'
+};
+function _klPropExpired(s){
+  return !!(s && isTruthy(s.proposalExpired));
+}
+function _klExpiredNoteHtml(){
+  return '<div class="msg mi" style="margin-top:.5rem">'+esc(KL_EXPIRED_COPY.note)+'</div>';
+}
+function phaseLabel(phase, avSubmitted, avOpen, tcAcceptedAt, needsManualInvoice, expired){
   if(phase==='Leads'||phase==='Pending'){
     if(isTruthy(avSubmitted)) return [{text:'Availability has been submitted', cls:'c-info'}];
     return [{text: isTruthy(avOpen)?'Submit your availability':'Pending', cls:'c-pend'}];
@@ -1370,7 +1448,7 @@ function phaseLabel(phase, avSubmitted, avOpen, tcAcceptedAt, needsManualInvoice
     // never a replacement for the phase-specific chip below.
     if(_isAccepted) chips.push({text:'Policies Accepted \u2014 Enrollment Pending', cls:'c-info'});
     if(phase==='Proposal'&&!_isAccepted){
-      chips.push({text:'Review and accept proposal', cls:'c-good'});
+      chips.push(expired?{text:KL_EXPIRED_COPY.chip, cls:'c-pend'}:{text:'Review and accept proposal', cls:'c-good'});   // [1.651]
     } else if(phase==='Confirmed to Enroll'){
       if(isTruthy(needsManualInvoice)){
         // Only the rare manual-invoice case is "by definition unpaid" now --
@@ -4675,7 +4753,7 @@ function _rChildStatusSummary(s, opts){
   var _inDetail = !!(opts && opts.inDetailBlock);
   var avOpen=isTruthy(publicCfg.availabilityOpen);
   var locMap={studio:'at Keylab','in-home':'In-home',virtual:'Virtual'};
-  var lbl=phaseLabel(s.phase, s.availabilitySubmitted, avOpen, s.tcAcceptedAt, s.needsManualInvoice);
+  var lbl=phaseLabel(s.phase, s.availabilitySubmitted, avOpen, s.tcAcceptedAt, s.needsManualInvoice, _klPropExpired(s));
   var ph=s.phase||'';
   var firstName=s.studentName?(s.studentName.trim().split(' ')[0]):'';
   var avSubmitted=isTruthy(s.availabilitySubmitted);
@@ -4701,7 +4779,8 @@ function _rChildStatusSummary(s, opts){
     if(s.lessonLocation) details.push(locMap[s.lessonLocation]||s.lessonLocation);
     if(details.length&&!_inDetail) h+='<div style="font-size:13px;color:var(--text3);margin-bottom:.3rem">'+esc(details.join(' \u00b7 '))+'</div>';
     if(s.startDate&&!_inDetail) h+='<div style="font-size:12px;color:var(--text3);margin-bottom:.3rem">Starts '+esc(_fmtFamilyDate(s.startDate))+'</div>';
-    if(s.monthlyPrice&&!_inDetail) h+=_fmtPriceBox(s,false);
+    // [1.651] — an expired change's price is not one anybody can accept.
+    if(s.monthlyPrice&&!_inDetail&&!_klPropExpired(s)) h+=_fmtPriceBox(s,false);
     if(ph==='Enrollment Change'){
       h+='<div class="msg mi" style="margin-top:.5rem">'+esc(firstName)+'\u2019s current enrollment will remain active until you accept the new proposal. Once accepted, we\u2019ll process the new enrollment and get '+esc(firstName)+'\u2019s new lesson schedule on the books, and the current enrollment will be archived.</div>';
     } else if(isEnrolled){
@@ -4736,6 +4815,9 @@ function _rChildStatusSummary(s, opts){
     } else {
       h+='<div style="font-size:12px;color:var(--text4)">'+esc(firstName)+' has a hold placed for '+esc(holdDur)+' minute '+esc(holdInstr)+' lessons with our teacher '+esc(s.teacher)+' for '+esc(s.day)+'s at '+esc(s.time)+' at Keylab. Holds are not guaranteed and can change, but we are currently targeting this time slot for '+esc(firstName)+'’s '+esc(holdInstr)+' lessons.</div>';
     }
+  } else if(hasProp&&!isAccepted&&_klPropExpired(s)){
+    // [1.651] — nothing to review or accept, and no price that still holds.
+    h+=_klExpiredNoteHtml();
   } else if(hasProp&&!isAccepted){
     var propDur=_effDur(s.durationBase,s.durationExtra)||s.durationBase||'';
     var propInstr=s.instrument||'';
@@ -5745,7 +5827,7 @@ function _rHomeChildActionCard(s){
     h+='<div class="card-stu">';
     h+=_rChildStatusSummary(s);
     var ctas=[];
-    if((ph==='Proposal'||ph==='Confirmed to Enroll')&&!isAccepted){
+    if((ph==='Proposal'||ph==='Confirmed to Enroll')&&!isAccepted&&!_klPropExpired(s)){   // [1.651]
       ctas.push('<button class="btn btn-p btn-sm" onclick="gotoEnrollment(&apos;'+esc(s.studentId)+'&apos;)">Review and Accept Proposal</button>');
     }
     if(!avLocked&&avOpen&&!avSubmitted&&(ph==='Leads'||ph==='Pending')&&!hasProp&&!hasTrial&&!isWithdrawn&&!isEnrolled){
@@ -6017,7 +6099,7 @@ function rHome(){
       h+='<div class="card-stu">';
       h+=_rChildStatusSummary(s);
       var ctas=[];
-      if((ph==='Proposal'||ph==='Confirmed to Enroll')&&!isAccepted){
+      if((ph==='Proposal'||ph==='Confirmed to Enroll')&&!isAccepted&&!_klPropExpired(s)){   // [1.651]
         ctas.push('<button class="btn btn-p btn-sm" onclick="gotoEnrollment(&apos;'+esc(s.studentId)+'&apos;)">Review and Accept Proposal</button>');
       }
       if(!avLocked&&avOpen&&!avSubmitted&&(ph==='Leads'||ph==='Pending')&&!hasProp&&!hasTrial&&!isWithdrawn&&!isEnrolled){
@@ -6970,8 +7052,7 @@ function rSchedForm(forReg){
   var _availTchs=_famAvailableTeachers(SC.instrument);
   var _isOtherInstrument=SC.instrument==='Other';
   var _noTeacherForInstrument=!!SC.instrument&&!_isOtherInstrument&&SC.teachers.length>0&&_availTchs.length===0;
-  var _availTchsForPref=_famAvailableTeachersForPref(SC.instrument);
-  var _noTeacherForDays=!_isOtherInstrument&&!_noTeacherForInstrument&&_availTchs.length>0&&_famSelectedDays().length>0&&_availTchsForPref.length===0;
+  var _noTeacherForDays=!_isOtherInstrument&&!_noTeacherForInstrument&&_famNobodyOnDays(SC.instrument);   // [1.667]
   if(!_isOtherInstrument){
     h+='<div class="card">';
     if(SC.teachersError){
@@ -7247,17 +7328,14 @@ function _saveSlotsAndDetails(cb,isNewRegistration,suppressEmails){
   // bagpipes to a teacher whose "Other" is harp would be worse than no match.
   var _saveIsOther=SC.instrument==='Other';
   var _saveNoTeacher=!!SC.instrument&&(_saveIsOther||(SC.teachers.length>0&&_saveAvailTchs.length===0));
-  // If SC.teacherPref no longer matches any teacher who teaches the
-  // currently-selected instrument AND is available on the currently-selected
-  // days (e.g. the family picked a teacher, then changed instrument or
-  // changed their days), the dropdown already visually shows "No
+  // If SC.teacherPref no longer matches any teacher the dropdown offers for
+  // the currently-selected instrument (e.g. the family picked a teacher, then
+  // changed instrument), the dropdown already visually shows "No
   // preference" since no <option> matches — but the raw SC.teacherPref
   // variable itself is untouched. Sanitize it here so what actually gets
   // saved matches what the family sees, instead of silently submitting a
-  // mismatched pairing they never had a chance to notice or correct. Uses
-  // the day-aware list, not _saveAvailTchs above -- that one stays
-  // instrument-only on purpose, since it also drives the separate
-  // no-teacher-for-instrument flag below.
+  // mismatched pairing they never had a chance to notice or correct. The
+  // same list the dropdown draws from ([1.667]: no longer day-filtered).
   var _saveAvailTchsForPref=_famAvailableTeachersForPref(SC.instrument);
   var _saveTeacherPref=(!_saveIsOther&&SC.teacherPref&&_saveAvailTchsForPref.some(function(t){return t.teacherName===SC.teacherPref;}))?SC.teacherPref:'';
   fapi('saveFamilyAvailability', {
@@ -7464,7 +7542,8 @@ function _fmtPriceBox(s,showFirstPaymentNote){
     if(_splitFee>0)   h+='<div class="prop-row" style="border-bottom:none;font-size:12px"><span class="prop-lbl">Split lesson fee'+(s.splitLessonNote?' \u2014 '+esc(s.splitLessonNote):'')+'</span><span class="prop-val">+$'+Math.round(_splitFee)+'/mo</span></div>';
     if(_sibPctVal>0)  h+='<div class="prop-row" style="border-bottom:none;font-size:12px;color:var(--green)"><span class="prop-lbl">Sibling discount</span><span class="prop-val">'+Math.round(_sibPctVal)+'%</span></div>';
     if(_pctDiscVal>0) h+='<div class="prop-row" style="border-bottom:none;font-size:12px;color:var(--green)"><span class="prop-lbl">Discount applied'+(s.pctDiscountNote?' \u2014 '+esc(s.pctDiscountNote):'')+'</span><span class="prop-val">'+Math.round(_pctDiscVal)+'%</span></div>';
-    if(_dolDisc>0)    h+='<div class="prop-row" style="border-bottom:none;font-size:12px;color:var(--green)"><span class="prop-lbl">Discount applied'+(s.dollarDiscountNote?' \u2014 '+esc(s.dollarDiscountNote):'')+'</span><span class="prop-val">&minus;$'+Math.round(_dolDisc)+'</span></div>';
+    // [1.662] — PLACEHOLDER words, flagged: the same as the proposal email's.
+    if(_dolDisc>0)    h+='<div class="prop-row" style="border-bottom:none;font-size:12px;color:var(--green)"><span class="prop-lbl">Discount applied'+(s.dollarDiscFirst?' (first payment only)':'')+(s.dollarDiscountNote?' \u2014 '+esc(s.dollarDiscountNote):'')+'</span><span class="prop-val">&minus;$'+Math.round(_dolDisc)+'</span></div>';
     if(_adj!==0){var _adjSign=_adj<0?'&minus;':'+';var _adjCol=_adj<0?'var(--green)':'var(--rt)';h+='<div class="prop-row" style="border-bottom:none;font-size:12px;color:'+_adjCol+'"><span class="prop-lbl">Adjustment'+(s.adjustmentNote?' \u2014 '+esc(s.adjustmentNote):'')+'</span><span class="prop-val">'+_adjSign+'$'+Math.round(Math.abs(_adj))+'/mo</span></div>';}
     if(_oneTime>0)    h+='<div class="prop-row" style="border-bottom:none;font-size:12px"><span class="prop-lbl">One-time fee (first payment only)'+(s.oneTimeChargeNote?' \u2014 '+esc(s.oneTimeChargeNote):'')+'</span><span class="prop-val">$'+Math.round(_oneTime)+'</span></div>';
     h+='</div>';
@@ -7571,7 +7650,7 @@ function rEnrollment(scopeStudentId){
       // ── New proposal section ──
       h+='<div class="card" style="margin-top:1rem">';
       h+='<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem">New Proposal \u2014 Pending Your Review</div>';
-      h+='<div style="margin-bottom:.75rem"><div style="font-size:18px;font-weight:700;color:var(--text);letter-spacing:-.01em;margin-bottom:.4rem">LESSON PROPOSAL FOR '+esc(s.studentName||firstName)+(s.instrument?' \u2014 '+esc(s.instrument):'')+'</div><span class="chip c-warn" style="display:inline-block">Review and accept</span></div>';
+      h+='<div style="margin-bottom:.75rem"><div style="font-size:18px;font-weight:700;color:var(--text);letter-spacing:-.01em;margin-bottom:.4rem">LESSON PROPOSAL FOR '+esc(s.studentName||firstName)+(s.instrument?' \u2014 '+esc(s.instrument):'')+'</div>'+(_klPropExpired(s)?'<span class="chip c-pend" style="display:inline-block">'+esc(KL_EXPIRED_COPY.chip)+'</span>':'<span class="chip c-warn" style="display:inline-block">Review and accept</span>')+'</div>';   // [1.651]
       var _npRows=[
         ['Instrument',s.instrument],
         ['Teacher',s.teacher],
@@ -7585,6 +7664,11 @@ function rEnrollment(scopeStudentId){
         if(!row[1]) return;
         h+='<div class="prop-row"><span class="prop-lbl">'+esc(row[0])+'</span><span class="prop-val">'+esc(row[1])+'</span></div>';
       });
+      if(_klPropExpired(s)){
+        // [1.651] — expired: no price that still holds, nothing to accept. The
+        // current enrollment above is untouched.
+        h+=_klExpiredNoteHtml();
+      } else {
       if(hasPrice) h+=_fmtPriceBox(s);
       h+=_klProposalAdjustmentsHtml(s);
       // Acceptance form
@@ -7609,10 +7693,11 @@ function rEnrollment(scopeStudentId){
         :'<div id="tc-err-'+esc(sid)+'" style="display:none;color:var(--rt);font-size:13px;margin-bottom:.5rem"></div>'+
          '<button id="tc-submit-btn-'+esc(sid)+'" class="btn btn-p btn-full" onclick="doSubmitTC(&apos;'+esc(sid)+'&apos;)" '+(canSubmit?'':'disabled style="opacity:0.4"')+'>Accept New Proposal</button>';
       h+='</div>';
+      }   // [1.651] — end of the not-expired branch
       h+='</div>';
     } else if(isProposalPhase){
       // ── Full enrollment details ──
-      var _chips=phaseLabel(ph, s.availabilitySubmitted, avOpen, s.tcAcceptedAt, s.needsManualInvoice);
+      var _chips=phaseLabel(ph, s.availabilitySubmitted, avOpen, s.tcAcceptedAt, s.needsManualInvoice, _klPropExpired(s));
       var statusChip='';
       if(ph==='Proposal'&&!isAccepted){
         statusChip='<div style="margin-bottom:.75rem"><div style="font-size:18px;font-weight:700;color:var(--text);letter-spacing:-.01em;margin-bottom:.4rem">LESSON PROPOSAL FOR '+esc(s.studentName||' ')+(s.instrument?' \u2014 '+esc(s.instrument):'')+'</div>'+_renderChips(_chips)+'</div>';
@@ -7639,7 +7724,7 @@ function rEnrollment(scopeStudentId){
         if(!row[1]) return;
         h+='<div class="prop-row"><span class="prop-lbl">'+esc(row[0])+'</span><span class="prop-val">'+esc(row[1])+'</span></div>';
       });
-      if(hasPrice&&!(isAccepted||isFullyEnrolled)){
+      if(hasPrice&&!(isAccepted||isFullyEnrolled)&&!_klPropExpired(s)){   // [1.651]
         h+=_fmtPriceBox(s);
         h+=_klProposalAdjustmentsHtml(s);
       }
@@ -7715,6 +7800,12 @@ function rEnrollment(scopeStudentId){
 
           h+='</div>';
         }
+      } else if(_klPropExpired(s)&&!isAccepted&&!isFullyEnrolled){
+        // [1.651] — expired: the child's summary above says so (inside this card
+        // or in its own), and there is nothing to accept. The policies stay
+        // readable.
+        h+='<h2 style="margin-top:1.25rem">Lesson Policies</h2>';
+        h+=rPolicyCollapsible(false, isInHome, sid);
       } else if(hasPrice&&!isAccepted&&!isFullyEnrolled){
         var _needsInvoice3=isTruthy(s.needsManualInvoice);
         // Folded into this child's block rather than a card of its own
@@ -8112,6 +8203,18 @@ function doSubmitTC(studentId){
   var _ackText=_tcAckText(isTruthy(_ackStu.needsManualInvoice));
   fapi('submitTandC', {studentId:studentId, acceptedName:name, policySnapshot:policySnapshot, acknowledgment:_ackText}, function(e,r){
     tc.busy=false;
+    // [1.651] — the proposal expired while this page was open. The card is
+    // redrawn as expired at once, so the note takes the Accept button's place
+    // (AC, 8 September: a status goes beside the control, not at the top of
+    // the page), and the family's data is fetched again behind it.
+    if(r&&!r.ok&&r.expired){
+      TC[studentId]={checked:false,name:'',busy:false};
+      for(var _xi=0;_xi<students.length;_xi++){
+        if(students[_xi].studentId===studentId){ students[_xi].proposalExpired=true; break; }
+      }
+      gotoEnrollment(studentId);
+      return;
+    }
     if(e||!r||!r.ok){showMsg((r&&r.error)||'Something went wrong. Please try again.','e');render();return;}
     if(r.alreadyAccepted){
       // Not an error -- most likely a duplicate click or a second open tab.
@@ -8217,6 +8320,8 @@ function boot(){
       if(r.closures){ EST_CLOSURES=r.closures; publicCfg.closures=r.closures; }
       if(r.upcomingDates) publicCfg.upcomingDates=r.upcomingDates;
       if(r.schoolYearStart) publicCfg.schoolYearStart=r.schoolYearStart;
+      if(r.schoolYearEnd) publicCfg.schoolYearEnd=r.schoolYearEnd;   // [1.660]
+      if(r.estimate) publicCfg.estimate=r.estimate;                   // [1.659]
       if(r.keylabCalendarUrl) publicCfg.keylabCalendarUrl=r.keylabCalendarUrl;
       if(r.instruments){
         var _fInstr=r.instruments.split(',').map(function(x){return x.trim();}).filter(Boolean);

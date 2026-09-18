@@ -611,7 +611,33 @@ var familyAddress = {street:'', apt:''};
 var INV = {open:false, name:'', email:'', busy:false, sent:false, error:''};
 var _familyLoading = false;
 var _lastFamilyLoadAt = 0;
-var publicCfg = {availabilityOpen:'FALSE',schedulingBillingUrl:''};
+// [1.671] — availabilityOpen starts with NO ANSWER YET, not with CLOSED.
+//
+// **The portal has two states, open and closed.** AC, 18 September 2026:
+// *"the portal is either open or closed, it doesn't matter if we're on holiday"*
+// and *"we don't close the portal for times the studio is closed."* Correct, and
+// nothing here changes it: this flag is one switch he sets in Settings, read
+// directly at every site, and it is joined to no calendar — not the closures,
+// not the school year, not a holiday. Checked across all three app files rather
+// than assumed.
+//
+// **The null below is not a third state of the portal.** It is this PAGE not
+// having been told which of the two states applies yet, which is a fact about
+// page load and not about the studio. Described as "three states" first, which
+// read as if the portal had grown a holiday mode; it has not.
+//
+// AC, 18 September 2026,
+// looking at his own family page: *"it also looks like you somehow broke access
+// for families on the family page. It says we're not accepting submissions."*
+// Nothing was broken and the switch was on. This default was, and the page
+// rendered it as a statement of studio policy for the 15-25 seconds the server
+// took to answer — and for ever, silently, if that call failed, because its
+// handler had no else branch. **null means "the studio has not been asked yet",
+// which is not the same fact as "the studio is closed".** Every existing reader
+// goes through isTruthy(), and isTruthy(null) is false, so nothing that merely
+// WITHHOLDS a control changes behaviour; only the one place that ASSERTS a
+// policy to a family now has to know the answer first. See _avKnown().
+var publicCfg = {availabilityOpen:null,schedulingBillingUrl:''};
 var MSG = {m:'', t:''};
 var busy = false; // generic submitting flag
 
@@ -1307,6 +1333,14 @@ function esc(s){
     .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 function isTruthy(v){ return v===true||v==='TRUE'||v==='true'; }
+// [1.671] — has the server told this page which of the two states applies?
+// isTruthy() answers "is it open", which cannot tell a closed portal apart from
+// an unanswered one. Anything that puts a sentence about the portal in front of
+// a family asks this first. NOT a third portal state — the portal is open or
+// closed; this is only whether the page knows yet.
+function _avKnown(){
+  return publicCfg.availabilityOpen!==null && publicCfg.availabilityOpen!==undefined;
+}
 // Effective duration = base + extra minutes (v223). Mirrors the admin file's
 // _effDur() and calcPrice()'s own effDur=dur+extra formula, so a family sees
 // the same real lesson length the admin priced and scheduled, not just the
@@ -2638,6 +2672,11 @@ function _saveNextRegisteredChild(studentIds, idx, done){
 // ============================================================
 function _applyProposalResp(r){
   students=r.proposals||[];
+  // [1.671] — the availability flag travels with the family's own data now, so
+  // a card can never render without it. Assigned unconditionally when present,
+  // for BACKLOG 1.136's reason: a truthiness guard would stop 'FALSE' ever
+  // overwriting a previous 'TRUE', which is the half that has to reach the page.
+  if(r.availabilityOpen!==undefined&&r.availabilityOpen!==null) publicCfg.availabilityOpen=r.availabilityOpen;
   familyParents=_famParentsFromResp(r);
   familyAddress={street:r.street||'',apt:r.apt||'',city:r.city||'',state:r.state||'',zip:r.zip||''};
   _lastFamilyLoadAt=Date.now();
@@ -4841,9 +4880,17 @@ function _rChildStatusSummary(s, opts){
   } else if(ph==='Leads'||ph==='Pending'){
     if(avOpen){
       h+='<div style="font-size:12px;color:var(--text4)">Please let us know when '+esc(firstName)+' is available for lessons.</div>';
-    } else {
+    } else if(_avKnown()){
+      // [1.671] — only once the server has actually said FALSE. PLACEHOLDER:
+      // AC on this sentence, 18 September 2026 — *"The message is also
+      // completely wrong. We'll be in touch soon doesn't make sense when we
+      // don't know who didn't have access"* — so the wording is his to replace.
+      // What is fixed here is that it can no longer appear when nobody knows.
       h+='<div style="font-size:12px;color:var(--text4)">We\'re not accepting availability submissions right now. We\'ll be in touch soon.</div>';
     }
+    // UNKNOWN: say nothing at all. A card that states studio policy before the
+    // studio has been asked is a false statement, not a default — and saying
+    // nothing needs no copy, so it adds no wording for AC to write.
   }
   return h;
 }
@@ -8296,45 +8343,8 @@ function boot(){
   // waited on this). If it happens to resolve after the main content is
   // already showing, it re-renders so config-dependent UI (e.g. whether the
   // Scheduling tab appears) never gets stuck on default values.
-  api({action:'getPublicConfig', data:{}}, function(e,r){
-    if(!e&&r&&r.ok){
-      publicCfg.availabilityOpen=r.availabilityOpen;
-      // BACKLOG 1.136. Assigned unconditionally, not behind an `if` -- the
-      // whole point is that flipping the lock OFF has to reach the page too,
-      // and a truthiness guard would make 'FALSE' and '' unable to overwrite
-      // a previous value.
-      publicCfg.agreementPolicy=r.agreementPolicy||null;
-      publicCfg.messagingLocked=r.messagingLocked;
-      publicCfg.messagingLockedMsg=r.messagingLockedMsg;
-      if(r.schedulingBillingUrl) publicCfg.schedulingBillingUrl=r.schedulingBillingUrl;
-      // Everything doGetPublicConfig() returns has to land on publicCfg, not
-      // just the two fields this handler started life with. Three of them
-      // weren't being copied at all: `closures` went only into EST_CLOSURES
-      // (the pricing estimator's own copy), and `upcomingDates` and
-      // `schoolYearStart` went nowhere — so on the live page the one-page
-      // Home's closure-skipping never skipped anything, Important Upcoming
-      // Dates was permanently empty, and the school-year floor was inert.
-      // None of it showed up in testing because the render harness stubs
-      // publicCfg directly. scripts/check.js now guards this handler against
-      // the server growing a field the client silently drops.
-      if(r.closures){ EST_CLOSURES=r.closures; publicCfg.closures=r.closures; }
-      if(r.upcomingDates) publicCfg.upcomingDates=r.upcomingDates;
-      if(r.schoolYearStart) publicCfg.schoolYearStart=r.schoolYearStart;
-      if(r.schoolYearEnd) publicCfg.schoolYearEnd=r.schoolYearEnd;   // [1.660]
-      if(r.estimate) publicCfg.estimate=r.estimate;                   // [1.659]
-      if(r.keylabCalendarUrl) publicCfg.keylabCalendarUrl=r.keylabCalendarUrl;
-      if(r.instruments){
-        var _fInstr=r.instruments.split(',').map(function(x){return x.trim();}).filter(Boolean);
-        // The studio's list replaces the built-in one wholesale and does not
-        // carry "Other" -- the admin portal appends it to its own copy the
-        // same way. Without this a family had no way to ask for anything off
-        // the list, because the built-in list that did carry it was gone.
-        if(_fInstr.length&&_fInstr.indexOf('Other')===-1) _fInstr.push('Other');
-        if(_fInstr.length) INSTRUMENTS=_fInstr;
-      }
-      render();
-    }
-  });
+  // [1.671] — bounded retry, see _klLoadPublicConfig().
+  _klLoadPublicConfig(0);
 
   // ── [1.137] — settle the emailed link before anything else ────────────
   // An emailed link is a working key, and until now a year-long reusable one:
@@ -8506,6 +8516,76 @@ function boot(){
   PAGE = 'login';
   render();
 }
+
+// [1.671] — the public-config load, with a bounded retry.
+//
+// This used to sit inline in boot() as `if(!e&&r&&r.ok){...}` with NO else: a
+// failed or timed-out call left the page with no answer, no retry and no
+// message — for ever, on that visit — and the availability card rendered its
+// hardcoded CLOSED default as a statement of studio policy. Measured 18
+// September 2026: this endpoint takes 15-25 seconds signed out, so the window
+// was real even when the call eventually succeeded.
+//
+// Two things close it. The flag now also travels with the family's own data
+// (doGetProposal), so a logged-in family never waits on this at all; and a
+// failure here is retried rather than swallowed. Until an answer arrives the
+// flag stays null, which _avKnown() reports as unknown and which says nothing
+// to a family.
+//
+// Bounded at three retries on a 2s/6s/18s backoff: long enough to outlast a
+// slow first byte, short enough that a family who waits gets the real answer on
+// this visit, and finite so an endpoint that is genuinely down is not hammered
+// from every open portal.
+var _KL_CFG_RETRIES = 3;
+function _klLoadPublicConfig(attempt){
+  attempt = attempt || 0;
+  api({action:'getPublicConfig', data:{}}, function(e,r){
+    if(e||!r||!r.ok){
+      if(attempt < _KL_CFG_RETRIES){
+        setTimeout(function(){ _klLoadPublicConfig(attempt+1); }, 2000*Math.pow(3,attempt));
+      }
+      return;
+    }
+    if(!e&&r&&r.ok){
+      publicCfg.availabilityOpen=r.availabilityOpen;
+      // BACKLOG 1.136. Assigned unconditionally, not behind an `if` -- the
+      // whole point is that flipping the lock OFF has to reach the page too,
+      // and a truthiness guard would make 'FALSE' and '' unable to overwrite
+      // a previous value.
+      publicCfg.agreementPolicy=r.agreementPolicy||null;
+      publicCfg.messagingLocked=r.messagingLocked;
+      publicCfg.messagingLockedMsg=r.messagingLockedMsg;
+      if(r.schedulingBillingUrl) publicCfg.schedulingBillingUrl=r.schedulingBillingUrl;
+      // Everything doGetPublicConfig() returns has to land on publicCfg, not
+      // just the two fields this handler started life with. Three of them
+      // weren't being copied at all: `closures` went only into EST_CLOSURES
+      // (the pricing estimator's own copy), and `upcomingDates` and
+      // `schoolYearStart` went nowhere — so on the live page the one-page
+      // Home's closure-skipping never skipped anything, Important Upcoming
+      // Dates was permanently empty, and the school-year floor was inert.
+      // None of it showed up in testing because the render harness stubs
+      // publicCfg directly. scripts/check.js now guards this handler against
+      // the server growing a field the client silently drops.
+      if(r.closures){ EST_CLOSURES=r.closures; publicCfg.closures=r.closures; }
+      if(r.upcomingDates) publicCfg.upcomingDates=r.upcomingDates;
+      if(r.schoolYearStart) publicCfg.schoolYearStart=r.schoolYearStart;
+      if(r.schoolYearEnd) publicCfg.schoolYearEnd=r.schoolYearEnd;   // [1.660]
+      if(r.estimate) publicCfg.estimate=r.estimate;                   // [1.659]
+      if(r.keylabCalendarUrl) publicCfg.keylabCalendarUrl=r.keylabCalendarUrl;
+      if(r.instruments){
+        var _fInstr=r.instruments.split(',').map(function(x){return x.trim();}).filter(Boolean);
+        // The studio's list replaces the built-in one wholesale and does not
+        // carry "Other" -- the admin portal appends it to its own copy the
+        // same way. Without this a family had no way to ask for anything off
+        // the list, because the built-in list that did carry it was gone.
+        if(_fInstr.length&&_fInstr.indexOf('Other')===-1) _fInstr.push('Other');
+        if(_fInstr.length) INSTRUMENTS=_fInstr;
+      }
+      render();
+    }
+  });
+}
+
 
 document.addEventListener('DOMContentLoaded', function(){
   render();

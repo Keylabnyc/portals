@@ -1104,8 +1104,9 @@ var EST_CLOSURES = {};
 // and fails if this disagrees with the pricing calculator. It is the
 // calculator's own arithmetic for the plain case (a studio lesson with no
 // travel, prep or discount) starting with the first lesson on that day after
-// today: the base rate for the length, plus the teacher's premium per lesson
-// hour; every lesson left in the year, less closures; the payment months for
+// today: the base rate for the length — [1.676], and NOTHING for the teacher,
+// whose rate no longer reaches a family's price; every lesson left in the year,
+// less closures; the payment months for
 // the month those lessons start in, a first month of fewer than three lessons
 // taken out and charged on its own; the monthly figure rounded up. It returns
 // that monthly figure, or null when it has nothing to go on.
@@ -1119,7 +1120,12 @@ function klEstimateMonthly(o) {
   else if (dur <= 45) base = r30 + (dur - 30) / 15 * (r45 - r30);
   else if (dur <= 60) base = r45 + (dur - 45) / 15 * (r60 - r45);
   else base = r60 + (dur - 60) / 15 * (r60 - r45);
-  var perLesson = base + (dur / 60) * (parseFloat(o.premium) || 0);
+  // [1.676] — THE TEACHER'S PREMIUM IS OUT OF THE PRICE, here as in the
+  // calculator: the card is the price whoever teaches the lesson. This term
+  // was `calcPrice`'s teacher-rate markup coming out the other end, so a
+  // family who picked a higher-paid teacher was quoted more for the same
+  // lesson. Change this in all three copies or none.
+  var perLesson = base;
   var want = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].indexOf(o.day);
   if (want < 1) return null;
   var DAY = 864e5;
@@ -1151,12 +1157,13 @@ function _estTodayYMD(){
   return d.getFullYear()+'-'+(d.getMonth()<9?'0':'')+(d.getMonth()+1)+'-'+(d.getDate()<10?'0':'')+d.getDate();
 }
 // Returns raw monthly estimate before discounts, or null before the studio's
-// figures have arrived. `premium` is the teacher's, per lesson hour — the
-// server sends that, never a teacher's pay.
-function estimatePrice(duration, day, premium){
+// figures have arrived. [1.676] — it takes no teacher premium any more: the
+// card is the price whoever teaches the lesson, so the estimate a family reads
+// no longer moves when they change their preferred teacher.
+function estimatePrice(duration, day){
   var est = publicCfg.estimate;
   if(!est) return null;
-  return klEstimateMonthly({duration:duration, day:day||'Monday', premium:premium||0,
+  return klEstimateMonthly({duration:duration, day:day||'Monday',
     rates:est.rates, rounding:est.rounding, closures:_estOmittedDates(), today:_estTodayYMD(),
     yearStart:publicCfg.schoolYearStart, yearEnd:publicCfg.schoolYearEnd});
 }
@@ -1185,12 +1192,9 @@ function applyDiscounts(raw, discPct, discDollar){
   return Math.ceil(v/10)*10;
 }
 
-// [1.659] — the preferred teacher's premium per lesson hour, as the server
-// works it out. The teacher list no longer carries anyone's pay.
-function activeTeacherPremium(){
-  var t=_prefTeacherRow();
-  return t?(parseFloat(t.estPremium)||0):0;
-}
+// [1.676] — `activeTeacherPremium` IS GONE, with the server field it read. The
+// preferred teacher still changes which DATES an estimate leaves out (that
+// teacher's days away, [1.668]); what they are paid no longer changes the price.
 // The preferred teacher's row from the public list, or null.
 function _prefTeacherRow(){
   if(!SC.teacherPref) return null;
@@ -1216,7 +1220,6 @@ var EST_DISCLAIMER = 'Pricing shown is an estimate to help families budget for t
 // Shows all selected durations as rows, priced for this specific day + teacher
 function rSlotPricing(day){
   if(!SC.durations.length || !day) return '';
-  var tPremium = activeTeacherPremium();
   var disc = currentStudentDiscounts();
   var hasDisc = disc.pct>0 || disc.dollar>0;
   var hd = 'Estimated monthly tuition';
@@ -1226,9 +1229,9 @@ function rSlotPricing(day){
     splitFee = SC.durations.indexOf('60')>-1 ? 30 : 20;
   }
   // Nothing to show until the studio's figures have arrived.
-  if(SC.durations.every(function(d){ return estimatePrice(d, day, tPremium)==null; })) return '';
+  if(SC.durations.every(function(d){ return estimatePrice(d, day)==null; })) return '';
   var rows = SC.durations.map(function(d){
-    var raw = estimatePrice(d, day, tPremium);
+    var raw = estimatePrice(d, day);
     if(raw==null) return '';
     var final = hasDisc ? applyDiscounts(raw, disc.pct, disc.dollar) : raw;
     var splitLine = splitFee ? '<div class="est-row" style="font-size:11px;color:var(--text4)"><span class="est-dur">Split lesson fee</span><span class="est-amt">+$'+splitFee+'/mo</span></div>' : '';

@@ -207,7 +207,6 @@ button:active:not(:disabled),
 .est-row:last-of-type{border-bottom:none}
 .est-dur{font-size:12px;color:var(--text3)}
 .est-amt{font-size:13px;font-weight:600;font-family:"Inter",sans-serif;color:var(--acc)}
-.est-disc{font-size:10px;color:var(--gt);margin-top:3px}
 .est-note{font-size:10px;color:var(--text5);margin-top:.4rem;line-height:1.5}
 .stu-name{display:inline-block;background:rgba(255,255,255,.55);border-radius:20px;padding:4px 14px;color:var(--acc);font-size:22px;font-weight:700;letter-spacing:-.01em;line-height:1.25;border:1px solid rgba(30,58,110,.12)}
 /* Policy PDF print view — hidden on screen, shown only inside the print media query below */
@@ -1182,15 +1181,17 @@ function _estOmittedDates(){
   return out;
 }
 
-// Apply pct then dollar discount, round up to $10
-function applyDiscounts(raw, discPct, discDollar){
-  if(!raw) return raw;
-  var v = raw;
-  if(discPct>0) v = v * (1 - discPct/100);
-  if(discDollar>0) v = v - discDollar;
-  if(v<0) v=0;
-  return Math.ceil(v/10)*10;
-}
+// [1.675] — `applyDiscounts` AND `currentStudentDiscounts` ARE GONE, with the
+// two fields they read. They discounted the availability form's estimate from
+// `familyDiscountPct`/`familyDiscountDollar` — a pair on the STUDENTS row that
+// `calcPrice` never read and no box in the admin tool ever set, so a parent
+// could be shown "✓ 5% off" with the list price struck through against a
+// discount no proposal would honour. AC, 18 September 2026: *"Discounts are
+// supposed to be displayed in the adjustments area of the proposal, and should
+// display the same on the family page after acceptance."* — which is what
+// `_adjustmentLines_` already builds, out of the fields the calculator really
+// uses. So this estimate shows the card price and nothing else, and it is
+// *"just a general estimate, so we dont need to complicate things"*.
 
 // [1.676] — `activeTeacherPremium` IS GONE, with the server field it read. The
 // preferred teacher still changes which DATES an estimate leaves out (that
@@ -1204,24 +1205,12 @@ function _prefTeacherRow(){
   return null;
 }
 
-// Get discounts for currently-selected student from students[] array
-function currentStudentDiscounts(){
-  var s=null;
-  for(var i=0;i<students.length;i++){
-    if(students[i].studentId===SC.studentId){s=students[i];break;}
-  }
-  if(!s) return {pct:0,dollar:0};
-  return {pct:parseFloat(s.familyDiscountPct)||0, dollar:parseFloat(s.familyDiscountDollar)||0};
-}
-
 var EST_DISCLAIMER = 'Pricing shown is an estimate to help families budget for the school year. Your actual tuition will be confirmed in your proposal and may vary based on location, start date, and other factors.';
 
 // Per-slot pricing block — called from rSlot, rSlotLocked, rSchedViewMode
 // Shows all selected durations as rows, priced for this specific day + teacher
 function rSlotPricing(day){
   if(!SC.durations.length || !day) return '';
-  var disc = currentStudentDiscounts();
-  var hasDisc = disc.pct>0 || disc.dollar>0;
   var hd = 'Estimated monthly tuition';
   // Split lesson fee: $30/mo if 60min selected, $20/mo otherwise (45min split)
   var splitFee = 0;
@@ -1233,25 +1222,16 @@ function rSlotPricing(day){
   var rows = SC.durations.map(function(d){
     var raw = estimatePrice(d, day);
     if(raw==null) return '';
-    var final = hasDisc ? applyDiscounts(raw, disc.pct, disc.dollar) : raw;
     var splitLine = splitFee ? '<div class="est-row" style="font-size:11px;color:var(--text4)"><span class="est-dur">Split lesson fee</span><span class="est-amt">+$'+splitFee+'/mo</span></div>' : '';
-    var totalLine = splitFee ? '<div class="est-row" style="font-weight:600"><span class="est-dur">Total</span><span class="est-amt">~$'+(final+splitFee)+'/mo</span></div>' : '';
+    var totalLine = splitFee ? '<div class="est-row" style="font-weight:600"><span class="est-dur">Total</span><span class="est-amt">~$'+(raw+splitFee)+'/mo</span></div>' : '';
     return '<div class="est-row">'
       +'<span class="est-dur">'+esc(d)+' min</span>'
-      +'<span class="est-amt">~$'+final+'/mo'+(hasDisc&&final!==raw?'<span style="font-size:10px;font-weight:400;color:var(--text5);margin-left:4px;text-decoration:line-through">$'+raw+'</span>':'')+'</span>'
+      +'<span class="est-amt">~$'+raw+'/mo</span>'
       +'</div>'+splitLine+totalLine;
   }).join('');
-  var discLine='';
-  if(hasDisc){
-    var parts=[];
-    if(disc.pct>0) parts.push(disc.pct+'% off');
-    if(disc.dollar>0) parts.push('$'+disc.dollar+'/mo off');
-    discLine='<div class="est-disc">\u2713 '+parts.join(' + ')+'</div>';
-  }
   return '<div class="est-block">'
     +'<div class="est-hd">'+hd+'</div>'
     +rows
-    +discLine
     +'</div>';
 }
 

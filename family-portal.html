@@ -4578,6 +4578,17 @@ function _tcAckText(needsInvoice){
   return _agrText(needsInvoice?'ackInvoice':'ackOnFile')
       || (needsInvoice?TC_ACK_INVOICE:TC_ACK_ONFILE);
 }
+// [1.681] — the Enrollment Change screen's own sentence, moved here unchanged so
+// the screen and the record read one string. The screen drew it inline while the
+// acceptance stored _tcAckText()'s — so a family changing an enrollment was
+// recorded (and emailed) as agreeing to a sentence they were never shown.
+var TC_ACK_CHANGE='By accepting this proposal, I acknowledge that I have read and accept Keylab\u2019s enrollment policies, and I am authorizing Keylab to schedule my child\u2019s lessons, bill my card on file for the first month of lessons, and schedule recurring automatic flat-monthly payments based on the proposal details.';
+// The sentence THIS student is shown beside the accept box, and therefore the one
+// their acceptance records.
+function _tcAckTextFor(stu){
+  if(stu&&stu.phase==='Enrollment Change') return TC_ACK_CHANGE;
+  return _tcAckText(isTruthy(stu&&stu.needsManualInvoice));
+}
 // A function, not a constant, because the version is fetched after load.
 function _selfReleaseText(){ return _agrText('selfRelease') || SELF_RELEASE_TEXT; }
 
@@ -5717,6 +5728,11 @@ function _klCurrentEnrollmentFactsHtml(s){
       '<div class="kl-when">'+esc(r[1])+'</div></div>';
   });
   h+=_fmtPriceBox({monthlyPrice:ce.monthlyPrice, lessonLocation:ce.lessonLocation}, false);
+  // [1.681] — and the adjustments that enrollment was accepted with. The row's
+  // acceptedAdjustmentsText is still the CURRENT enrollment's while a change is
+  // pending (the pending proposal's words travel separately, as
+  // proposalAdjustmentsText), so this is the right block for the right lesson.
+  h+=_klAdjustmentsHtml(s);
   // ── [1.575] — the policies end THIS block too, not the caller ──────────
   //
   // Moved down from `_rHomeEnrDetailsToggle`, where it used to sit after the
@@ -7573,7 +7589,7 @@ function _fmtPriceBox(s,showFirstPaymentNote){
     if(_sibPctVal>0)  h+='<div class="prop-row" style="border-bottom:none;font-size:12px;color:var(--green)"><span class="prop-lbl">Sibling discount</span><span class="prop-val">'+Math.round(_sibPctVal)+'%</span></div>';
     if(_pctDiscVal>0) h+='<div class="prop-row" style="border-bottom:none;font-size:12px;color:var(--green)"><span class="prop-lbl">Discount applied'+(s.pctDiscountNote?' \u2014 '+esc(s.pctDiscountNote):'')+'</span><span class="prop-val">'+Math.round(_pctDiscVal)+'%</span></div>';
     // [1.662] — PLACEHOLDER words, flagged: the same as the proposal email's.
-    if(_dolDisc>0)    h+='<div class="prop-row" style="border-bottom:none;font-size:12px;color:var(--green)"><span class="prop-lbl">Discount applied'+(s.dollarDiscFirst?' (first payment only)':'')+(s.dollarDiscountNote?' \u2014 '+esc(s.dollarDiscountNote):'')+'</span><span class="prop-val">&minus;$'+Math.round(_dolDisc)+'</span></div>';
+    if(_dolDisc>0)    h+='<div class="prop-row" style="border-bottom:none;font-size:12px;color:var(--green)"><span class="prop-lbl">Discount applied'+(s.dollarDiscountWhereText!=null?s.dollarDiscountWhereText:(s.dollarDiscFirst?' (first payment only)':''))+(s.dollarDiscountNote?' \u2014 '+esc(s.dollarDiscountNote):'')+'</span><span class="prop-val">&minus;$'+Math.round(_dolDisc)+'</span></div>';
     if(_adj!==0){var _adjSign=_adj<0?'&minus;':'+';var _adjCol=_adj<0?'var(--green)':'var(--rt)';h+='<div class="prop-row" style="border-bottom:none;font-size:12px;color:'+_adjCol+'"><span class="prop-lbl">Adjustment'+(s.adjustmentNote?' \u2014 '+esc(s.adjustmentNote):'')+'</span><span class="prop-val">'+_adjSign+'$'+Math.round(Math.abs(_adj))+'/mo</span></div>';}
     if(_oneTime>0)    h+='<div class="prop-row" style="border-bottom:none;font-size:12px"><span class="prop-lbl">One-time fee (first payment only)'+(s.oneTimeChargeNote?' \u2014 '+esc(s.oneTimeChargeNote):'')+'</span><span class="prop-val">$'+Math.round(_oneTime)+'</span></div>';
     h+='</div>';
@@ -7708,7 +7724,7 @@ function rEnrollment(scopeStudentId){
       h+=rPolicyText(isInHome);
       h+='<div class="agree-box" id="tc-agree-box-'+esc(sid)+'" style="'+(tc.checked?'border-color:var(--green);background:rgba(255,255,255,.5)':'')+'">';
       h+='<input type="checkbox" id="tc-chk-'+esc(sid)+'"'+(tc.checked?' checked':'')+' onchange="_tcState(&apos;'+esc(sid)+'&apos;).checked=this.checked;tcRefresh(&apos;'+esc(sid)+'&apos;)">';
-      h+='<label class="agree-lbl" for="tc-chk-'+esc(sid)+'">By accepting this proposal, I acknowledge that I have read and accept Keylab\u2019s enrollment policies, and I am authorizing Keylab to schedule my child\u2019s lessons, bill my card on file for the first month of lessons, and schedule recurring automatic flat-monthly payments based on the proposal details.</label></div>';
+      h+='<label class="agree-lbl" for="tc-chk-'+esc(sid)+'">'+esc(TC_ACK_CHANGE)+'</label></div>';   // [1.681]
       var canSubmit=tc.checked&&tc.name.trim().length>0;
       var _pOpts2='';
       if(familyParents.p1) _pOpts2+='<option value="'+esc(familyParents.p1)+'"'+(tc.name===familyParents.p1?' selected':'')+'>'+esc(familyParents.p1)+'</option>';
@@ -7806,6 +7822,12 @@ function rEnrollment(scopeStudentId){
           h+='<div style="margin-top:1rem;border-top:1px solid var(--border);padding-top:1rem">';
           h+='<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:.75rem">Tuition Details</div>';
           h+=_fmtPriceBox(s,false);
+          // [1.681] — the adjustments they accepted, WITH the price, which is
+          // [1.339]'s placement. They were on the review screen before the family
+          // accepted and gone from this card the moment they did; AC, 21 September
+          // 2026: "the family needs to see this ... in the acceptance terms AFTER
+          // they agree."
+          h+=_klAdjustmentsHtml(s);
           h+='</div>';
         }
         // 6. Self-release section (always last in this card) -- once per child
@@ -7820,6 +7842,7 @@ function rEnrollment(scopeStudentId){
 
           h+='<div style="font-size:11px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem">Tuition</div>';
           h+=_fmtPriceBox(s,false);
+          h+=_klAdjustmentsHtml(s);   // [1.681] — and once enrolled
 
           h+='<div style="border-top:1px solid var(--border);margin-top:1rem;padding-top:1rem">';
           h+='<div style="font-size:11px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem">Scheduling &amp; Billing</div>';
@@ -8169,7 +8192,10 @@ function _downloadPolicyPdf(stuId){
       '<div class="pdf-subtitle">Accepted policy record</div>' +
     '</div>' +
     // The block itself, from the one function that defines it.
-    _klEnrollmentFactsHtml(stu);
+    // [1.681] — during a change, the enrollment actually accepted, as the Home
+    // toggle already shows it. This printed the PENDING proposal under
+    // "Accepted policy record", with the old enrollment's adjustments beneath.
+    (stu.phase==='Enrollment Change'?_klCurrentEnrollmentFactsHtml(stu):_klEnrollmentFactsHtml(stu));
   document.body.appendChild(wrap);
   _policyPdfEl = wrap;
   document.body.classList.add('printing-policy-pdf');
@@ -8223,14 +8249,18 @@ function doSubmitTC(studentId){
   tc.name=name;
   tc.busy=true; render();
   // Snapshot the current policy HTML at acceptance time for immutable legal record
+  // [1.681] — the student first, because both records depend on them.
+  var _ackStu=students.filter(function(x){return x.studentId===studentId;})[0]||{};
   var policyEl=document.createElement('div');
-  policyEl.innerHTML=rPolicyText(false);
+  // [1.681] — the policies THIS family was shown. It was always the studio text,
+  // so an in-home family read the in-home policies and was recorded, and emailed,
+  // as accepting the studio ones.
+  policyEl.innerHTML=rPolicyText(_ackStu.lessonLocation==='in-home');
   var policySnapshot=policyEl.innerHTML||'';
   // The acknowledgment actually shown to this family goes with the
-  // acceptance, so it can be snapshotted (BACKLOG 1.109). Which variant was
-  // displayed depends on needsManualInvoice, so it's read off the student.
-  var _ackStu=students.filter(function(x){return x.studentId===studentId;})[0]||{};
-  var _ackText=_tcAckText(isTruthy(_ackStu.needsManualInvoice));
+  // acceptance, so it can be snapshotted (BACKLOG 1.109) — including the
+  // Enrollment Change screen's own sentence ([1.681]).
+  var _ackText=_tcAckTextFor(_ackStu);
   fapi('submitTandC', {studentId:studentId, acceptedName:name, policySnapshot:policySnapshot, acknowledgment:_ackText}, function(e,r){
     tc.busy=false;
     // [1.651] — the proposal expired while this page was open. The card is

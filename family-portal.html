@@ -4975,7 +4975,20 @@ function _fmtDateRange(a,b){
 // The family's enrolled students, in record order. Used in enough places on
 // this page that the phase test is worth stating once.
 function _klEnrolled(){
-  return students.filter(function(s){ return s.phase==='Enrolled'||s.phase==='Enrollment Change'; });
+  return students.filter(function(s){ return s.phase==='Enrolled'||s.phase==='Enrollment Change'; }).map(_klNow);
+}
+// [1.706] — THE LESSONS ACTUALLY HAPPENING. During an Enrollment Change the
+// record this page is sent describes the NEW offer (the server lays the pending
+// proposal over it, which is right for the offer card), and the lesson the child
+// is still taking is in `currentEnrollment`. Next lesson, the lesson days and the
+// teacher-absence rows are about the lesson that is happening, so they read it
+// from here. A copy, never the record itself: the offer card keeps the offer.
+function _klNow(s){
+  var ce=s&&s.phase==='Enrollment Change'&&s.currentEnrollment;
+  if(!ce||!ce.day) return s;
+  return Object.assign({},s,{day:ce.day,time:ce.time||'',teacher:ce.teacher||'',
+    durationBase:ce.durationBase||s.durationBase,durationExtra:ce.durationExtra||'',
+    startDate:ce.startDate||s.startDate,lessonLocation:ce.lessonLocation||s.lessonLocation});
 }
 
 // ── Schedule block (BACKLOG 1.50 + 1.47) ────────────────────────────────
@@ -5237,8 +5250,7 @@ function rHomeSchedule(){
   // ── Next lesson, soonest first — the child who has one tomorrow belongs
   // above the one who has one next week.
   var lessons=[];
-  students.forEach(function(s){
-    if(s.phase!=='Enrolled'&&s.phase!=='Enrollment Change') return;
+  _klEnrolled().forEach(function(s){   // [1.706] — the lesson happening, not an offer
     if(!s.day) return;
     lessons.push({ s:s, d:_nextLessonDate(s.day, s.startDate) });
   });

@@ -4975,7 +4975,10 @@ function _fmtDateRange(a,b){
 // The family's enrolled students, in record order. Used in enough places on
 // this page that the phase test is worth stating once.
 function _klEnrolled(){
-  return students.filter(function(s){ return s.phase==='Enrolled'||s.phase==='Enrollment Change'; }).map(_klNow);
+  // [1.706] — and a child already taking lessons whose Enrollment Change was just
+  // accepted (Confirmed to Enroll again until admin marks them Enrolled): AC,
+  // "they should keep both the whole time until marked as withdrawn".
+  return students.filter(function(s){ return s.phase==='Enrolled'||s.phase==='Enrollment Change'||(s.phase==='Confirmed to Enroll'&&s.keepsLessons); }).map(_klNow);
 }
 // [1.706] — THE LESSONS ACTUALLY HAPPENING. During an Enrollment Change the
 // record this page is sent describes the NEW offer (the server lays the pending

@@ -5582,17 +5582,23 @@ function _klEnrollmentFactsHtml(s){
   h+='<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;'+
     'color:var(--text3);margin-bottom:.35rem">'+esc(KL_ENR_COPY.sectionProposal)+'</div>';
   var locMap={studio:'at Keylab','in-home':'In-home',virtual:'Virtual'};
+  // [1.707] — what they ACCEPTED, not the lesson as it is now. AC, 25 September
+  // 2026: "accepted proposals DO NOT CHANGE ... The family will always be able to
+  // see the teacher they were originally with." The server sends the agreed
+  // values as s.agreed once a proposal is accepted; before that there is nothing
+  // to keep apart and the record is the proposal.
+  var g=s.agreed||s;
   var rows=[
     // Repeated here even though the card above already names the child --
     // a busy parent scanning past two cards shouldn't lose track of whose
     // details are open (AC, 26 Aug).
     ['Student', s.studentName],
     ['Instrument', s.instrument],
-    ['Teacher', s.teacher],
-    ['Lesson', [s.day, s.time].filter(Boolean).join(', ')],
-    ['Length', _effDur(s.durationBase,s.durationExtra)?_effDur(s.durationBase,s.durationExtra)+' minutes':''],
-    ['Location', locMap[s.lessonLocation]||s.lessonLocation],
-    ['Start date', s.startDate?_fmtFamilyDate(s.startDate):'']
+    ['Teacher', g.teacher],
+    ['Lesson', [g.day, g.time].filter(Boolean).join(', ')],
+    ['Length', _effDur(g.durationBase,g.durationExtra)?_effDur(g.durationBase,g.durationExtra)+' minutes':''],
+    ['Location', locMap[g.lessonLocation]||g.lessonLocation],
+    ['Start date', g.startDate?_fmtFamilyDate(g.startDate):'']
   ].filter(function(r){ return r[1]; });
   rows.forEach(function(r){
     h+='<div class="kl-row" style="padding:.3rem 0"><div class="kl-sub">'+esc(r[0])+'</div>'+

@@ -124,6 +124,7 @@ button:active:not(:disabled),
 .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
 .prop-row{display:flex;justify-content:space-between;align-items:baseline;padding:6px 0;border-bottom:.5px solid var(--border)}
 .prop-row:last-child{border-bottom:none}
+.kl-chg{margin:.2rem 0 .4rem}.kl-chg .prop-row{padding:4px 0;font-size:13px}
 .prop-lbl{font-size:11px;color:var(--text4);text-transform:uppercase;letter-spacing:.06em;font-family:"Inter",sans-serif}
 .prop-val{font-size:13px;color:var(--text);text-align:right;font-weight:500}
 .price-big{font-size:26px;font-weight:300;font-family:"Inter",sans-serif;color:var(--acc)}
@@ -4783,6 +4784,7 @@ function _rHomeSelfRelease(s){
 // and policies accepted" line twice, a few hundred pixels apart. Only the
 // header (name, instrument, status) is wanted in that context.
 function _rChildStatusSummary(s, opts){
+  var KL_CHANGE_COPY={current:'Current enrollment',proposed:'New proposal'};   // [1.715] row 6 — the card headings below
   var _inDetail = !!(opts && opts.inDetailBlock);
   var avOpen=isTruthy(publicCfg.availabilityOpen);
   var locMap={studio:'at Keylab','in-home':'In-home',virtual:'Virtual'};
@@ -4804,7 +4806,22 @@ function _rChildStatusSummary(s, opts){
   if(s.instrument) h+='<div style="font-size:12px;color:var(--text4);margin-top:5px">'+esc(s.instrument)+'</div>';
   h+='</div>'+_renderChips(lbl)+'</div>';
 
-  if(showDashboard){
+  if(showDashboard&&ph==='Enrollment Change'){
+    // [1.715] row 6 — AC: *"make it clear to the family about the new vs old
+    // teacher"*. During a change this line showed the NEW proposal's day, time
+    // and teacher with no label, above a card headed Current Enrollment. Each
+    // is named now, with the headings the cards below already use; the price
+    // and the note are in those cards, so they are not repeated here.
+    var _ceS=s.currentEnrollment||{};
+    var _slotOf=function(o){return[o.day,o.time,o.teacher,o.lessonLocation?(locMap[o.lessonLocation]||o.lessonLocation):''].filter(Boolean).join(' \u00b7 ');};
+    var _cur=_slotOf(_ceS),_new=_slotOf(s);
+    if(_cur||_new){
+      h+='<div class="kl-chg">';
+      if(_cur) h+='<div class="prop-row"><span class="prop-lbl">'+esc(KL_CHANGE_COPY.current)+'</span><span class="prop-val">'+esc(_cur)+'</span></div>';
+      if(_new) h+='<div class="prop-row"><span class="prop-lbl">'+esc(KL_CHANGE_COPY.proposed)+'</span><span class="prop-val">'+esc(_new)+'</span></div>';
+      h+='</div>';
+    }
+  } else if(showDashboard){
     var details=[];
     if(s.day) details.push(s.day);
     if(s.time) details.push(s.time);
@@ -4814,9 +4831,7 @@ function _rChildStatusSummary(s, opts){
     if(s.startDate&&!_inDetail) h+='<div style="font-size:12px;color:var(--text3);margin-bottom:.3rem">Starts '+esc(_fmtFamilyDate(s.startDate))+'</div>';
     // [1.651] — an expired change's price is not one anybody can accept.
     if(s.monthlyPrice&&!_inDetail&&!_klPropExpired(s)) h+=_fmtPriceBox(s,false);
-    if(ph==='Enrollment Change'){
-      h+='<div class="msg mi" style="margin-top:.5rem">'+esc(firstName)+'\u2019s current enrollment will remain active until you accept the new proposal. Once accepted, we\u2019ll process the new enrollment and get '+esc(firstName)+'\u2019s new lesson schedule on the books, and the current enrollment will be archived.</div>';
-    } else if(isEnrolled){
+    if(isEnrolled){
       h+='<div class="msg ms">\u2713 '+esc(firstName)+' is enrolled! See below for details on how to manage their enrollment.</div>';
     } else if((s.tcAcceptedAt||s.tcAcceptedName)&&!_inDetail){
       h+='<div class="msg ms">\u2713 Proposal and policies accepted'+(s.tcAcceptedName?' by '+esc(s.tcAcceptedName):'')+

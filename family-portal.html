@@ -124,6 +124,15 @@ button:active:not(:disabled),
 .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
 .prop-row{display:flex;justify-content:space-between;align-items:baseline;padding:6px 0;border-bottom:.5px solid var(--border)}
 .prop-row:last-child{border-bottom:none}
+.kl-ls-sum{font-size:14px;line-height:1.5;background:rgba(255,255,255,.6);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin:6px 0 4px}
+.kl-ls-sec{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--acc);margin:14px 0 4px}
+.kl-ls-dates div{font-size:14px;padding:5px 0;border-bottom:.5px solid var(--border)}
+.kl-ls-dates div:last-child{border-bottom:0}
+.kl-ls-pay{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--border2);border-radius:8px;padding:10px 12px;margin-bottom:8px;background:rgba(255,255,255,.5);font-size:14px;line-height:1.45;cursor:pointer}
+.kl-ls-pay.on{border:2px solid var(--acc);padding:9px 11px;background:rgba(255,255,255,.8)}
+.kl-ls-dot{flex:0 0 16px;height:16px;margin-top:3px;border-radius:50%;border:2px solid var(--border3);background:#fff}
+.kl-ls-pay.on .kl-ls-dot{border-color:var(--acc);box-shadow:inset 0 0 0 3px #fff;background:var(--acc)}
+.kl-ls-note{font-size:13px;margin-top:10px;background:var(--bbg);border:1px solid #8FB0DA;border-radius:6px;padding:8px 10px;color:var(--bt)}
 .kl-chg{margin:.2rem 0 .4rem}.kl-chg .prop-row{padding:4px 0;font-size:13px}
 .prop-lbl{font-size:11px;color:var(--text4);text-transform:uppercase;letter-spacing:.06em;font-family:"Inter",sans-serif}
 .prop-val{font-size:13px;color:var(--text);text-align:right;font-weight:500}
@@ -4586,7 +4595,101 @@ function _tcAckText(needsInvoice){
 var TC_ACK_CHANGE='By accepting this proposal, I acknowledge that I have read and accept Keylab\u2019s enrollment policies, and I am authorizing Keylab to schedule my child\u2019s lessons, bill my card on file for the first month of lessons, and schedule recurring automatic flat-monthly payments based on the proposal details.';
 // The sentence THIS student is shown beside the accept box, and therefore the one
 // their acceptance records.
+// ── [1.715] row 17 — A MAY–JUNE PROPOSAL, as the family reads it ───────────
+// AC's words throughout (27 September 2026): the dates, the Single Lesson Price,
+// the Balance Due, Full Payment or Two Installments, and the note that the school
+// year ends mid-June. The policies are the same as everyone's (*"Just give them
+// the same policies"*). Laid out for a busy parent: when, the dates, the price.
+var KL_LS_COPY={
+  dates:'Lesson dates',price:'Price',lessonPrice:'Single Lesson Price',balance:'Balance Due',
+  full:'Full Payment',inst:'Two Installments',choose:'Choose how to pay',payment:'Payment',
+  billedNow:'billed now',billedOn:'billed on {date} via automatic payment',
+  note:'Keylab’s school year ends mid-June and does not continue into the summer. If you want summer lessons, contact admin.',
+  ackFull:'I have read and accept Keylab’s enrollment policies, and authorize Keylab to schedule {name}’s lessons on the dates listed above, and to bill {amount} using the payment method stored in my account',
+  ackInst:'I have read and accept Keylab’s enrollment policies. I authorize Keylab to schedule {name}’s lessons on the dates listed above, and to bill {first} now, and process the final payment for {second} on {date} using the payment method stored in my account',
+  next:'I’ll schedule {name}’s lessons on the dates listed above and process the payment using the payment method on file. Check your email for confirmation and details and let us know if you need any help!'
+};
+function _klLsMoney(n){
+  var x=Math.round((parseFloat(n)||0)*100)/100;
+  return '$'+(x%1?x.toFixed(2):String(x));
+}
+// "June 1st"
+function _klLsDay(ymd){
+  var f=_fmtFamilyDate(ymd);
+  return f.replace(/^[A-Za-z]+, /,'');
+}
+function _klLsLessons(s){
+  var l=s&&s.lessonSchedule;
+  if(typeof l==='string'){try{l=JSON.parse(l||'[]');}catch(e){l=[];}}
+  return Array.isArray(l)?l.filter(function(x){return x&&x.date;}):[];
+}
+// [1.715] row 17, stage 3 — a May–June proposal, or a child enrolled from one.
+function _klIsLs(s){
+  return !!s&&(s.proposalKind==='lateSpring'||s.enrollmentKind==='lateSpring');
+}
+// Its next lesson still to come, {date, time}, or null once they are over.
+function _klLsNext(s){
+  var today=new Date();today.setHours(0,0,0,0);
+  var l=_klLsLessons(s).filter(function(x){var d=_parseYMD(x.date);return !isNaN(d.getTime())&&d>=today;});
+  l.sort(function(a,b){return a.date<b.date?-1:a.date>b.date?1:0;});
+  return l[0]||null;
+}
+function _klLsOptions(s){
+  var o=s&&s.payOptions;
+  if(typeof o==='string')o=o.split(',');
+  return (Array.isArray(o)?o:[]).filter(function(x){return x==='full'||x==='installments';});
+}
+// The way this family pays: what they chose, or the one option offered.
+function _klLsChoice(s){
+  if(s&&s.payChoice)return s.payChoice;
+  var o=_klLsOptions(s);
+  if(o.length===1)return o[0];
+  var tc=(s&&s.studentId)?_tcState(s.studentId):null;
+  return (tc&&tc.pay)||'';
+}
+function _klLsAck(s){
+  var first=s.studentName?s.studentName.trim().split(' ')[0]:'';
+  var C=KL_LS_COPY;
+  if(_klLsChoice(s)==='installments'){
+    return C.ackInst.replace('{name}',first).replace('{first}',_klLsMoney(s.installment1)).replace('{second}',_klLsMoney(s.installment2)).replace('{date}',_klLsDay(s.installmentDate));
+  }
+  return C.ackFull.replace('{name}',first).replace('{amount}',_klLsMoney(s.balanceDue||s.monthlyPrice));
+}
+function _klLsPick(sid,which){
+  _tcState(sid).pay=which;
+  render();
+}
+// The block: when, the dates, the price, the payment, and the note.
+function _klLsBlockHtml(s,canChoose,noPayment){
+  var C=KL_LS_COPY,lessons=_klLsLessons(s);
+  var locMap={studio:'at Keylab','in-home':'In-home',virtual:'Virtual'};
+  var dur=_effDur(s.durationBase,s.durationExtra);
+  var days={},times={};lessons.forEach(function(x){days[_fmtFamilyDate(x.date).split(',')[0]]=1;times[x.time||'']=1;});
+  var oneSlot=Object.keys(days).length===1&&Object.keys(times).length===1;
+  var h='<div class="kl-ls-sum">'+(oneSlot?'<b>'+esc(Object.keys(days)[0])+'s, '+esc(Object.keys(times)[0])+'</b><br>':'')+
+    esc([dur?dur+' minutes':'',s.teacher?'with '+s.teacher:''].filter(Boolean).join(' ')+(s.lessonLocation?' · '+(locMap[s.lessonLocation]||s.lessonLocation):''))+'</div>';
+  h+='<div class="kl-ls-sec">'+esc(C.dates)+'</div><div class="kl-ls-dates">'+
+    lessons.map(function(x){return'<div>'+esc(_fmtFamilyDate(x.date))+(x.time?' · '+esc(x.time):'')+'</div>';}).join('')+'</div>';
+  h+='<div class="kl-ls-sec">'+esc(C.price)+'</div>'+
+    '<div class="prop-row"><span class="prop-lbl">'+esc(C.lessonPrice)+'</span><span class="prop-val">'+_klLsMoney(s.lessonPrice)+'</span></div>'+
+    '<div class="prop-row"><span class="prop-lbl">'+esc(C.balance)+'</span><span class="prop-val" style="font-weight:700;font-size:16px">'+_klLsMoney(s.balanceDue||s.monthlyPrice)+'</span></div>';
+  if(noPayment)return h+'<div class="kl-ls-note">'+esc(C.note)+'</div>';   // [1.715] row 17 — a summary: the way to pay is chosen on the proposal
+  var opts=_klLsOptions(s),choice=_klLsChoice(s);
+  var instLines=_klLsMoney(s.installment1)+' '+esc(C.billedNow)+'<br>'+_klLsMoney(s.installment2)+' '+esc(C.billedOn.replace('{date}',_klLsDay(s.installmentDate)));
+  if(canChoose&&opts.length>1&&!s.payChoice){
+    h+='<div class="kl-ls-sec">'+esc(C.choose)+'</div>'+
+      '<div class="kl-ls-pay'+(choice==='full'?' on':'')+'" role="radio" aria-checked="'+(choice==='full')+'" tabindex="0" onclick="_klLsPick(&apos;'+esc(s.studentId)+'&apos;,&apos;full&apos;)"><span class="kl-ls-dot"></span><span><b>'+esc(C.full)+'</b><br>'+_klLsMoney(s.balanceDue||s.monthlyPrice)+'</span></div>'+
+      '<div class="kl-ls-pay'+(choice==='installments'?' on':'')+'" role="radio" aria-checked="'+(choice==='installments')+'" tabindex="0" onclick="_klLsPick(&apos;'+esc(s.studentId)+'&apos;,&apos;installments&apos;)"><span class="kl-ls-dot"></span><span><b>'+esc(C.inst)+'</b><br>'+instLines+'</span></div>';
+  }else if(choice==='installments'){
+    h+='<div class="prop-row"><span class="prop-lbl">'+esc(C.inst)+'</span><span class="prop-val" style="text-align:right">'+instLines+'</span></div>';
+  }else{
+    h+='<div class="prop-row"><span class="prop-lbl">'+esc(C.full)+'</span><span class="prop-val">'+_klLsMoney(s.balanceDue||s.monthlyPrice)+'</span></div>';
+  }
+  h+='<div class="kl-ls-note">'+esc(C.note)+'</div>';
+  return h;
+}
 function _tcAckTextFor(stu){
+  if(stu&&(stu.proposalKind==='lateSpring'||stu.enrollmentKind==='lateSpring')) return _klLsAck(stu);   // [1.715] row 17
   if(stu&&stu.phase==='Enrollment Change') return TC_ACK_CHANGE;
   return _tcAckText(isTruthy(stu&&stu.needsManualInvoice));
 }
@@ -4823,14 +4926,15 @@ function _rChildStatusSummary(s, opts){
     }
   } else if(showDashboard){
     var details=[];
-    if(s.day) details.push(s.day);
-    if(s.time) details.push(s.time);
+    var _isLsS=_klIsLs(s);   // [1.715] row 17 — its dates are in its own block, not one weekly day and time
+    if(s.day&&!_isLsS) details.push(s.day);
+    if(s.time&&!_isLsS) details.push(s.time);
     if(s.teacher) details.push(s.teacher);
     if(s.lessonLocation) details.push(locMap[s.lessonLocation]||s.lessonLocation);
     if(details.length&&!_inDetail) h+='<div style="font-size:13px;color:var(--text3);margin-bottom:.3rem">'+esc(details.join(' \u00b7 '))+'</div>';
     if(s.startDate&&!_inDetail) h+='<div style="font-size:12px;color:var(--text3);margin-bottom:.3rem">Starts '+esc(_fmtFamilyDate(s.startDate))+'</div>';
     // [1.651] — an expired change's price is not one anybody can accept.
-    if(s.monthlyPrice&&!_inDetail&&!_klPropExpired(s)) h+=_fmtPriceBox(s,false);
+    if(s.monthlyPrice&&!_inDetail&&!_klPropExpired(s)) h+=_isLsS?_klLsBlockHtml(s,false):_fmtPriceBox(s,false);   // [1.715] row 17
     if(isEnrolled){
       h+='<div class="msg ms">\u2713 '+esc(firstName)+' is enrolled! See below for details on how to manage their enrollment.</div>';
     } else if((s.tcAcceptedAt||s.tcAcceptedName)&&!_inDetail){
@@ -4870,7 +4974,8 @@ function _rChildStatusSummary(s, opts){
     var propDur=_effDur(s.durationBase,s.durationExtra)||s.durationBase||'';
     var propInstr=s.instrument||'';
     var propStart=s.startDate?_fmtFamilyDate(s.startDate):'';
-    if(s.day&&s.time&&s.teacher&&propDur&&propInstr){
+    // [1.715] row 17 — this sentence describes weekly lessons; a May–June proposal's own block says when.
+    if(s.day&&s.time&&s.teacher&&propDur&&propInstr&&!_klIsLs(s)){
       var propSentence='Please review and accept '+esc(firstName)+'\u2019s proposal for '+esc(propDur)+' minute ';
       if(s.lessonLocation==='in-home') propSentence+='in-home ';
       else if(s.lessonLocation==='virtual') propSentence+='virtual ';
@@ -4879,7 +4984,7 @@ function _rChildStatusSummary(s, opts){
       propSentence+=propStart?', to begin on '+esc(propStart)+'.':'.';
       h+='<div style="font-size:13px;color:var(--text3);margin-bottom:.35rem">'+propSentence+'</div>';
     }
-    if(s.monthlyPrice&&!_inDetail) h+=_fmtPriceBox(s,false);
+    if(s.monthlyPrice&&!_inDetail) h+=_klIsLs(s)?_klLsBlockHtml(s,false,true):_fmtPriceBox(s,false);   // [1.715] row 17 — the choice is made on the proposal itself
   } else if(isWithdrawn){
     h+='<div style="font-size:12px;color:var(--text4)">'+esc(firstName)+' is not currently enrolled. Please contact us at <a href="mailto:info@keylab.nyc">info@keylab.nyc</a> if you have questions.</div>';
   } else if(avLocked){
@@ -5006,7 +5111,10 @@ function _klNow(s){
   if(!ce||!ce.day) return s;
   return Object.assign({},s,{day:ce.day,time:ce.time||'',teacher:ce.teacher||'',
     durationBase:ce.durationBase||s.durationBase,durationExtra:ce.durationExtra||'',
-    startDate:ce.startDate||s.startDate,lessonLocation:ce.lessonLocation||s.lessonLocation});
+    startDate:ce.startDate||s.startDate,lessonLocation:ce.lessonLocation||s.lessonLocation,
+    // [1.715] row 17 — whether the lessons happening are May–June ones is the
+    // CURRENT enrollment's to say, not the offer's
+    proposalKind:'',enrollmentKind:ce.enrollmentKind||'',lessonSchedule:ce.lessonSchedule||''});
 }
 
 // ── Schedule block (BACKLOG 1.50 + 1.47) ────────────────────────────────
@@ -5041,8 +5149,9 @@ function _klLessonDays(){
   var multiChild=Object.keys(byChildCount).length>1;
   var multiEnrollment=enrolled.length>1;
   enrolled.forEach(function(s){
+    var _ls=_klIsLs(s);   // [1.715] row 17 — a May–June child's days are its dates
     var idx=KL_DAYIDX[String(s.day||'').trim().toLowerCase()];
-    if(idx===undefined) return;
+    if(idx===undefined&&!_ls) return;
     var first=s.studentName?s.studentName.trim().split(' ')[0]:'';
     if(!first) return;
     var label='';
@@ -5053,6 +5162,11 @@ function _klLessonDays(){
       } else {
         label=s.instrument||first;
       }
+    }
+    if(_ls){
+      // Keyed 'd:YYYY-MM-DD': a closure matters to it only on one of its own dates.
+      _klLsLessons(s).forEach(function(x){var k='d:'+x.date;if(!byDay[k])byDay[k]=[];if(byDay[k].indexOf(label)===-1)byDay[k].push(label);});
+      return;
     }
     if(!byDay[idx]) byDay[idx]=[];
     if(byDay[idx].indexOf(label)===-1) byDay[idx].push(label);
@@ -5105,7 +5219,8 @@ function _klScheduleEvents(){
     // told their first lesson is that Monday, while the Next lesson section
     // directly above said Wednesday. Same calculation as that section, so the
     // two halves of this card can't contradict each other.
-    var actual=_nextLessonDate(s.day, s.startDate);
+    var _lsF=_klIsLs(s)?_klLsLessons(s)[0]:null;   // [1.715] row 17 — its first dated lesson
+    var actual=_lsF?_parseYMD(_lsF.date):_nextLessonDate(s.day, s.startDate);
     var ymd=actual
       ? actual.getFullYear()+'-'+_p2(actual.getMonth()+1)+'-'+_p2(actual.getDate())
       : s.startDate;
@@ -5228,8 +5343,9 @@ function _klDayFilteredHits(){
       return;
     }
     _klEventDates(e).forEach(function(d){
-      var who=byDay[d.getDay()];
-      if(!who) return;
+      // [1.715] row 17 — a weekday's children, and any May–June child with a lesson on this very date
+      var who=(byDay[d.getDay()]||[]).concat((byDay['d:'+d.getFullYear()+'-'+_p2(d.getMonth()+1)+'-'+_p2(d.getDate())]||[]).filter(function(x){return (byDay[d.getDay()]||[]).indexOf(x)===-1;}));
+      if(!who.length) return;
       hits.push({e:e, when:_fmtLessonDate(d), who:who.join(' & '), sort:d.getTime()});
     });
   });
@@ -5269,6 +5385,11 @@ function rHomeSchedule(){
   // above the one who has one next week.
   var lessons=[];
   _klEnrolled().forEach(function(s){   // [1.706] — the lesson happening, not an offer
+    if(_klIsLs(s)){   // [1.715] row 17 — its next dated lesson, at that lesson's time; none once they are over
+      var nx=_klLsNext(s);
+      if(nx) lessons.push({ s:s, d:_parseYMD(nx.date), time:nx.time });
+      return;
+    }
     if(!s.day) return;
     lessons.push({ s:s, d:_nextLessonDate(s.day, s.startDate) });
   });
@@ -5288,7 +5409,7 @@ function rHomeSchedule(){
       // booking around a lesson needs the length, not only the start time,
       // and it is already on the record.
       var _dur=_effDur(s.durationBase,s.durationExtra);
-      var _timeStr=(s.time||'')+(_dur?' · '+_dur+' min':'');
+      var _timeStr=(L.time||s.time||'')+(_dur?' · '+_dur+' min':'');
       var when=L.d
         ? esc(_fmtLessonDate(L.d))+(_timeStr?'<br>'+esc(_timeStr):'')
         : esc(s.day+(_timeStr?' · '+_timeStr:''));
@@ -5610,10 +5731,11 @@ function _klEnrollmentFactsHtml(s){
     ['Student', s.studentName],
     ['Instrument', s.instrument],
     ['Teacher', g.teacher],
-    ['Lesson', [g.day, g.time].filter(Boolean).join(', ')],
+    // [1.715] row 17 — a May–June enrollment's days, times and dates are in its own block below
+    ['Lesson', _klIsLs(s)?'':[g.day, g.time].filter(Boolean).join(', ')],
     ['Length', _effDur(g.durationBase,g.durationExtra)?_effDur(g.durationBase,g.durationExtra)+' minutes':''],
     ['Location', locMap[g.lessonLocation]||g.lessonLocation],
-    ['Start date', g.startDate?_fmtFamilyDate(g.startDate):'']
+    ['Start date', (g.startDate&&!_klIsLs(s))?_fmtFamilyDate(g.startDate):'']
   ].filter(function(r){ return r[1]; });
   rows.forEach(function(r){
     h+='<div class="kl-row" style="padding:.3rem 0"><div class="kl-sub">'+esc(r[0])+'</div>'+
@@ -5622,7 +5744,7 @@ function _klEnrollmentFactsHtml(s){
   // _fmtPriceBox always shows the prorated-first-month box alongside the
   // standing monthly price when s.isProrated is set \u2014 never one number
   // alone for a family who paid a prorated first month (AC, 26 Aug).
-  h+=_fmtPriceBox(s,false,!!s.acceptedAdjustmentsText);   // [1.683]
+  h+=_klIsLs(s)?_klLsBlockHtml(s,false):_fmtPriceBox(s,false,!!s.acceptedAdjustmentsText);   // [1.683] [1.715] row 17
   // [1.339] — the adjustments sit WITH the pricing, which is AC's placement:
   // they are the explanation of the number above them, not a section.
   h+=_klAdjustmentsHtml(s);
@@ -5749,11 +5871,12 @@ function _klProposalAdjustmentsHtml(s){
 function _klCurrentEnrollmentFactsHtml(s){
   var ce=s.currentEnrollment||{};
   var locMap={studio:'at Keylab','in-home':'In-home',virtual:'Virtual'};
+  var _ceLs=ce.enrollmentKind==='lateSpring';   // [1.715] row 17
   var rows=[
     ['Student', s.studentName],
     ['Instrument', s.instrument],
     ['Teacher', ce.teacher],
-    ['Lesson', [ce.day, ce.time].filter(Boolean).join(', ')],
+    ['Lesson', _ceLs?'':[ce.day, ce.time].filter(Boolean).join(', ')],
     ['Length', _effDur(ce.durationBase,ce.durationExtra)?_effDur(ce.durationBase,ce.durationExtra)+' minutes':''],
     ['Location', locMap[ce.lessonLocation]||ce.lessonLocation],
     ['Start date', ce.startDate?_fmtFamilyDate(ce.startDate):'']
@@ -5763,7 +5886,7 @@ function _klCurrentEnrollmentFactsHtml(s){
     h+='<div class="kl-row" style="padding:.3rem 0"><div class="kl-sub">'+esc(r[0])+'</div>'+
       '<div class="kl-when">'+esc(r[1])+'</div></div>';
   });
-  h+=_fmtPriceBox({monthlyPrice:ce.monthlyPrice, lessonLocation:ce.lessonLocation}, false);
+  h+=_ceLs?_klLsBlockHtml(Object.assign({},ce,{studentId:s.studentId}),false):_fmtPriceBox({monthlyPrice:ce.monthlyPrice, lessonLocation:ce.lessonLocation}, false);   // [1.715] row 17
   // [1.681] — and the adjustments that enrollment was accepted with. The row's
   // acceptedAdjustmentsText is still the CURRENT enrollment's while a change is
   // pending (the pending proposal's words travel separately, as
@@ -5866,6 +5989,7 @@ function _rHomeChildActionCard(s){
         (_needsInvoice
           ?('<p style="font-size:14px;color:var(--bt);margin:0">Only one more step to finish '+esc(firstName)+'&rsquo;s enrollment \u2014 click below to pay the invoice. You\u2019ll sign in with the login info from your proposal acceptance confirmation email.</p>'+
             '<div style="margin-top:.75rem"><a href="'+publicCfg.schedulingBillingUrl+'" target="_blank" class="btn btn-p btn-sm">Pay Invoice</a></div>')
+          :_klIsLs(s)?('<p style="font-size:14px;color:var(--bt);margin:0">'+esc(KL_LS_COPY.next.replace('{name}',firstName))+'</p>')   // [1.715] row 17 — the same as the proposal card's
           :('<p style="font-size:14px;color:var(--bt);margin:0">I\u2019ll schedule '+esc(firstName)+'&rsquo;s lessons for the school year and process their enrollment on the admin side using the payment method on file. '+_klBillingSentence(s,firstName)+' Check your email for confirmation and details and let us know if you need any help!</p>'))+
         '</div>';
       // Was _rHomeActionButtons('Review Proposal and Policies', ...), which
@@ -6163,6 +6287,7 @@ function rHome(){
           (_needsInvoice
             ?('<p style="font-size:14px;color:var(--bt);margin:0">Only one more step to finish '+esc(firstName)+'&rsquo;s enrollment \u2014 click below to pay the invoice. You\u2019ll sign in with the login info from your proposal acceptance confirmation email.</p>'+
               '<div style="margin-top:.75rem"><a href="'+publicCfg.schedulingBillingUrl+'" target="_blank" class="btn btn-p btn-sm">Pay Invoice</a></div>')
+            :_klIsLs(s)?('<p style="font-size:14px;color:var(--bt);margin:0">'+esc(KL_LS_COPY.next.replace('{name}',firstName))+'</p>')   // [1.715] row 17 — the same as the proposal card's
             :('<p style="font-size:14px;color:var(--bt);margin:0">I\u2019ll schedule '+esc(firstName)+'&rsquo;s lessons for the school year and process their enrollment on the admin side using the payment method on file. '+_klBillingSentence(s,firstName)+' Check your email for confirmation and details and let us know if you need any help!</p>'))+
           '</div>';
         h+=_rHomeActionButtons('Review Proposal and Policies', s.studentId);
@@ -7795,7 +7920,11 @@ function rEnrollment(scopeStudentId){
       h+='<div class="card">';
       h+='<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem">Current Enrollment \u2014 Active</div>';
       h+='<span class="chip c-good" style="margin-bottom:.75rem;display:inline-block">Active</span>';
-      if(_ce.day||_ce.time||_ce.teacher){
+      if(_ce.enrollmentKind==='lateSpring'){
+        // [1.715] row 17 — the current enrollment is a May–June one: its dates and how it is paid.
+        h+=_klLsBlockHtml(Object.assign({},_ce,{studentId:s.studentId}),false);
+        _cePriceStr='';
+      } else if(_ce.day||_ce.time||_ce.teacher){
         var _ceDetails=[];
         if(_ce.day) _ceDetails.push(_ce.day);
         if(_ce.time) _ceDetails.push(_ce.time);
@@ -7847,7 +7976,7 @@ function rEnrollment(scopeStudentId){
         '<select id="tc-nm-'+esc(sid)+'" onchange="_tcState(&apos;'+esc(sid)+'&apos;).name=this.value;tcRefresh(&apos;'+esc(sid)+'&apos;)">'+
         '<option value="">-- Select --</option>'+_pOpts2+
         '</select>'+
-        '<div class="hint">By selecting your name, you are executing this agreement electronically. Your electronic signature is legally binding and has the same legal effect as a handwritten signature under applicable e-signature laws.</div></div>';
+        '<div class="hint">Selecting your name serves as your electronic signature.</div></div>';
       h+=tc.busy
         ?'<button class="btn btn-p btn-full" disabled><span class="spin">\u21bb</span> Submitting...</button>'
         :'<div id="tc-err-'+esc(sid)+'" style="display:none;color:var(--rt);font-size:13px;margin-bottom:.5rem"></div>'+
@@ -7871,7 +8000,7 @@ function rEnrollment(scopeStudentId){
       // instead of a second one above it.
       if(_mergeIntoDetail) h+=_summaryHtml;
       if(statusChip) h+=statusChip;
-      var rows=[
+      var rows=(s.proposalKind==='lateSpring'||s.enrollmentKind==='lateSpring')?[]:[   // [1.715] row 17 — a May–June proposal draws its own block below
         ['Instrument',s.instrument],
         ['Teacher',s.teacher],
         ['Day',s.day],
@@ -7880,12 +8009,13 @@ function rEnrollment(scopeStudentId){
         ['Location',locMap[s.lessonLocation]||s.lessonLocation||null],
         ['Start Date',s.startDate?_fmtFamilyDate(s.startDate):(s.startMonth?'Starting month '+s.startMonth:null)]
       ];
+      if((s.proposalKind==='lateSpring'||s.enrollmentKind==='lateSpring')) h+=_klLsBlockHtml(s,!(isAccepted||isFullyEnrolled)&&!_klPropExpired(s));
       rows.forEach(function(row){
         if(!row[1]) return;
         h+='<div class="prop-row"><span class="prop-lbl">'+esc(row[0])+'</span><span class="prop-val">'+esc(row[1])+'</span></div>';
       });
       if(hasPrice&&!(isAccepted||isFullyEnrolled)&&!_klPropExpired(s)){   // [1.651]
-        h+=_fmtPriceBox(s,true,!!s.proposalAdjustmentsText);   // [1.683]
+        if(!(s.proposalKind==='lateSpring'||s.enrollmentKind==='lateSpring')) h+=_fmtPriceBox(s,true,!!s.proposalAdjustmentsText);   // [1.683]
         h+=_klProposalAdjustmentsHtml(s);
       }
       // ── Welcome/status line + What Happens Next + Review Policies button + self-release (in display order) ──
@@ -7913,6 +8043,7 @@ function rEnrollment(scopeStudentId){
             (_needsInvoice2
               ?('<p style="font-size:14px;color:var(--bt);margin:0">Only one more step to finish '+esc(firstName)+'&rsquo;s enrollment \u2014 click below to pay the invoice. You\u2019ll sign in with the login info from your proposal acceptance confirmation email.</p>'+
                 '<div style="margin-top:.75rem"><a href="'+publicCfg.schedulingBillingUrl+'" target="_blank" class="btn btn-p btn-sm">Pay Invoice</a></div>')
+              :(s.proposalKind==='lateSpring'||s.enrollmentKind==='lateSpring')?('<p style="font-size:14px;color:var(--bt);margin:0">'+esc(KL_LS_COPY.next.replace('{name}',firstName))+'</p>')   // [1.715] row 17
               :('<p style="font-size:14px;color:var(--bt);margin:0">I\u2019ll schedule '+esc(firstName)+'&rsquo;s lessons for the school year and process their enrollment on the admin side using the payment method on file. '+_klBillingSentence(s,firstName)+' Check your email for confirmation and details and let us know if you need any help!</p>'))+
             '</div>';
         }
@@ -7935,7 +8066,7 @@ function rEnrollment(scopeStudentId){
         if(isAccepted&&!isFullyEnrolled){
           h+='<div style="margin-top:1rem;border-top:1px solid var(--border);padding-top:1rem">';
           h+='<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:.75rem">Tuition Details</div>';
-          h+=_fmtPriceBox(s,false,!!s.acceptedAdjustmentsText);   // [1.683]
+          if(!(s.proposalKind==='lateSpring'||s.enrollmentKind==='lateSpring')) h+=_fmtPriceBox(s,false,!!s.acceptedAdjustmentsText);   // [1.683] — [1.715] row 17: a May–June one shows its own above
           // [1.681] — the adjustments they accepted, WITH the price, which is
           // [1.339]'s placement. They were on the review screen before the family
           // accepted and gone from this card the moment they did; AC, 21 September
@@ -7955,7 +8086,7 @@ function rEnrollment(scopeStudentId){
           h+='<div class="card">';
 
           h+='<div style="font-size:11px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem">Tuition</div>';
-          h+=_fmtPriceBox(s,false,!!s.acceptedAdjustmentsText);   // [1.683]
+          h+=(s.proposalKind==='lateSpring'||s.enrollmentKind==='lateSpring')?_klLsBlockHtml(s,false):_fmtPriceBox(s,false,!!s.acceptedAdjustmentsText);   // [1.683] [1.715] row 17
           h+=_klAdjustmentsHtml(s);   // [1.681] — and once enrolled
 
           h+='<div style="border-top:1px solid var(--border);margin-top:1rem;padding-top:1rem">';
@@ -7981,12 +8112,13 @@ function rEnrollment(scopeStudentId){
         h+='<h2 style="margin-top:1.25rem">Lesson Policies</h2>';
         h+=_needsInvoice3
           ?'<p>Please take a look at our policies below and let us know if you have any questions. Once you\'ve accepted, the next step is to log into your scheduling and billing account and pay the first month invoice to confirm '+esc(firstName)+'&rsquo;s spot.</p>'
+          :(s.proposalKind==='lateSpring'||s.enrollmentKind==='lateSpring')?'<p>Please take a look at our policies below and let us know if you have any questions.</p>'   // [1.715] row 17
           :'<p>Please take a look at our policies below and let us know if you have any questions. Once you\'ve accepted, I\'ll get '+esc(firstName)+'&rsquo;s lessons scheduled for the school year and process their enrollment using the payment method on file.</p>';
         h+=rPolicyText(isInHome);
         h+='<div class="agree-box" id="tc-agree-box-'+esc(sid)+'" style="'+(tc.checked?'border-color:var(--green);background:rgba(255,255,255,.5)':'')+'">';
         h+='<input type="checkbox" id="tc-chk-'+esc(sid)+'"'+(tc.checked?' checked':'')+' onchange="_tcState(&apos;'+esc(sid)+'&apos;).checked=this.checked;tcRefresh(&apos;'+esc(sid)+'&apos;)">';
-        h+='<label class="agree-lbl" for="tc-chk-'+esc(sid)+'">'+esc(_tcAckText(_needsInvoice3))+'</label></div>';
-        var canSubmit=tc.checked&&tc.name.trim().length>0;
+        h+='<label class="agree-lbl" for="tc-chk-'+esc(sid)+'">'+esc((s.proposalKind==='lateSpring'||s.enrollmentKind==='lateSpring')?_klLsAck(s):_tcAckText(_needsInvoice3))+'</label></div>';   // [1.715] row 17
+        var canSubmit=tc.checked&&tc.name.trim().length>0&&(!(s.proposalKind==='lateSpring'||s.enrollmentKind==='lateSpring')||!!_klLsChoice(s));   // [1.715] row 17 — and a way to pay
         var _pOpts='';
         if(familyParents.p1) _pOpts+='<option value="'+esc(familyParents.p1)+'"'+(tc.name===familyParents.p1?' selected':'')+'>'+esc(familyParents.p1)+'</option>';
         if(familyParents.p2) _pOpts+='<option value="'+esc(familyParents.p2)+'"'+(tc.name===familyParents.p2?' selected':'')+'>'+esc(familyParents.p2)+'</option>';
@@ -7994,7 +8126,7 @@ function rEnrollment(scopeStudentId){
           '<select id="tc-nm-'+esc(sid)+'" onchange="_tcState(&apos;'+esc(sid)+'&apos;).name=this.value;tcRefresh(&apos;'+esc(sid)+'&apos;)">'+
           '<option value="">-- Select --</option>'+_pOpts+
           '</select>'+
-          '<div class="hint">By selecting your name, you are executing this agreement electronically. Your electronic signature is legally binding and has the same legal effect as a handwritten signature under applicable e-signature laws.</div></div>';
+          '<div class="hint">Selecting your name serves as your electronic signature.</div></div>';
         h+=tc.busy
           ?'<button class="btn btn-p btn-full" disabled><span class="spin">\u21bb</span> Submitting...</button>'
           :'<div id="tc-err-'+esc(sid)+'" style="display:none;color:var(--rt);font-size:13px;margin-bottom:.5rem"></div>'+
@@ -8333,7 +8465,8 @@ function tcRefresh(studentId){
   var nmEl=document.getElementById('tc-nm-'+studentId);
   var nm=nmEl?nmEl.value:'';
   tc.name=nm;
-  var ready=tc.checked&&nm.trim().length>0;
+  var _rs=students.filter(function(x){return x.studentId===studentId;})[0];
+  var ready=tc.checked&&nm.trim().length>0&&(!(!!_rs&&(_rs.proposalKind==='lateSpring'||_rs.enrollmentKind==='lateSpring'))||!!_klLsChoice(_rs));   // [1.715] row 17
   if(box){
     box.style.borderColor=tc.checked?'var(--green)':'';
     box.style.background=tc.checked?'rgba(255,255,255,.5)':'rgba(255,255,255,.3)';
@@ -8375,7 +8508,9 @@ function doSubmitTC(studentId){
   // acceptance, so it can be snapshotted (BACKLOG 1.109) — including the
   // Enrollment Change screen's own sentence ([1.681]).
   var _ackText=_tcAckTextFor(_ackStu);
-  fapi('submitTandC', {studentId:studentId, acceptedName:name, policySnapshot:policySnapshot, acknowledgment:_ackText}, function(e,r){
+  // [1.715] row 17 — a May–June proposal is accepted with the way the family pays.
+  if((_ackStu.proposalKind==='lateSpring'||_ackStu.enrollmentKind==='lateSpring')&&!_klLsChoice(_ackStu)){tc.busy=false;showErr(KL_LS_COPY.choose+'.');render();return;}
+  fapi('submitTandC', {studentId:studentId, acceptedName:name, policySnapshot:policySnapshot, acknowledgment:_ackText, payChoice:(_ackStu.proposalKind==='lateSpring'||_ackStu.enrollmentKind==='lateSpring')?_klLsChoice(_ackStu):''}, function(e,r){
     tc.busy=false;
     // [1.651] — the proposal expired while this page was open. The card is
     // redrawn as expired at once, so the note takes the Accept button's place
@@ -8410,6 +8545,7 @@ function doSubmitTC(studentId){
         students[i].tcAcceptedName=name;
         students[i].tcPolicySnapshot=policySnapshot;
         students[i].tcAcknowledgment=_ackText;
+        if((students[i].proposalKind==='lateSpring'))students[i].payChoice=_klLsChoice(students[i]);   // [1.715] row 17
         // Phase advances server-side; patch locally for immediate UI update
         if(students[i].phase==='Proposal'||students[i].phase==='Enrollment Change'){
           students[i].phase='Confirmed to Enroll';

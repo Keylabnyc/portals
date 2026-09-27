@@ -4282,11 +4282,29 @@ function _rMark(text, q){
 // already set. That is worth more than it looks: an unset student is the only
 // case in practice where a merge tag cannot fill in, which is the message AC
 // photographed going to a parent as "[studentFirst]" ([1.454]).
+// [1.715] row 17 — a May–June child has dated lessons, each with its own time:
+// its roster line names the next one ("Thu, May 20 4:00 PM") instead of a
+// weekday it may not have, and nothing once they are over.
+function _kidNextDated(st){
+  var ld=(st&&st.lessonDates)||[];if(!ld.length) return null;
+  var n=new Date(),today=n.getFullYear()+'-'+('0'+(n.getMonth()+1)).slice(-2)+'-'+('0'+n.getDate()).slice(-2);
+  var nx=ld.filter(function(x){return x&&x.date>=today;}).sort(function(a,b){return a.date<b.date?-1:1;})[0];
+  return nx||null;
+}
+function _kidWhen(st, plural){
+  if(st&&st.lessonDates&&st.lessonDates.length){
+    var nx=_kidNextDated(st);if(!nx) return '';
+    var d=new Date(nx.date+'T12:00:00');
+    return d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})+(nx.time?' '+nx.time:'');
+  }
+  var day=String(st.day||'').trim();
+  return [day?(plural?day+'s':day):'', String(st.time||'').trim()].filter(Boolean).join(' ');
+}
 function rStudentRow(x){
   var st=x.stu||{}, t=x.row||{};
   var _what=[st.duration ? st.duration + ' min' : '', st.instrument]
     .filter(Boolean).join(' ');
-  var _when=[st.day, st.time].filter(Boolean).join(' ');
+  var _when=_kidWhen(st,false);   // [1.715] row 17
   var facts=[_what, _when].filter(Boolean).join(' - ');
   var parents=[t.parent1Name, t.parent2Name].filter(Boolean).join(' & ');
   return '<div class="thread-row age-rest" onclick="openStudentRow(\''+esc(x.fid)+'\',\''+
@@ -4580,7 +4598,7 @@ function _rosterStudentLine(t){
   var kids=t.students||[];
   if(!kids.length) return [t.parent1Name,t.parent2Name].filter(Boolean).join(' & ')||'Family';
   return kids.map(function(st){
-    var bits=[st.day,st.time].filter(Boolean).join(' ');
+    var bits=_kidWhen(st,false);   // [1.715] row 17
     return [st.studentName, [bits,st.instrument].filter(Boolean).join(' ')]
       .filter(Boolean).join(' - ');
   }).join(' · ');
@@ -5062,8 +5080,7 @@ function refreshFamilyThread(){
 // shown to a family — which is why this is safe here and would not be in
 // EnrollmentFamily.html.
 function _kidLine(st){
-  var day=String(st.day||'').trim();
-  var when=[day?day+'s':'', String(st.time||'').trim()].filter(Boolean).join(' ');
+  var when=_kidWhen(st,true);   // [1.715] row 17 — "Tuesdays 3:45 PM", or a May–June child's next date
   var what=[st.duration?st.duration+' min':'', String(st.instrument||'').trim().toLowerCase()]
              .filter(Boolean).join(' ');
   return [what, when, String(st.room||'').trim()].filter(Boolean).join(' \u00b7 ');
@@ -5928,13 +5945,32 @@ function _daySlot(slot){
   return got;
 }
 
+// [1.715] row 17 — the date a day name stands for on this panel: today's or
+// tomorrow's, resolved from the clock like the names themselves.
+function _dayYmd(day){
+  var d=String(day||'').trim().toLowerCase(),n=new Date();
+  var f=function(x){return x.getFullYear()+'-'+('0'+(x.getMonth()+1)).slice(-2)+'-'+('0'+x.getDate()).slice(-2);};
+  if(d===_todayName().toLowerCase()) return f(n);
+  if(d===_tomorrowName().toLowerCase()){ var t=new Date(n.getFullYear(),n.getMonth(),n.getDate()+1,12); return f(t); }
+  return '';
+}
+// A child's lesson on that day, or null. A May–June child has lessons on its
+// dates only (each with its own time) — not before the first, not after the
+// last, and not on a weekday it has no date on; everyone else by weekday.
+function _kidOnDay(st, day){
+  var ld=st&&st.lessonDates;
+  if(ld&&ld.length){
+    var ymd=_dayYmd(day),hit=null;
+    ld.forEach(function(x){ if(!hit&&x&&x.date===ymd) hit=x; });
+    return hit?Object.assign({},st,{day:day,time:hit.time||st.time}):null;
+  }
+  return String(st.day||'').trim().toLowerCase()===String(day).trim().toLowerCase()?st:null;
+}
 function _dayFamilies(day){
   if(!day) return [];
   var out=[];
   (FAMILY_THREADS.list||[]).forEach(function(t){
-    var kids=(t.students||[]).filter(function(st){
-      return String(st.day||'').trim().toLowerCase()===String(day).trim().toLowerCase();
-    });
+    var kids=(t.students||[]).map(function(st){ return _kidOnDay(st, day); }).filter(Boolean);   // [1.715] row 17
     if(!kids.length) return;
     out.push({familyId:t.familyId, parent1Name:t.parent1Name, parent2Name:t.parent2Name,
               students:t.students, kids:kids,
@@ -5967,9 +6003,8 @@ function _dayCounts(){
   (FAMILY_THREADS.list||[]).forEach(function(t){
     var seen={};
     (t.students||[]).forEach(function(st){
-      var d=String(st.day||'').trim();
       DAY_NAMES.forEach(function(n){
-        if(n.toLowerCase()===d.toLowerCase() && !seen[n]){ seen[n]=1; out[n]++; }
+        if(_kidOnDay(st, n) && !seen[n]){ seen[n]=1; out[n]++; }   // [1.715] row 17 — the same rule as the list
       });
     });
   });
@@ -10770,6 +10805,9 @@ function _tplValuesFor(t, stuId){
     v.instrument=String(st.instrument||'').trim();
     v.day=String(st.day||'').trim();
     v.time=String(st.time||'').trim();
+    // [1.715] row 17 — a May–June child: the weekday and time of its next dated lesson
+    var _nx=_kidNextDated(st);
+    if(_nx){ v.day=new Date(_nx.date+'T12:00:00').toLocaleDateString('en-US',{weekday:'long'}); v.time=_nx.time||v.time; }
   }
   return v;
 }

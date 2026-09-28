@@ -1254,6 +1254,27 @@ input[type=checkbox]{width:13px;height:13px;padding:0;margin:0;border:0;border-r
 /* The guide. Closed by default and quiet when closed — it sits under the
    colour key all day and should not compete with the messages. */
 .guide{margin:-.35rem 0 1rem}
+.tt-guide{margin:0 0 1rem}
+.tt-guide-btn{width:auto}
+.tt-sub{display:block;font-size:12px;color:var(--text4);font-weight:400;margin-top:2px}
+.tt-guide-body{margin-top:.5rem;padding:.75rem .9rem;background:#fff;border:1px solid var(--border);border-radius:var(--r);font-size:13px}
+.tt-guide-body h4{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--acc);margin:.7rem 0 .2rem}
+.tt-guide-body h4:first-child{margin-top:0}.tt-guide-body ul{margin:0 0 0 1.1rem;padding:0}
+.tt-card{padding:1rem 1.1rem}
+.tt-row{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.tt-btn{width:100%;background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer;text-align:left}
+.tt-meta{font-size:12px;color:var(--text4)}
+.tt-sum{margin-top:.55rem;background:#fff;border:1px solid var(--border);border-radius:var(--r);padding:10px 12px;font-size:13px;white-space:pre-wrap}
+.tt-pill{display:inline-block;font-size:11px;font-weight:700;padding:1px 8px;border-radius:10px;white-space:nowrap}
+.tt-pill.bad{background:var(--rbg);color:var(--red)}.tt-pill.ok{background:var(--gbg);color:var(--green)}
+.tt-kv{border-collapse:collapse;font-size:13px;margin:.4rem 0 .2rem}.tt-kv th{text-align:left;font-size:11px;color:var(--text4);font-weight:600;padding:3px 12px 3px 0}.tt-kv td{padding:3px 0}
+.tt-note{font-size:12px;color:var(--text4);margin:.3rem 0}
+.tt-sec{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--acc);margin:.9rem 0 .1rem}
+.tt-q{display:block;font-size:12.5px;font-weight:600;color:var(--text3);margin:.55rem 0 .15rem;text-transform:none;letter-spacing:normal;text-align:left}
+.tt-a{width:100%;min-height:44px;border:1px solid var(--border);border-radius:var(--r);padding:6px 8px;font-family:inherit;font-size:13px;background:#fff;resize:vertical;box-sizing:border-box}
+.tt-a-ro{font-size:13px;white-space:pre-wrap}
+.tt-info{background:var(--bbg);color:var(--bt);border-radius:var(--r);padding:6px 10px;font-size:12px;margin-top:.6rem}
+.tt-err{color:var(--red);font-size:12px;font-weight:600;margin-top:.6rem}
 .guide-toggle{background:none;border:0;padding:2px 0;font-family:inherit;font-size:12px;font-weight:600;
   color:var(--acc);cursor:pointer;display:inline-flex;align-items:center;gap:4px}
 .guide-toggle:hover{text-decoration:underline}
@@ -1929,6 +1950,12 @@ function rAct(key){
 function fmtMsgTime(ms){
   var n=Number(ms);
   if(!n) return String(ms||'');
+  // [1.222] — a spreadsheet epoch-zero cell arrives as a large NEGATIVE
+  // number, which is truthy and used to print as "12/30/99". Anything before
+  // the year 2000 is not a real message time; showing nothing is honest.
+  // [1.731] — here, where the admin and family portals have it; @693 put it in
+  // rTabBadge by mistake, which hid every tab count and left this unguarded.
+  if(n < 946684800000) return '';
   var d=new Date(n);
   if(isNaN(d.getTime())) return String(ms||'');
   var days=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
@@ -2739,10 +2766,15 @@ function rHome(){
   // ([1.161] #1's guarantee — a teacher must not have to open something to
   // discover a message is waiting — now met by having nothing to open).
   var tabs='<div class="tabbar">'+
-    '<div class="tab'+(HOME_TAB!=='settings'?' on':'')+'" onclick="switchTab(\'family\')">Messages'+rTabBadge(famUnread+staffUnread)+'</div>'+
+    '<div class="tab'+(HOME_TAB!=='settings'&&HOME_TAB!=='trials'?' on':'')+'" onclick="switchTab(\'family\')">Messages'+rTabBadge(famUnread+staffUnread)+'</div>'+
+    '<div class="tab'+(HOME_TAB==='trials'?' on':'')+'" onclick="switchTab(\'trials\')">'+esc(TT_COPY.tab)+rTabBadge(_ttDueCount())+'</div>'+   // [1.731]
     '<div class="tab'+(HOME_TAB==='settings'?' on':'')+'" onclick="switchTab(\'settings\')">Settings</div>'+
     '</div>';
+  // [1.731] — loaded once per sign-in from here, so every way into the portal
+  // (sign-in, a kept session, a password set) gets the tab's count.
+  if(TOKEN&&!TT.asked) loadTrials(true);
   var body = HOME_TAB==='settings' ? rTeacherSettings()
+           : HOME_TAB==='trials' ? rTrialsTab()
            : rTimerKey()+rMessagesPage();
   return '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">'+
     '<div class="login-brand" style="margin:0">KEYLAB</div>'+
@@ -2827,6 +2859,153 @@ var TSET_COPY={
   // window stops being per teacher, which is why it could not simply stay.
   hoursNote:"You'll receive email notifications between 9 am and 7 pm for all family messages. Email notifications for messages sent after 7pm will be sent at 9am the next morning. You do not have to respond to weekend messages until Monday 12 pm, but if the message is time sensitive please try to respond or forward to admin."
 };
+// ============================================================
+// [1.731] TRIAL LESSONS — the studio's guidelines, the summary admin sends
+// before each trial, and the report the teacher sends back after it.
+// ============================================================
+// PLACEHOLDER wording for AC to replace, except the guidelines, the questions
+// and the note above them, which are his and come from the server.
+var TT_COPY={
+  tab:'Trial Lessons',guide:'Trial lesson guidelines',guideClose:'Close guidelines',   // AC's words
+  upcoming:'Upcoming',due:'Report due',sent:'Reports sent',
+  none:'No trial lessons right now.',
+  parent:'Parent',age:'Age',
+  dueToday:'Due by 11 AM today',dueTomorrow:'Due by 11 AM tomorrow',overdue:'Overdue',
+  sentOn:function(w){return 'Report sent '+w;},
+  kName:'Student Name',kDetails:'Trial Details',
+  send:'Send report to Adrian',sending:'Sending…',
+  autosave:'Your answers save as you type, so you can close this and finish later.',
+  saveFail:'Your last answers were not saved. Check your connection.'
+};
+var TT={asked:false,loading:false,data:null,guideOpen:false,ans:{},timer:{},sending:{},err:{},open:{}};
+function loadTrials(quiet){
+  TT.asked=true;if(!quiet)TT.loading=true;
+  api({action:'teacherTrials',data:{teacherToken:TOKEN}},function(e,r){
+    TT.loading=false;
+    if(e||!r||!r.ok){if(!quiet)showMsg((r&&r.error)||'Trial lessons could not be loaded','e');render();return;}
+    TT.data=r;
+    // Answers being typed are kept; everything else comes from the server.
+    (r.taught||[]).forEach(function(t){if(!TT.timer[t.key])TT.ans[t.key]=Object.assign({},t.report||{});});
+    render();
+  });
+}
+function _ttDueCount(){
+  return ((TT.data&&TT.data.taught)||[]).filter(function(t){return !t.submittedAt;}).length;
+}
+function _ttWhen(v){
+  var s=String(v||''),mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);if(m)return mo[+m[2]-1]+' '+(+m[3]);
+  m=s.match(/^(\d{1,2})\/(\d{1,2})\//);if(m)return mo[+m[1]-1]+' '+(+m[2]);
+  return s;
+}
+// AC's guidelines are plain text: a line starting with * is a point, any other line a heading.
+function _ttGuideHTML(txt){
+  var out='',inList=false;
+  String(txt||'').split('\n').forEach(function(l){
+    var t=l.trim();if(!t)return;
+    if(/^[*•-]\s*/.test(t)){if(!inList){out+='<ul>';inList=true;}out+='<li>'+esc(t.replace(/^[*•-]\s*/,''))+'</li>';}
+    else{if(inList){out+='</ul>';inList=false;}out+='<h4>'+esc(t)+'</h4>';}
+  });
+  return out+(inList?'</ul>':'');
+}
+function rTrialsTab(){
+  if(!TT.data)return '<div class="empty-state">'+(TT.loading?'<span class="spin">↻</span>':'')+'</div>';
+  var d=TT.data,h='';
+  // AC, 28 September 2026: a button, reading "Close guidelines" while open.
+  h+='<div class="tt-guide"><button type="button" class="btn btn-s tt-guide-btn" onclick="TT.guideOpen=!TT.guideOpen;render()">'+
+    esc(TT.guideOpen?TT_COPY.guideClose:TT_COPY.guide)+'</button>'+
+    (TT.guideOpen?'<div class="tt-guide-body">'+_ttGuideHTML(d.guidelines)+'</div>':'')+'</div>';
+  var due=(d.taught||[]).filter(function(t){return !t.submittedAt;});
+  var done=(d.taught||[]).filter(function(t){return t.submittedAt;});
+  if(!(d.upcoming||[]).length&&!due.length&&!done.length)h+='<div class="empty-state">'+esc(TT_COPY.none)+'</div>';
+  if(due.length){
+    h+='<h2>'+esc(TT_COPY.due)+'</h2>';
+    due.forEach(function(t){h+=_ttReportCard(t);});
+  }
+  if((d.upcoming||[]).length){
+    h+='<h2>'+esc(TT_COPY.upcoming)+'</h2>';
+    d.upcoming.forEach(function(t){
+      h+='<div class="card tt-card"><div class="tt-row"><b>'+esc(t.studentName)+'</b><span class="tt-meta">'+esc(t.details)+'</span></div>'+
+        '<div class="tt-meta">'+esc([t.trialRoom,t.age?TT_COPY.age+' '+t.age:'',t.skillLevel,t.parents?TT_COPY.parent+': '+t.parents:''].filter(Boolean).join(' · '))+'</div>'+
+        '<div class="tt-sum">'+esc(t.summary)+'</div></div>';
+    });
+  }
+  if(done.length){
+    h+='<h2>'+esc(TT_COPY.sent)+'</h2>';
+    done.forEach(function(t){
+      var on=!!TT.open[t.key];
+      h+='<div class="card tt-card"><button type="button" class="tt-row tt-btn" onclick="ttToggle(\''+esc(t.key)+'\')">'+
+        '<span><span class="caret">'+(on?'▾':'▸')+'</span> <b>'+esc(t.studentName)+'</b></span>'+
+        '<span class="tt-pill ok">'+esc(TT_COPY.sentOn(_ttWhen(t.submittedAt)))+'</span></button>'+
+        (on?_ttAnswersHTML(t):'')+'</div>';
+    });
+  }
+  return h;
+}
+function ttToggle(k){TT.open[k]=!TT.open[k];render();}
+function _ttPill(t){
+  if(t.overdue)return '<span class="tt-pill bad">'+esc(TT_COPY.overdue)+'</span>';
+  return '<span class="tt-pill bad">'+esc(t.dueDay===TT.data.today?TT_COPY.dueToday:TT_COPY.dueTomorrow)+'</span>';
+}
+function _ttIdx(k){return ((TT.data&&TT.data.taught)||[]).map(function(t){return t.key;}).indexOf(k);}
+function _ttReportCard(t){
+  var i=_ttIdx(t.key),a=TT.ans[t.key]||{},d=TT.data;
+  // AC, 28 September 2026: *"They should see all reports due as cards to click
+  // and expand to complete and submit"* — closed, the card is its heading only.
+  var on=!!TT.open[t.key];
+  var head='<button type="button" class="tt-row tt-btn" onclick="ttToggle(\''+esc(t.key)+'\')">'+
+    '<span><span class="caret">'+(on?'\u25be':'\u25b8')+'</span> <b>'+esc(t.studentName)+'</b><span class="tt-sub">'+esc(t.details)+'</span></span>'+_ttPill(t)+'</button>';
+  return '<div class="card tt-card">'+head+(on?_ttReportForm(t,i,a,d):'')+'</div>';
+}
+function _ttReportForm(t,i,a,d){
+  var h='<table class="tt-kv"><tr><th>'+esc(TT_COPY.kName)+'</th><td>'+esc(t.studentName)+'</td></tr>'+
+    '<tr><th>'+esc(TT_COPY.kDetails)+'</th><td>'+esc(t.details)+'</td></tr></table>'+
+    (d.note?'<div class="tt-note">'+esc(d.note)+'</div>':'');
+  (d.questions||[]).forEach(function(sec,si){
+    h+='<div class="tt-sec">'+esc(sec.h)+'</div>';
+    sec.q.forEach(function(q,qi){
+      var k=si+'.'+qi;
+      h+='<label class="tt-q" for="ttr-'+i+'-'+si+'-'+qi+'">'+esc(q)+'</label>'+
+        '<textarea id="ttr-'+i+'-'+si+'-'+qi+'" class="tt-a" rows="2" oninput="ttAnswer('+i+',\''+k+'\',this.value)"'+(TT.sending[t.key]?' disabled':'')+'>'+esc(a[k]||'')+'</textarea>';
+    });
+  });
+  return h+'<button class="btn btn-p" style="margin-top:.8rem" '+(TT.sending[t.key]?'disabled ':'')+'onclick="ttSubmit('+i+')">'+esc(TT.sending[t.key]?TT_COPY.sending:TT_COPY.send)+'</button>'+
+    (TT.err[t.key]?'<div class="tt-err">'+esc(TT.err[t.key])+'</div>':'<div class="tt-info">'+esc(TT_COPY.autosave)+'</div>');
+}
+function _ttAnswersHTML(t){
+  var a=t.report||{};
+  return '<div class="tt-ans">'+((TT.data.questions)||[]).map(function(sec,si){
+    return '<div class="tt-sec">'+esc(sec.h)+'</div>'+sec.q.map(function(q,qi){
+      return '<div class="tt-q">'+esc(q)+'</div><div class="tt-a-ro">'+esc(a[si+'.'+qi]||'—')+'</div>';
+    }).join('');
+  }).join('')+'</div>';
+}
+// Typing never redraws; the answers go to the server a moment after typing stops.
+function ttAnswer(i,k,v){
+  var t=TT.data.taught[i];if(!t)return;
+  var a=TT.ans[t.key]=TT.ans[t.key]||{};a[k]=v;
+  clearTimeout(TT.timer[t.key]);
+  TT.timer[t.key]=setTimeout(function(){_ttSave(t,null);},1200);
+}
+function _ttSave(t,then){
+  api({action:'teacherSaveTrialReport',data:{teacherToken:TOKEN,key:t.key,answers:TT.ans[t.key]||{}}},function(e,r){
+    TT.timer[t.key]=null;
+    var bad=e||!r||!r.ok;
+    if(bad!==!!TT.err[t.key]){TT.err[t.key]=bad?TT_COPY.saveFail:'';render();}
+    if(then)then(!bad);
+  });
+}
+function ttSubmit(i){
+  var t=TT.data.taught[i];if(!t||TT.sending[t.key])return;
+  clearTimeout(TT.timer[t.key]);TT.timer[t.key]=null;
+  TT.sending[t.key]=true;TT.err[t.key]='';render();
+  api({action:'teacherSubmitTrialReport',data:{teacherToken:TOKEN,key:t.key,answers:TT.ans[t.key]||{}}},function(e,r){
+    TT.sending[t.key]=false;
+    if(e||!r||!r.ok){TT.err[t.key]=(r&&r.error)||TT_COPY.saveFail;render();return;}
+    t.submittedAt=r.submittedAt;t.report=Object.assign({},TT.ans[t.key]||{});
+    render();
+  });
+}
 function rTeacherSettings(){
   if(TSET.loading&&!TSET.loaded){
     return '<div style="text-align:center;padding:2rem;color:var(--text3)"><span class="spin" style="font-size:20px">↻</span></div>';
@@ -3507,11 +3686,12 @@ function _saveSettings(fields){
 }
 
 function rTabBadge(n){
-  if(!n) return '';
-  // [1.222] — a spreadsheet epoch-zero cell arrives as a large NEGATIVE
-  // number, which is truthy and used to print as "12/30/99". Anything before
-  // the year 2000 is not a real message time; showing nothing is honest.
-  if(n < 946684800000) return '';
+  // [1.731] — this is a COUNT. @693 put [1.222]'s message-TIME guard here
+  // ("anything before the year 2000 is not a real message time"), so every
+  // count below 946,684,800,000 — which is every count — drew nothing, and the
+  // Messages tab has shown no unread number since. A count is shown when it is
+  // above zero; [1.222]'s guard belongs to the time formatters, which have it.
+  if(!(Number(n) > 0)) return '';
   return '<span class="tab-badge">'+n+'</span>';
 }
 
@@ -3519,6 +3699,7 @@ function switchTab(tab){
   HOME_TAB=tab;
   render();
   if(tab==='settings' && !TSET.loaded && !TSET.loading) loadTeacherSettings();
+  if(tab==='trials' && !TT.loading) loadTrials(!!TT.data);   // [1.731] — fresh each visit
   if(tab==='staff' && STAFF_VIEW==='list'){
     if(!STAFF_PICKER.all.length && !STAFF_PICKER.loading) loadStaffDirectory();
     if(!STAFF_THREADS.list.length && !STAFF_THREADS.loading) loadStaffThreads();
@@ -14078,6 +14259,7 @@ function doSignOut(){
   PICK=''; PICK_Q=''; LINK_ADDED={}; LIBRARY_OPEN=false; LIB_EDIT=''; LIB_DEL=''; LIB_KEPT={};
   LIB_MINE=[]; LIB_SHELF_STUDIO=[]; LIB_TAGS=[]; _libLoaded=false; _libInFlight=false;
   if(_pollTimer){ clearInterval(_pollTimer); _pollTimer=null; }
+  TT={asked:false,loading:false,data:null,guideOpen:false,ans:{},timer:{},sending:{},err:{},open:{}};   // [1.731]
   TOKEN=''; TEACHER_ID=''; TEACHER_NAME='';
   LF={email:'', password:'', remember:true};
   HOME_TAB='family';

@@ -579,6 +579,22 @@ button:active:not(:disabled),
 .kl-send-row{display:flex;gap:8px;align-items:center;padding-top:8px}
 .teacher-pick-row{background:rgba(255,255,255,.45);border:1px solid var(--border);border-radius:var(--r);padding:.7rem .85rem;cursor:pointer;margin-bottom:6px;transition:background .12s}
 .teacher-pick-row:hover{background:rgba(255,255,255,.65)}
+/* [1.734] an Assignment, drawn as in its email */
+.asg{background:#fff;border:1px solid #d9dee6;border-radius:10px;overflow:hidden;min-width:240px;color:#1f2937;text-align:left}
+.asg-hero{background:#C9E0E6;padding:12px 14px;border-bottom:3px solid #000}
+.asg-date{font-size:12px;font-weight:700;color:#35545C}
+.asg-title{font-size:17px;font-weight:700;color:#111;margin-top:2px;line-height:1.25}
+.asg-body{padding:12px 14px;font-size:14px;line-height:1.5}
+.asg-intro{margin-bottom:10px}
+.asg-panel{background:#EEF6F8;border:1px solid #C9E0E6;border-radius:8px;padding:10px 12px}
+.asg-h{font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#111;margin-bottom:6px}
+.asg-item{display:flex;gap:8px;align-items:flex-start;padding:3px 0}
+.asg-n{flex:0 0 20px;height:20px;border-radius:50%;background:#111;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.asg-m{display:flex;gap:10px;align-items:center;width:100%;border:1px solid #E3E7EE;border-radius:8px;padding:8px 10px;margin-bottom:6px;background:#fff;color:#1f2937;text-decoration:none;font:inherit;text-align:left;cursor:pointer;box-sizing:border-box}
+div.asg-m{cursor:default}
+.asg-ic{flex:0 0 36px;height:36px;border-radius:7px;color:#fff;font-size:9.5px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.asg-ml{flex:1;font-size:13.5px}
+.asg-go{font-size:20px;color:#111}
 </style>
 </head>
 <body>
@@ -3929,6 +3945,38 @@ function _klAttThumb(id){
   });
   return '';
 }
+// [1.734] — the Assignment a message carries, or null.
+function _klAssignment(m){
+  if(!m||!m.assignment)return null;
+  try{var a=typeof m.assignment==='string'?JSON.parse(m.assignment):m.assignment;return a&&a.lessonDate?a:null;}catch(e){return null;}
+}
+var KL_ASG_COPY={practice:'Practice this week',materials:'Materials'};   // PLACEHOLDER headings, as in the email
+function _klLongDate(ymd){
+  var p=String(ymd||'').split('-');if(p.length!==3)return String(ymd||'');
+  var d=new Date(Date.UTC(+p[0],+p[1]-1,+p[2],12)),n=+p[2];
+  var sfx=(n%10===1&&n!==11)?'st':(n%10===2&&n!==12)?'nd':(n%10===3&&n!==13)?'rd':'th';
+  return ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][d.getUTCDay()]+', '+
+    ['January','February','March','April','May','June','July','August','September','October','November','December'][+p[1]-1]+' '+n+sfx;
+}
+function _rKlAssignment(a){
+  var ic={book:['BOOK','#8B5CF6'],file:['FILE','#DC2626'],link:['LINK','#059669']};
+  var mats=(a.materials||[]).map(function(x){
+    var i=ic[x.kind]||ic.link;
+    var inner='<span class="asg-ic" style="background:'+i[1]+'">'+i[0]+'</span><span class="asg-ml">'+esc(x.label||'')+'</span>';
+    if(x.kind==='link'&&/^https?:\/\//i.test(x.url||''))return '<a class="asg-m" href="'+esc(x.url)+'" target="_blank" rel="noopener noreferrer">'+inner+'<span class="asg-go">\u203a</span></a>';
+    if(x.kind==='file'&&x.attachmentId)return '<button type="button" class="asg-m" onclick="klOpenAttachment(\''+esc(x.attachmentId)+'\',\'view\')">'+inner+'<span class="asg-go">\u203a</span></button>';
+    return '<div class="asg-m">'+inner+'</div>';
+  }).join('');
+  return '<div class="asg">'+
+    '<div class="asg-hero"><div class="asg-date">'+esc(_klLongDate(a.lessonDate))+'</div>'+
+      '<div class="asg-title">'+esc('Here\u2019s '+(a.studentFirst||'')+'\u2019s Assignment from '+(a.teacherFirst||'')+'!')+'</div></div>'+
+    '<div class="asg-body">'+
+      (a.intro?'<div class="asg-intro">'+esc(a.intro).replace(/\n/g,'<br>')+'</div>':'')+
+      ((a.practice||[]).length?'<div class="asg-panel"><div class="asg-h">'+esc(KL_ASG_COPY.practice)+'</div>'+
+        a.practice.map(function(p,i){return '<div class="asg-item"><span class="asg-n">'+(i+1)+'</span><span>'+esc(p)+'</span></div>';}).join('')+'</div>':'')+
+      (mats?'<div class="asg-h" style="margin-top:12px">'+esc(KL_ASG_COPY.materials)+'</div>'+mats:'')+
+    '</div></div>';
+}
 function rKlAttachments(m){
   var list=m.attachments||[];
   if(!list.length) return '';
@@ -4280,6 +4328,12 @@ function rMsgBubble(m, prev, next){
     return _rKlNote(KL_NOTE_LABEL_SEEN, m.sentAt, m.messageText);
   }
   if(isTruthy(m.isAuto)) return rKlAutoBubble(m,mine);
+  // [1.734] — a teacher's Assignment is drawn as one, in the design AC approved
+  // for its email: the date, his heading, the practice numbered, and each
+  // material a row of its own. Its files are those rows, so the ordinary
+  // attachment list is not drawn under it as well.
+  var _asg=_klAssignment(m);
+  if(_asg){ body=_rKlAssignment(_asg); }
   // [1.249] — the sender's name moves onto the TIMESTAMP LINE, on every
   // message including the family's own: "Xavier Tombstone · Thursday, 9/3/26
   // 2:12 AM". A family thread can carry two parents and admin as well as the
@@ -4292,7 +4346,7 @@ function rMsgBubble(m, prev, next){
   return '<div class="bubble-row'+(mine?' mine':'')+(_runStart?' run-start':'')+(_runEnd?' run-end':'')+'">'+
     '<div class="bubble'+(mine?' mine':'')+'">'+
     '<div class="bubble-text">'+body+'</div>'+
-    rKlAttachments(m)+
+    (_asg?'':rKlAttachments(m))+
     // [1.413] — one timestamp per run, on its last message.
     // ── [1.413] — EVERY message carries its time again ──────────────────
     //

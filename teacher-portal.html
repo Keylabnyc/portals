@@ -1150,6 +1150,13 @@ input[type=checkbox]{width:13px;height:13px;padding:0;margin:0;border:0;border-r
    inside a container nobody would think to scroll. A list holding an open
    editor stops clamping. */
 .lib-list.editing{max-height:none;overflow:visible}
+/* [1.736] row 8 — AC: "all of the four sections in the messages area ... are
+   constricted to a very small window and do not expand. The teacher can only
+   see one item at a time and has to scroll." Each shelf of Tags, Files, Links
+   and Templates was its own 230px scroller inside the library screen, which
+   scrolls already. In the library screen and the picker the shelves now grow
+   to their content, and the screen itself is the one scroll. */
+.lib-modal .lib-list,.lib-panel.pick-in-thread .lib-list{max-height:none;overflow:visible}
 
 /* ── A row: the NAME gets the width, the small facts get the second line ─ */
 .lib-row{display:block;padding:7px 9px;border:1px solid var(--border2);
@@ -1319,6 +1326,7 @@ input[type=checkbox]{width:13px;height:13px;padding:0;margin:0;border:0;border-r
 .tt-sec{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--acc);margin:.9rem 0 .1rem}
 .tt-q{display:block;font-size:12.5px;font-weight:600;color:var(--text3);margin:.55rem 0 .15rem;text-transform:none;letter-spacing:normal;text-align:left}
 .tt-a{width:100%;min-height:44px;border:1px solid var(--border);border-radius:var(--r);padding:6px 8px;font-family:inherit;font-size:13px;background:#fff;resize:vertical;box-sizing:border-box}
+.tt-a.tt-miss{border:2px solid #DC2626}   /* [1.736] row 2 */
 .tt-a-ro{font-size:13px;white-space:pre-wrap}
 .tt-info{background:var(--bbg);color:var(--bt);border-radius:var(--r);padding:6px 10px;font-size:12px;margin-top:.6rem}
 .tt-err{color:var(--red);font-size:12px;font-weight:600;margin-top:.6rem}
@@ -1444,6 +1452,12 @@ input[type=checkbox]{width:13px;height:13px;padding:0;margin:0;border:0;border-r
   /* Each pane scrolls internally rather than the page scrolling as a whole. */
   .pane .thread-list{flex:1;overflow-y:auto;min-height:0;margin-right:-4px;padding-right:4px}
   .pane .msg-list{flex:1;max-height:none;min-height:0;margin-bottom:.75rem}
+  /* [1.736] row 8 — the roster's sections (New Messages, Staff, My Students,
+     Closed) each took a share of one fixed-height pane, so with several open
+     each was a sliver showing one row. The roster pane now scrolls as ONE
+     list and every section is as tall as what is in it. */
+  .pane.pane-roster{overflow-y:auto}
+  .pane.pane-roster .thread-list{flex:none;overflow:visible;min-height:auto;margin-right:0;padding-right:0}
 
   /* The point of the exercise: the composer grows instead of scrolling inside
      160px. Capped at 40vh so a long message can never push Send off-screen. */
@@ -1484,7 +1498,7 @@ input[type=checkbox]{width:13px;height:13px;padding:0;margin:0;border:0;border-r
 .lib-said.bad { color:var(--rt);background:var(--rbg);border-color:var(--red);white-space:normal }
 .lib-foot { margin-top:9px;display:flex;justify-content:flex-end }
 .lib-scrim { position:fixed;inset:0;background:rgba(0,0,0,.42);z-index:60 }
-.lib-modal { position:fixed;top:4vh;left:50%;transform:translateX(-50%);width:min(680px,94vw);max-height:92vh;
+.lib-modal { position:fixed;top:3vh;left:50%;transform:translateX(-50%);width:min(960px,96vw);max-height:94vh;
   overflow-y:auto;background:var(--bg2);border:1px solid var(--border3);border-radius:var(--rl);padding:14px;
   box-shadow:0 18px 40px rgba(0,0,0,.35);z-index:61 }
 /* [1.585] — the file editor, above the library screen that opened it. Its own
@@ -1650,7 +1664,7 @@ var HOME_TAB = 'family'; // 'family' | 'staff' | 'settings'
 var TSET = {tpls:null, tplEdit:-1, tplDel:-1, tplBackup:null, tplsSaved:false, tplsErr:'',
   tplFocus:-1,
             loading:false, saving:false, loaded:false,
-            awayEnabled:false, awayMessage:'', afterHoursMessage:'', awayDefaultCopy:'',
+            awayEnabled:false, awayMessage:'', afterHoursMessage:'', awayDefaultCopy:'', afterHoursDefaultCopy:'',
             notifyOpen:9, notifyClose:17, notifyDerived:false,
             draftAway:'', draftAfter:'',
             // [1.338] — the teacher's OWN link library, edited here and drawn in
@@ -1884,7 +1898,88 @@ var SPW = {checking:false, invalid:false, resent:false, resending:false, email:'
 // API
 // ============================================================
 var GAS_URL = 'https://script.google.com/a/macros/keylab.nyc/s/AKfycbzY4K1XCbYZlj4fXksfwEZ3Kxbeolr9abRuifT-_TY4hgfPZP9gbL1dSCn1_zeFRsvl3g/exec';
+// ── [1.736] rows 1, 5, 6 — the portal answers from what it already holds ──
+//
+// AC, 28 September 2026: "Everything should load at login for fast movement
+// between tabs, students, etc." teacherBootstrap (sent once at sign-in, beside
+// the Messages roster) brings every week around this one, every student card,
+// the trial lessons and the recent conversations. Here is where a click finds
+// them: a week or a card already held is answered at once, and the server is
+// asked again behind it so the next visit is fresh. Nothing on screen waits.
+var API_KEEP={}, API_KEEP_AT={}, API_THISWEEK='';
+var API_KEEP_REFRESH_MS=60000;
+function _apiKeepKey(p){
+  var d=(p&&p.data)||{};
+  if(p.action==='teacherWeek') return 'w|'+(d.weekStart||API_THISWEEK);
+  if(p.action==='teacherStudentCard') return 'c|'+(d.studentId||'');
+  return '';
+}
+function _apiCopy(r){ return JSON.parse(JSON.stringify(r)); }
+function _apiRefreshKept(payload,k,force){
+  if(!force && Date.now()-(API_KEEP_AT[k]||0)<API_KEEP_REFRESH_MS) return;
+  API_KEEP_AT[k]=Date.now();
+  _apiFetch(payload,function(e,r){ if(!e&&r&&r.ok) API_KEEP[k]=r; });
+}
+// What this teacher just wrote is put into the held card at once, so opening
+// the card again never shows the words from before the save.
+function _apiPatchKept(payload){
+  var d=(payload&&payload.data)||{}, c=API_KEEP['c|'+(d.studentId||'')];
+  if(payload.action==='teacherSaveStudentNote' && c){ c.myNote=String(d.note||''); }
+  if(payload.action==='teacherSaveLessonNote' && c){
+    c.notes=c.notes||[];
+    var n=c.notes.filter(function(x){return x.lessonDate===d.lessonDate;})[0];
+    if(!n){ n={lessonDate:d.lessonDate,lessonTime:'',activities:'',materials:[],sent:[]}; c.notes.push(n);
+      c.notes.sort(function(a,b){return a.lessonDate<b.lessonDate?1:a.lessonDate>b.lessonDate?-1:0;}); }
+    n.lessonTime=d.lessonTime||n.lessonTime; n.activities=String(d.activities||''); n.materials=d.materials||[];
+  }
+}
 function api(payload, cb){
+  var k=_apiKeepKey(payload);
+  if(k && API_KEEP[k]){
+    var held=_apiCopy(API_KEEP[k]);
+    setTimeout(function(){ cb(null, held); },0);
+    _apiRefreshKept(payload,k);
+    return;
+  }
+  _apiPatchKept(payload);
+  _apiFetch(payload, function(e,r){
+    if(k && !e && r && r.ok){
+      if(payload.action==='teacherWeek' && r.weekStart){ if(!(payload.data||{}).weekStart) API_THISWEEK=r.weekStart; k='w|'+r.weekStart; }
+      API_KEEP[k]=r; API_KEEP_AT[k]=Date.now();
+    }
+    // An Assignment changes the card it was sent from: fetched again behind.
+    if(payload.action==='sendMessage' && payload.data && payload.data.assignment && !e && r && r.ok){
+      var sid=payload.data.assignment.studentId;
+      if(sid) _apiRefreshKept({action:'teacherStudentCard',data:{teacherToken:TOKEN,studentId:sid}},'c|'+sid,true);
+    }
+    cb(e,r);
+  });
+}
+// Sent once at sign-in, beside the roster. What it brings is held for the
+// clicks above; the trial lessons go straight onto their tab.
+function _bootTeacher(){
+  var tok=TOKEN;
+  TT.asked=true;   // the trials come in this call; rHome need not ask separately
+  _apiFetch({action:'teacherBootstrap',data:{teacherToken:TOKEN}},function(e,r){
+    if(tok!==TOKEN) return;
+    if(e||!r||!r.ok){ if(!TT.data) loadTrials(true); return; }   // the old per-click loads still work
+    var now=Date.now();
+    API_THISWEEK=r.thisWeek||API_THISWEEK;
+    Object.keys(r.weeks||{}).forEach(function(ws){ API_KEEP['w|'+ws]=r.weeks[ws]; API_KEEP_AT['w|'+ws]=now; });
+    Object.keys(r.cards||{}).forEach(function(id){ API_KEEP['c|'+id]=r.cards[id]; API_KEEP_AT['c|'+id]=now; });
+    (r.conversations||[]).forEach(function(c){
+      var d=Object.assign({teacherToken:TOKEN},c.req);
+      var key=_threadCacheKey(d);
+      if(!THREAD_CACHE[key] && (c.messages||[]).length) THREAD_CACHE[key]=c.messages;
+    });
+    var tr=(r.parts||{}).teacherTrials;
+    if(tr && !TT.data){ TT.asked=true; TT.loading=false; TT.data=tr;
+      (tr.taught||[]).forEach(function(t){ if(!TT.timer[t.key]) TT.ans[t.key]=Object.assign({},t.report||{}); }); }
+    if(!MS.week && API_KEEP['w|'+API_THISWEEK]){ MS.asked=true; MS.week=_apiCopy(API_KEEP['w|'+API_THISWEEK]); MS.weekStart=MS.week.weekStart; }
+    render();
+  });
+}
+function _apiFetch(payload, cb){
   fetch(GAS_URL, {
     method:'POST',
     headers:{'Content-Type':'text/plain;charset=utf-8'},
@@ -1897,6 +1992,9 @@ function api(payload, cb){
 // ============================================================
 // HELPERS
 // ============================================================
+// [1.736] rows 4, 17 — AC: "Student age should always accompany the student
+// name, like 'Alex May, age 9'". One helper, so the form is the same everywhere.
+function _nameAge(name,age){ name=String(name||'').trim(); age=String(age||'').trim(); return age?name+', age '+age:name; }
 function esc(s){
   return String(s||'')
     .replace(/&/g,'&amp;').replace(/</g,'&lt;')
@@ -2078,6 +2176,7 @@ function _ktBootRetry(saved){
         // visit the tab is not a badge (1.161 #1).
         loadStaffThreads(true);
         _startMessagePolling(); loadTeacherSettings(); loadScheduled();   // [1.373]
+        _bootTeacher();   // [1.736] — everything else, in one call
       } else {
         _ktClearSession(); TOKEN=''; TEACHER_ID=''; TEACHER_NAME='';
         PAGE='login'; render();
@@ -2557,6 +2656,7 @@ function doLogin(){
     _startMessagePolling();
     loadTeacherSettings();
     loadScheduled();   // [1.373] — the count, before they look for it
+    _bootTeacher();   // [1.736] — everything else, in one call
   });
 }
 
@@ -2677,6 +2777,7 @@ function doCompleteReset(){
       _startMessagePolling();
       loadTeacherSettings();
       loadScheduled();   // [1.373]
+      _bootTeacher();   // [1.736] — everything else, in one call
     } else {
       PAGE='login'; render();
     }
@@ -2882,7 +2983,18 @@ function rStatusBanner(){
 // AC's copy for this panel, 3 September. Kept in one object rather than inline
 // in the markup for the same reason TCH_COPY exists: his words are the thing
 // that must not be edited by accident while somebody is changing a div.
+// [1.736] row 7 — the studio's message, read-only, under the teacher's own box,
+// so a teacher always knows what goes out when they write nothing. The text
+// comes from the server (the sentence actually sent); nothing is drawn until
+// it has arrived.
+function _tsetStudioCopy(txt){
+  if(!txt)return '';
+  return '<div style="margin-top:.75rem;padding:.6rem .75rem;background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px">'+
+    '<div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:.25rem">'+esc(TSET_COPY.studioLabel)+'</div>'+
+    '<div style="font-size:12.5px;color:var(--text2);white-space:pre-wrap">'+esc(txt)+'</div></div>';
+}
 var TSET_COPY={
+  studioLabel:'Studio message (sent when yours is blank)',   // PLACEHOLDER — AC's wording
   awayHeading:'Away / Busy Message',
   // AC's third revision of this sentence on 3 September.
   awayBody:'When enabled, families, other staff, and admin see this before they compose their message to you. If they send you a message, it also appears in the thread as an auto-generated message. Change the message to suit your needs, or use the generic message.',
@@ -2924,14 +3036,19 @@ var TT_COPY={
   kName:'Student Name',kDetails:'Trial Details',
   send:'Send report to Adrian',sending:'Sending…',
   autosave:'Your answers save as you type, so you can close this and finish later.',
-  saveFail:'Your last answers were not saved. Check your connection.'
+  saveFail:'Your last answers were not saved. Check your connection.',
+  missing:function(n){return 'Answer every question before sending ('+n+' left).';}   // PLACEHOLDER — AC's wording
 };
-var TT={asked:false,loading:false,data:null,guideOpen:false,ans:{},timer:{},sending:{},err:{},open:{}};
+var TT={asked:false,loading:false,data:null,guideOpen:false,ans:{},timer:{},sending:{},err:{},open:{},miss:{}};
 function loadTrials(quiet){
   TT.asked=true;if(!quiet)TT.loading=true;
   api({action:'teacherTrials',data:{teacherToken:TOKEN}},function(e,r){
     TT.loading=false;
     if(e||!r||!r.ok){if(!quiet)showMsg((r&&r.error)||'Trial lessons could not be loaded','e');render();return;}
+    // [1.736] — a report sent from this screen stays sent, even when a refresh
+    // asked for before the send landed answers after it.
+    var _mine={};((TT.data&&TT.data.taught)||[]).forEach(function(t){if(t.submittedAt)_mine[t.key]=t;});
+    (r.taught||[]).forEach(function(t){var m=_mine[t.key];if(m&&!t.submittedAt){t.submittedAt=m.submittedAt;t.report=m.report;}});
     TT.data=r;
     // Answers being typed are kept; everything else comes from the server.
     (r.taught||[]).forEach(function(t){if(!TT.timer[t.key])TT.ans[t.key]=Object.assign({},t.report||{});});
@@ -2974,8 +3091,8 @@ function rTrialsTab(){
   if((d.upcoming||[]).length){
     h+='<h2>'+esc(TT_COPY.upcoming)+'</h2>';
     d.upcoming.forEach(function(t){
-      h+='<div class="card tt-card"><div class="tt-row"><b>'+esc(t.studentName)+'</b><span class="tt-meta">'+esc(t.details)+'</span></div>'+
-        '<div class="tt-meta">'+esc([t.trialRoom,t.age?TT_COPY.age+' '+t.age:'',t.skillLevel,t.parents?TT_COPY.parent+': '+t.parents:''].filter(Boolean).join(' · '))+'</div>'+
+      h+='<div class="card tt-card"><div class="tt-row"><b>'+esc(_nameAge(t.studentName,t.age))+'</b><span class="tt-meta">'+esc(t.details)+'</span></div>'+
+        '<div class="tt-meta">'+esc([t.trialRoom,t.skillLevel,t.parents?TT_COPY.parent+': '+t.parents:''].filter(Boolean).join(' · '))+'</div>'+
         '<div class="tt-sum">'+esc(t.summary)+'</div></div>';
     });
   }
@@ -2984,7 +3101,7 @@ function rTrialsTab(){
     done.forEach(function(t){
       var on=!!TT.open[t.key];
       h+='<div class="card tt-card"><button type="button" class="tt-row tt-btn" onclick="ttToggle(\''+esc(t.key)+'\')">'+
-        '<span><span class="caret">'+(on?'▾':'▸')+'</span> <b>'+esc(t.studentName)+'</b></span>'+
+        '<span><span class="caret">'+(on?'▾':'▸')+'</span> <b>'+esc(_nameAge(t.studentName,t.age))+'</b></span>'+
         '<span class="tt-pill ok">'+esc(TT_COPY.sentOn(_ttWhen(t.submittedAt)))+'</span></button>'+
         (on?_ttAnswersHTML(t):'')+'</div>';
     });
@@ -3003,11 +3120,11 @@ function _ttReportCard(t){
   // and expand to complete and submit"* — closed, the card is its heading only.
   var on=!!TT.open[t.key];
   var head='<button type="button" class="tt-row tt-btn" onclick="ttToggle(\''+esc(t.key)+'\')">'+
-    '<span><span class="caret">'+(on?'\u25be':'\u25b8')+'</span> <b>'+esc(t.studentName)+'</b><span class="tt-sub">'+esc(t.details)+'</span></span>'+_ttPill(t)+'</button>';
+    '<span><span class="caret">'+(on?'\u25be':'\u25b8')+'</span> <b>'+esc(_nameAge(t.studentName,t.age))+'</b><span class="tt-sub">'+esc(t.details)+'</span></span>'+_ttPill(t)+'</button>';
   return '<div class="card tt-card">'+head+(on?_ttReportForm(t,i,a,d):'')+'</div>';
 }
 function _ttReportForm(t,i,a,d){
-  var h='<table class="tt-kv"><tr><th>'+esc(TT_COPY.kName)+'</th><td>'+esc(t.studentName)+'</td></tr>'+
+  var h='<table class="tt-kv"><tr><th>'+esc(TT_COPY.kName)+'</th><td>'+esc(_nameAge(t.studentName,t.age))+'</td></tr>'+
     '<tr><th>'+esc(TT_COPY.kDetails)+'</th><td>'+esc(t.details)+'</td></tr></table>'+
     (d.note?'<div class="tt-note">'+esc(d.note)+'</div>':'');
   (d.questions||[]).forEach(function(sec,si){
@@ -3015,7 +3132,9 @@ function _ttReportForm(t,i,a,d){
     sec.q.forEach(function(q,qi){
       var k=si+'.'+qi;
       h+='<label class="tt-q" for="ttr-'+i+'-'+si+'-'+qi+'">'+esc(q)+'</label>'+
-        '<textarea id="ttr-'+i+'-'+si+'-'+qi+'" class="tt-a" rows="2" oninput="ttAnswer('+i+',\''+k+'\',this.value)"'+(TT.sending[t.key]?' disabled':'')+'>'+esc(a[k]||'')+'</textarea>';
+        // [1.736] row 2 — a question left blank at Send is outlined red until
+        // it is answered; typing clears the outline without a redraw.
+        '<textarea id="ttr-'+i+'-'+si+'-'+qi+'" class="tt-a'+((TT.miss[t.key]||[]).indexOf(k)>-1?' tt-miss':'')+'" rows="2" oninput="this.classList.remove(\'tt-miss\');ttAnswer('+i+',\''+k+'\',this.value)"'+(TT.sending[t.key]?' disabled':'')+'>'+esc(a[k]||'')+'</textarea>';
     });
   });
   return h+'<button class="btn btn-p" style="margin-top:.8rem" '+(TT.sending[t.key]?'disabled ':'')+'onclick="ttSubmit('+i+')">'+esc(TT.sending[t.key]?TT_COPY.sending:TT_COPY.send)+'</button>'+
@@ -3044,14 +3163,36 @@ function _ttSave(t,then){
     if(then)then(!bad);
   });
 }
+// [1.736] row 1 — Send is instant: the report moves to Reports sent the moment
+// it is pressed and goes to the server behind it. Only a refusal brings it
+// back, with the reason. Row 2 — every question must be answered first.
+function _ttMissing(t){
+  var a=TT.ans[t.key]||{}, out=[];
+  ((TT.data&&TT.data.questions)||[]).forEach(function(sec,si){ sec.q.forEach(function(_q,qi){ if(!String(a[si+'.'+qi]||'').trim()) out.push(si+'.'+qi); }); });
+  return out;
+}
+function _ttNowLabel(){
+  var d=new Date(), h=d.getHours(), m=d.getMinutes();
+  return (d.getMonth()+1)+'/'+d.getDate()+'/'+String(d.getFullYear()).slice(2)+' '+((h%12)||12)+':'+(m<10?'0':'')+m+' '+(h<12?'AM':'PM');
+}
 function ttSubmit(i){
-  var t=TT.data.taught[i];if(!t||TT.sending[t.key])return;
+  var t=TT.data.taught[i];if(!t||TT.sending[t.key]||t.submittedAt)return;
+  var miss=_ttMissing(t);
+  if(miss.length){TT.miss[t.key]=miss;TT.err[t.key]=TT_COPY.missing(miss.length);render();return;}
   clearTimeout(TT.timer[t.key]);TT.timer[t.key]=null;
-  TT.sending[t.key]=true;TT.err[t.key]='';render();
+  TT.miss[t.key]=[];TT.err[t.key]='';
+  TT.sending[t.key]=true;
+  var before=t.report;
+  t.submittedAt=_ttNowLabel();t.report=Object.assign({},TT.ans[t.key]||{});
+  render();
   api({action:'teacherSubmitTrialReport',data:{teacherToken:TOKEN,key:t.key,answers:TT.ans[t.key]||{}}},function(e,r){
     TT.sending[t.key]=false;
-    if(e||!r||!r.ok){TT.err[t.key]=(r&&r.error)||TT_COPY.saveFail;render();return;}
-    t.submittedAt=r.submittedAt;t.report=Object.assign({},TT.ans[t.key]||{});
+    if(e||!r||!r.ok){
+      t.submittedAt='';t.report=before;TT.open[t.key]=true;
+      TT.miss[t.key]=(r&&r.missing)||[];
+      TT.err[t.key]=(r&&r.error)||TT_COPY.saveFail;render();return;
+    }
+    t.submittedAt=r.submittedAt||t.submittedAt;
     render();
   });
 }
@@ -3120,7 +3261,7 @@ function rMyStudents(){
     else if(!d.lessons.length)h+='<div class="ms-day-none">'+esc(MS_COPY.noLessons)+'</div>';
     d.lessons.forEach(function(l){
       h+='<button type="button" class="ms-row" onclick="msOpen(\''+esc(l.studentId)+'\',\''+d.date+'\',\''+esc(l.time)+'\')">'+
-        '<span class="ms-t">'+esc(String(l.time||'').replace(/\s*[AP]M$/i,''))+'</span><span><b>'+esc(l.studentName)+'</b>'+
+        '<span class="ms-t">'+esc(String(l.time||'').replace(/\s*[AP]M$/i,''))+'</span><span><b>'+esc(_nameAge(l.studentName,l.age))+'</b>'+
         (l.trial?' <span class="tt-pill bad">'+esc(MS_COPY.trial)+'</span>':'')+
         '<span class="ms-s">'+esc([l.instrument,l.duration?l.duration+' min':'',l.room].filter(Boolean).join(' · '))+'</span></span></button>';
     });
@@ -3154,8 +3295,8 @@ function rMsCard(){
   var c=MS.card,h='<button type="button" class="btn btn-s ms-sm" style="margin-bottom:10px" onclick="msBack()">'+esc(MS_COPY.back)+'</button>';
   if(!c)return h+'<div class="empty-state">'+(MS.cardLoading?'<span class="spin">↻</span>':'')+'</div>';
   var s=c.student;
-  h+='<div class="ms-head"><div><div class="ms-name">'+esc(s.studentName)+'</div><div class="ms-det">'+
-    esc([s.day?s.day+'s':'',s.time,s.duration?s.duration+' min':'',s.age?'Age '+s.age:'',s.grade?s.grade+' grade':'',s.level].filter(Boolean).join(' · '))+'</div></div>'+
+  h+='<div class="ms-head"><div><div class="ms-name">'+esc(_nameAge(s.studentName,s.age))+'</div><div class="ms-det">'+
+    esc([s.day?s.day+'s':'',s.time,s.duration?s.duration+' min':'',s.grade?s.grade+' grade':'',s.level].filter(Boolean).join(' · '))+'</div></div>'+
     '<button type="button" class="btn btn-p ms-sm" onclick="msAsgOpen(\''+MS.cardDate+'\')">'+esc(MS_COPY.create)+'</button></div>';
   if(MS.asg)h+=rMsAsg();
   h+='<div class="ms-day"><div class="ms-day-h"><span>'+esc(MS_COPY.notesAbout(s.first))+'</span><span class="ms-tag">'+esc(MS_COPY.onlyYou)+'</span></div>'+
@@ -3401,12 +3542,15 @@ function rTeacherSettings(){
      (TSET.saving?'<span class="spin">↻</span>':'')+
      '</div>'+
      rAct('away');   // [1.404] — beside the control, not in the corner
+  // [1.736] row 7 — the studio's wording, always visible for reference, with
+  // this teacher's name in it the way a family reads it.
+  h+=_tsetStudioCopy(String(TSET.awayDefaultCopy||'').replace('[teacher first name]',String(TEACHER_NAME||'').trim().split(/\s+/)[0]||'your teacher'));
   h+='</div>';
 
   h+='<div class="card" style="margin-top:.75rem">';
   h+='<div class="thread-hd">'+esc(TSET_COPY.afterHeading)+'</div>';
   h+='<div style="font-size:12px;color:var(--text3);margin-bottom:.6rem">'+esc(TSET_COPY.afterBody)+'</div>';
-  h+='<textarea id="tset-after" rows="3" placeholder="Your own after-hours message (optional)" '+
+  h+='<textarea id="tset-after" rows="3" placeholder="'+esc(TSET.afterHoursDefaultCopy||'Your own after-hours message (optional)')+'" '+
      'oninput="TSET.draftAfter=this.value" style="width:100%">'+esc(TSET.draftAfter)+'</textarea>';
   // [1.238] — the generated sentence that used to open this line is gone.
   // It read "We only email you between 9am and 5pm, from your own
@@ -3416,6 +3560,7 @@ function rTeacherSettings(){
   h+='<div style="font-size:11px;color:var(--text4);margin-top:.5rem">'+
      esc(TSET_COPY.hoursNote)+'</div>';
   h+='<div style="margin-top:.6rem"><button class="btn btn-s" onclick="saveTeacherSettings()">Save</button></div>';
+  h+=_tsetStudioCopy(TSET.afterHoursDefaultCopy);
   h+='</div>';
   // ── [1.580] — the Settings link card is GONE ─────────────────────────
   // Same fault as admin's, same sheet, same shape: this card saved a teacher's
@@ -3938,10 +4083,17 @@ function ttplSave(){
   });
   var _named=(TSET.tpls||[])[TSET.tplEdit];
   var _name=_named ? String(_named.label||'').trim() : '';
-  actStart('tpl', TCH_COPY.savingTemplate);
+  // [1.736] row 6 — AC: "Saving, opening, loading are all very slow." The
+  // editor closes and says Saved the moment Save is pressed; the composer's
+  // list has the change at once. A refusal reopens the template with the
+  // reason beside it.
+  var _editWas=TSET.tplEdit, _backupWas=TSET.tplBackup;
+  SAVED_TPLS=(TSET.tpls||[]).slice(); _savedTplsLoaded=true;
+  TSET.tplEdit=-1; TSET.tplDel=-1; TSET.tplBackup=null;
+  actDone('tpl', _name ? TCH_COPY.savedTemplateNamed.replace('{name}', _name) : TCH_COPY.savedTemplate);
   render();
   api({action:'saveTeacherTemplates', data:{teacherToken:TOKEN, templates:payload}}, function(e,r){
-    if(e||!r||!r.ok){ TSET.tplsErr=(r&&r.error)||'Could not save.'; actFail('tpl',(r&&r.error)||'Could not save.'); render(); return; }
+    if(e||!r||!r.ok){ TSET.tplEdit=_editWas; TSET.tplBackup=_backupWas; TSET.tplsErr=(r&&r.error)||'Could not save.'; actFail('tpl',(r&&r.error)||'Could not save.'); render(); return; }
     // ── [1.608] — the server's own rows, drawn. No refetch ────────────────
     //
     // **This threw the list away and asked for it again, and so did the
@@ -3955,15 +4107,21 @@ function ttplSave(){
     // refetched at all**, because saving a teacher's own row cannot change AC's.
     var rows=(r.templates && r.templates.length!==undefined) ? r.templates : null;
     if(rows){
-      TSET.tpls=rows; SAVED_TPLS=rows; _savedTplsLoaded=true; _savedTplsInFlight=false;
+      SAVED_TPLS=rows; _savedTplsLoaded=true; _savedTplsInFlight=false;
+      if(TSET.tplEdit===-1) TSET.tpls=rows;
+      else (TSET.tpls||[]).forEach(function(t){   // mid-edit: only the new ids, nothing typed is touched
+        if(t.templateId) return;
+        var m=rows.filter(function(x){ return String(x.label||'').trim()===String(t.label||'').trim(); })[0];
+        if(m) t.templateId=m.templateId;
+      });
     } else {
       // A server that still answers with a count: fall back to the old path
       // rather than drawing an empty list.
       TSET.tpls=null; ttplLoad();
       SAVED_TPLS=[]; _savedTplsLoaded=false; _savedTplsInFlight=false; loadSavedTpls();
     }
-    TSET.tplEdit=-1; TSET.tplDel=-1; TSET.tplBackup=null;
-    actDone('tpl', _name ? TCH_COPY.savedTemplateNamed.replace('{name}', _name) : TCH_COPY.savedTemplate);
+    // Drawn from the server's rows (new templates get their ids); the editor
+    // was already closed, and the teacher may be editing another by now.
     render();
   });
 }
@@ -4001,7 +4159,7 @@ function loadTeacherSettings(){
     TSET.awayEnabled=!!st.awayEnabled;
     TSET.awayMessage=st.awayMessage||'';
     TSET.afterHoursMessage=st.afterHoursMessage||'';
-    TSET.awayDefaultCopy=st.awayDefaultCopy||TSET.awayDefaultCopy;
+    TSET.awayDefaultCopy=st.awayDefaultCopy||TSET.awayDefaultCopy;TSET.afterHoursDefaultCopy=st.afterHoursDefaultCopy||TSET.afterHoursDefaultCopy;
     TSET.notifyOpen=st.notifyOpen; TSET.notifyClose=st.notifyClose;
     TSET.notifyDerived=!!st.notifyDerived;
     TSET.draftAway=TSET.awayMessage;
@@ -4034,18 +4192,24 @@ function _saveSettings(fields){
   // [1.404] — AC: turning Away on and off "works, but again, no feedback
   // progress or success message on button". The status now sits on the
   // control, not in the corner.
-  actStart('away', TCH_COPY.savingSettings);
+  // [1.736] row 6 — the switch and the banner change the moment it is
+  // pressed; a refusal puts them back and says why beside the control.
+  var _was={awayEnabled:TSET.awayEnabled,awayMessage:TSET.awayMessage,afterHoursMessage:TSET.afterHoursMessage};
+  if(fields.awayEnabled!==undefined) TSET.awayEnabled=!!fields.awayEnabled;
+  if(fields.awayMessage!==undefined) TSET.awayMessage=String(fields.awayMessage||'');
+  if(fields.afterHoursMessage!==undefined) TSET.afterHoursMessage=String(fields.afterHoursMessage||'');
+  actDone('away', TSET.awayEnabled?TCH_COPY.awayOnDone:TCH_COPY.awayOffDone);
   render();
   var d={teacherToken:TOKEN};
   for(var k in fields) if(fields[k]!==undefined) d[k]=fields[k];
   api({action:'teacherSaveSettings', data:d}, function(e,r){
     TSET.saving=false;
-    if(e||!r||!r.ok){ actFail('away',(r&&r.error)||'Could not save.'); render(); return; }
+    if(e||!r||!r.ok){ Object.assign(TSET,_was); actFail('away',(r&&r.error)||'Could not save.'); render(); return; }
     var st=r.settings||{};
     TSET.awayEnabled=!!st.awayEnabled;
     TSET.awayMessage=st.awayMessage||'';
     TSET.afterHoursMessage=st.afterHoursMessage||'';
-    TSET.awayDefaultCopy=st.awayDefaultCopy||TSET.awayDefaultCopy;
+    TSET.awayDefaultCopy=st.awayDefaultCopy||TSET.awayDefaultCopy;TSET.afterHoursDefaultCopy=st.afterHoursDefaultCopy||TSET.afterHoursDefaultCopy;
     TSET.draftAway=TSET.awayMessage;
     TSET.draftAfter=TSET.afterHoursMessage;
     TSET.loaded=true;
@@ -4298,7 +4462,7 @@ function rMessagesPage(){
     ? rMessagingLocked()+rSectionedRoster()
     : rSectionedRoster();
   return '<div class="panes">'+
-    '<div class="pane'+(showThread?' only-lg':'')+'">'+roster+'</div>'+
+    '<div class="pane pane-roster'+(showThread?' only-lg':'')+'">'+roster+'</div>'+
     '<div class="pane'+(showThread?'':' only-lg')+'">'+thread+'</div>'+
   '</div>';
 }
@@ -14619,6 +14783,7 @@ function _pollTick(){
 }
 
 function doSignOut(){
+  API_KEEP={}; API_KEEP_AT={}; API_THISWEEK='';   // [1.736] — nothing held survives signing out
   _ktClearSession();
   // [1.336] — drafts are this teacher's unsent words on a shared machine.
   DRAFTS={}; try{ localStorage.removeItem('kl_teacher_drafts'); }catch(e){}
@@ -14629,7 +14794,7 @@ function doSignOut(){
   PICK=''; PICK_Q=''; LINK_ADDED={}; LIBRARY_OPEN=false; LIB_EDIT=''; LIB_DEL=''; LIB_KEPT={};
   LIB_MINE=[]; LIB_SHELF_STUDIO=[]; LIB_TAGS=[]; _libLoaded=false; _libInFlight=false;
   if(_pollTimer){ clearInterval(_pollTimer); _pollTimer=null; }
-  TT={asked:false,loading:false,data:null,guideOpen:false,ans:{},timer:{},sending:{},err:{},open:{}};   // [1.731]
+  TT={asked:false,loading:false,data:null,guideOpen:false,ans:{},timer:{},sending:{},err:{},open:{},miss:{}};   // [1.731]
   MS={asked:false,loading:false,week:null,weekStart:'',card:null,cardStu:'',cardDate:'',cardTime:'',cardLoading:false,
     open:{},trialOpen:{},q:'',qDate:'',note:null,lesson:{},timer:{},st:'',adding:null,asg:null,lib:null,busy:false,err:''};   // [1.732]
   TOKEN=''; TEACHER_ID=''; TEACHER_NAME='';
@@ -14792,6 +14957,7 @@ function boot(){
         _startMessagePolling();
         loadTeacherSettings();
         loadScheduled();   // [1.373]
+        _bootTeacher();   // [1.736] — everything else, in one call
       } else {
         _ktClearSession();
         TOKEN=''; TEACHER_ID=''; TEACHER_NAME='';

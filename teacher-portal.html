@@ -3059,6 +3059,9 @@ function _ttDueCount(){
   return ((TT.data&&TT.data.taught)||[]).filter(function(t){return !t.submittedAt;}).length;
 }
 function _ttWhen(v){
+  // [1.739] — a trial's sentAt shares its name with the message tables' epoch
+  // columns, so the sheet hands it back as a number (AC saw "Sent 1790637480000").
+  if(/^\d{11,}$/.test(String(v||''))){var _d=new Date(+v);return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][_d.getMonth()]+' '+_d.getDate();}
   var s=String(v||''),mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   var m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);if(m)return mo[+m[2]-1]+' '+(+m[3]);
   m=s.match(/^(\d{1,2})\/(\d{1,2})\//);if(m)return mo[+m[1]-1]+' '+(+m[2]);

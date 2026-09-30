@@ -745,7 +745,29 @@ function _klReadSession(){
 }
 function _klClearSession(){
   try{ localStorage.removeItem('kl_family_session'); }catch(e){}
+  _klClearSnapshot();   // [1.743] — signing out forgets the saved home screen too
 }
+// ── [1.743] — a returning family sees home at once ─────────────────────────
+// AC, 30 September 2026: "the Family portal is taking a long time to load."
+// Home waited on a server call that reads eight whole sheets. The family's last
+// answer is kept on this device beside the remembered sign-in — only when the
+// sign-in itself is remembered, and cleared with it — and a return visit draws
+// home from it straight away, then redraws when the server answers.
+var _KL_SNAP_KEY='kl_family_snapshot';
+function _klSaveSnapshot(r){
+  try{
+    var sess=_klReadSession();
+    if(!sess||!sess.familyId||sess.familyId!==FAMILY_ID) return;   // not remembered: nothing kept
+    localStorage.setItem(_KL_SNAP_KEY, JSON.stringify({familyId:FAMILY_ID, at:Date.now(), r:r}));
+  }catch(e){}
+}
+function _klReadSnapshot(familyId){
+  try{
+    var o=JSON.parse(localStorage.getItem(_KL_SNAP_KEY)||'null');
+    return (o&&o.familyId&&o.familyId===familyId&&o.r&&o.r.ok)?o.r:null;
+  }catch(e){ return null; }
+}
+function _klClearSnapshot(){ try{ localStorage.removeItem(_KL_SNAP_KEY); }catch(e){} }
 // ── [1.332] — a half-written message survives a reload. FAMILY-FACING. ────
 //
 // AC, 5 September 2026, on being told the teacher's draft was kept and the
@@ -2693,6 +2715,7 @@ function _applyProposalResp(r){
   familyParents=_famParentsFromResp(r);
   familyAddress={street:r.street||'',apt:r.apt||'',city:r.city||'',state:r.state||'',zip:r.zip||''};
   _lastFamilyLoadAt=Date.now();
+  if(!r._fromSnapshot) _klSaveSnapshot(r);   // [1.743]
   _onFamilyDataReady();
 }
 
@@ -3211,6 +3234,9 @@ function loadHomeConversations(silent){
   // are known, which is the call that actually fetches for an enrolled
   // family.
   if(!_familyHasMessaging()){ HOME_CONVOS={loading:false, list:[]}; return; }
+  // [1.743] — one fetch at a time: the boot asked twice, once as the family's
+  // data landed and once straight after, each a full round trip.
+  if(!silent && HOME_CONVOS.loading) return;
   if(!silent){ HOME_CONVOS.loading=true; render(); }
   fapi('getFamilyConversations', {}, function(e,r){
     HOME_CONVOS.loading=false;
@@ -8789,6 +8815,15 @@ function boot(){
 
     var _sessionOk = null;    // null = pending, true/false once resolved
     var _propArrived = false, _propErr = null, _propResp = null;
+
+    // [1.743] — home from this device's saved copy while the server is asked.
+    var _snap = saved.familyId ? _klReadSnapshot(saved.familyId) : null;
+    if(_snap){
+      FAMILY_ID = saved.familyId;
+      _applyProposalResp(Object.assign({}, _snap, {_fromSnapshot:true}));
+      PAGE='home'; TAB='home'; _familyLoading=false;
+      render();
+    }
 
     var _bootSettle = function(){
       if(_sessionOk === false){

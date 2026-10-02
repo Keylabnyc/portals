@@ -629,6 +629,31 @@ var KEYLAB_LOGO_SRC='data:image/png;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX
 var students = [];
 var familyParents = {p1:'', p1Email:'', p2:'', p2Email:'', p2HasPassword:false};
 var familyAddress = {street:'', apt:''};
+// [1.751] — every load reads the whole address. Two of the three paths kept only
+// street and apt, so after a quick reload the city, state and zip were blank —
+// in the address editor, and now in an in-home lesson's Address row.
+function _famAddrFromResp(r){return {street:r.street||'',apt:r.apt||'',city:r.city||'',state:r.state||'',zip:r.zip||''};}
+// [1.751] — AC, 2 October 2026: "proposals for in-home lessons need to update the
+// 'Lesson' info to read 'In-Home Lessons' and list the family address". The
+// same words and the same address line as the proposal email and the
+// confirmation (admin klAddrLine, Code.js _klAddrLine_).
+var KL_INHOME_COPY={lessonLabel:'In-Home Lessons',addressLabel:'Address'};
+function klAddrLine(a){
+  a=a||{};
+  var apt=String(a.apt||'').trim();
+  if(apt&&!/^(apt|unit|suite|ste|fl|floor|ph|#)/i.test(apt))apt='Apt '+apt;
+  var csz=[a.city,[a.state,a.zip].filter(Boolean).join(' ')].filter(Boolean).join(' ');
+  return [String(a.street||'').trim(),apt,csz].filter(Boolean).join(', ');
+}
+function _klInHomeRows(rows,loc){
+  if(loc!=='in-home')return rows;
+  var out=[],addr=klAddrLine(typeof familyAddress==='undefined'?{}:familyAddress);
+  rows.forEach(function(r){
+    if(r[0]==='Lesson'){out.push([KL_INHOME_COPY.lessonLabel,r[1]]);if(addr)out.push([KL_INHOME_COPY.addressLabel,addr]);}
+    else out.push(r);
+  });
+  return out;
+}
 // Home-tab "add a second parent" flow — collapsed by default, per AC's
 // direction that a second parent is always optional and never surfaced
 // by default. Reused for both the initial add and a "resend" action once
@@ -2713,7 +2738,7 @@ function _applyProposalResp(r){
   // overwriting a previous 'TRUE', which is the half that has to reach the page.
   if(r.availabilityOpen!==undefined&&r.availabilityOpen!==null) publicCfg.availabilityOpen=r.availabilityOpen;
   familyParents=_famParentsFromResp(r);
-  familyAddress={street:r.street||'',apt:r.apt||'',city:r.city||'',state:r.state||'',zip:r.zip||''};
+  familyAddress=_famAddrFromResp(r);
   _lastFamilyLoadAt=Date.now();
   if(!r._fromSnapshot) _klSaveSnapshot(r);   // [1.743]
   _onFamilyDataReady();
@@ -4495,7 +4520,7 @@ function gotoEnrollment(studentId){
   if(students.length&&(Date.now()-_lastFamilyLoadAt)<60000){
     render();
     fapi('getProposal', {}, function(e, r){
-      if(!e&&r&&r.ok){ students=r.proposals||[]; familyParents=_famParentsFromResp(r); familyAddress={street:r.street||'',apt:r.apt||''}; _lastFamilyLoadAt=Date.now(); render(); }
+      if(!e&&r&&r.ok){ students=r.proposals||[]; familyParents=_famParentsFromResp(r); familyAddress=_famAddrFromResp(r); _lastFamilyLoadAt=Date.now(); render(); }
     });
     return;
   }
@@ -4505,7 +4530,7 @@ function gotoEnrollment(studentId){
   fapi('getProposal', {}, function(e, r){
     _familyLoading=false;
     if(!e && r && r.ok){
-      students = r.proposals || []; familyParents=_famParentsFromResp(r); familyAddress={street:r.street||'',apt:r.apt||''}; _lastFamilyLoadAt=Date.now();
+      students = r.proposals || []; familyParents=_famParentsFromResp(r); familyAddress=_famAddrFromResp(r); _lastFamilyLoadAt=Date.now();
     } else if(!students.length){
       // A genuine fetch failure with nothing already cached to fall back on
       // -- deliberately NOT the same as "confirmed empty." Surfaced as a
@@ -5821,6 +5846,7 @@ function _klEnrollmentFactsHtml(s){
     ['Location', locMap[g.lessonLocation]||g.lessonLocation],
     ['Start date', (g.startDate&&!_klIsLs(s))?_fmtFamilyDate(g.startDate):'']
   ].filter(function(r){ return r[1]; });
+  rows=_klInHomeRows(rows,g.lessonLocation);   // [1.751]
   rows.forEach(function(r){
     h+='<div class="kl-row" style="padding:.3rem 0"><div class="kl-sub">'+esc(r[0])+'</div>'+
       '<div class="kl-when">'+esc(r[1])+'</div></div>';
@@ -5965,6 +5991,7 @@ function _klCurrentEnrollmentFactsHtml(s){
     ['Location', locMap[ce.lessonLocation]||ce.lessonLocation],
     ['Start date', ce.startDate?_fmtFamilyDate(ce.startDate):'']
   ].filter(function(r){ return r[1]; });
+  rows=_klInHomeRows(rows,ce.lessonLocation);   // [1.751]
   var h='';
   rows.forEach(function(r){
     h+='<div class="kl-row" style="padding:.3rem 0"><div class="kl-sub">'+esc(r[0])+'</div>'+

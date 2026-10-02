@@ -645,6 +645,19 @@ function klAddrLine(a){
   var csz=[a.city,[a.state,a.zip].filter(Boolean).join(' ')].filter(Boolean).join(' ');
   return [String(a.street||'').trim(),apt,csz].filter(Boolean).join(', ');
 }
+// [1.752] — THE REVIEW AND ACCEPT PAGE. It has no Lesson row (Day, Time and
+// Duration are rows of their own), so the Location row says In-Home Lessons and
+// the Address row follows it. AC, asked whether the address belongs there too:
+// "yes on review and accept page".
+function _klInHomeLocRows(rows,loc){
+  if(loc!=='in-home')return rows;
+  var out=[],addr=klAddrLine(typeof familyAddress==='undefined'?{}:familyAddress);
+  rows.forEach(function(r){
+    if(r[0]==='Location'){out.push([r[0],KL_INHOME_COPY.lessonLabel]);if(addr)out.push([KL_INHOME_COPY.addressLabel,addr]);}
+    else out.push(r);
+  });
+  return out;
+}
 function _klInHomeRows(rows,loc){
   if(loc!=='in-home')return rows;
   var out=[],addr=klAddrLine(typeof familyAddress==='undefined'?{}:familyAddress);
@@ -8060,6 +8073,7 @@ function rEnrollment(scopeStudentId){
         ['Location',locMap[s.lessonLocation]||s.lessonLocation||null],
         ['Start Date',s.startDate?_fmtFamilyDate(s.startDate):(s.startMonth?'Starting month '+s.startMonth:null)]
       ];
+      _npRows=_klInHomeLocRows(_npRows,s.lessonLocation);   // [1.752]
       _npRows.forEach(function(row){
         if(!row[1]) return;
         h+='<div class="prop-row"><span class="prop-lbl">'+esc(row[0])+'</span><span class="prop-val">'+esc(row[1])+'</span></div>';
@@ -8120,6 +8134,7 @@ function rEnrollment(scopeStudentId){
         ['Location',locMap[s.lessonLocation]||s.lessonLocation||null],
         ['Start Date',s.startDate?_fmtFamilyDate(s.startDate):(s.startMonth?'Starting month '+s.startMonth:null)]
       ];
+      rows=_klInHomeLocRows(rows,s.lessonLocation);   // [1.752]
       if((s.proposalKind==='lateSpring'||s.enrollmentKind==='lateSpring')) h+=_klLsBlockHtml(s,!(isAccepted||isFullyEnrolled)&&!_klPropExpired(s));
       rows.forEach(function(row){
         if(!row[1]) return;

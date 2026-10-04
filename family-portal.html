@@ -595,6 +595,14 @@ div.asg-m{cursor:default}
 .asg-ic{flex:0 0 36px;height:36px;border-radius:7px;color:#fff;font-size:9.5px;font-weight:700;display:flex;align-items:center;justify-content:center}
 .asg-ml{flex:1;font-size:13.5px}
 .asg-go{font-size:20px;color:#111}
+/* [1.753] stage 6 — 16px on every touch screen, and nothing may override it.
+   The phone rule above sets inputs to 16px, but a more specific rule later in
+   the file (the reply box at 14px, search and link boxes at 13px) won, so
+   iPhones still zoomed in and stayed zoomed. (pointer:coarse) also catches a
+   phone held sideways, which is wider than the phone rule's breakpoint. */
+@media (pointer:coarse){
+  input:not([type=checkbox]):not([type=radio]),select,textarea,[contenteditable="true"]{font-size:16px!important}
+}
 </style>
 </head>
 <body>
@@ -996,7 +1004,7 @@ var _srOpen = {};
 var _supportAccOpen = {};
 function _klAcc(key, summaryHtml, bodyHtml){
   var open=!!_supportAccOpen[key];
-  return '<details class="kl-acc"'+(open?' open':'')+' ontoggle="_supportAccOpen[&apos;'+key+'&apos;]=this.open">'+
+  return '<details class="kl-acc"'+(open?' open':'')+' ontoggle="_supportAccOpen['+jsq(key)+']=this.open">'+
     '<summary>'+summaryHtml+'</summary>'+bodyHtml+'</details>';
 }
 
@@ -1401,6 +1409,16 @@ function esc(s){
     .replace(/&/g,'&amp;').replace(/</g,'&lt;')
     .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
+// [1.753] stage 5 — a value placed INSIDE an inline handler, as a JavaScript
+// string. esc() alone cannot do this: the browser decodes &#39; and &quot;
+// back into quotes before it runs the handler, so an apostrophe in a name
+// broke the handler, and a crafted value could close the string and run
+// script. JSON.stringify makes a correct JS string literal (quotes and
+// backslashes escaped); esc() then makes that safe inside the double-quoted
+// attribute, and the browser's decoding hands the handler exactly the
+// literal. Every quoted argument in a handler goes through this — check.js
+// fails on the old \''+esc(…)+'\' form.
+function jsq(s){ return esc(JSON.stringify(String(s||''))); }
 function isTruthy(v){ return v===true||v==='TRUE'||v==='true'; }
 // [1.671] — has the server told this page which of the two states applies?
 // isTruthy() answers "is it open", which cannot tell a closed portal apart from
@@ -2980,7 +2998,7 @@ function rHomeContactRow(c){
   } else {
     right='<span class="kl-cchev">›</span>';
   }
-  return '<div class="kl-crow'+(c.unread?' un':'')+'" onclick="toggleHomeThread(\''+esc(c.teacherId)+'\',\''+esc(c.teacherName)+'\')">'+
+  return '<div class="kl-crow'+(c.unread?' un':'')+'" onclick="toggleHomeThread('+jsq(c.teacherId)+','+jsq(c.teacherName)+')">'+
     '<div class="kl-cav'+(c.teacherId==='admin'?' adm':'')+'">'+esc(c.teacherId==='admin'?'K':_klInitials(c.teacherName))+'</div>'+
     '<div class="kl-cmain">'+
       '<div class="kl-ctop"><span class="kl-cname'+(c.unread?' b':'')+'">'+esc(c.teacherName)+'</span>'+
@@ -3098,6 +3116,13 @@ function rHomeThreadView(){
       return rMsgBubble(_m,_all[_i-1],_all[_i+1]);   // [1.413]
     }).join('')+'</div>';
   }
+  // [1.753] — a former teacher's thread: the history stays, the composer does
+  // not. AC, 4 October 2026, "Yes". The server refuses the send regardless;
+  // this is so a parent is told before writing rather than after.
+  if(c.canReply===false){
+    h+='<div class="kl-guide">'+esc(c.closedNote||'')+'</div>';
+    return h;
+  }
   // BACKLOG 1.161 #4 — which child is this about? Asked only when the answer
   // is not obvious: one child with this teacher and it is set automatically,
   // with nothing on screen. The thread stays one conversation per teacher
@@ -3108,7 +3133,7 @@ function rHomeThreadView(){
     h+='<div class="kl-about"><span>About</span>'+
       _kids.map(function(st){
         return '<span class="kl-about-pill'+(_sel===st.studentId?' on':'')+'" '+
-          'onclick="HOME_EXPANDED.studentId=\''+esc(st.studentId)+'\';render()">'+esc(st.studentName)+'</span>';
+          'onclick="HOME_EXPANDED.studentId='+jsq(st.studentId)+';render()">'+esc(st.studentName)+'</span>';
       }).join('')+
       '<span class="kl-about-pill'+(_sel?'':' on')+'" onclick="HOME_EXPANDED.studentId=\'\';render()">Something else</span>'+
       '</div>';
@@ -3744,18 +3769,34 @@ function confirmCancelHomeDraft(){
 // this never marks anything read just because a poll tick happened. Paused
 // while the tab isn't visible, so a backgrounded/closed tab doesn't keep
 // burning script executions.
+// ── [1.753] stage 6 — every five seconds while somebody is using the page ──
+// It polled every five seconds for as long as a tab stood open and visible —
+// about seventeen thousand requests a day from one forgotten desktop tab, each
+// a run of the script, and many families at once is how a shared limit on
+// simultaneous runs gets reached. Five seconds is kept for anyone using the
+// page ("instant or near instant" is the requirement); after five minutes with
+// no touch, key or scroll it asks every thirty, and the first touch after that
+// asks at once. Coming back to the tab still refreshes at once. The listeners
+// are added once, not again on every sign-in.
+var _pollLastInput=Date.now(), _pollWired=false, POLL_IDLE_MS=5*60*1000;
+function _pollDelay(){ return (Date.now()-_pollLastInput > POLL_IDLE_MS) ? 30000 : 5000; }
 function _startMessagePolling(){
   if(_pollTimer) return;
-  _pollTimer=setInterval(_pollTick,5000);
-  // Coming back to the tab refreshes at once instead of waiting out the rest
-  // of the interval. Polling pauses while hidden, so without this the worst
-  // case is a full 5 seconds of stale screen at exactly the moment someone is
-  // looking at it. Cheap now that a poll with nothing to report never touches
-  // the messages sheet (1.159).
-  document.addEventListener('visibilitychange',function(){
-    if(document.visibilityState==='visible') _pollTick();
+  var loop=function(){ _pollTimer=setTimeout(function(){ if(!_pollTimer) return; _pollTick(); loop(); }, _pollDelay()); };
+  loop();
+  if(_pollWired) return;
+  _pollWired=true;
+  ['pointerdown','keydown','touchstart','scroll'].forEach(function(ev){
+    window.addEventListener(ev, function(){
+      var wasIdle=(Date.now()-_pollLastInput > POLL_IDLE_MS);
+      _pollLastInput=Date.now();
+      if(wasIdle && _pollTimer) _pollTick();
+    }, {passive:true, capture:true});
   });
-  window.addEventListener('focus',_pollTick);
+  document.addEventListener('visibilitychange',function(){
+    if(document.visibilityState==='visible' && _pollTimer){ _pollLastInput=Date.now(); _pollTick(); }
+  });
+  window.addEventListener('focus',function(){ if(_pollTimer){ _pollLastInput=Date.now(); _pollTick(); } });
 }
 // ── [1.277] — attachments, family side ──────────────────────────────────
 // RECEIVE AND OPEN, never send. AC, 5 September: "Teachers and admin only."
@@ -3828,9 +3869,12 @@ var KL_ATT_TYPES = [
 // something every provider can supply without fetching the bytes.
 //
 // **This loosens nothing.** `accept` is advisory in every browser and always
-// has been — the real gate is the server, which checks the DECODED bytes
-// against ATTACH_ALLOWED_MIME and rewrites the filename to agree with the type
-// it verified. Widening this attribute cannot widen what is accepted; it only
+// has been — the real gate is the server, which checks the declared type (or,
+// when the browser gives none, the name's extension — [1.753]) against
+// ATTACH_ALLOWED_MIME and rewrites the filename to agree with it. **Corrected
+// 4 October 2026: this said the server checks the DECODED bytes; it never
+// has.** What keeps a mislabelled file harmless is that it is always served
+// back with a type from that list. Widening this attribute cannot widen what is accepted; it only
 // stops the chooser hiding files it should offer.
 //
 // **It is NOT an in-tool Google Drive browser**, which is a different thing
@@ -3971,7 +4015,7 @@ function rKlAttachRow(){
            '<span class="att-size">'+esc(_klAttSize(a.sizeBytes))+'</span>'+
            (a.failed?'<span class="att-err">'+esc(a.error||KL_STATE_COPY.attachFailed)+'</span>':'')+
            '<button type="button" class="att-x" aria-label="'+esc(KL_ATT_REMOVE)+'"'+
-             ' onclick="klAttachRemove(\''+esc(a.tempId)+'\')">&#215;</button></div>';
+             ' onclick="klAttachRemove('+jsq(a.tempId)+')">&#215;</button></div>';
        }).join('')+'</div>';
   }
   return h;
@@ -4004,7 +4048,9 @@ function _klAttThumb(id){
     // meant one bad round trip left a plain tile for the life of the page,
     // with a reload the only way back. A failure forgets, so the next render
     // asks again.
-    if(!e && r && r.ok){ KL_ATT_THUMBS[id]=false; render(); return; }
+    // [1.753] stage 7 — a file that is gone stays gone: remembered like "no thumbnail",
+    // so an old file (unreadable since 8 September) is not asked for on every redraw.
+    if(!e && r && (r.ok || /no longer available|Not authorized/.test(r.error||''))){ KL_ATT_THUMBS[id]=false; render(); return; }
     delete KL_ATT_THUMBS[id];
   });
   return '';
@@ -4028,7 +4074,7 @@ function _rKlAssignment(a){
     var i=ic[x.kind]||ic.link;
     var inner='<span class="asg-ic" style="background:'+i[1]+'">'+i[0]+'</span><span class="asg-ml">'+esc(x.label||'')+'</span>';
     if(x.kind==='link'&&/^https?:\/\//i.test(x.url||''))return '<a class="asg-m" href="'+esc(x.url)+'" target="_blank" rel="noopener noreferrer">'+inner+'<span class="asg-go">\u203a</span></a>';
-    if(x.kind==='file'&&x.attachmentId)return '<button type="button" class="asg-m" onclick="klOpenAttachment(\''+esc(x.attachmentId)+'\',\'view\')">'+inner+'<span class="asg-go">\u203a</span></button>';
+    if(x.kind==='file'&&x.attachmentId)return '<button type="button" class="asg-m" onclick="klOpenAttachment('+jsq(x.attachmentId)+',\'view\')">'+inner+'<span class="asg-go">\u203a</span></button>';
     return '<div class="asg-m">'+inner+'</div>';
   }).join('');
   return '<div class="asg">'+
@@ -4067,7 +4113,7 @@ function rKlAttachments(m){
     var _canView=_attCanView(a.mimeType, a.fileName);
     var _tile='<button type="button" class="att-tile'+_cls+'" title="'+esc(a.fileName)+'"'+
       (_st&&_st.state==='working'?' disabled':'')+
-      ' onclick="event.stopPropagation();klOpenAttachment(\''+esc(a.attachmentId)+'\',\''+
+      ' onclick="event.stopPropagation();klOpenAttachment('+jsq(a.attachmentId)+',\''+
         (_canView?'view':'download')+'\')">'+
       art+
       '<span class="att-meta"><span class="att-name">'+esc(a.fileName)+'</span>'+
@@ -4079,13 +4125,13 @@ function rKlAttachments(m){
     if(ATT_HELD[a.attachmentId]){
       return '<span class="att-wrap">'+_tile+
         '<button type="button" class="att-dl" onclick="event.stopPropagation();'+
-          '_attSaveHeld(\''+esc(a.attachmentId)+'\')">'+esc(KL_STATE_COPY.attachDownloadHeld)+'</button></span>';
+          '_attSaveHeld('+jsq(a.attachmentId)+')">'+esc(KL_STATE_COPY.attachDownloadHeld)+'</button></span>';
     }
     if(!_canView) return '<span class="att-wrap">'+_tile+'</span>';
     return '<span class="att-wrap">'+_tile+
       '<button type="button" class="att-dl" title="'+esc(KL_STATE_COPY.attachDownload)+'"'+
         (_st&&_st.state==='working'?' disabled':'')+
-        ' onclick="event.stopPropagation();klOpenAttachment(\''+esc(a.attachmentId)+'\',\'download\')">'+
+        ' onclick="event.stopPropagation();klOpenAttachment('+jsq(a.attachmentId)+',\'download\')">'+
         esc(KL_STATE_COPY.attachDownload)+'</button></span>';
   }).join('')+'</div>';
 }
@@ -4163,6 +4209,33 @@ function _attSaveHeld(id){
 // address does not expire the way a blob does, so there is nothing to keep
 // alive and nothing to sweep. The reader is told, and the Download control
 // beside the tile does the other thing.
+// ── [1.753] stage 6 — View opens its tab ON THE TAP ─────────────────────
+// The tab used to be opened after the server answered, which is no longer
+// the tap as far as a browser is concerned — iPhone Safari blocks that as a
+// pop-up, so View said "blocked" for the very people most likely to press it.
+// The tab is opened at once, empty but for the same "getting your file" line
+// the button shows, and pointed at the file when the answer comes; closed if
+// the answer is a refusal. It is cut loose from this page first (opener=null),
+// so the file's page can never reach back into the portal.
+var ATT_PREOPEN={};
+function _attPreopen(id){
+  try{
+    var w=window.open('','_blank');
+    if(!w) return;
+    try{ w.document.body.innerHTML='<p style="font:16px sans-serif;padding:24px;color:#333">'+esc(KL_ATT_OPENING)+'</p>'; }catch(e){}
+    ATT_PREOPEN[id]=w;
+  }catch(e){}
+}
+function _attTakePreopen(id){
+  var w=ATT_PREOPEN[id]; delete ATT_PREOPEN[id];
+  return (w && !w.closed) ? w : null;
+}
+function _attDropPreopen(id){ var w=_attTakePreopen(id); if(w){ try{ w.close(); }catch(e){} } }
+function _attSendTo(id, url){
+  var w=_attTakePreopen(id);
+  if(!w) return window.open(url,'_blank');
+  try{ w.opener=null; w.location.href=url; return w; }catch(e){ try{ w.close(); }catch(_e){} return window.open(url,'_blank'); }
+}
 function _attOpenUrl_(url, fileName, id, mode){
   if(mode==='download'){
     // ── [1.504] — this branch should now be unreachable for a real save ───
@@ -4183,7 +4256,7 @@ function _attOpenUrl_(url, fileName, id, mode){
     document.body.appendChild(dl); dl.click(); document.body.removeChild(dl);
     return;
   }
-  var w=window.open(url,'_blank');
+  var w=_attSendTo(id, url);   // [1.753]
   if(!w && id){ actFail('att:'+id, KL_STATE_COPY.attachPopupBlocked); render(); }
 }
 
@@ -4207,6 +4280,7 @@ function klOpenAttachment(id, mode){
   // [1.417] — keyed by the file; see the teacher portal's note.
   if(actBusy('att:'+id)) return;
   actStart('att:'+id, KL_ATT_OPENING);
+  if(mode!=='download') _attPreopen(id);   // [1.753] — on the tap, see _attPreopen
   // [1.504] — a save needs the BYTES; a cross-origin link cannot download.
   fapi('getAttachment', {attachmentId:id, wantBytes:(mode==='download')}, function(e,r){
     // [1.463] — a LINK is the fast answer and the bytes are the fallback, so
@@ -4218,6 +4292,7 @@ function klOpenAttachment(id, mode){
       return;
     }
     if(e||!r||!r.ok||!r.dataBase64){
+      _attDropPreopen(id);   // [1.753]
       actFail('att:'+id,(r&&r.error)||KL_STATE_COPY.attachOpenFailed); render(); return;
     }
     actClear('att:'+id);
@@ -4244,7 +4319,7 @@ function klOpenAttachment(id, mode){
         dl.href=url; dl.download=r.fileName||'attachment';
         document.body.appendChild(dl); dl.click(); document.body.removeChild(dl);
       } else {
-        var w=window.open(url,'_blank');
+        var w=_attSendTo(id, url);
         if(!w){ _attHoldBlob(id, url, r.fileName); actFail('att:'+id, KL_STATE_COPY.attachPopupBlocked); render(); }
       }
     // [1.417] — NOT while the file is being held for a blocked tab. The blob
@@ -4651,7 +4726,7 @@ function _rHomeQuickActions(){
 // (BACKLOG 1.90). Harmless for tabbed families, which ignore it.
 function _rHomeActionButtons(mainLabel, studentId){
   var h='<div style="margin-top:.6rem;display:flex;flex-direction:column;gap:12px">';
-  h+='<div><button class="btn btn-p btn-sm" onclick="gotoEnrollment('+(studentId?'&apos;'+esc(studentId)+'&apos;':'')+')">'+esc(mainLabel)+'</button></div>';
+  h+='<div><button class="btn btn-p btn-sm" onclick="gotoEnrollment('+(studentId?''+jsq(studentId)+'':'')+')">'+esc(mainLabel)+'</button></div>';
   h+='<div><a class="btn btn-p btn-sm" href="'+publicCfg.schedulingBillingUrl+'" target="_blank">Scheduling / Billing Portal</a>'+
     '<p style="font-size:12px;color:var(--text3);margin-top:.3rem">Check your schedule, cancel a lesson, review and update billing &amp; payment details.</p></div>';
   h+='</div>';
@@ -4800,8 +4875,8 @@ function _klLsBlockHtml(s,canChoose,noPayment){
   var instLines=_klLsMoney(s.installment1)+' '+esc(C.billedNow)+'<br>'+_klLsMoney(s.installment2)+' '+esc(C.billedOn.replace('{date}',_klLsDay(s.installmentDate)));
   if(canChoose&&opts.length>1&&!s.payChoice){
     h+='<div class="kl-ls-sec">'+esc(C.choose)+'</div>'+
-      '<div class="kl-ls-pay'+(choice==='full'?' on':'')+'" role="radio" aria-checked="'+(choice==='full')+'" tabindex="0" onclick="_klLsPick(&apos;'+esc(s.studentId)+'&apos;,&apos;full&apos;)"><span class="kl-ls-dot"></span><span><b>'+esc(C.full)+'</b><br>'+_klLsMoney(s.balanceDue||s.monthlyPrice)+'</span></div>'+
-      '<div class="kl-ls-pay'+(choice==='installments'?' on':'')+'" role="radio" aria-checked="'+(choice==='installments')+'" tabindex="0" onclick="_klLsPick(&apos;'+esc(s.studentId)+'&apos;,&apos;installments&apos;)"><span class="kl-ls-dot"></span><span><b>'+esc(C.inst)+'</b><br>'+instLines+'</span></div>';
+      '<div class="kl-ls-pay'+(choice==='full'?' on':'')+'" role="radio" aria-checked="'+(choice==='full')+'" tabindex="0" onclick="_klLsPick('+jsq(s.studentId)+',&apos;full&apos;)"><span class="kl-ls-dot"></span><span><b>'+esc(C.full)+'</b><br>'+_klLsMoney(s.balanceDue||s.monthlyPrice)+'</span></div>'+
+      '<div class="kl-ls-pay'+(choice==='installments'?' on':'')+'" role="radio" aria-checked="'+(choice==='installments')+'" tabindex="0" onclick="_klLsPick('+jsq(s.studentId)+',&apos;installments&apos;)"><span class="kl-ls-dot"></span><span><b>'+esc(C.inst)+'</b><br>'+instLines+'</span></div>';
   }else if(choice==='installments'){
     h+='<div class="prop-row"><span class="prop-lbl">'+esc(C.inst)+'</span><span class="prop-val" style="text-align:right">'+instLines+'</span></div>';
   }else{
@@ -4955,7 +5030,7 @@ function _rHomeSelfRelease(s){
     // granted self release on the closed card"). Two enrolled children with
     // permission granted used to both collapse to the identical row
     // "Self-release · Granted", with nothing to tell them apart.
-    h+='<div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer" onclick="_srOpen[&apos;'+esc(s.studentId)+'&apos;]=!_srOpen[&apos;'+esc(s.studentId)+'&apos;];render()">';
+    h+='<div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer" onclick="_srOpen['+jsq(s.studentId)+']=!_srOpen['+jsq(s.studentId)+'];render()">';
     h+='<div style="display:flex;align-items:center;gap:8px">';
     h+='<span style="font-size:13px;font-weight:600;color:var(--text)">Self-release'+(_srFirst?' — '+esc(_srFirst):'')+'</span>';
     h+='<span class="chip c-good" style="font-size:10px;padding:2px 7px">Granted</span>';
@@ -4963,7 +5038,7 @@ function _rHomeSelfRelease(s){
     h+='<span style="font-size:16px;color:var(--text4)">'+(open?'\u2039':'\u203a')+'</span>';
     h+='</div>';
   } else {
-    h+='<button class="btn btn-p btn-sm" onclick="_srOpen[&apos;'+esc(s.studentId)+'&apos;]=!_srOpen[&apos;'+esc(s.studentId)+'&apos;];render()">Authorize self-release'+(_srFirst?' for '+esc(_srFirst):'')+'</button>';
+    h+='<button class="btn btn-p btn-sm" onclick="_srOpen['+jsq(s.studentId)+']=!_srOpen['+jsq(s.studentId)+'];render()">Authorize self-release'+(_srFirst?' for '+esc(_srFirst):'')+'</button>';
     h+='<p style="font-size:12px;color:var(--text3);margin-top:.3rem">Optional. For children ages 10 to 17 who can arrive and leave by themselves.</p>';
   }
   if(open){
@@ -4984,7 +5059,7 @@ function _rHomeSelfRelease(s){
       '</div>';
       h+=_srBusy[s.studentId]
         ?'<button class="btn btn-p btn-full" disabled><span class="spin">\u21bb</span> Submitting...</button>'
-        :'<button id="sr-hm-btn-'+esc(s.studentId)+'" class="btn btn-p btn-full" disabled onclick="doGrantSelfRelease(&apos;'+esc(s.studentId)+'&apos;)">Grant Permission</button>';
+        :'<button id="sr-hm-btn-'+esc(s.studentId)+'" class="btn btn-p btn-full" disabled onclick="doGrantSelfRelease('+jsq(s.studentId)+')">Grant Permission</button>';
     }
     h+='</div>';
   }
@@ -6043,7 +6118,7 @@ function _rHomeEnrDetailsToggle(s){
   var isChange=!!s.currentEnrollment;
   var h='<div style="margin-top:.6rem">';
   h+='<p style="font-size:12px;color:var(--text3);margin-bottom:.4rem">Review '+esc(first)+'\u2019s enrollment details and studio policies.</p>';
-  h+='<button class="btn btn-p btn-sm" onclick="_homeEnrOpen[&apos;'+esc(s.studentId)+'&apos;]=!_homeEnrOpen[&apos;'+esc(s.studentId)+'&apos;];render()">'+(open?'Hide Details':'Show Details')+'</button>';
+  h+='<button class="btn btn-p btn-sm" onclick="_homeEnrOpen['+jsq(s.studentId)+']=!_homeEnrOpen['+jsq(s.studentId)+'];render()">'+(open?'Hide Details':'Show Details')+'</button>';
   // ── [1.575] — ONE call, because the policies were being drawn twice ─────
   //
   // AC, 11 September 2026, with a screenshot: *"Family page: policies are
@@ -6158,16 +6233,16 @@ function _rHomeChildActionCard(s){
     h+=_rChildStatusSummary(s);
     var ctas=[];
     if((ph==='Proposal'||ph==='Confirmed to Enroll')&&!isAccepted&&!_klPropExpired(s)){   // [1.651]
-      ctas.push('<button class="btn btn-p btn-sm" onclick="gotoEnrollment(&apos;'+esc(s.studentId)+'&apos;)">Review and Accept Proposal</button>');
+      ctas.push('<button class="btn btn-p btn-sm" onclick="gotoEnrollment('+jsq(s.studentId)+')">Review and Accept Proposal</button>');
     }
     if(!avLocked&&avOpen&&!avSubmitted&&(ph==='Leads'||ph==='Pending')&&!hasProp&&!hasTrial&&!isWithdrawn&&!isEnrolled){
-      ctas.push('<button class="btn btn-p btn-sm" onclick="_gotoSchedulingForStudent(&apos;'+esc(s.studentId)+'&apos;)">Submit availability</button>');
+      ctas.push('<button class="btn btn-p btn-sm" onclick="_gotoSchedulingForStudent('+jsq(s.studentId)+')">Submit availability</button>');
     }
     if(!avLocked&&avOpen&&!avSubmitted&&ph==='Holding'){
-      ctas.push('<button class="btn btn-p btn-sm" onclick="_gotoSchedulingForStudent(&apos;'+esc(s.studentId)+'&apos;)">Submit availability</button>');
+      ctas.push('<button class="btn btn-p btn-sm" onclick="_gotoSchedulingForStudent('+jsq(s.studentId)+')">Submit availability</button>');
     }
     if(!avLocked&&avSubmitted&&(ph==='Leads'||ph==='Pending'||ph==='Holding')){
-      ctas.push('<button class="btn btn-p btn-sm" onclick="_gotoSchedulingForStudent(&apos;'+esc(s.studentId)+'&apos;)">Review / Update Availability</button>');
+      ctas.push('<button class="btn btn-p btn-sm" onclick="_gotoSchedulingForStudent('+jsq(s.studentId)+')">Review / Update Availability</button>');
     }
     if(ctas.length) h+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:.5rem">'+ctas.join('')+'</div>';
     h+=_rHomeChildDetail(s);
@@ -6431,16 +6506,16 @@ function rHome(){
       h+=_rChildStatusSummary(s);
       var ctas=[];
       if((ph==='Proposal'||ph==='Confirmed to Enroll')&&!isAccepted&&!_klPropExpired(s)){   // [1.651]
-        ctas.push('<button class="btn btn-p btn-sm" onclick="gotoEnrollment(&apos;'+esc(s.studentId)+'&apos;)">Review and Accept Proposal</button>');
+        ctas.push('<button class="btn btn-p btn-sm" onclick="gotoEnrollment('+jsq(s.studentId)+')">Review and Accept Proposal</button>');
       }
       if(!avLocked&&avOpen&&!avSubmitted&&(ph==='Leads'||ph==='Pending')&&!hasProp&&!hasTrial&&!isWithdrawn&&!isEnrolled){
-        ctas.push('<button class="btn btn-p btn-sm" onclick="_gotoSchedulingForStudent(&apos;'+esc(s.studentId)+'&apos;)">Submit availability</button>');
+        ctas.push('<button class="btn btn-p btn-sm" onclick="_gotoSchedulingForStudent('+jsq(s.studentId)+')">Submit availability</button>');
       }
       if(!avLocked&&avOpen&&!avSubmitted&&ph==='Holding'){
-        ctas.push('<button class="btn btn-p btn-sm" onclick="_gotoSchedulingForStudent(&apos;'+esc(s.studentId)+'&apos;)">Submit availability</button>');
+        ctas.push('<button class="btn btn-p btn-sm" onclick="_gotoSchedulingForStudent('+jsq(s.studentId)+')">Submit availability</button>');
       }
       if(!avLocked&&avSubmitted&&(ph==='Leads'||ph==='Pending'||ph==='Holding')){
-        ctas.push('<button class="btn btn-p btn-sm" onclick="_gotoSchedulingForStudent(&apos;'+esc(s.studentId)+'&apos;)">Review / Update Availability</button>');
+        ctas.push('<button class="btn btn-p btn-sm" onclick="_gotoSchedulingForStudent('+jsq(s.studentId)+')">Review / Update Availability</button>');
       }
       if(ctas.length) h+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:.5rem">'+ctas.join('')+'</div>';
       h+=_rHomeChildDetail(s);
@@ -6462,9 +6537,14 @@ function doSignOut(){
   students=[];
   PAGE='login';
   LF.step='email'; LF.password=''; LF.needsSetup=false;
-  if(_pollTimer){ clearInterval(_pollTimer); _pollTimer=null; }
+  if(_pollTimer){ clearTimeout(_pollTimer); _pollTimer=null; }
   HOME_CONVOS={loading:false, list:[]};
   HOME_EXPANDED=null;
+  // [1.753] stage 6 — the thread cache is keyed by teacher alone, so on a
+  // shared computer the next family to sign in was shown the last family's
+  // messages for a moment on opening Admin (every family has Admin). Nothing
+  // held for one family survives signing out.
+  KL_THREAD_CACHE={}; _klPrefetchDone=false; _klPollAmendAt=0;
   render();
 }
 
@@ -6682,10 +6762,10 @@ function rScheduling(){
       _btnHtml+='<p style="font-size:13px;color:var(--text3);margin-bottom:.75rem">Select a child to submit availability for:</p>';
       students.forEach(function(stu){
         var _pkLbl=stu.studentName+(stu.instrument?' \u2014 '+stu.instrument:'');
-        _btnHtml+='<button class="btn btn-p" style="margin-bottom:.5rem;margin-right:.5rem" onclick="_gotoSchedulingForStudent(&apos;'+esc(stu.studentId)+'&apos;)">'+esc(_pkLbl)+'</button>';
+        _btnHtml+='<button class="btn btn-p" style="margin-bottom:.5rem;margin-right:.5rem" onclick="_gotoSchedulingForStudent('+jsq(stu.studentId)+')">'+esc(_pkLbl)+'</button>';
       });
     } else if(students.length===1){
-      _btnHtml+='<button class="btn btn-p" onclick="_gotoSchedulingForStudent(&apos;'+esc(students[0].studentId)+'&apos;)">Submit availability for '+esc(students[0].studentName)+'</button>';
+      _btnHtml+='<button class="btn btn-p" onclick="_gotoSchedulingForStudent('+jsq(students[0].studentId)+')">Submit availability for '+esc(students[0].studentName)+'</button>';
     } else {
       _btnHtml+='<button class="btn btn-p" onclick="_klGoHome()">Back to home</button>';
     }
@@ -6717,7 +6797,7 @@ function _rSiblingNudge(){
   return '<div class="card" style="margin-top:1.25rem;border:1.5px solid var(--green)">'+
     '<div style="font-weight:600;font-size:14px;margin-bottom:.4rem">\u2713 Done! Submit for '+esc(sibLabel)+'?</div>'+
     '<p style="font-size:13px;color:var(--text3);margin-bottom:.75rem">You can also submit availability for '+esc(sibLabel)+' now, or come back any time.</p>'+
-    '<button class="btn btn-p btn-sm" onclick="_siblingNudgeId=&apos;&apos;;_gotoSchedulingForStudent(&apos;'+esc(sib.studentId)+'&apos;)">Submit for '+esc(sibFirst)+(sib.instrument?' ('+esc(sib.instrument)+')':'')+'</button>'+
+    '<button class="btn btn-p btn-sm" onclick="_siblingNudgeId=&apos;&apos;;_gotoSchedulingForStudent('+jsq(sib.studentId)+')">Submit for '+esc(sibFirst)+(sib.instrument?' ('+esc(sib.instrument)+')':'')+'</button>'+
     '</div>';
 }
 
@@ -6725,13 +6805,13 @@ function rViewLocPills(){
   var locs=[{v:'studio',l:'at Keylab'},{v:'in-home',l:'In-home'},{v:'virtual',l:'Virtual'}];
   return locs.map(function(x){
     var on=SC.locations.indexOf(x.v)>-1;
-    return '<button class="db'+(on?' on':'')+'" onclick="toggleScLoc(&apos;'+x.v+'&apos;);SC.pendingChanges=true">'+x.l+'</button>';
+    return '<button class="db'+(on?' on':'')+'" onclick="toggleScLoc('+jsq(x.v)+');SC.pendingChanges=true">'+x.l+'</button>';
   }).join('');
 }
 function rViewDurPills(){
   return ['30','45','60'].map(function(d){
     var on=SC.durations.indexOf(d)>-1;
-    return '<button class="db'+(on?' on':'')+'" onclick="toggleScDur(&apos;'+d+'&apos;);SC.pendingChanges=true">'+d+' min</button>';
+    return '<button class="db'+(on?' on':'')+'" onclick="toggleScDur('+jsq(d)+');SC.pendingChanges=true">'+d+' min</button>';
   }).join('');
 }
 function rViewTchOpts(){
@@ -7007,7 +7087,7 @@ function rSchedViewMode(){
       };
       var prefBtns=Object.keys(prefMap).map(function(pv){
         var on=slot.pref===pv;
-        return '<button class="pb'+(on?' '+({preferred:'p-pref',next:'p-next',possible:'p-poss',least:'p-least'}[pv]||''):'')+'" onclick="SC.slots['+i+'].pref=&apos;'+pv+'&apos;;SC.pendingChanges=true;render()">'+prefMap[pv]+'</button>';
+        return '<button class="pb'+(on?' '+({preferred:'p-pref',next:'p-next',possible:'p-poss',least:'p-least'}[pv]||''):'')+'" onclick="SC.slots['+i+'].pref='+jsq(pv)+';SC.pendingChanges=true;render()">'+prefMap[pv]+'</button>';
       }).join('');
       h+='<div class="av-slot" style="margin-bottom:.6rem">';
       h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem">';
@@ -7269,7 +7349,7 @@ function rSchedForm(forReg){
   h+='<p style="font-size:12px;color:var(--text4);margin-bottom:.4rem">You can select more than one.</p>';
   h+='<div class="dur-row" style="margin-bottom:.5rem">'+['30','45','60'].map(function(d){
     var on=SC.durations.indexOf(d)>-1;
-    return '<button class="db'+(on?' on':'')+'" onclick="toggleScDur(&apos;'+d+'&apos;);render()">'+d+' min</button>';
+    return '<button class="db'+(on?' on':'')+'" onclick="toggleScDur('+jsq(d)+');render()">'+d+' min</button>';
   }).join('')+'</div>';
   var durNoteMissing=SC.durations.length>1&&!SC.durationNote.trim();
   if(SC.durations.length>1){
@@ -7288,7 +7368,7 @@ function rSchedForm(forReg){
   h+='<h2 style="margin-bottom:.15rem">Where would you like lessons?</h2>';
   h+='<div class="dur-row">'+LOCS.map(function(x){
     var on=SC.locations.indexOf(x.v)>-1;
-    return '<button class="db'+(on?' on':'')+'" onclick="toggleScLoc(&apos;'+x.v+'&apos;);render()">'+x.l+'</button>';
+    return '<button class="db'+(on?' on':'')+'" onclick="toggleScLoc('+jsq(x.v)+');render()">'+x.l+'</button>';
   }).join('')+'</div>';
   if(locMissing&&SC.submitAttempted){
     h+='<div class="aw">Please select a lesson location.</div>';
@@ -7514,7 +7594,7 @@ function rSlot(slot, i, isEdit){
   };
   var prefBtns=PREFS.map(function(p){
     var on=slot.pref===p.v;
-    return '<button class="pb'+(on?' '+p.cls:'')+'" onclick="SC.slots['+i+'].pref=&apos;'+p.v+'&apos;;render()">'+p.l+'</button>';
+    return '<button class="pb'+(on?' '+p.cls:'')+'" onclick="SC.slots['+i+'].pref='+jsq(p.v)+';render()">'+p.l+'</button>';
   }).join('');
   var h='<div class="av-slot" style="margin-bottom:.6rem"><div class="av-slot-hd">';
   h+='<div class="av-slot-num">'+(SC.slots.length>1||isEdit?'Time window '+(i+1):'When are you free?')+'</div>';
@@ -7978,7 +8058,7 @@ function rEnrollment(scopeStudentId){
   }
   if(_familyLoadError){
     return h+'<div class="card"><p style="color:var(--text3)">'+esc(_familyLoadError)+'</p>'+
-      '<button class="btn btn-s btn-sm" style="margin-top:.5rem" onclick="gotoEnrollment('+(scopeStudentId?'&apos;'+esc(scopeStudentId)+'&apos;':'')+')">Try Again</button></div>';
+      '<button class="btn btn-s btn-sm" style="margin-top:.5rem" onclick="gotoEnrollment('+(scopeStudentId?''+jsq(scopeStudentId)+'':'')+')">Try Again</button></div>';
   }
   if(!students.length){
     return h+'<div class="card"><p style="color:var(--text3)">Nothing here yet. We\'ll update this as soon as your enrollment details are ready.</p></div>';
@@ -8091,21 +8171,21 @@ function rEnrollment(scopeStudentId){
       h+='<p>Please read through our policies below. Once you\u2019ve reviewed everything, accept and sign at the bottom to confirm the new enrollment.</p>';
       h+=rPolicyText(isInHome);
       h+='<div class="agree-box" id="tc-agree-box-'+esc(sid)+'" style="'+(tc.checked?'border-color:var(--green);background:rgba(255,255,255,.5)':'')+'">';
-      h+='<input type="checkbox" id="tc-chk-'+esc(sid)+'"'+(tc.checked?' checked':'')+' onchange="_tcState(&apos;'+esc(sid)+'&apos;).checked=this.checked;tcRefresh(&apos;'+esc(sid)+'&apos;)">';
+      h+='<input type="checkbox" id="tc-chk-'+esc(sid)+'"'+(tc.checked?' checked':'')+' onchange="_tcState('+jsq(sid)+').checked=this.checked;tcRefresh('+jsq(sid)+')">';
       h+='<label class="agree-lbl" for="tc-chk-'+esc(sid)+'">'+esc(TC_ACK_CHANGE)+'</label></div>';   // [1.681]
       var canSubmit=tc.checked&&tc.name.trim().length>0;
       var _pOpts2='';
       if(familyParents.p1) _pOpts2+='<option value="'+esc(familyParents.p1)+'"'+(tc.name===familyParents.p1?' selected':'')+'>'+esc(familyParents.p1)+'</option>';
       if(familyParents.p2) _pOpts2+='<option value="'+esc(familyParents.p2)+'"'+(tc.name===familyParents.p2?' selected':'')+'>'+esc(familyParents.p2)+'</option>';
       h+='<div class="field"><label>Select your name<span class="req">*</span></label>'+
-        '<select id="tc-nm-'+esc(sid)+'" onchange="_tcState(&apos;'+esc(sid)+'&apos;).name=this.value;tcRefresh(&apos;'+esc(sid)+'&apos;)">'+
+        '<select id="tc-nm-'+esc(sid)+'" onchange="_tcState('+jsq(sid)+').name=this.value;tcRefresh('+jsq(sid)+')">'+
         '<option value="">-- Select --</option>'+_pOpts2+
         '</select>'+
         '<div class="hint">Selecting your name serves as your electronic signature.</div></div>';
       h+=tc.busy
         ?'<button class="btn btn-p btn-full" disabled><span class="spin">\u21bb</span> Submitting...</button>'
         :'<div id="tc-err-'+esc(sid)+'" style="display:none;color:var(--rt);font-size:13px;margin-bottom:.5rem"></div>'+
-         '<button id="tc-submit-btn-'+esc(sid)+'" class="btn btn-p btn-full" onclick="doSubmitTC(&apos;'+esc(sid)+'&apos;)" '+(canSubmit?'':'disabled style="opacity:0.4"')+'>Accept New Proposal</button>';
+         '<button id="tc-submit-btn-'+esc(sid)+'" class="btn btn-p btn-full" onclick="doSubmitTC('+jsq(sid)+')" '+(canSubmit?'':'disabled style="opacity:0.4"')+'>Accept New Proposal</button>';
       h+='</div>';
       }   // [1.651] — end of the not-expired branch
       h+='</div>';
@@ -8175,7 +8255,7 @@ function rEnrollment(scopeStudentId){
         }
         // 3. Review Policies toggle button
         h+='<div style="margin-top:1rem;border-top:1px solid var(--border);padding-top:.85rem">';
-        h+='<button class="btn btn-p btn-sm" onclick="_enrExpanded[&apos;'+esc(sid)+'&apos;]=!_enrExpanded[&apos;'+esc(sid)+'&apos;];render()">'+(_exp?'Hide policies':'Review Policies')+'</button>';
+        h+='<button class="btn btn-p btn-sm" onclick="_enrExpanded['+jsq(sid)+']=!_enrExpanded['+jsq(sid)+'];render()">'+(_exp?'Hide policies':'Review Policies')+'</button>';
         h+='</div>';
         // 4. Policies content (collapsible under button)
         if(_exp){
@@ -8242,21 +8322,21 @@ function rEnrollment(scopeStudentId){
           :'<p>Please take a look at our policies below and let us know if you have any questions. Once you\'ve accepted, I\'ll get '+esc(firstName)+'&rsquo;s lessons scheduled for the school year and process their enrollment using the payment method on file.</p>';
         h+=rPolicyText(isInHome);
         h+='<div class="agree-box" id="tc-agree-box-'+esc(sid)+'" style="'+(tc.checked?'border-color:var(--green);background:rgba(255,255,255,.5)':'')+'">';
-        h+='<input type="checkbox" id="tc-chk-'+esc(sid)+'"'+(tc.checked?' checked':'')+' onchange="_tcState(&apos;'+esc(sid)+'&apos;).checked=this.checked;tcRefresh(&apos;'+esc(sid)+'&apos;)">';
+        h+='<input type="checkbox" id="tc-chk-'+esc(sid)+'"'+(tc.checked?' checked':'')+' onchange="_tcState('+jsq(sid)+').checked=this.checked;tcRefresh('+jsq(sid)+')">';
         h+='<label class="agree-lbl" for="tc-chk-'+esc(sid)+'">'+esc((s.proposalKind==='lateSpring'||s.enrollmentKind==='lateSpring')?_klLsAck(s):_tcAckText(_needsInvoice3))+'</label></div>';   // [1.715] row 17
         var canSubmit=tc.checked&&tc.name.trim().length>0&&(!(s.proposalKind==='lateSpring'||s.enrollmentKind==='lateSpring')||!!_klLsChoice(s));   // [1.715] row 17 — and a way to pay
         var _pOpts='';
         if(familyParents.p1) _pOpts+='<option value="'+esc(familyParents.p1)+'"'+(tc.name===familyParents.p1?' selected':'')+'>'+esc(familyParents.p1)+'</option>';
         if(familyParents.p2) _pOpts+='<option value="'+esc(familyParents.p2)+'"'+(tc.name===familyParents.p2?' selected':'')+'>'+esc(familyParents.p2)+'</option>';
         h+='<div class="field"><label>Select your name<span class="req">*</span></label>'+
-          '<select id="tc-nm-'+esc(sid)+'" onchange="_tcState(&apos;'+esc(sid)+'&apos;).name=this.value;tcRefresh(&apos;'+esc(sid)+'&apos;)">'+
+          '<select id="tc-nm-'+esc(sid)+'" onchange="_tcState('+jsq(sid)+').name=this.value;tcRefresh('+jsq(sid)+')">'+
           '<option value="">-- Select --</option>'+_pOpts+
           '</select>'+
           '<div class="hint">Selecting your name serves as your electronic signature.</div></div>';
         h+=tc.busy
           ?'<button class="btn btn-p btn-full" disabled><span class="spin">\u21bb</span> Submitting...</button>'
           :'<div id="tc-err-'+esc(sid)+'" style="display:none;color:var(--rt);font-size:13px;margin-bottom:.5rem"></div>'+
-           '<button id="tc-submit-btn-'+esc(sid)+'" class="btn btn-p btn-full" onclick="doSubmitTC(&apos;'+esc(sid)+'&apos;)" '+(canSubmit?'':'disabled style="opacity:0.4"')+'>Accept Proposal</button>';
+           '<button id="tc-submit-btn-'+esc(sid)+'" class="btn btn-p btn-full" onclick="doSubmitTC('+jsq(sid)+')" '+(canSubmit?'':'disabled style="opacity:0.4"')+'>Accept Proposal</button>';
         // (card closed once after the branch chain below)
       } else {
         // Phase but no pricing yet -- a genuine (if rare) in-between state:
@@ -8286,10 +8366,10 @@ function rEnrollment(scopeStudentId){
       var _enBtn='';
       if(ph==='Holding'){
         _enBtn=isTruthy(s.availabilitySubmitted)
-          ?'<button class="btn btn-p btn-sm" onclick="_gotoSchedulingForStudent(&apos;'+esc(s.studentId)+'&apos;)">Review / Update Availability</button>'
-          :'<button class="btn btn-p btn-sm" onclick="_gotoSchedulingForStudent(&apos;'+esc(s.studentId)+'&apos;)">Submit availability</button>';
+          ?'<button class="btn btn-p btn-sm" onclick="_gotoSchedulingForStudent('+jsq(s.studentId)+')">Review / Update Availability</button>'
+          :'<button class="btn btn-p btn-sm" onclick="_gotoSchedulingForStudent('+jsq(s.studentId)+')">Submit availability</button>';
       } else if(ph!=='Trial Booked'&&ph!=='Withdrawn'&&!isTruthy(s.availabilityLocked)&&!isTruthy(s.availabilitySubmitted)){
-        _enBtn='<button class="btn btn-p btn-sm" onclick="_gotoSchedulingForStudent(&apos;'+esc(s.studentId)+'&apos;)">Submit '+esc(firstName)+'\u2019s availability</button>';
+        _enBtn='<button class="btn btn-p btn-sm" onclick="_gotoSchedulingForStudent('+jsq(s.studentId)+')">Submit '+esc(firstName)+'\u2019s availability</button>';
       }
       if(_enBtn) h+='<div class="card">'+_enBtn+'</div>';
     }
@@ -8343,13 +8423,13 @@ function _klPolicySnapshotHtml(stu, isInHome){
   var snapshot=stu&&stu.tcPolicySnapshot?stu.tcPolicySnapshot:'';
   if(!snapshot) return rPolicyText(isInHome);
   return '<div class="tc-box"><p class="tc-ver" style="margin-bottom:.5rem">Policies as accepted on '+esc(_fmtFamilyTs(stu.tcAcceptedAt||''))+'</p>'+
-    '<button class="btn btn-s btn-sm" style="margin-bottom:.6rem" onclick="_downloadPolicyPdf(&apos;'+esc(stu.studentId)+'&apos;)">Download PDF</button>'+
+    '<button class="btn btn-s btn-sm" style="margin-bottom:.6rem" onclick="_downloadPolicyPdf('+jsq(stu.studentId)+')">Download PDF</button>'+
     '<div style="font-size:11px;color:var(--text3);line-height:1.6">'+snapshot+'</div></div>';
 }
 
 function rPolicyCollapsible(forceOpen, isInHome, stuId){
   var open=forceOpen||(stuId?_tcPolicyOpen[stuId]:_policyOpen);
-  var toggleArg=stuId?'&apos;'+stuId+'&apos;':'';
+  var toggleArg=stuId?''+jsq(stuId)+'':'';
   var h='<button class="btn btn-p btn-sm" onclick="togglePolicy('+toggleArg+')" style="margin-bottom:.75rem">'+
     (open?'Hide policies':'Click to view policies')+'</button>';
   if(open){
@@ -8710,7 +8790,7 @@ function _klDeviceId(){
 // does not try to claim it a second time. _magicRefused blanks the token on
 // that second pass — a link belonging to somebody else's device has to be
 // treated as if it were never in the URL at all.
-var _magicSettled=false, _magicRefused=false;
+var _magicSettled=false, _magicRefused=false, _magicSlot='';   // [1.753] — which parent the link was sent to
 function boot(){
   var resetTokenFromUrl = '';
   var loginTokenFromUrl = '';
@@ -8757,6 +8837,7 @@ function boot(){
       _magicSettled=true;
       api({action:'claimMagicLink', data:{kind:'family', token:loginTokenFromUrl,
                                           deviceId:_klDeviceId()}}, function(ce,cr){
+        if(cr&&cr.ok&&cr.parentSlot) _magicSlot=cr.parentSlot;   // [1.753]
         if(ce||!cr||!cr.ok){
           _magicRefused=true;
           showMsg((cr&&cr.reason==='claimed') ? KL_LINK_CLAIMED : KL_LINK_EXPIRED, 'e');
@@ -8787,7 +8868,10 @@ function boot(){
     // per-family, not per-parent) -- 'parent1' is the same fallback the
     // remembered-session path below already uses in the equivalent
     // unknown-parent case.
-    MY_PARENT_SLOT = 'parent1';
+    // [1.753] stage 3 — it is known now: each parent's email carries their
+    // own link, and the server said which one this was when it was claimed.
+    // 'parent1' stays the fallback for a link minted before that.
+    MY_PARENT_SLOT = _magicSlot || 'parent1';
     // Remembered so returning to the portal within this token's own real
     // expiry doesn't require clicking the emailed link again. familyId is
     // left blank here -- doGetProposal() never returns it to the client,

@@ -769,6 +769,9 @@ input[type=checkbox]{width:13px;height:13px;padding:0;margin:0;border:0;border-r
 .sched-item-hd{font-size:13px;font-weight:600;color:var(--text)}
 .sched-item-at{font-weight:400;color:var(--text3);font-size:12px}
 .sched-item-txt{font-size:12px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sched-stopped{cursor:default;border-color:var(--red);position:relative;padding-right:28px}
+.sched-stop-x{position:absolute;top:6px;right:6px;background:none;border:0;color:var(--text4);font-size:14px;line-height:1;cursor:pointer;padding:2px 4px}
+.sched-stop-note{font-size:12px;color:var(--red);font-weight:600;margin:.3rem 0 .4rem}
 /* A colour set directly on the label beats one inherited from its parent, no
    matter how specific the parent's selector is — so the dark-on-dark fault
    comes straight back without this line. */
@@ -1646,6 +1649,14 @@ input[type=checkbox]{width:13px;height:13px;padding:0;margin:0;border:0;border-r
 .lib-modal-2 .lib-edit { margin-top:0 }
 .lib-modal-hd { display:flex;align-items:center;margin-bottom:10px }
 .lib-modal-t { font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text2) }
+/* [1.753] stage 6 — 16px on every touch screen, and nothing may override it.
+   The phone rule above sets inputs to 16px, but a more specific rule later in
+   the file (the reply box at 14px, search and link boxes at 13px) won, so
+   iPhones still zoomed in and stayed zoomed. (pointer:coarse) also catches a
+   phone held sideways, which is wider than the phone rule's breakpoint. */
+@media (pointer:coarse){
+  input:not([type=checkbox]):not([type=radio]),select,textarea,[contenteditable="true"]{font-size:16px!important}
+}
 </style>
 </head>
 <body>
@@ -1979,7 +1990,23 @@ function _bootTeacher(){
     render();
   });
 }
+// [1.753] stage 6 — a session that has ENDED (revoked by a password reset or
+// the account being made inactive) used to fail every poll silently for ever,
+// with no way back to the sign-in screen. Any answer saying so now does what
+// the boot check does with one: back to sign-in. Drafts are kept on the device
+// — signing back in finds them.
+function _ktSessionGone(r){
+  return !!(TOKEN && r && r.ok===false && /^(Session expired|Session invalid|Not authenticated)/.test(String(r.error||'')));
+}
+function _ktToSignIn(){
+  if(_pollTimer){ clearTimeout(_pollTimer); _pollTimer=null; }
+  _ktClearSession(); TOKEN=''; TEACHER_ID=''; TEACHER_NAME='';
+  API_KEEP={}; API_KEEP_AT={};
+  PAGE='login'; render();
+}
 function _apiFetch(payload, cb){
+  var _cb=cb;
+  cb=function(e,r){ if(!e && _ktSessionGone(r)){ _ktToSignIn(); return; } _cb(e,r); };
   fetch(GAS_URL, {
     method:'POST',
     headers:{'Content-Type':'text/plain;charset=utf-8'},
@@ -2000,6 +2027,16 @@ function esc(s){
     .replace(/&/g,'&amp;').replace(/</g,'&lt;')
     .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
+// [1.753] stage 5 — a value placed INSIDE an inline handler, as a JavaScript
+// string. esc() alone cannot do this: the browser decodes &#39; and &quot;
+// back into quotes before it runs the handler, so an apostrophe in a name
+// broke the handler, and a crafted value could close the string and run
+// script. JSON.stringify makes a correct JS string literal (quotes and
+// backslashes escaped); esc() then makes that safe inside the double-quoted
+// attribute, and the browser's decoding hands the handler exactly the
+// literal. Every quoted argument in a handler goes through this — check.js
+// fails on the old \''+esc(…)+'\' form.
+function jsq(s){ return esc(JSON.stringify(String(s||''))); }
 function showMsg(m, t){
   MSG={m:m, t:t||'s'}; render();
   setTimeout(function(){ MSG={m:'',t:''}; render(); }, 7000);
@@ -3103,7 +3140,7 @@ function rTrialsTab(){
     h+='<h2>'+esc(TT_COPY.sent)+'</h2>';
     done.forEach(function(t){
       var on=!!TT.open[t.key];
-      h+='<div class="card tt-card"><button type="button" class="tt-row tt-btn" onclick="ttToggle(\''+esc(t.key)+'\')">'+
+      h+='<div class="card tt-card"><button type="button" class="tt-row tt-btn" onclick="ttToggle('+jsq(t.key)+')">'+
         '<span><span class="caret">'+(on?'▾':'▸')+'</span> <b>'+esc(_nameAge(t.studentName,t.age))+'</b></span>'+
         '<span class="tt-pill ok">'+esc(TT_COPY.sentOn(_ttWhen(t.submittedAt)))+'</span></button>'+
         (on?_ttAnswersHTML(t):'')+'</div>';
@@ -3122,7 +3159,7 @@ function _ttReportCard(t){
   // AC, 28 September 2026: *"They should see all reports due as cards to click
   // and expand to complete and submit"* — closed, the card is its heading only.
   var on=!!TT.open[t.key];
-  var head='<button type="button" class="tt-row tt-btn" onclick="ttToggle(\''+esc(t.key)+'\')">'+
+  var head='<button type="button" class="tt-row tt-btn" onclick="ttToggle('+jsq(t.key)+')">'+
     '<span><span class="caret">'+(on?'\u25be':'\u25b8')+'</span> <b>'+esc(_nameAge(t.studentName,t.age))+'</b><span class="tt-sub">'+esc(t.details)+'</span></span>'+_ttPill(t)+'</button>';
   return '<div class="card tt-card">'+head+(on?_ttReportForm(t,i,a,d):'')+'</div>';
 }
@@ -3263,7 +3300,7 @@ function rMyStudents(){
     if(d.off)h+='<div class="ms-day-note">'+esc(d.off.kind==='absence'?MS_COPY.absence:MS_COPY.closed(d.off.name))+'</div>';
     else if(!d.lessons.length)h+='<div class="ms-day-none">'+esc(MS_COPY.noLessons)+'</div>';
     d.lessons.forEach(function(l){
-      h+='<button type="button" class="ms-row" onclick="msOpen(\''+esc(l.studentId)+'\',\''+d.date+'\',\''+esc(l.time)+'\')">'+
+      h+='<button type="button" class="ms-row" onclick="msOpen('+jsq(l.studentId)+',\''+d.date+'\','+jsq(l.time)+')">'+
         '<span class="ms-t">'+esc(String(l.time||'').replace(/\s*[AP]M$/i,''))+'</span><span><b>'+esc(_nameAge(l.studentName,l.age))+'</b>'+
         (l.trial?' <span class="tt-pill bad">'+esc(MS_COPY.trial)+'</span>':'')+
         '<span class="ms-s">'+esc([l.instrument,l.duration?l.duration+' min':'',l.room].filter(Boolean).join(' · '))+'</span></span></button>';
@@ -3889,7 +3926,7 @@ function rTtplForm(i,t){
           var on=_tplTags.indexOf(t.tagId)>-1;
           return '<button type="button" class="lib-tag'+(on?' on':'')+'"'+
             ' aria-pressed="'+(on?'true':'false')+'"'+
-            ' onclick="ttplTag('+i+',\''+esc(t.tagId)+'\')">'+esc(t.name)+'</button>';
+            ' onclick="ttplTag('+i+','+jsq(t.tagId)+')">'+esc(t.name)+'</button>';
         }).join('')+
       '</div>'
     : '<div class="lib-ask">'+
@@ -4898,7 +4935,7 @@ function _searchNames(q){
   // back twice, once as its student and once as its parents. Found in review.
   (FAMILY_THREADS.list||[]).forEach(function(t){
     var parents=_rosterParentLine(t)||'Family';
-    var open='openFamilyRow(\''+esc(t.familyId)+'\');clearMsgSearch()';
+    var open='openFamilyRow('+jsq(t.familyId)+');clearMsgSearch()';
     var parentHit=parents.toLowerCase().indexOf(needle)!==-1;
     var kids=(t.students||[]);
     var pushed=false;
@@ -4920,7 +4957,7 @@ function _searchNames(q){
     out.push({label:nm, sub:'Admin & staff',
       open:(x.contactType==='admin'
         ? 'openStaffThread(\'admin\',\'admin\',\'Admin\')'
-        : 'openStaffThread(\'staff\',\''+esc(x.teacherId)+'\',\''+esc(nm)+'\')')+';clearMsgSearch()'});
+        : 'openStaffThread(\'staff\','+jsq(x.teacherId)+','+jsq(nm)+')')+';clearMsgSearch()'});
   });
   // [1.348] — and the families whose MESSAGES matched, which no name above can
   // find. Found by running it: the list below the box narrowed to one family
@@ -4946,7 +4983,7 @@ function _searchNames(q){
       // "recital", and a bare name in the list would not say why it is there.
       out.push({label:parents, _fid:fid,
                 sub:(MSG_SEARCH.hits[fid].extract||'').replace(/\s+/g,' ').slice(0,60),
-                open:'openFamilyRow(\''+esc(fid)+'\');clearMsgSearch()'});
+                open:'openFamilyRow('+jsq(fid)+');clearMsgSearch()'});
     });
   }
   return out.slice(0,12);
@@ -5025,8 +5062,8 @@ function rStudentRow(x){
   var _when=_kidWhen(st,false);   // [1.715] row 17
   var facts=[_what, _when].filter(Boolean).join(' - ');
   var parents=[t.parent1Name, t.parent2Name].filter(Boolean).join(' & ');
-  return '<div class="thread-row age-rest" onclick="openStudentRow(\''+esc(x.fid)+'\',\''+
-      esc(st.studentId||'')+'\')">'+
+  return '<div class="thread-row age-rest" onclick="openStudentRow('+jsq(x.fid)+','+
+      jsq(st.studentId||'')+')">'+
     '<div class="thread-row-main">'+
     '<div class="r-parent">'+esc(st.studentName||'')+
       (facts?' <span class="dir">\u00b7 '+esc(facts)+'</span>':'')+'</div>'+
@@ -5122,9 +5159,9 @@ function _rowNames(r){
 function rConvRow(r, focusReview){
   var _f = focusReview ? ',true' : '';
   var open = r.kind==='family'
-    ? 'openFamilyRow(\'' + esc(r.id) + '\''+_f+')'
+    ? 'openFamilyRow(' + jsq(r.id) + _f + ')'
     : (r.kind==='admin' ? 'openStaffThread(\'admin\',\'admin\',\'Admin\''+_f+')'
-                        : 'openStaffThread(\'staff\',\'' + esc(r.id) + '\',\'' + esc(r.name||'') + '\''+_f+')');
+                        : 'openStaffThread(\'staff\',' + jsq(r.id) + ',' + jsq(r.name||'') + _f + ')');   // [1.753] — a name in a handler goes through jsq()
   var head = _rowNames(r);
   var when = r.at ? ' <span class="dir">· '+esc(fmtMsgTime(r.at))+'</span>' : '';
   // Rule 1: the left edge bar carries time pressure and nothing else ever
@@ -5480,7 +5517,10 @@ function loadThreads(silent){
   api({action:'getTeacherThreads', data:{teacherToken:TOKEN}}, function(e,r){
     THREADS._inFlight=false;
     THREADS.loading=false;
-    if(e||!r||!r.ok){ if(!silent) showMsg((r&&r.error)||'Could not load conversations.','e'); render(); return; }
+    // [1.753] stage 6 — a failed BACKGROUND refresh changes nothing on screen,
+    // so it draws nothing: on weak signal this redrew the whole page, the box
+    // being typed in included, every five seconds.
+    if(e||!r||!r.ok){ if(!silent){ showMsg((r&&r.error)||'Could not load conversations.','e'); render(); } return; }
     // [1.176], AC: "The browser reloads when navigating away to another tab and
     // back." It was not a reload — every focus event re-rendered the whole page
     // whether or not anything had changed, which looks identical. The roster is
@@ -5715,6 +5755,7 @@ function openFamilyThread(familyId, p1, p2, focusReview){
                    draft:_draftGet('family', familyId), sending:false,
                    loading:!_had && !_knownEmpty, refreshing:!!_had || _knownEmpty, notifyP1:true, notifyP2:true,
                    students:_row.students||[]};
+  _sendRestore('family:'+familyId);   // [1.753] stage 4 — a failed send's files and note come back with it
   _openPane('family');   // [1.336] — one pane, one open thing
   _shouldScrollMsgList=true;
   render();
@@ -5988,7 +6029,7 @@ function rFamilyThread(){
     h+='<div class="about-row"><span>About</span>'+
       _kids.map(function(st){
         return '<span class="about-pill'+(_sel===st.studentId?' on':'')+'" '+
-          'onclick="ACTIVE_THREAD.studentId=\''+esc(st.studentId)+'\';render()">'+esc(st.studentName)+'</span>';
+          'onclick="ACTIVE_THREAD.studentId='+jsq(st.studentId)+';render()">'+esc(st.studentName)+'</span>';
       }).join('')+
       '<span class="about-pill'+(_sel?'':' on')+'" onclick="ACTIVE_THREAD.studentId=\'\';render()">Something else</span>'+
       '</div>';
@@ -6406,6 +6447,40 @@ function askAdminAbout(){
 // scheduling on this side. Everything about what is being sent — the words,
 // the files, which parents are ticked, the student — is read exactly once,
 // here, so the two cannot drift apart.
+// ── [1.753] stage 4 — a send that fails keeps its id, wherever the teacher is ──
+//
+// The 3 October review found two ways a teacher's message went wrong. (1) A
+// send that failed after the teacher had left the thread — Send, then Back, on
+// a phone with bad signal — returned before anything was put back: the words
+// were gone from the box and from the saved draft, and the family stayed marked
+// answered. (2) A send that DID land but whose answer was lost read "not sent",
+// and pressing Send again minted a new message id, so the family got it twice;
+// the server only recognises a repeat by its id.
+//
+// So a failure is recorded against its conversation, not against whatever is
+// on screen: the draft and the answered mark are put back at once, and the id
+// is kept with the words. Sending the same words again reuses that id, which
+// the server answers with the message it already has rather than a second one
+// — so retrying is always safe and needs no new wording. Opening the
+// conversation again brings back its files and its failure note, beside its
+// own composer.
+var SEND_RETRY={};
+function _sendIdFor(key, text){
+  var r=SEND_RETRY[key];
+  return (r && r.text===text) ? r.id : _ktNewClientMsgId();
+}
+function _sendFailed(key, id, text, att, err){ SEND_RETRY[key]={id:id, text:text, att:att||[], err:err||''}; }
+function _sendSucceeded(key){ delete SEND_RETRY[key]; }
+function _sendRestore(key){
+  var r=SEND_RETRY[key]; if(!r) return;
+  if(r.att.length && !ATT_PENDING.length){
+    ATT_PENDING=r.att.map(function(a){ return {tempId:'t'+a.attachmentId, fileName:a.fileName,
+      mimeType:a.mimeType, sizeBytes:a.sizeBytes, uploading:false, attachmentId:a.attachmentId}; });
+    ATT_BUSY=0;
+  }
+  if(r.err){ actFail('send', r.err); r.err=''; }
+}
+
 function sendFamilyMessage(sendAt){
   var t=ACTIVE_THREAD;
   var _el=document.getElementById('family-composer');
@@ -6456,7 +6531,8 @@ function sendFamilyMessage(sendAt){
   // refreshFamilyThread() to fetch back the message just sent. The family
   // portal has done it properly since 1.46 and this is that pattern ported --
   // append locally, post in the background, reconcile in place.
-  var clientMsgId=_ktNewClientMsgId();
+  var _sk='family:'+t.familyId;   // [1.753] stage 4
+  var clientMsgId=_sendIdFor(_sk, text);
   var _stuId=_threadStudentId(t);   // which child (1.161 #4)
   // [1.277] — the optimistic bubble carries the files too, drawn from what the
   // chips already know. Without this a message with a photo appears blank for
@@ -6529,9 +6605,22 @@ function sendFamilyMessage(sendAt){
     // **So it resolves before anything else can return.** The rule this teaches:
     // a state that disables a control must be cleared on EVERY path out,
     // including the ones that give up.
-    if(e||!r||!r.ok) actFail('send', (r&&r.error)||TCH_COPY.notSent);
+    var _failed=(e||!r||!r.ok), _here=!!(ACTIVE_THREAD && ACTIVE_THREAD.familyId===t.familyId);
+    // [1.753] stage 4 — settled for THIS conversation before anything asks
+    // where the teacher is now: the words back in its saved draft, its row
+    // owing a reply again, and the id kept with the words.
+    if(_failed){
+      _draftKeep(t, html);
+      _undoRowAnswered(_rowUndo);
+      _sendFailed(_sk, clientMsgId, text, _attRows, (r&&r.error)||TCH_COPY.notSent);
+    } else _sendSucceeded(_sk);
+    if(!_here){   // navigated away mid-flight
+      actClear('send');   // [1.539] — Send is never left disabled; the note waits for this thread to reopen
+      if(_failed) showMsg((r&&r.error)||'Could not send message.','e');
+      return;
+    }
+    if(_failed){ SEND_RETRY[_sk].err=''; actFail('send', (r&&r.error)||TCH_COPY.notSent); }
     else actDone('send', sendAt ? TCH_COPY.scheduledConfirm : TCH_COPY.sentOk);   // [1.536]
-    if(!ACTIVE_THREAD || ACTIVE_THREAD.familyId!==t.familyId) return; // navigated away mid-flight
     t._sendInFlight=false;
     if(e||!r||!r.ok){
       // Put it back where the teacher can see and retry it, rather than losing
@@ -6544,8 +6633,8 @@ function sendFamilyMessage(sendAt){
       ATT_PENDING=_attRows.map(function(a){ return {tempId:'t'+a.attachmentId, fileName:a.fileName,
         mimeType:a.mimeType, sizeBytes:a.sizeBytes, uploading:false, attachmentId:a.attachmentId}; });
       ATT_BUSY=0;
-      _draftKeep(t, html);   // [1.336] — it never left, so it is a draft again
-      _undoRowAnswered(_rowUndo);    // [1.325] — nothing was sent, so nothing was answered
+      // [1.753] — the saved draft and the answered mark were put back above,
+      // before the where-is-the-teacher check, so they hold either way.
       showMsg((r&&r.error)||'Could not send message.','e');
       render();
       return;
@@ -6859,7 +6948,7 @@ function rDaySend(){
      ' onclick="daySendTpl(\''+DAY_TPL_CANCEL+'\')">'+esc(TCH_COPY.dayCancelLabel)+'</button>';
   tpls.forEach(function(t){
     h+='<button type="button" class="day-chip'+(DAY_SEND.tplId===t.templateId?' on':'')+'"'+
-       ' onclick="daySendTpl(\''+esc(t.templateId)+'\')">'+esc(t.label||'Template')+'</button>';
+       ' onclick="daySendTpl('+jsq(t.templateId)+')">'+esc(t.label||'Template')+'</button>';
   });
   h+='</div>';
   h+=rComposer('day-composer', DAY_SEND.draft, 'dayComposerIn()',
@@ -7141,6 +7230,7 @@ function openStaffThread(contactType, otherId, otherName, focusReview){
   ACTIVE_STAFF_THREAD = {contactType:contactType, otherId:otherId, otherName:otherName, messages:_had||[],
                          draft:_draftGet(contactType==='admin'?'admin':'staff', contactType==='admin'?'admin':otherId), sending:false,
                          loading:!_had && !_knownEmpty, refreshing:!!_had || _knownEmpty};
+  _sendRestore(contactType==='admin'?'admin:admin':'staff:'+otherId);   // [1.753] stage 4
   _openPane('staff');    // [1.336] — one pane, one open thing
   _shouldScrollMsgList=true;
   render();
@@ -8752,8 +8842,8 @@ function _libAlready(attachmentId){
 function rLibSave(attachmentId){
   if(!attachmentId) return '';
   if(_libAlready(attachmentId)) return '';
-  return '<button type="button" class="lib-mini" onclick="event.stopPropagation();libSave(\''+
-    esc(attachmentId)+'\')">'+esc(TLIB_COPY.save)+'</button>';
+  return '<button type="button" class="lib-mini" onclick="event.stopPropagation();libSave('+
+    jsq(attachmentId)+')">'+esc(TLIB_COPY.save)+'</button>';
 }
 
 // ── MANAGING: rename, tags, and the two removals ────────────────────────
@@ -9520,7 +9610,7 @@ function rLibAddCard(at){
               var t=c.t, on=LIBADD.tags.indexOf(t.tagId)>-1;
               return '<button type="button" class="lib-tag'+(on?' on':(c.near?' near':''))+'"'+
                 ' aria-pressed="'+(on?'true':'false')+'"'+
-                ' onclick="libAddTag(\''+esc(t.tagId)+'\')">'+esc(t.name)+'</button>';
+                ' onclick="libAddTag('+jsq(t.tagId)+')">'+esc(t.name)+'</button>';
             }).join('')+'</div>'
           : '<div class="lib-empty">'+esc(TLIB_COPY.noTagsYet)+'</div>')+
       '</div>'
@@ -9537,7 +9627,7 @@ function rLibAddCard(at){
         (LIBADD.priv.length
           ? '<div class="lib-tags" style="padding-top:0;padding-bottom:4px">'+LIBADD.priv.map(function(w){
               return '<button type="button" class="lib-tag priv on" title="'+esc(TLIB_COPY.removeWord)+'"'+
-                ' onclick="libAddPrivRemove(\''+esc(w)+'\')">'+esc(w)+' &#215;</button>';
+                ' onclick="libAddPrivRemove('+jsq(w)+')">'+esc(w)+' &#215;</button>';
             }).join('')+'</div>'
           : '')+
         '<div class="lib-fld-row">'+
@@ -9894,7 +9984,7 @@ function rLibraryAdded(){
               return '<button type="button" class="lib-tag'+(all?' on':(some?' some':''))+'"'+
                 ' aria-pressed="'+(all?'true':(some?'mixed':'false'))+'"'+
                 (sel.length?'':' disabled')+
-                ' onclick="libAddedTagAll(\''+esc(t.tagId)+'\')">'+esc(t.name)+'</button>';
+                ' onclick="libAddedTagAll('+jsq(t.tagId)+')">'+esc(t.name)+'</button>';
             }).join('')+'</div>'
           : '<div class="lib-empty">'+esc(TLIB_COPY.noTagsYet)+'</div>')+
       '</div>'+
@@ -9919,12 +10009,12 @@ function rLibraryAdded(){
         return '<div class="lib-row'+(_lk?' lib-link':'')+(_on?' sel':'')+'">'+
           '<div style="display:flex;align-items:flex-start;gap:8px">'+
             '<input type="checkbox" class="lib-tick"'+(_on?' checked':'')+
-              ' onclick="libAddedSel(\''+esc(f.id)+'\')" aria-label="'+esc(f.fileName)+'">'+
+              ' onclick="libAddedSel('+jsq(f.id)+')" aria-label="'+esc(f.fileName)+'">'+
             '<span class="lib-kind">'+esc(_lk?TLIB_COPY.linkKind:_attKind(f.fileName))+'</span>'+
             '<input class="lib-name-in" style="flex:1" id="lib-bn-'+esc(f.id)+'"'+
               ' value="'+esc(f.fileName)+'" aria-label="'+esc(TLIB_COPY.lblName)+'"'+
               ' onkeydown="if(event.key===\'Enter\'){event.preventDefault();this.blur();}"'+
-              ' onblur="libAddedRename(\''+esc(f.id)+'\')">'+
+              ' onblur="libAddedRename('+jsq(f.id)+')">'+
           '</div>'+
           (_lk?'<div class="lib-row-foot"><span class="lib-meta">'+esc(_libLinkHost(f.url))+'</span></div>':'')+
           // [1.487] — ONE row. The likely tag leads it, a tag the name nearly
@@ -9935,13 +10025,13 @@ function rLibraryAdded(){
                 var t=c.t, on=(f.tags||[]).indexOf(t.tagId)>-1;
                 return '<button type="button" class="lib-tag'+(on?' on':(c.near?' near':''))+'"'+
                   ' aria-pressed="'+(on?'true':'false')+'"'+
-                  ' onclick="libFileTag(\''+esc(f.id)+'\',\''+esc(t.tagId)+'\',this)">'+esc(t.name)+'</button>';
+                  ' onclick="libFileTag('+jsq(f.id)+','+jsq(t.tagId)+',this)">'+esc(t.name)+'</button>';
               }).join('')+'</div>'
             : '')+
           ((f.privateTags||[]).length
             ? '<div class="lib-tags" style="padding-top:3px">'+(f.privateTags||[]).map(function(w){
                 return '<button type="button" class="lib-tag priv on" title="'+esc(TLIB_COPY.removeWord)+'"'+
-                  ' onclick="libPrivateRemove(\''+esc(f.id)+'\',\''+esc(w)+'\')">'+esc(w)+' &#215;</button>';
+                  ' onclick="libPrivateRemove('+jsq(f.id)+','+jsq(w)+')">'+esc(w)+' &#215;</button>';
               }).join('')+'</div>'
             : '')+
         '</div>';
@@ -10485,7 +10575,7 @@ function rLibBulkBar(){
             return '<button type="button" class="lib-tag'+(all?' on':(some?' part':''))+(t.priv?' priv':'')+'"'+
               ' aria-pressed="'+(all?'true':'false')+'"'+
               ' title="'+esc((all?TLIB_COPY.bulkOff:TLIB_COPY.bulkOn).replace('{n}', String(sel.length)))+'"'+
-              ' onclick="libBulkApply(\''+esc(t.v)+'\','+(all?'true':'false')+')">'+
+              ' onclick="libBulkApply('+jsq(t.v)+','+(all?'true':'false')+')">'+
               esc(t.name)+(some?' <span class="lib-part-n">'+have+'/'+sel.length+'</span>':'')+'</button>';
           }).join('')+'</div></div>'
         : '')+
@@ -10673,7 +10763,7 @@ function rLibraryTags(){
     var on=LIB_FILTER.indexOf(t.v)>-1;
     return '<button type="button" class="lib-tag'+(on?' on':'')+(t.priv?' priv':'')+'"'+
       ' aria-pressed="'+(on?'true':'false')+'"'+
-      ' onclick="libTag(\''+esc(t.v)+'\')">'+esc(t.name)+'</button>';
+      ' onclick="libTag('+jsq(t.v)+')">'+esc(t.name)+'</button>';
   }).join('')+
   // [1.488] — the clear used to be a button at the end of this row. It is now
   // an × on the search box, where a person looks for it.
@@ -10770,7 +10860,7 @@ function rLibStudioTagList(){
           return '<div class="lib-mytag-row">'+
             '<span class="lib-tag">'+esc(t.name)+'</span>'+
             '<span class="lib-meta">'+esc(TLIB_COPY.myTagOn.replace('{n}', String(_libTagUseCount(t.tagId))))+'</span>'+
-            '<button type="button" class="lib-act" onclick="libTagHide(\''+esc(t.tagId)+'\',true)">'+
+            '<button type="button" class="lib-act" onclick="libTagHide('+jsq(t.tagId)+',true)">'+
               esc(TLIB_COPY.tagHide)+'</button>'+
             '</div>';
         }).join('')
@@ -10783,7 +10873,7 @@ function rLibStudioTagList(){
           return '<button type="button" class="lib-tag back"'+
             ' title="'+esc(TLIB_COPY.tagBack.replace('{name}', t.name))+'"'+
             ' aria-label="'+esc(TLIB_COPY.tagBack.replace('{name}', t.name))+'"'+
-            ' onclick="libTagHide(\''+esc(t.tagId)+'\',false)">+ '+esc(t.name)+'</button>';
+            ' onclick="libTagHide('+jsq(t.tagId)+',false)">+ '+esc(t.name)+'</button>';
         }).join('')+'</div>'
       : '')+
     rAct('tagshow')+
@@ -10808,7 +10898,7 @@ function rLibMyTagManager(){
           '<button type="button" class="lnk-btn" onclick="libMyTagCancel()">'+
             esc(TLIB_COPY.myTagDelNo)+'</button>'+
           '<button type="button" class="btn btn-danger" style="width:auto;font-size:12px"'+
-            ' onclick="libMyTagDelete(\''+esc(w.word)+'\')">'+esc(TLIB_COPY.myTagDelYes)+'</button>'+
+            ' onclick="libMyTagDelete('+jsq(w.word)+')">'+esc(TLIB_COPY.myTagDelYes)+'</button>'+
           '</div>';
       }
       if(LIB_TAG_EDIT===w.word){
@@ -10816,19 +10906,19 @@ function rLibMyTagManager(){
           '<input id="lib-tagrn" value="'+esc(LIB_TAG_NEW)+'"'+
             ' aria-label="'+esc(TLIB_COPY.myTagRename)+'"'+
             ' oninput="LIB_TAG_NEW=this.value"'+
-            ' onkeydown="if(event.key===\'Enter\'){event.preventDefault();libMyTagRename(\''+esc(w.word)+'\');}'+
+            ' onkeydown="if(event.key===\'Enter\'){event.preventDefault();libMyTagRename('+jsq(w.word)+');}'+
               'else if(event.key===\'Escape\'){event.preventDefault();libMyTagCancel();}">'+
           '<button type="button" class="lnk-btn" onclick="libMyTagCancel()">'+esc(TLIB_COPY.myTagCancel)+'</button>'+
-          '<button type="button" class="lib-done" onclick="libMyTagRename(\''+esc(w.word)+'\')">'+
+          '<button type="button" class="lib-done" onclick="libMyTagRename('+jsq(w.word)+')">'+
             esc(TLIB_COPY.myTagSave)+'</button>'+
           '</div>';
       }
       return '<div class="lib-mytag-row">'+
         '<span class="lib-tag priv">'+esc(w.word)+'</span>'+
         '<span class="lib-meta">'+esc(TLIB_COPY.myTagOn.replace('{n}', String(w.n)))+'</span>'+
-        '<button type="button" class="lib-act" onclick="libMyTagEdit(\''+esc(w.word)+'\')">'+
+        '<button type="button" class="lib-act" onclick="libMyTagEdit('+jsq(w.word)+')">'+
           esc(TLIB_COPY.myTagRename)+'</button>'+
-        '<button type="button" class="lib-act bad" onclick="libMyTagDelAsk(\''+esc(w.word)+'\')">'+
+        '<button type="button" class="lib-act bad" onclick="libMyTagDelAsk('+jsq(w.word)+')">'+
           esc(TLIB_COPY.myTagDelete)+'</button>'+
         '</div>';
     }).join('')+
@@ -10935,7 +11025,7 @@ function _libShelf(label, key, n, body){
   var searching=!!String(LIB_Q||'').trim() || LIB_FILTER.length>0;
   var open=(searching && n>0) || !!LIB_SHELF_OPEN[key];
   return '<div class="lib-shelf">'+
-    '<div class="lib-group-hd lib-shelf-hd" onclick="libShelfToggle(\''+esc(key)+'\')">'+
+    '<div class="lib-group-hd lib-shelf-hd" onclick="libShelfToggle('+jsq(key)+')">'+
       '<span class="caret">'+(open?'\u25be':'\u25b8')+'</span>'+esc(label)+
       '<span class="zcount">'+n+'</span></div>'+
     (open?body:'')+
@@ -11019,8 +11109,8 @@ function rLibRow(f, mine){
   // for a teacher because there was nothing on it they were allowed to edit.
   // Reading AC's file is not editing it.
   var _press=LIB_STANDALONE
-    ? 'libOpenItem(\''+esc(id)+'\')'
-    : 'libAttach(\''+esc(id)+'\')';
+    ? 'libOpenItem('+jsq(id)+')'
+    : 'libAttach('+jsq(id)+')';
   // ── [1.484] — THE NAME GETS THE ROW ──────────────────────────────────
   //
   // **AC:** *"File names are also so compressed they are unusable."* True: the
@@ -11045,7 +11135,7 @@ function rLibRow(f, mine){
     '<div style="display:flex;align-items:flex-start;gap:8px">'+
       (mine
         ? '<input type="checkbox" class="lib-tick"'+(LIB_SEL[id]?' checked':'')+
-          ' onclick="event.stopPropagation();libSel(\''+esc(id)+'\')"'+
+          ' onclick="event.stopPropagation();libSel('+jsq(id)+')"'+
           ' title="'+esc(TLIB_COPY.tickHint)+'"'+
           ' aria-label="'+esc(TLIB_COPY.tickHint)+': '+esc(f.fileName)+'">'
         : '')+
@@ -11071,13 +11161,13 @@ function rLibRow(f, mine){
           return '<span class="lib-tag sm">'+esc(nm)+
             '<button type="button" class="lib-tag-x" aria-label="'+esc(TLIB_COPY.tagOffThis.replace('{name}', nm))+'"'+
             ' title="'+esc(TLIB_COPY.tagOffThis.replace('{name}', nm))+'"'+
-            ' onclick="event.stopPropagation();libFileTag(\''+esc(id)+'\',\''+esc(tid)+'\')">&#215;</button></span>';
+            ' onclick="event.stopPropagation();libFileTag('+jsq(id)+','+jsq(tid)+')">&#215;</button></span>';
         }).join('')+
         (f.privateTags||[]).map(function(w){
           return '<span class="lib-tag sm priv">'+esc(w)+
             '<button type="button" class="lib-tag-x" aria-label="'+esc(TLIB_COPY.tagOffThis.replace('{name}', w))+'"'+
             ' title="'+esc(TLIB_COPY.tagOffThis.replace('{name}', w))+'"'+
-            ' onclick="event.stopPropagation();libPrivateRemove(\''+esc(id)+'\',\''+esc(w)+'\')">&#215;</button></span>';
+            ' onclick="event.stopPropagation();libPrivateRemove('+jsq(id)+','+jsq(w)+')">&#215;</button></span>';
         }).join('')+
         '</div>'
       : '')+
@@ -11093,9 +11183,9 @@ function rLibRow(f, mine){
       // a master control area for all four."* Delete was reachable only by
       // opening Edit first, so removing a file was two presses and a panel.
       // Admin's rows gained both in [1.579]; this is the same change.
-      (mine?'<button type="button" class="lib-act" onclick="libEdit(\''+esc(id)+'\')">'+
+      (mine?'<button type="button" class="lib-act" onclick="libEdit('+jsq(id)+')">'+
          esc(TLIB_COPY.manage)+'</button>'+
-        '<button type="button" class="lib-act bad" onclick="libAskDelete(\''+esc(id)+'\')">'+
+        '<button type="button" class="lib-act bad" onclick="libAskDelete('+jsq(id)+')">'+
          esc(link?TLIB_COPY.linkDel:TLIB_COPY.del)+'</button>':'')+
     '</div>'+
   '</div>';
@@ -11165,7 +11255,7 @@ function rLibEdit(f){
         '<input id="lib-rn-'+esc(id)+'" value="'+esc(f.fileName)+'" style="flex:1"'+
           ' aria-label="'+esc(TLIB_COPY.lblName)+'"'+
           ' onkeydown="if(event.key===\'Enter\'){event.preventDefault();this.blur();}"'+
-          ' onblur="libRename(\''+esc(id)+'\')">'+
+          ' onblur="libRename('+jsq(id)+')">'+
       '</div>'+
     '</div>'+
     // ── [1.615] — and the ADDRESS, which used to be a read-only line ───────
@@ -11185,7 +11275,7 @@ function rLibEdit(f){
             '<input id="lib-url-'+esc(id)+'" value="'+esc(f.url||'')+'" style="flex:1"'+
               ' aria-label="'+esc(TLIB_COPY.lblUrl)+'" inputmode="url" spellcheck="false"'+
               ' onkeydown="if(event.key===\'Enter\'){event.preventDefault();this.blur();}"'+
-              ' onblur="libLinkUrl(\''+esc(id)+'\')">'+
+              ' onblur="libLinkUrl('+jsq(id)+')">'+
           '</div>'+
         '</div>'
       : '')+
@@ -11198,7 +11288,7 @@ function rLibEdit(f){
             var t=c.t, on=(f.tags||[]).indexOf(t.tagId)>-1;
             return '<button type="button" class="lib-tag'+(on?' on':(c.near?' near':''))+'"'+
               ' aria-pressed="'+(on?'true':'false')+'"'+
-              ' onclick="libFileTag(\''+esc(id)+'\',\''+esc(t.tagId)+'\',this)">'+esc(t.name)+'</button>';
+              ' onclick="libFileTag('+jsq(id)+','+jsq(t.tagId)+',this)">'+esc(t.name)+'</button>';
           }).join('')+'</div>'+
         '</div>'
       : '')+
@@ -11207,14 +11297,14 @@ function rLibEdit(f){
       ((f.privateTags||[]).length
         ? '<div class="lib-tags" style="padding-top:0;padding-bottom:5px">'+(f.privateTags||[]).map(function(w){
             return '<button type="button" class="lib-tag priv on" title="'+esc(TLIB_COPY.removeWord)+'"'+
-              ' onclick="libPrivateRemove(\''+esc(id)+'\',\''+esc(w)+'\')">'+esc(w)+' &#215;</button>';
+              ' onclick="libPrivateRemove('+jsq(id)+','+jsq(w)+')">'+esc(w)+' &#215;</button>';
           }).join('')+'</div>'
         : '')+
       '<div class="lib-fld-row">'+
         '<input id="lib-pt-'+esc(id)+'" placeholder="'+esc(TLIB_COPY.privatePh)+'"'+
           ' aria-label="'+esc(TLIB_COPY.privatePh)+'"'+
-          ' onkeydown="if(event.key===\'Enter\'){event.preventDefault();libPrivateAdd(\''+esc(id)+'\');}">'+
-        '<button type="button" class="lib-act" onclick="libPrivateAdd(\''+esc(id)+'\')">'+
+          ' onkeydown="if(event.key===\'Enter\'){event.preventDefault();libPrivateAdd('+jsq(id)+');}">'+
+        '<button type="button" class="lib-act" onclick="libPrivateAdd('+jsq(id)+')">'+
           esc(TLIB_COPY.privateAdd)+'</button>'+
       '</div>'+
     '</div>'+
@@ -11223,12 +11313,12 @@ function rLibEdit(f){
     // accident.
     '<div class="lib-foot">'+
       (link?''
-           :'<button type="button" class="lib-act" onclick="libUnshelve(\''+esc(id)+'\')">'+
+           :'<button type="button" class="lib-act" onclick="libUnshelve('+jsq(id)+')">'+
             esc(TLIB_COPY.unshelve)+'</button>')+
-      '<button type="button" class="lib-act bad" onclick="libAskDelete(\''+esc(id)+'\')">'+
+      '<button type="button" class="lib-act bad" onclick="libAskDelete('+jsq(id)+')">'+
         esc(link?TLIB_COPY.linkDel:TLIB_COPY.del)+'</button>'+
       '<button type="button" class="lib-act" style="margin-left:auto"'+
-        ' onclick="libEdit(\''+esc(id)+'\')">'+esc(TLIB_COPY.doneEditing)+'</button>'+
+        ' onclick="libEdit('+jsq(id)+')">'+esc(TLIB_COPY.doneEditing)+'</button>'+
     '</div>'+
   '</div>';
 }
@@ -11243,7 +11333,7 @@ function rLibConfirmDelete(f){
       '<div class="lib-warn">'+esc(TLIB_COPY.linkDelAsk)+'</div>'+
       '<div class="lib-meta" style="margin:-4px 0 6px">'+esc(TLIB_COPY.linkDelSafe)+'</div>'+
       '<div class="lib-edit-acts">'+
-        '<button type="button" class="lib-mini bad" onclick="libDelete(\''+esc(id)+'\')">'+esc(TLIB_COPY.delGo)+'</button>'+
+        '<button type="button" class="lib-mini bad" onclick="libDelete('+jsq(id)+')">'+esc(TLIB_COPY.delGo)+'</button>'+
         '<button type="button" class="lib-mini" onclick="libDelCancel()">'+esc(TLIB_COPY.delBack)+'</button>'+
       '</div></div>';
   }
@@ -11251,7 +11341,7 @@ function rLibConfirmDelete(f){
     '<div class="lib-warn">'+esc(TLIB_COPY.delAsk)+' '+
       esc(f.reach?TLIB_COPY.delReach.replace('{n}', String(f.reach)):TLIB_COPY.delReachNone)+'</div>'+
     '<div class="lib-edit-acts">'+
-      '<button type="button" class="lib-mini bad" onclick="libDelete(\''+esc(id)+'\')">'+esc(TLIB_COPY.delGo)+'</button>'+
+      '<button type="button" class="lib-mini bad" onclick="libDelete('+jsq(id)+')">'+esc(TLIB_COPY.delGo)+'</button>'+
       '<button type="button" class="lib-mini" onclick="libDelCancel()">'+esc(TLIB_COPY.delBack)+'</button>'+
     '</div></div>';
 }
@@ -11352,7 +11442,7 @@ function rTemplateRow(id){
     // question they are asking.
     h+='<div class="cmp-saved">'+studio.concat(mine).map(function(t){
       return '<button type="button" class="cmp-mini" onmousedown="event.preventDefault()" '+
-        'title="'+esc(_ttplPreview(t.body))+'" onclick="tplUse(\''+esc(id)+'\',\''+esc(t.templateId)+'\')">'+
+        'title="'+esc(_ttplPreview(t.body))+'" onclick="tplUse('+jsq(id)+','+jsq(t.templateId)+')">'+
         esc(t.label)+'</button>';
     }).join('')+'</div>';
   }
@@ -11381,8 +11471,8 @@ function _tplOfferHtml(id){
        '<input id="tpl-newname" type="text" value="'+esc(TPL_NEWNAME)+'"'+
          ' placeholder="'+esc(TTPL_COPY.namePromptPh)+'"'+
          ' aria-label="'+esc(TTPL_COPY.namePrompt)+'"'+
-         ' oninput="TPL_NEWNAME=this.value" onkeydown="tplNameKey(event,\''+esc(id)+'\')">'+
-       '<button type="button" class="btn btn-p" style="font-size:12px" onclick="tplSaveAsDo(\''+esc(id)+'\')">'+
+         ' oninput="TPL_NEWNAME=this.value" onkeydown="tplNameKey(event,'+jsq(id)+')">'+
+       '<button type="button" class="btn btn-p" style="font-size:12px" onclick="tplSaveAsDo('+jsq(id)+')">'+
          esc(TTPL_COPY.saveAsGo)+'</button>'+
        '<button type="button" class="btn btn-s" style="font-size:12px" onclick="tplSaveAsCancel()">'+
          esc(TTPL_COPY.saveAsCancel)+'</button>'+
@@ -11418,7 +11508,7 @@ function _tplOfferHtml(id){
        '<input id="tpl-newtags" type="text" value="'+esc(TPL_NEWTAGS)+'"'+
          ' placeholder="'+esc(TTPL_COPY.tagsPh)+'"'+
          ' aria-label="'+esc(TTPL_COPY.tplTags)+'"'+
-         ' oninput="TPL_NEWTAGS=this.value" onkeydown="tplNameKey(event,\''+esc(id)+'\')">'+
+         ' oninput="TPL_NEWTAGS=this.value" onkeydown="tplNameKey(event,'+jsq(id)+')">'+
        '</div>';
     var vocab=_ttplTagVocab();
     if(vocab.length){
@@ -11426,7 +11516,7 @@ function _tplOfferHtml(id){
       h+='<div class="tpl-tagchips">'+vocab.map(function(t){
         return '<button type="button" class="lib-tag'+(on.indexOf(t.toLowerCase())>-1?' on':'')+'"'+
           ' aria-pressed="'+(on.indexOf(t.toLowerCase())>-1?'true':'false')+'"'+
-          ' onmousedown="event.preventDefault()" onclick="tplTagToggle(\''+esc(t)+'\')">'+esc(t)+'</button>';
+          ' onmousedown="event.preventDefault()" onclick="tplTagToggle('+jsq(t)+')">'+esc(t)+'</button>';
       }).join('')+'</div>';
     }
   }
@@ -12459,7 +12549,7 @@ function _tbPick(id, kind, label){
   return '<button type="button" class="cmp-tb-btn cmp-tb-pick'+(PICK===kind?' on':'')+'"'+
     ' aria-pressed="'+(PICK===kind?'true':'false')+'"'+
     ' onmousedown="event.preventDefault()"'+
-    ' onclick="pickOpen(\''+kind+'\',\''+esc(id)+'\')">'+esc(label)+'</button>';
+    ' onclick="pickOpen(\''+kind+'\','+jsq(id)+')">'+esc(label)+'</button>';
 }
 
 // ── [1.532] — the More menu, AC's approved layout ────────────────────────
@@ -12626,7 +12716,7 @@ function rComposerToolbar(id,opts){
     '<div class="cmp-tb cmp-row2">'+
       '<button type="button" class="cmp-tb-btn cmp-fmt-toggle'+(fmtOn?' on':'')+'"'+
         ' aria-expanded="'+(fmtOn?'true':'false')+'" title="'+esc(CMP_COPY.formatting)+'"'+
-        ' onmousedown="event.preventDefault()" onclick="_cmpFmtToggle(\''+esc(id)+'\')">Aa</button>'+
+        ' onmousedown="event.preventDefault()" onclick="_cmpFmtToggle('+jsq(id)+')">Aa</button>'+
       // [1.344] — see rComposer's note: on the whole-day panel these two would
       // accept a file the send cannot carry, and lose it without saying so.
       (opts.noFiles?'':_tbPick(id,'file',TLIB_COPY.pickFile))+
@@ -12869,7 +12959,9 @@ function _attThumb(id){
     // with none:true; caching a FAILURE as though it were that answer left a
     // plain tile for the life of the page, with a reload the only way back. A
     // failure forgets, so the next render asks again.
-    if(!e && r && r.ok){ ATT_THUMBS[id]=false; render(); return; }
+    // [1.753] stage 7 — a file that is gone stays gone: remembered like "no thumbnail",
+    // so an old file (unreadable since 8 September) is not asked for on every redraw.
+    if(!e && r && (r.ok || /no longer available|Not authorized/.test(r.error||''))){ ATT_THUMBS[id]=false; render(); return; }
     delete ATT_THUMBS[id];
   });
   return '';
@@ -12900,7 +12992,7 @@ function rAttachments(m){
     var _canView=_attCanView(a.mimeType, a.fileName);
     var _tile='<button type="button" class="att-tile'+_cls+'" title="'+esc(a.fileName)+'"'+
       (_st&&_st.state==='working'?' disabled':'')+
-      ' onclick="event.stopPropagation();openAttachment(\''+esc(a.attachmentId)+'\',\''+
+      ' onclick="event.stopPropagation();openAttachment('+jsq(a.attachmentId)+',\''+
         (_canView?'view':'download')+'\')">'+
       art+
       '<span class="att-meta"><span class="att-name">'+esc(a.fileName)+'</span>'+
@@ -12912,7 +13004,7 @@ function rAttachments(m){
     if(ATT_HELD[a.attachmentId]){
       return '<span class="att-wrap">'+_tile+
         '<button type="button" class="att-dl" onclick="event.stopPropagation();'+
-          '_attSaveHeld(\''+esc(a.attachmentId)+'\')">'+esc(TCH_COPY.attachDownloadHeld)+'</button></span>';
+          '_attSaveHeld('+jsq(a.attachmentId)+')">'+esc(TCH_COPY.attachDownloadHeld)+'</button></span>';
     }
     // [1.465] — and Save to Library, on any file in a thread. **A teacher may
     // keep what a family sent them**: AC overturned my rule against it and was
@@ -12923,7 +13015,7 @@ function rAttachments(m){
     return '<span class="att-wrap">'+_tile+
       '<button type="button" class="att-dl" title="'+esc(TCH_COPY.attachDownload)+'"'+
         (_st&&_st.state==='working'?' disabled':'')+
-        ' onclick="event.stopPropagation();openAttachment(\''+esc(a.attachmentId)+'\',\'download\')">'+
+        ' onclick="event.stopPropagation();openAttachment('+jsq(a.attachmentId)+',\'download\')">'+
         esc(TCH_COPY.attachDownload)+'</button>'+_keep+'</span>';
   }).join('')+'</div>';
 }
@@ -12936,6 +13028,7 @@ function openAttachment(id, mode){
   // in the corner. [1.404]'s mechanism, on the action it was never applied to.
   if(actBusy('att:'+id)) return;
   actStart('att:'+id, TCH_COPY.attachOpening);
+  if(mode!=='download') _attPreopen(id);   // [1.753] — on the tap, see _attPreopen
   // [1.504] — a save needs the BYTES; a cross-origin link cannot download.
   api({action:'getAttachment', data:{attachmentId:id, wantBytes:(mode==='download'), teacherId:TEACHER_ID, teacherToken:TOKEN}}, function(e,r){
     // [1.463] — a LINK is the fast answer and the bytes are the fallback, so
@@ -12948,6 +13041,7 @@ function openAttachment(id, mode){
       return;
     }
     if(e||!r||!r.ok||!r.dataBase64){
+      _attDropPreopen(id);   // [1.753]
       actFail('att:'+id,(r&&r.error)||TCH_COPY.attachOpenFailed); render(); return;
     }
     // Cleared, not marked done: the file opening IS the confirmation, and a
@@ -13031,6 +13125,33 @@ function _attSaveHeld(id){
 // address does not expire the way a blob does, so there is nothing to keep
 // alive and nothing to sweep. The reader is told, and the Download control
 // beside the tile does the other thing.
+// ── [1.753] stage 6 — View opens its tab ON THE TAP ─────────────────────
+// The tab used to be opened after the server answered, which is no longer
+// the tap as far as a browser is concerned — iPhone Safari blocks that as a
+// pop-up, so View said "blocked" for the very people most likely to press it.
+// The tab is opened at once, empty but for the same "getting your file" line
+// the button shows, and pointed at the file when the answer comes; closed if
+// the answer is a refusal. It is cut loose from this page first (opener=null),
+// so the file's page can never reach back into the portal.
+var ATT_PREOPEN={};
+function _attPreopen(id){
+  try{
+    var w=window.open('','_blank');
+    if(!w) return;
+    try{ w.document.body.innerHTML='<p style="font:16px sans-serif;padding:24px;color:#333">'+esc(TCH_COPY.attachOpening)+'</p>'; }catch(e){}
+    ATT_PREOPEN[id]=w;
+  }catch(e){}
+}
+function _attTakePreopen(id){
+  var w=ATT_PREOPEN[id]; delete ATT_PREOPEN[id];
+  return (w && !w.closed) ? w : null;
+}
+function _attDropPreopen(id){ var w=_attTakePreopen(id); if(w){ try{ w.close(); }catch(e){} } }
+function _attSendTo(id, url){
+  var w=_attTakePreopen(id);
+  if(!w) return window.open(url,'_blank');
+  try{ w.opener=null; w.location.href=url; return w; }catch(e){ try{ w.close(); }catch(_e){} return window.open(url,'_blank'); }
+}
 function _attOpenUrl_(url, fileName, id, mode){
   if(mode==='download'){
     var dl=document.createElement('a');
@@ -13043,7 +13164,7 @@ function _attOpenUrl_(url, fileName, id, mode){
     document.body.appendChild(dl); dl.click(); document.body.removeChild(dl);
     return;
   }
-  var w=window.open(url,'_blank');
+  var w=_attSendTo(id, url);   // [1.753]
   if(!w && id){ actFail('att:'+id, TCH_COPY.attachPopupBlocked); render(); }
 }
 
@@ -13085,7 +13206,7 @@ function _attOpenBlob(b64, mimeType, fileName, id, mode){
       dl.href=url; dl.download=fileName||'attachment';
       document.body.appendChild(dl); dl.click(); document.body.removeChild(dl);
     } else {
-      var w2=window.open(url,'_blank');
+      var w2=_attSendTo(id, url);
       if(!w2 && id){ _attHoldBlob(id, url, fileName); actFail('att:'+id, TCH_COPY.attachPopupBlocked); render(); }
     }
     // Long enough for the new tab to have taken the bytes, then the memory
@@ -13301,9 +13422,12 @@ var ATT_TYPES=[
 // something every provider can supply without fetching the bytes.
 //
 // **This loosens nothing.** `accept` is advisory in every browser and always
-// has been — the real gate is the server, which checks the DECODED bytes
-// against ATTACH_ALLOWED_MIME and rewrites the filename to agree with the type
-// it verified. Widening this attribute cannot widen what is accepted; it only
+// has been — the real gate is the server, which checks the declared type (or,
+// when the browser gives none, the name's extension — [1.753]) against
+// ATTACH_ALLOWED_MIME and rewrites the filename to agree with it. **Corrected
+// 4 October 2026: this said the server checks the DECODED bytes; it never
+// has.** What keeps a mislabelled file harmless is that it is always served
+// back with a type from that list. Widening this attribute cannot widen what is accepted; it only
 // stops the chooser hiding files it should offer.
 //
 // **It is NOT an in-tool Google Drive browser**, which is a different thing
@@ -13360,7 +13484,7 @@ function rAttachRow(){
            '<span class="att-size">'+esc(_attSize(a.sizeBytes))+'</span>'+
            (a.failed?'<span class="att-err">'+esc(a.error||TCH_COPY.attachFailed)+'</span>':'')+
            '<button type="button" class="att-x" aria-label="'+esc(TCH_COPY.attachRemove)+'"'+
-             ' onclick="attachRemove(\''+esc(a.tempId)+'\')">&#215;</button></div>'+
+             ' onclick="attachRemove('+jsq(a.tempId)+')">&#215;</button></div>'+
            // ── [1.553] — the offer, under the file it is about ─────────────
            //
            // **AC:** *"Add Blues Scale — Position 1.pdf to your library? / Add /
@@ -13385,8 +13509,8 @@ function _rAttKeep(a){
   var card=rLibAddCard('att:'+a.attachmentId);
   if(card) return card;
   if(_libAlready(a.attachmentId) || LIB_NO[a.attachmentId]) return rAct('libadd:'+a.attachmentId);
-  return rLibAddAsk(a.fileName, 'libKeepYes(\''+esc(a.attachmentId)+'\')',
-                                'libKeepNo(\''+esc(a.attachmentId)+'\')');
+  return rLibAddAsk(a.fileName, 'libKeepYes('+jsq(a.attachmentId)+')',
+                                'libKeepNo('+jsq(a.attachmentId)+')');
 }
 // [1.553] — No thanks, remembered PER FILE and nowhere else. AC asked to be
 // asked every time, so this is cleared with the thread ([1.553] in `_attClear`)
@@ -13407,7 +13531,7 @@ function rPickButtons(composerId){
   function b(kind, label){
     return '<button type="button" class="btn btn-s'+(PICK===kind?' lib-on':'')+'"'+
       ' aria-pressed="'+(PICK===kind?'true':'false')+'"'+
-      ' onclick="pickOpen(\''+kind+'\',\''+esc(composerId)+'\')">'+esc(label)+'</button>';
+      ' onclick="pickOpen(\''+kind+'\','+jsq(composerId)+')">'+esc(label)+'</button>';
   }
   // ── [1.524] — Done follows the PANEL, not a fixed spot ─────────────────
   //
@@ -13424,7 +13548,7 @@ function rPickButtons(composerId){
   // happens. This row keeps only what you press when you are finished, so Done
   // is all that is left of the pair.
   return ((PICK && _isPhone())
-      ? '<button type="button" class="btn btn-p" onclick="pickClose(\''+esc(composerId)+'\')">'+esc(TLIB_COPY.editMessage)+'</button>'
+      ? '<button type="button" class="btn btn-p" onclick="pickClose('+jsq(composerId)+')">'+esc(TLIB_COPY.editMessage)+'</button>'
       : '');
 }
 // The picker itself. One shape for both kinds: the new thing first, the
@@ -13438,7 +13562,7 @@ function rPickPanel(composerId){
   var h='<div class="lib-panel pick-in-thread" id="pick-panel">'+
     '<div class="lib-hd"><span class="lib-hd-t">'+esc(file?TLIB_COPY.pickFile:TLIB_COPY.pickLink)+'</span>'+
       '<button type="button" class="modal-x" aria-label="'+esc(TLIB_COPY.close)+'"'+
-        ' onclick="pickClose(\''+esc(composerId)+'\')">&#215;</button></div>';
+        ' onclick="pickClose('+jsq(composerId)+')">&#215;</button></div>';
   if(file){
     h+='<button type="button" class="btn btn-p pick-from" onclick="attachPick()">'+esc(TLIB_COPY.fromDevice)+'</button>';
     // [1.516] — an affordance nobody can see is not built. Drag-and-drop and
@@ -13472,7 +13596,7 @@ function rPickPanel(composerId){
   // Manage Library stays a quiet link beside it — it goes somewhere else, and
   // two primary buttons in one row would be two answers to one question.
   h+='<div class="lib-foot">'+
-     (_isPhone()?'':'<button type="button" class="lib-done" onclick="pickClose(\''+esc(composerId)+'\')">'+esc(TLIB_COPY.editMessage)+'</button>')+
+     (_isPhone()?'':'<button type="button" class="lib-done" onclick="pickClose('+jsq(composerId)+')">'+esc(TLIB_COPY.editMessage)+'</button>')+
      '<button type="button" class="lnk-btn" onclick="libraryOpen()">'+esc(TLIB_COPY.manageGo)+'</button></div>';
   return h+'</div>';
 }
@@ -13525,11 +13649,11 @@ function rPickRow(f, composerId){
   return '<div class="lib-row'+(link?' lib-link':'')+'">'+
     '<div style="display:flex;align-items:flex-start;gap:8px">'+
       '<input type="checkbox" class="lib-tick"'+(_on?' checked':'')+((_on||_busy)?' disabled':'')+
-        ' onclick="event.stopPropagation();pickAdd(\''+esc(id)+'\',\''+esc(composerId)+'\')"'+
+        ' onclick="event.stopPropagation();pickAdd('+jsq(id)+','+jsq(composerId)+')"'+
         ' title="'+esc(link?TLIB_COPY.pickTickLink:TLIB_COPY.pickTickFile)+'"'+
         ' aria-label="'+esc(link?TLIB_COPY.pickTickLink:TLIB_COPY.pickTickFile)+': '+esc(f.fileName)+'">'+
       '<button type="button" class="lib-pick" title="'+esc(link?f.url:f.fileName)+'"'+
-        ' onclick="pickOpenItem(\''+esc(id)+'\')">'+
+        ' onclick="pickOpenItem('+jsq(id)+')">'+
         '<span class="lib-kind">'+esc(link?TLIB_COPY.linkKind:_attKind(f.fileName))+'</span>'+
         '<span class="lib-name">'+esc(f.fileName)+'</span>'+
       '</button>'+
@@ -14018,10 +14142,44 @@ function rScheduledLine(){
 }
 function rScheduledList(){
   return '<div class="sched-list">'+SCHED_LIST.rows.map(function(x){
-    return '<button type="button" class="sched-item" onclick="openScheduled(\''+esc(x.messageId)+'\')">'+
+    // [1.753] — refused when its time came (the family moved to another
+    // teacher, or the person it was for is no longer active). It never went,
+    // and opening its conversation may not be possible any more, so the list
+    // itself says so and offers the one thing left to do with it.
+    if(x.stopped){
+      return '<div class="sched-item sched-stopped">'+
+        '<div class="sched-item-hd">'+esc(x.to)+' <span class="sched-item-at">'+esc(_schedWhen(x.sendAt))+'</span></div>'+
+        '<div class="sched-item-txt">'+esc(x.preview||'')+'</div>'+
+        '<div class="sched-stop-note">'+esc(x.stoppedNote||'')+'</div>'+
+        // AC, 4 October 2026: "there doesn't need to be a button to remove a
+        // note. Just an 'x' to close."
+        '<button type="button" class="sched-stop-x" title="Close" aria-label="Close" onclick="removeStoppedScheduled('+jsq(x.messageId)+')">\u2715</button>'+
+      '</div>';
+    }
+    return '<button type="button" class="sched-item" onclick="openScheduled('+jsq(x.messageId)+')">'+
       '<div class="sched-item-hd">'+esc(x.to)+' <span class="sched-item-at">'+esc(_schedWhen(x.sendAt))+'</span></div>'+
       '<div class="sched-item-txt">'+esc(x.preview||'')+'</div></button>';
   }).join('')+'</div>';
+}
+// [1.753] — Remove, for a stopped message only. Addressed from the list row,
+// not from an open thread, because the thread may no longer be one this
+// teacher can open. The server's ordinary unsend: the sender, a message that
+// was never sent.
+function removeStoppedScheduled(id){
+  // [1.753] — gone from the list on the press. AC, 4 October 2026, on a
+  // failure message here: "why wouldn't they be able to remove the message?"
+  // Only a dropped connection could stop it, and then the note simply comes
+  // back on the next look at the list — the message can never be sent either
+  // way, so there is nothing to warn about.
+  var row=null;
+  SCHED_LIST.rows.forEach(function(x){ if(x.messageId===id) row=x; });
+  if(!row) return;
+  SCHED_LIST.rows=SCHED_LIST.rows.filter(function(x){ return x.messageId!==id; });
+  render();
+  var req={conversationType:row.conversationType, familyId:row.familyId, teacherId:TEACHER_ID,
+           teacherToken:TOKEN, messageId:id};
+  if(row.conversationType==='staff_staff') req.staffId2=String(row.teacherId)===String(TEACHER_ID)?row.staffId2:row.teacherId;
+  api({action:'retractMessage', data:req}, function(){});
 }
 // Opens the conversation the message is in. No second set of controls: Edit,
 // Send now and Cancel live on the bubble, in one place.
@@ -14362,7 +14520,11 @@ function _bubbleMeta(m){
 function rNotifyWarn(m){
   if(m.senderType!=='teacher' && m.senderType!=='admin') return '';
   var st=m.notifyState||'';
-  if(st!=='none' && st!=='error') return '';
+  // [1.753] — 'failed' is an email given up on after its retries (AC, 4
+  // October: admin sees it in red). An 'error' still carrying its hold is
+  // being retried, and says nothing until the retries are over.
+  if(st==='error' && m.notifyHoldOpts) return '';
+  if(st!=='none' && st!=='error' && st!=='failed') return '';
   return '<div class="msg-notify-warn"><b>'+esc(TCH_COPY.notSent)+'</b>'+
     (m.notifyDetail?'<span>'+esc(m.notifyDetail)+'</span>':'')+'</div>';
 }
@@ -14420,7 +14582,7 @@ function _rNote(label, at, text, refFamilyId){
       // reads in the portal never could, so being told you owe somebody a
       // reply ended in going to look for them.
       (refFamilyId
-        ? '<button type="button" class="note-goto" onclick="openFamilyRow(\''+esc(refFamilyId)+'\')">'+
+        ? '<button type="button" class="note-goto" onclick="openFamilyRow('+jsq(refFamilyId)+')">'+
             esc(TCH_COPY.nudgeGoto)+'</button>'
         : '')+
     '</div>'+
@@ -14453,7 +14615,7 @@ function rMsgTools(m, mine){
   var saved = !!m.reviewAt;
   var h = '<div class="msg-tools">'+
     '<label class="rev-check'+(saved?' on':'')+'"><input type="checkbox"'+(saved?' checked':'')+
-      ' onclick="event.stopPropagation();toggleReview(\''+esc(m.messageId)+'\',this.checked)"> '+
+      ' onclick="event.stopPropagation();toggleReview('+jsq(m.messageId)+',this.checked)"> '+
       // AC, 3 Sept (second pass): the label follows its state.
       esc(saved?TCH_COPY.savedForReview:TCH_COPY.saveForReview)+'</label>';
   // Only on a message someone else sent: marking your own message "seen" says
@@ -14487,10 +14649,10 @@ function rMsgTools(m, mine){
   // have silently thrown away what was typed.
   if(mine && !AMEND.messageId && _canAmendMsg(m)){
     h += '<span class="msg-tools-sep">·</span>'+
-      '<button type="button" class="lnk-btn" onclick="event.stopPropagation();startEditMessage(\''+esc(m.messageId)+'\')">'+
+      '<button type="button" class="lnk-btn" onclick="event.stopPropagation();startEditMessage('+jsq(m.messageId)+')">'+
       esc(TCH_COPY.editMsg)+'</button>'+
       '<span class="msg-tools-sep">·</span>'+
-      '<button type="button" class="lnk-btn" onclick="event.stopPropagation();unsendMessage(\''+esc(m.messageId)+'\')">'+
+      '<button type="button" class="lnk-btn" onclick="event.stopPropagation();unsendMessage('+jsq(m.messageId)+')">'+
       esc(TCH_COPY.unsend)+'</button>';
   }
   // ── [1.562] — what a message's own controls say when they FAIL ────────
@@ -14579,7 +14741,8 @@ function sendStaffMessage(sendAt){
   // and cleared below so the next message starts unchecked again.
   // [1.531] — a teacher no longer sends this flag at all.
   // Same optimistic path as sendFamilyMessage() above (BACKLOG 1.124 #2).
-  var clientMsgId=_ktNewClientMsgId();
+  var _sk=(t.contactType==='admin'?'admin:admin':'staff:'+t.otherId);   // [1.753] stage 4
+  var clientMsgId=_sendIdFor(_sk, text);
   reqData.clientMsgId=clientMsgId;
   var _attRows=ATT_PENDING.filter(function(x){ return x.attachmentId; })
     .map(function(x){ return {attachmentId:x.attachmentId, fileName:x.fileName,
@@ -14624,9 +14787,20 @@ function sendStaffMessage(sendAt){
     // Same regression, same fix, same reason as the family send above: a state
     // that disables a control must be cleared on every path out, including the
     // ones that give up.
-    if(e||!r||!r.ok) actFail('send', (r&&r.error)||TCH_COPY.notSent);
+    var _failed=(e||!r||!r.ok), _here=!!(ACTIVE_STAFF_THREAD && ACTIVE_STAFF_THREAD.otherId===t.otherId);
+    // [1.753] stage 4 — see sendFamilyMessage.
+    if(_failed){
+      _draftKeep(t, html);
+      _undoRowAnswered(_rowUndo);
+      _sendFailed(_sk, clientMsgId, text, _attRows, (r&&r.error)||TCH_COPY.notSent);
+    } else _sendSucceeded(_sk);
+    if(!_here){
+      actClear('send');   // [1.539]
+      if(_failed) showMsg((r&&r.error)||'Could not send message.','e');
+      return;
+    }
+    if(_failed){ SEND_RETRY[_sk].err=''; actFail('send', (r&&r.error)||TCH_COPY.notSent); }
     else actDone('send', sendAt ? TCH_COPY.scheduledConfirm : TCH_COPY.sentOk);   // [1.536]/[1.533]
-    if(!ACTIVE_STAFF_THREAD || ACTIVE_STAFF_THREAD.otherId!==t.otherId) return;
     t._sendInFlight=false;
     if(e||!r||!r.ok){
       if(sendAt) t.scheduled=(t.scheduled||[]).filter(function(m){ return m!==pending; });
@@ -14635,8 +14809,7 @@ function sendStaffMessage(sendAt){
       ATT_PENDING=_attRows.map(function(a){ return {tempId:'t'+a.attachmentId, fileName:a.fileName,   // [1.277]
         mimeType:a.mimeType, sizeBytes:a.sizeBytes, uploading:false, attachmentId:a.attachmentId}; });
       ATT_BUSY=0;
-      _draftKeep(t, html);   // [1.336]
-      _undoRowAnswered(_rowUndo);    // [1.325]
+      // [1.753] — draft and answered mark already put back above.
       showMsg((r&&r.error)||'Could not send message.','e');
       render();
       return;
@@ -14677,19 +14850,34 @@ function sendStaffMessage(sendAt){
 // expanded, via the lock-free doGetMessagesSince() so this never trips the
 // shared save-lock or marks anything read on its own (see the matching
 // comment in Code.js). Paused while the tab isn't visible.
+// ── [1.753] stage 6 — every five seconds while somebody is using the page ──
+// It polled every five seconds for as long as a tab stood open and visible —
+// about seventeen thousand requests a day from one forgotten desktop tab, each
+// a run of the script, and many families at once is how a shared limit on
+// simultaneous runs gets reached. Five seconds is kept for anyone using the
+// page ("instant or near instant" is the requirement); after five minutes with
+// no touch, key or scroll it asks every thirty, and the first touch after that
+// asks at once. Coming back to the tab still refreshes at once. The listeners
+// are added once, not again on every sign-in.
+var _pollLastInput=Date.now(), _pollWired=false, POLL_IDLE_MS=5*60*1000;
+function _pollDelay(){ return (Date.now()-_pollLastInput > POLL_IDLE_MS) ? 30000 : 5000; }
 function _startMessagePolling(){
   if(_pollTimer) return;
-  _pollTimer=setInterval(_pollTick,5000);
-  // Coming back to the tab refreshes at once rather than waiting out the rest
-  // of the interval (AC, 1 Sept: "can the tool load new messages upon login so
-  // I can access right away?"). Polling pauses while hidden, so without this
-  // the worst case is a full 5 seconds of stale screen at exactly the moment
-  // someone is looking. Cheap now that a poll with nothing to report never
-  // touches the messages sheet (1.159).
-  document.addEventListener('visibilitychange',function(){
-    if(document.visibilityState==='visible') _pollTick();
+  var loop=function(){ _pollTimer=setTimeout(function(){ if(!_pollTimer) return; _pollTick(); loop(); }, _pollDelay()); };
+  loop();
+  if(_pollWired) return;
+  _pollWired=true;
+  ['pointerdown','keydown','touchstart','scroll'].forEach(function(ev){
+    window.addEventListener(ev, function(){
+      var wasIdle=(Date.now()-_pollLastInput > POLL_IDLE_MS);
+      _pollLastInput=Date.now();
+      if(wasIdle && _pollTimer) _pollTick();
+    }, {passive:true, capture:true});
   });
-  window.addEventListener('focus',_pollTick);
+  document.addEventListener('visibilitychange',function(){
+    if(document.visibilityState==='visible' && _pollTimer){ _pollLastInput=Date.now(); _pollTick(); }
+  });
+  window.addEventListener('focus',function(){ if(_pollTimer){ _pollLastInput=Date.now(); _pollTick(); } });
 }
 // ── [1.293] — the poll fits inside its own interval ─────────────────────
 //
@@ -14796,7 +14984,7 @@ function doSignOut(){
   // two clicks instead of four.
   PICK=''; PICK_Q=''; LINK_ADDED={}; LIBRARY_OPEN=false; LIB_EDIT=''; LIB_DEL=''; LIB_KEPT={};
   LIB_MINE=[]; LIB_SHELF_STUDIO=[]; LIB_TAGS=[]; _libLoaded=false; _libInFlight=false;
-  if(_pollTimer){ clearInterval(_pollTimer); _pollTimer=null; }
+  if(_pollTimer){ clearTimeout(_pollTimer); _pollTimer=null; }
   TT={asked:false,loading:false,data:null,guideOpen:false,ans:{},timer:{},sending:{},err:{},open:{},miss:{}};   // [1.731]
   MS={asked:false,loading:false,week:null,weekStart:'',card:null,cardStu:'',cardDate:'',cardTime:'',cardLoading:false,
     open:{},trialOpen:{},q:'',qDate:'',note:null,lesson:{},timer:{},st:'',adding:null,asg:null,lib:null,busy:false,err:''};   // [1.732]

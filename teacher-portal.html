@@ -1264,6 +1264,24 @@ input[type=checkbox]{width:13px;height:13px;padding:0;margin:0;border:0;border-r
 /* The guide. Closed by default and quiet when closed — it sits under the
    colour key all day and should not compete with the messages. */
 .guide{margin:-.35rem 0 1rem}
+/* [1.759] — the Guide tab */
+.guide-open-btn{margin-left:auto;width:auto}
+.guide-toc .btn{width:auto}
+.guide-page{padding:1.1rem 1.2rem;line-height:1.55;font-size:14px}
+.guide-title{font-size:20px;margin:0 0 .6rem}
+.guide-toc{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 1rem;padding-bottom:.9rem;border-bottom:1px solid var(--border)}
+.guide-toc-h{width:100%;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text3)}
+.guide-sec{padding:.9rem 0;border-top:1px solid var(--border);scroll-margin-top:12px}
+.guide-sec:first-of-type{border-top:0}
+.guide-sec h3{font-size:16px;margin:0 0 .45rem;color:var(--acc)}
+.guide-sec h4{font-size:13.5px;margin:.8rem 0 .3rem}
+.guide-sec p{margin:0 0 .6rem}
+.guide-sec ul{margin:0 0 .6rem;padding-left:1.2rem}
+.guide-sec li{margin:0 0 .35rem}
+.guide-ui{background:rgba(23,71,192,.09);border-radius:4px;padding:0 4px;font-weight:600}
+.guide-tbl{border-collapse:collapse;width:100%;margin:0 0 .7rem;font-size:13.5px}
+.guide-tbl th,.guide-tbl td{border-top:1px solid var(--border);padding:6px;text-align:left;vertical-align:top}
+.guide-tbl th{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--text3)}
 .tt-guide{margin:0 0 1rem}
 /* [1.732] My Students */
 .ms-sm{width:auto;padding:5px 10px;font-size:12px}
@@ -2865,8 +2883,10 @@ function rTimerKey(){
     // WAITING stage any more, so it is not in a key of waiting stages.
     '<span class="k"><i style="background:var(--age-wait)"></i>waiting for a reply</span>'+
     '<span class="k"><i style="background:var(--age-4h)"></i>4h mark</span>'+
-    '<span class="k"><i style="background:var(--age-12h)"></i>12h \u2014 nudge</span>'+
-    '<span class="k"><i style="background:var(--age-od)"></i>past due \u2014 overdue</span>'+
+    // [1.759] — no reminder at 12 hours any more ([1.755]), so the key does
+    // not promise one.
+    '<span class="k"><i style="background:var(--age-12h)"></i>12h mark</span>'+
+    '<span class="k"><i style="background:var(--age-od)"></i>past due</span>'+
     // ── [1.450] — the two BADGES, in the key that is already on screen ────
     //
     // AC, 9 September 2026, shown every roster state at once, agreed the
@@ -2885,7 +2905,10 @@ function rTimerKey(){
     // shape the rows do not is a key that can drift.
     '<span class="k"><span class="msg-circle p-new key-badge">1</span>waiting for you</span>'+
     '<span class="k"><span class="msg-circle p-review key-badge">1</span>you saved it</span>'+
-    '</div>'+rGuide();
+    // [1.759] — AC, 4 October 2026: the guide "should be accessed by a button,
+    // not link text, and should be included as a separate tab".
+    '<button type="button" class="btn btn-s guide-open-btn" onclick="switchTab(\'guide\')">'+esc(GUIDE_COPY.openBtn)+'</button>'+
+    '</div>';
 }
 
 // ── The teacher's guide (AC, 3 September 2026) ──────────────────────────
@@ -2901,40 +2924,167 @@ function rTimerKey(){
 // Closed by default, and it stays closed between renders unless the teacher
 // opens it: a guide that reopens itself every five seconds is worse than no
 // guide.
-var GUIDE_OPEN = false;
-// AC, 3 September: the guide should render as collapsible SECTIONS rather than
-// one long block — it is eight sections deep now, and opening it to check one
-// thing meant scrolling past the other seven.
+// ── [1.759] — the guide is its own tab ───────────────────────────────────
 //
-// Every section starts closed, including when the guide itself is first
-// opened. A teacher opens the guide with a question in mind; showing all of it
-// expanded is the state that made this an item. Nothing here remembers itself
-// between sessions on purpose: the next question will be a different one.
-var GUIDE_SEC_OPEN = {};
-function toggleGuideSec(i){ GUIDE_SEC_OPEN[i]=!GUIDE_SEC_OPEN[i]; render(); }
-function rGuide(){
-  // One return, one closing tag: an early return that closed the wrapper in a
-  // second place read as unbalanced markup to the check suite, and a reader
-  // has the same problem.
-  var body='';
-  if(GUIDE_OPEN){
-    body='<div class="guide-body">'+TCH_COPY.guide.map(function(sec,i){
-      var on=!!GUIDE_SEC_OPEN[i];
-      return '<div class="guide-sec">'+
-        '<button type="button" class="guide-h" onclick="toggleGuideSec('+i+')">'+
-          '<span class="caret">'+(on?'▾':'▸')+'</span>'+esc(sec.h)+'</button>'+
-        (on?'<ul>'+
-          sec.items.map(function(li){
-            return '<li><b>'+esc(li.t)+'</b> — '+esc(li.d)+'</li>';
-          }).join('')+
-        '</ul>':'')+
-        '</div>';
-    }).join('')+'</div>';
-  }
-  return '<div class="guide">'+
-    '<button type="button" class="guide-toggle" onclick="GUIDE_OPEN=!GUIDE_OPEN;render()">'+
-      '<span class="caret">'+(GUIDE_OPEN?'▾':'▸')+'</span>'+esc(TCH_COPY.guideTitle)+'</button>'+
-    body+'</div>';
+// AC, 4 October 2026: "We will need a well written and updated teacher
+// messaging guide in the teacher portal … accessed by a button, not link text,
+// and … included as a separate tab to let the teacher know about all of the
+// features and guide them on how to use them. The guide should contain language
+// from the tool when referencing functions … Use complete sentences and clear
+// directions, remembering that teachers have no idea how this tool functions."
+// And on the draft: "The teachers need to know the general guidelines and the
+// tool behavior, but without too much detail about the tool behavior. We
+// already defined much of this language, so you can use that language."
+//
+// Written by Claude under that delegation and approved by AC as a draft on
+// 4 October; the reply-time sentences and the three guidance lines are his.
+// {{Label}} marks an on-screen label, drawn highlighted so a teacher can find
+// it; every one is the label the tool actually draws.
+var GUIDE_COPY={
+  tab:'Guide',
+  openBtn:'Open Teacher\u2019s Guide',   // AC, 4 October 2026
+  title:'Teacher Guide',
+  contents:'In this guide',
+  absentBanner:'You are on a day off from your record, back [return date].',
+  sections:[
+    {h:'Welcome', b:[
+      'This portal is where you message families and the office, keep notes on your students, send practice assignments, and file trial lesson reports. Families use their own portal, called the Family Portal, and see only the conversations they have with you and with admin.',
+      'Everything here is described using the names you see on screen. If something in this guide does not match what you see, please message admin.'
+    ]},
+    {h:'Signing in', b:[
+      'Sign in with your email address and password, then press {{Sign In}}. Tick {{Remember me}} on your own phone or computer so you stay signed in. Leave it unticked on a shared computer.',
+      'Every email the portal sends you has a button that signs you straight in and opens the right conversation. The button works on the first phone or computer you open it on. If you open it somewhere else, you will be asked to sign in.',
+      'If you forget your password, press {{Forgot your password?}} and we will email you a link to set a new one. To sign out, press {{Sign Out}} at the top right.'
+    ]},
+    {h:'The Messages tab', b:[
+      'The list on the left is in this order:',
+      {ul:[
+        '{{New Message}} takes you to the search box. Type a student’s or parent’s name to find their family and start writing.',
+        '{{Scheduled messages}} appears only when you have a message waiting to be sent later.',
+        '{{Messages}} lists every conversation that is waiting on you or still open.',
+        '{{My Students}} lists each of your students and their parents. Press a row to open that family’s conversation.',
+        '{{Admin & staff}} holds your conversation with admin and with other teachers.',
+        '{{My Library}} opens your saved files, links and templates.',
+        '{{Archived Conversations}} holds conversations that have been ended. A family writing again brings the conversation back to {{Messages}}.'
+      ]},
+      {h4:'What the colors mean'},
+      // AC's own sentence (3 September), less "(you'll also receive an automated
+      // reminder)" after "orange at 12 hours": there is no reminder at 12 hours
+      // since [1.755].
+      'The left side of a conversation has a vertical colored strip that shows how long the message has been waiting without a response. Blue - waiting for a reply, amber at the 4 hour mark, orange at 12 hours, Red when past the response deadline. Grey means nothing is waiting on you. The key is shown above the list.',
+      'A solid blue number shows how many messages are waiting for your reply. One reply answers all of them, so read every message before you write back. An outline number shows how many messages you have saved for review.'
+    ]},
+    {h:'Reading and replying', b:[
+      'Opening a conversation marks it read. There is nothing to click. The reply clock starts when a message arrives, not when you open it, and reading a message or pressing {{Mark seen}} does not stop its timer. Only your reply does.',
+      'Type your reply in the box at the bottom and press {{Send}}. If the family has two parents, tick the parents who should receive it. If you teach more than one child in the family, choose which child the message is about using the {{About}} buttons.',
+      'For 10 seconds after sending, before the family reads it, you can press {{Edit}} to change your message or {{Unsend}} to take it back. The family’s email waits for those 10 seconds, so an unsent message never reaches their inbox.',
+      'When a family has read your message, you will see “Read by” with their name and the time.',
+      {h4:'Formatting, files and links'},
+      {ul:[
+        'Press {{Aa}} for bold, italic, underline and lists.',
+        'Press {{Add file}} to attach a file from your device, from your saved files, or from the {{Keylab Master Library}}. You can also drag a file into your message or paste one in. Each file can be up to 10 MB, and you can send up to 10 files in one message. Press {{Accepted file types}} to see which kinds of file work.',
+        'Press {{Add link}}, paste the web address, add the text you want the family to see, and press {{Insert link}}.',
+        'Press {{Templates}} to use a message you have saved, or to save the message you are writing as a new template.'
+      ]}
+    ]},
+    {h:'How quickly to reply', b:[
+      // The studio's promise, word for word what admin's key says (check.js holds them together).
+      'Respond to family messages within a few hours, and in 24 hours at most whenever possible. Time sensitive messages should be responded to or sent for admin review asap. Messages sent on Friday before 5pm should be responded to by Saturday 12pm. Messages sent after 5pm on Friday or over the weekend that are not time sensitive should be responded to by Monday 12pm.',
+      'Every email about a new family message reminds you when to reply:',
+      {table:[
+        ['The message was sent','The email says'],
+        ['Before 12pm, Monday to Friday','Please respond by asap today, or this evening at the latest.'],
+        ['After 12pm, Monday to Friday before 5pm','Please respond this evening or by 12pm tomorrow at the latest.'],
+        ['From 5pm Friday, or over the weekend','Please respond asap if you can, or by 12pm Monday at the latest.']
+      ]},
+      'If you can’t reply fully straight away, open the message and press {{Mark seen}}. The family is told you have seen their message and will be in touch soon. Then reply properly as soon as you can, especially if the message is time sensitive.',
+      'The {{Reply by}} time at the top of an open conversation shows when the reply is due.',
+      {h4:'The emails you will receive'},
+      {ul:[
+        'A new message email as soon as a family writes, between 9am and 7pm. Messages that arrive after 7pm are saved for the next morning.',
+        'A morning email at 9am, Monday to Saturday, when anything is waiting. It lists every message you have not answered yet.',
+        'A reminder if a message is close to its reply time and still has no reply, and a final notice if the reply time passes. Admin is told about final notices, and both are noted in your conversation with admin.'
+      ]},
+      'No emails are sent between 7pm and 9am, and no reminders are sent on Sundays.'
+    ]},
+    {h:'Tools on each message', b:[
+      {ul:[
+        '{{Mark seen}} lets the family know you have seen their message and will reply soon. It does not count as a reply.',
+        '{{Save for review}} keeps a message marked so you can come back to it. Only you can see this mark. Untick it when you are done. When you reply to a message, your message queue is cleared, but messages saved for review are not.'
+      ]},
+      'Press {{More}} next to {{Send}} for these three:',
+      {ul:[
+        '{{Schedule Send}} lets you choose a date and time for your message to go out. Scheduled messages are listed under {{Scheduled messages}}, where you can {{Edit}} them or press {{Cancel Send}}.',
+        '{{Ask Admin}} opens your conversation with admin, with the family’s name already filled in. The family does not see this conversation. Asking admin does not stop the reminders \u2014 the family is still waiting for an answer.',
+        '{{End Conversation}} moves the conversation to {{Archived Conversations}}. Use it when the conversation is resolved, or when a message does not need a reply. If a reply is still owed, you will be asked to confirm. If you have messages saved for review, you will be asked to clear them first.'
+      ]}
+    ]},
+    {h:'When you are away', b:[
+      'If you can’t check messages for a while, press {{Turn on away}} in the banner at the top of any tab, or in {{Settings}}. Families then see the studio’s away message before they write to you, and get it as an automatic reply. Press {{Turn off away}} when you are back.',
+      'You do not need to do anything for days off that are on your record with the studio. On those days families automatically see that you are away and the day you will be back. You get no morning emails or reminders while you are away, and reply times start again on the day you return.',
+      'Outside your teaching hours, families see a note saying you are not working right now. The away and after-hours messages are written by the studio, and you can read them in {{Settings}}.'
+    ]},
+    {h:'Talking to admin and other teachers', b:[
+      'Open {{Admin & staff}} to write to admin or to another teacher. These conversations are private to the people in them, and families never see them. Use {{Ask Admin}} from a family’s conversation when you need help with that family.'
+    ]},
+    {h:'My Students', b:[
+      'The {{My Students}} tab shows your week. Use {{← Last week}} and {{Next week →}} to move between weeks. Days with a studio closure or your own day off are marked.',
+      'Press a lesson to open the student’s card. On the card:',
+      {ul:[
+        '{{Notes about}} the student is for your own notes. Only you can see them, and they save as you type.',
+        '{{Lesson Summary}} has one entry for each lesson. Write what you worked on under {{Lesson Activities}}. Add books, links and files under {{Materials & Resources}} with {{+ Add book, file or link}}.',
+        '{{Search Lessons}} finds past lessons by a word or a date.'
+      ]},
+      {h4:'Sending an assignment'},
+      'Press {{Create Assignment}} on the student’s card. Choose the lesson under {{For the lesson on}}, add a short message if you like, and check the practice list under {{Practice this week}}, which is taken from that lesson’s activities. Tick the materials to include, then press the {{Send to}} button. Parents receive the assignment as a message and an email. A link or file you add is also saved to {{My Library}}.'
+    ]},
+    {h:'My Library', b:[
+      '{{My Library}} keeps the files, links and templates you use often, so you can add them to any message.',
+      {ul:[
+        'Press {{Add files}} or {{Add links}} to save something new.',
+        'Use tags to group things, and {{Filter by tag}} to find them. {{Studio tags}} are shared by the studio, and {{Custom tags}} are your own.',
+        '{{Create a new template}} saves a message you send often. Use it from {{Templates}} when writing.',
+        '{{Remove from my library}} takes a file off your list but leaves it in messages already sent. {{Delete file}} removes it everywhere, including from past conversations.'
+      ]}
+    ]},
+    {h:'Trial Lessons', b:[
+      'The {{Trial Lessons}} tab lists your trial lessons under {{Report due}}, {{Upcoming}} and {{Reports sent}}. After a trial lesson, open it and answer every question in the report. Your answers save as you type, so you can close the report and finish it later. Press {{Send report to Adrian}} when you are done. Reports are due by 11 AM the day after the lesson. Press {{Trial lesson guidelines}} to read how the studio runs trial lessons.'
+    ]},
+    {h:'Getting help', b:[
+      'If something does not work or you are not sure what to do, message admin from {{Admin & staff}}. For a problem with a particular family, use {{Ask Admin}} from that family’s conversation.'
+    ]}
+  ]
+};
+// {{Label}} → the label, highlighted. Escaped first, so the guide can only ever
+// add its own <b> around text it already holds.
+function _guideText(t){
+  return esc(t).replace(/\{\{([\s\S]+?)\}\}/g,'<b class="guide-ui">$1</b>');
+}
+function _guideBlock(x){
+  if(typeof x==='string') return '<p>'+_guideText(x)+'</p>';
+  if(x.h4) return '<h4>'+esc(x.h4)+'</h4>';
+  if(x.ul) return '<ul>'+x.ul.map(function(li){ return '<li>'+_guideText(li)+'</li>'; }).join('')+'</ul>';
+  if(x.table) return '<table class="guide-tbl">'+x.table.map(function(r,i){
+    return '<tr>'+r.map(function(c){ return i?'<td>'+_guideText(c)+'</td>':'<th>'+esc(c)+'</th>'; }).join('')+'</tr>';
+  }).join('')+'</table>';
+  return '';
+}
+function guideJump(i){
+  var el=document.getElementById('guide-sec-'+i);
+  if(el&&el.scrollIntoView){ try{ el.scrollIntoView({block:'start',behavior:'smooth'}); }catch(e){ el.scrollIntoView(true); } }
+}
+function rGuidePage(){
+  var G=GUIDE_COPY;
+  return '<div class="card guide-page">'+
+    '<h2 class="guide-title">'+esc(G.title)+'</h2>'+
+    '<div class="guide-toc"><div class="guide-toc-h">'+esc(G.contents)+'</div>'+
+      G.sections.map(function(sec,i){
+        return '<button type="button" class="btn btn-s" onclick="guideJump('+i+')">'+esc(sec.h)+'</button>';
+      }).join('')+'</div>'+
+    G.sections.map(function(sec,i){
+      return '<section class="guide-sec" id="guide-sec-'+i+'"><h3>'+esc(sec.h)+'</h3>'+sec.b.map(_guideBlock).join('')+'</section>';
+    }).join('')+
+  '</div>';
 }
 function rHome(){
   // BACKLOG 1.161 #1 — a teacher reading a staff thread or editing their away
@@ -2951,15 +3101,17 @@ function rHome(){
   // ([1.161] #1's guarantee — a teacher must not have to open something to
   // discover a message is waiting — now met by having nothing to open).
   var tabs='<div class="tabbar">'+
-    '<div class="tab'+(HOME_TAB!=='settings'&&HOME_TAB!=='trials'&&HOME_TAB!=='students'?' on':'')+'" onclick="switchTab(\'family\')">Messages'+rTabBadge(famUnread+staffUnread)+'</div>'+
+    '<div class="tab'+(HOME_TAB!=='settings'&&HOME_TAB!=='trials'&&HOME_TAB!=='students'&&HOME_TAB!=='guide'?' on':'')+'" onclick="switchTab(\'family\')">Messages'+rTabBadge(famUnread+staffUnread)+'</div>'+
     '<div class="tab'+(HOME_TAB==='students'?' on':'')+'" onclick="switchTab(\'students\')">'+esc(MS_COPY.tab)+'</div>'+   // [1.732]
     '<div class="tab'+(HOME_TAB==='trials'?' on':'')+'" onclick="switchTab(\'trials\')">'+esc(TT_COPY.tab)+rTabBadge(_ttDueCount())+'</div>'+   // [1.731]
     '<div class="tab'+(HOME_TAB==='settings'?' on':'')+'" onclick="switchTab(\'settings\')">Settings</div>'+
+    '<div class="tab'+(HOME_TAB==='guide'?' on':'')+'" onclick="switchTab(\'guide\')">'+esc(GUIDE_COPY.tab)+'</div>'+   // [1.759]
     '</div>';
   // [1.731] — loaded once per sign-in from here, so every way into the portal
   // (sign-in, a kept session, a password set) gets the tab's count.
   if(TOKEN&&!TT.asked) loadTrials(true);
-  var body = HOME_TAB==='settings' ? rTeacherSettings()
+  var body = HOME_TAB==='guide' ? rGuidePage()   // [1.759]
+           : HOME_TAB==='settings' ? rTeacherSettings()
            : HOME_TAB==='trials' ? rTrialsTab()
            : HOME_TAB==='students' ? rMyStudents()
            : rTimerKey()+rMessagesPage();
@@ -3002,6 +3154,13 @@ function rStatusBanner(){
   // Disabled mid-save so a second press cannot queue a second write of a
   // setting whose whole meaning is which of two states it is in.
   var busy=TSET.saving;
+  // [1.759] — on a day off on the teacher's record the server treats them as
+  // away ([1.757]) whatever the switch says, so the banner says so too, and
+  // offers no switch that would change nothing.
+  if(TSET.absentUntil){
+    return '<div class="status-banner away"><span>Away/Busy</span>'+
+      '<span style="font-size:12px">'+esc(GUIDE_COPY.absentBanner.replace('[return date]',TSET.absentUntil))+'</span></div>';
+  }
   if(TSET.awayEnabled){
     return '<div class="status-banner away"><span>Away/Busy</span>'+
       '<button type="button" class="lnk-btn"'+(busy?' disabled':'')+' onclick="setAway(false)">Turn off away</button></div>';
@@ -3031,12 +3190,15 @@ function _tsetStudioCopy(txt){
     '<div style="font-size:12.5px;color:var(--text2);white-space:pre-wrap">'+esc(txt)+'</div></div>';
 }
 var TSET_COPY={
-  studioLabel:'Studio message (sent when yours is blank)',   // PLACEHOLDER — AC's wording
+  // [1.756] — "(sent when yours is blank)" came off with the teacher's own box.
+  studioLabel:'Studio message',   // PLACEHOLDER — AC's wording
   awayHeading:'Away / Busy Message',
   // AC's third revision of this sentence on 3 September.
-  awayBody:'When enabled, families, other staff, and admin see this before they compose their message to you. If they send you a message, it also appears in the thread as an auto-generated message. Change the message to suit your needs, or use the generic message.',
+  // [1.756] — AC, 4 October 2026: the studio's wording only. His sentence
+  // with the part that offered a teacher their own removed, nothing added.
+  awayBody:'When enabled, families, other staff, and admin see this before they compose their message to you. If they send you a message, it also appears in the thread as an auto-generated message.',
   afterHeading:'After hours',
-  afterBody:'Shown to a family before creating a message and sending outside of your set working hours. Feel free to customize your away message or leave it blank to use the studio\'s generic after hours message.',
+  afterBody:'Shown to a family before creating a message and sending outside of your set working hours.',   // [1.756] — as awayBody
   // [1.238] — AC's copy, 3 September, replacing his own line from earlier the
   // same day. The delay is now DOCUMENTED to the teacher in his words rather
   // than being invisible, and that was the actual defect all along: A1 was
@@ -3055,7 +3217,7 @@ var TSET_COPY={
   // within your regular working hours, but admin may email you outside your
   // working hours if something is time sensitive" — is stale the moment the
   // window stops being per teacher, which is why it could not simply stay.
-  hoursNote:"You'll receive email notifications between 9 am and 7 pm for all family messages. Email notifications for messages sent after 7pm will be sent at 9am the next morning. You do not have to respond to weekend messages until Monday 12 pm, but if the message is time sensitive please try to respond or forward to admin."
+  hoursNote:"You'll receive email notifications between 9 am and 7 pm for all family messages. Email notifications for messages sent after 7pm will be sent at 9am the next morning. You do not have to respond to messages sent after 5 pm on Friday or over the weekend until Monday 12 pm, but if the message is time sensitive please try to respond or forward to admin."
 };
 // ============================================================
 // [1.731] TRIAL LESSONS — the studio's guidelines, the summary admin sends
@@ -3374,7 +3536,7 @@ function rMsCard(){
   h+='</div></div>';
   (c.trials||[]).forEach(function(t){
     var on=!!MS.trialOpen[t.trialDate];
-    h+='<div class="ms-day off"><button type="button" class="ms-day-h ms-hbtn" onclick="MS.trialOpen[\''+t.trialDate+'\']=!MS.trialOpen[\''+t.trialDate+'\'];render()"><span>'+
+    h+='<div class="ms-day off"><button type="button" class="ms-day-h ms-hbtn" onclick="MS.trialOpen['+jsq(t.trialDate)+']=!MS.trialOpen['+jsq(t.trialDate)+'];render()"><span>'+
       esc(MS_COPY.trialH(_msShort(t.trialDate)))+'</span><span>'+esc(on?MS_COPY.close:MS_COPY.open)+'</span></button>'+
       (on?'<div class="ms-sec">'+(t.summary?'<div class="ms-lab">'+esc(MS_COPY.trialSummary)+'</div><div class="tt-sum">'+esc(t.summary)+'</div>':'')+
         (t.report?'<div class="ms-lab" style="margin-top:8px">'+esc(MS_COPY.trialReport)+'</div>'+_msReport(t.report,c.questions||[]):'')+'</div>':'')+'</div>';
@@ -3399,7 +3561,7 @@ function _msLessonCard(d,current){
     '<button type="button" class="btn btn-p ms-sm" onclick="msAsgOpen(\''+d+'\')">'+esc(MS_COPY.create)+'</button></div></div>';
   return h;
 }
-function _msYmdOf(ms){var d=new Date(Number(ms)||0);return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);}
+function _msYmdOf(ms){return _nyYmdOf(Number(ms)||0);}   // [1.762] — the New York day it was sent
 function _msMatRow(m,tail,head){
   var k={book:MS_COPY.book,link:MS_COPY.link,file:MS_COPY.file}[m.kind]||'';
   return '<div class="ms-mat">'+(head||'')+'<span class="ms-k">'+esc(k)+'</span><span class="ms-ml">'+
@@ -3568,13 +3730,9 @@ function rTeacherSettings(){
   // the teacher they can change it.
   h+='<div class="thread-hd">'+esc(TSET_COPY.awayHeading)+'</div>';
   h+='<div style="font-size:12px;color:var(--text3);margin-bottom:.6rem">'+esc(TSET_COPY.awayBody)+'</div>';
-  // The generic message as the placeholder — greyed until the teacher writes
-  // their own, so "or use the generic message" points at something visible.
-  // It comes from the server (AWAY_DEFAULT_COPY, the sentence that actually
-  // goes out); the fallback below is only for a payload that predates it, and
-  // is deliberately NOT a second copy of the wording.
-  h+='<textarea id="tset-away" rows="3" placeholder="'+esc(TSET.awayDefaultCopy||'Leave this blank to use the studio\'s generic away message.')+'" '+
-     'oninput="TSET.draftAway=this.value" style="width:100%">'+esc(TSET.draftAway)+'</textarea>';
+  // [1.756] — no box for the teacher's own wording any more: admin writes the
+  // away notice in Settings (AC, 4 October 2026). The switch stays; the
+  // studio's wording is shown below as the family reads it.
   h+='<div style="display:flex;gap:8px;align-items:center;margin-top:.6rem">'+
      (TSET.awayEnabled
        ? '<button class="btn btn-s" onclick="setAway(false)">Turn off away</button>'
@@ -3584,14 +3742,13 @@ function rTeacherSettings(){
      rAct('away');   // [1.404] — beside the control, not in the corner
   // [1.736] row 7 — the studio's wording, always visible for reference, with
   // this teacher's name in it the way a family reads it.
-  h+=_tsetStudioCopy(String(TSET.awayDefaultCopy||'').replace('[teacher first name]',String(TEACHER_NAME||'').trim().split(/\s+/)[0]||'your teacher'));
+  h+=_tsetStudioCopy(String(TSET.awayDefaultCopy||'').replace(/\[TEACHER\]|\[teacher first name\]/gi,String(TEACHER_NAME||'').trim().split(/\s+/)[0]||'your teacher'));
   h+='</div>';
 
   h+='<div class="card" style="margin-top:.75rem">';
   h+='<div class="thread-hd">'+esc(TSET_COPY.afterHeading)+'</div>';
   h+='<div style="font-size:12px;color:var(--text3);margin-bottom:.6rem">'+esc(TSET_COPY.afterBody)+'</div>';
-  h+='<textarea id="tset-after" rows="3" placeholder="'+esc(TSET.afterHoursDefaultCopy||'Your own after-hours message (optional)')+'" '+
-     'oninput="TSET.draftAfter=this.value" style="width:100%">'+esc(TSET.draftAfter)+'</textarea>';
+
   // [1.238] — the generated sentence that used to open this line is gone.
   // It read "We only email you between 9am and 5pm, from your own
   // availability", which is exactly the per-teacher window AC removed, and its
@@ -3599,7 +3756,6 @@ function rTeacherSettings(){
   // states the hours itself, so nothing here is derived any more.
   h+='<div style="font-size:11px;color:var(--text4);margin-top:.5rem">'+
      esc(TSET_COPY.hoursNote)+'</div>';
-  h+='<div style="margin-top:.6rem"><button class="btn btn-s" onclick="saveTeacherSettings()">Save</button></div>';
   h+=_tsetStudioCopy(TSET.afterHoursDefaultCopy);
   h+='</div>';
   // ── [1.580] — the Settings link card is GONE ─────────────────────────
@@ -4197,6 +4353,7 @@ function loadTeacherSettings(){
     if(e||!r||!r.ok) return;   // silent: a settings read must never block messaging
     var st=r.settings||{};
     TSET.awayEnabled=!!st.awayEnabled;
+    TSET.absentUntil=st.absentUntil||'';   // [1.759]
     TSET.awayMessage=st.awayMessage||'';
     TSET.afterHoursMessage=st.afterHoursMessage||'';
     TSET.awayDefaultCopy=st.awayDefaultCopy||TSET.awayDefaultCopy;TSET.afterHoursDefaultCopy=st.afterHoursDefaultCopy||TSET.afterHoursDefaultCopy;
@@ -4209,8 +4366,7 @@ function loadTeacherSettings(){
   });
 }
 function setAway(on){
-  var msg=(document.getElementById('tset-away')||{}).value;
-  if(msg===undefined) msg=TSET.draftAway;
+  // [1.756] — the switch alone; the wording is the studio's.
   // The refusal that used to be here is gone, found 3 September while wiring
   // the generic message into this box. [1.196] took it out of the SERVER on
   // 2 September — "away without writing anything", using AC's default wording
@@ -4218,14 +4374,7 @@ function setAway(on){
   // demanded text the tool no longer needed. A teacher who switches Away on
   // with an empty box now gets AWAY_DEFAULT_COPY, which is the sentence shown
   // greyed in that same box.
-  _saveSettings({awayEnabled:on, awayMessage:msg});
-}
-function saveTeacherSettings(){
-  _saveSettings({
-    awayEnabled:TSET.awayEnabled,
-    awayMessage:(document.getElementById('tset-away')||{}).value,
-    afterHoursMessage:(document.getElementById('tset-after')||{}).value
-  });
+  _saveSettings({awayEnabled:on});
 }
 function _saveSettings(fields){
   TSET.saving=true;
@@ -4247,6 +4396,7 @@ function _saveSettings(fields){
     if(e||!r||!r.ok){ Object.assign(TSET,_was); actFail('away',(r&&r.error)||'Could not save.'); render(); return; }
     var st=r.settings||{};
     TSET.awayEnabled=!!st.awayEnabled;
+    TSET.absentUntil=st.absentUntil||'';   // [1.759]
     TSET.awayMessage=st.awayMessage||'';
     TSET.afterHoursMessage=st.afterHoursMessage||'';
     TSET.awayDefaultCopy=st.awayDefaultCopy||TSET.awayDefaultCopy;TSET.afterHoursDefaultCopy=st.afterHoursDefaultCopy||TSET.afterHoursDefaultCopy;
@@ -4273,6 +4423,14 @@ function switchTab(tab){
   render();
   if(tab==='settings' && !TSET.loaded && !TSET.loading) loadTeacherSettings();
   if(tab==='trials' && !TT.loading) loadTrials(!!TT.data);   // [1.731] — fresh each visit
+  // [1.762] — a tab left open across midnight held the old week and its
+  // "Today" (the cache answered first and its refresh never reached the
+  // screen): when New York's day has moved on, forget the held weeks and cards
+  // and load this week.
+  if(tab==='students' && MS.week && MS.week.today && MS.week.today!==_nyYmdOf()){
+    Object.keys(API_KEEP).forEach(function(k){ if(/^[wc]\|/.test(k)){ delete API_KEEP[k]; delete API_KEEP_AT[k]; } });
+    API_THISWEEK=''; MS.weekStart=''; MS.week=null; MS.cardStu=''; MS.card=null;
+  }
   if(tab==='students' && !MS.loading && !MS.cardStu) loadWeek();   // [1.732] — fresh each visit
   if(tab==='staff' && STAFF_VIEW==='list'){
     if(!STAFF_PICKER.all.length && !STAFF_PICKER.loading) loadStaffDirectory();
@@ -5042,7 +5200,7 @@ function _rMark(text, q){
 // weekday it may not have, and nothing once they are over.
 function _kidNextDated(st){
   var ld=(st&&st.lessonDates)||[];if(!ld.length) return null;
-  var n=new Date(),today=n.getFullYear()+'-'+('0'+(n.getMonth()+1)).slice(-2)+'-'+('0'+n.getDate()).slice(-2);
+  var today=_nyYmdOf();   // [1.762] — New York's day
   var nx=ld.filter(function(x){return x&&x.date>=today;}).sort(function(a,b){return a.date<b.date?-1:1;})[0];
   return nx||null;
 }
@@ -6716,8 +6874,18 @@ function sendFamilyMessage(sendAt){
 // on Monday offers Monday and Tuesday; the same panel at 1am offers Tuesday and
 // Wednesday. `sendDayBatch` re-resolves it at the moment of sending too, so a
 // panel left open across midnight cannot send yesterday's answer.
-function _todayName(){ return DAY_NAMES[(new Date().getDay()+6)%7]; }
-function _tomorrowName(){ return DAY_NAMES[(new Date().getDay()+7)%7]; }
+// [1.762] — the studio's day (New York), wherever the teacher's device is. The
+// Today/Tomorrow panel used the device's day, so a teacher out of town late in
+// the evening told a whole day's families the wrong day; lessons are New York's.
+function _nyYmdOf(ms){
+  var d=ms===undefined?new Date():new Date(Number(ms)||0);
+  try{ return new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(d); }
+  catch(e){ return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); }
+}
+function _nyDowOf(ymd){ return new Date(ymd+'T12:00:00Z').getUTCDay(); }   // 0 = Sunday
+function _nyTomorrowYmd(){ return _msAdd(_nyYmdOf(),1); }
+function _todayName(){ return DAY_NAMES[(_nyDowOf(_nyYmdOf())+6)%7]; }
+function _tomorrowName(){ return DAY_NAMES[(_nyDowOf(_nyTomorrowYmd())+6)%7]; }
 function _daySlots(){
   var counts=_dayCounts();
   return [{slot:'today',    label:TCH_COPY.dayToday,    day:_todayName()},
@@ -6755,10 +6923,9 @@ function _daySlot(slot){
 // [1.715] row 17 — the date a day name stands for on this panel: today's or
 // tomorrow's, resolved from the clock like the names themselves.
 function _dayYmd(day){
-  var d=String(day||'').trim().toLowerCase(),n=new Date();
-  var f=function(x){return x.getFullYear()+'-'+('0'+(x.getMonth()+1)).slice(-2)+'-'+('0'+x.getDate()).slice(-2);};
-  if(d===_todayName().toLowerCase()) return f(n);
-  if(d===_tomorrowName().toLowerCase()){ var t=new Date(n.getFullYear(),n.getMonth(),n.getDate()+1,12); return f(t); }
+  var d=String(day||'').trim().toLowerCase();
+  if(d===_todayName().toLowerCase()) return _nyYmdOf();       // [1.762] — New York's
+  if(d===_tomorrowName().toLowerCase()) return _nyTomorrowYmd();
   return '';
 }
 // A child's lesson on that day, or null. A May–June child has lessons on its
@@ -12161,129 +12328,9 @@ var TCH_COPY={
   // [1.568] — AC's own word for admin's twin of this control, so one thing is
   // not called two things in two seats.
   newMessage:'New Message',
-  guideTitle:'How to use Messages',
-  // AC's copy, 3 September 2026 — his draft, his headings, his wording. Two
-  // things were corrected with him before it went in and both are noted where
-  // they land: the colour stages (his new key: blue, purple, amber, orange,
-  // red — the palette moved to match, it was not the guide that changed), and
-  // the timer, which starts when a message ARRIVES and not when it is opened.
-  // If reading started the clock, leaving something unopened would push the
-  // deadline back, which is exactly what the promise exists to prevent.
-  guide:[
-    // ── [1.346] — the response policy, moved off the permanent banner ─────
-    //
-    // Measured on a 375x812 phone with a thread open: the conversation began
-    // 537px down, and the colour key plus this five-line paragraph accounted
-    // for 208px of it. **71% of a teacher's first screen was spent before the
-    // first message**, on every screen, every time, for the life of the tool.
-    // The composer sat below the fold.
-    //
-    // It is not deleted and it is not shortened: it is AC's own wording and it
-    // is the studio's promise to families. It moved into the guide that was
-    // already collapsed directly beneath it — which is where a teacher goes
-    // with a question, and is what every professional tool does with policy.
-    // The colour key stays visible, because those colours are on every row.
-    //
-    // FIRST in the guide on purpose. It is the thing a teacher is answerable
-    // for, so it should not be the eighth section down.
-    {h:'How quickly to reply', items:[
-      {t:'The studio\u2019s promise', d:'Respond to family messages within a few hours, and in 24 hours at most whenever possible. Time sensitive messages should be responded to or sent for admin review asap. Messages sent on Friday evening or over the weekend that are not time sensitive should be responded to by Monday 12pm'}
-    ]},
-    // [1.238]/[1.249]. The FIRST heading is AC's own, 4 September 2026,
-    // verbatim: 'Teacher Guide: "New Message Badge" - blue with a number'.
-    //
-    // The SECOND was briefly changed to a line of his that turned out not to be
-    // copy at all — AC: "I didn't mean to quote grey with no number close
-    // conversation button. use the right text there, I'm not sure what that was
-    // about. I just wanted to have a 'close conversation' button if there are no
-    // outstanding messages." So it is back to Claude's wording, which is what
-    // he approved before and what actually describes the state he is naming.
-    // Worth the note rather than a silent revert: [1.253] says his words are
-    // final, and the failure mode of that rule is treating something he wrote
-    // in passing as a ruling. Ask, or he will have to correct it — as here.
-    //
-    // They had to change once before because the badge no longer carries the ageing, not
-    // AC's, and they had to change: the badge no longer carries the ageing
-    // colour at all (that moved to the left edge strip), so "solid colour,
-    // white number" and "white circle, blue number" both described a control
-    // that will not exist. The items under them are still his.
-    {h:'New Message Badge - blue with a number', items:[
-      {t:'The number', d:'How many messages in a thread are waiting for you to respond. This will usually be “1”, but could be more based on how many messages the parent sends. If responding to multiple messages, one reply will zero out all messages, so be sure to read and answer thoroughly so you don’t miss anything!'},
-      // AC wrote this one himself. He approved Claude to write it, was offered
-      // a draft, and replaced it with his own — so it is verbatim and final.
-      //
-      // It is load-bearing rather than descriptive, and that is the thing to
-      // know before editing anything it names. The row lost the words
-      // "overdue", the deadline and the type label in [1.249]'s pass, so the
-      // strip carries urgency alone — and this sentence is the only place a
-      // teacher is told what the colours mean. It also CHANGED the design: the
-      // resting strip was drawn as var(--border), a hairline, and his copy
-      // calls it "Grey", so it has to BE grey. A marker that only appears when
-      // something is wrong reads as broken.
-      // [1.354] — AC cut the grey stage from the key ("remove the grey under
-      // 4h. Just keep it blue"), so his own guide sentence, which named grey,
-      // had to move with it or a teacher checking the guide against the screen
-      // would find a colour the rows no longer draw. Grey is still on screen
-      // and still means something — a conversation with nothing owed — which
-      // is why it is named here rather than simply deleted.
-      {t:'The color', d:'The left side of a conversation has a vertical colored strip that shows how long the message has been waiting without a response. Blue - waiting for a reply, amber at the 4 hour mark, orange at 12 hours (you’ll also receive an automated reminder), Red when past the response deadline. Grey means nothing is waiting on you.'}
-    ]},
-    {h:'Marked for review badge — outline with a number', items:[
-      {t:'What it is', d:'These are messages you have set to review. This badge is independent of the solid color message badge. Marked for review is a private setting and will not be seen by family or admin.'}
-    ]},
-    // [1.246]/[1.249] — AC's heading, 4 September 2026, verbatim. It had to
-    // change: there is no "no circle" state any more. The badge is drawn at
-    // rest now, grey and without a number ([1.178]'s rule, and the same three
-    // states [1.250] gives the family's contact row), so a guide promising an
-    // absent circle would be describing something a teacher will never see.
-    // The sentence under it is unchanged and is still true.
-    {h:'Grey badge with no number, “End Conversation” button visible', items:[
-      {t:'What it means', d:'Nothing is waiting on you in that conversation. End the conversation if no response is due and the conversation is resolved.'}
-    ]},
-    {h:'Message sections', items:[
-      {t:'Messages', d:'Messages stay here until you end a conversation.'},
-      {t:'Marked for review', d:'Threads with individual messages marked for review. If a family sends a new message, the conversation moves back up to Messages, but you’ll still see the review count in the white circle with the blue number. Unclick the checkbox to revert messages marked for review to normal/read status.'},
-      {t:'Archived Conversations', d:'Messages that have been formally ended (see below). Families and staff/admin are kept separate. Click the heading to expand to see all archived conversations.'},
-      {t:'Search', d:'Finds any of your currently enrolled students and their families.'}
-    ]},
-    {h:'Reading a message', items:[
-      {t:'Opening a conversation', d:'Marks it read. There is nothing to click.'},
-      {t:'The timer', d:'The response clock starts when the message arrives, not when you open it. Reading a message does not pause it — only your reply stops it.'}
-    ]},
-    {h:'Your schedule and notifications', items:[
-      {t:'Your reply time', d:'The response clock starts when a family’s message arrives, not when you open it. You have 24 hours max to answer, but should reply asap. A message that arrives in the evening should be responded to by noon the next day, and anything sent Friday evening or over the weekend should be replied to by Monday at noon. Evening is generally defined as being after your last scheduled lesson on any given day, so the boundary follows your timetable rather than the studio’s. Be sensitive to time sensitive messages, and reach out to admin if you need help!'},
-      // [1.238] — AC: "approved." His existing sentence with the window
-      // changed and nothing else touched. It had to change: "within your own
-      // working hours" describes the per-teacher window that no longer exists.
-      // [1.359] — the second sentence promised that reminders pause once you
-      // have asked admin. Nothing pauses them now: the forward is gone and so
-      // is the pause, because the family is waiting either way. A guide
-      // sentence that quietly stops being true is worse than no sentence.
-      {t:'Reminders', d:'If something is still unanswered you’ll get one email a day, sent between 9am and 7pm, and none at all when nothing is outstanding. Asking admin does not stop the reminders — the family is still waiting for an answer.'},
-      {t:'When you’re away', d:'Turning on Away shows families your away message automatically and sends an auto-reply via email. The response clock keeps running while you’re away; Away tells families what to expect, but the message will still need to be responded to when you are active again. If the admin responds, you do not need to respond unless it’s clear in the message that you should respond, or the admin has requested you follow up with the family.'}
-    ]},
-    {h:'Message helpers — seen on individual messages in a thread', items:[
-      {t:'Save for review', d:'Tick “Save for review” on the message in the thread (not the entire thread). It will move to the review area. Private setting to use however you like.'},
-      // AC's own copy, 3 September, answering the one question left open from
-      // the 3 September batch (loose end 5). It is the fact the guide never
-      // stated and the most likely reason a teacher opens it: a reply clears
-      // the whole conversation, and Save for review is the only mark that
-      // survives one. The item TITLE was Claude's; the text
-      // is his, verbatim.
-      {t:'What a reply clears', d:'Use saved for review messages to help stay organized and ensure you don’t miss a message. When you reply to a message, your message queue is cleared, but messages saved for review are not. Messages saved for review stay that way until you clear them. Click the message checkbox to save and unsave.'},
-      // [1.233] — AC's guide line, verbatim. The item TITLE was Claude's; he
-      // supplied the sentence only. APPROVED by AC, 4 September 2026 — he reviewed the eight placeholder strings, changed three, and said "everything else is approved".
-      {t:'Clearing before ending', d:'Messages saved for review need to be cleared before ending a conversation.'},
-      {t:'Mark seen', d:'Adds a quick generic message to the conversation thread letting the family know their message has been seen. Admin or teacher can mark a message as seen and this is visible to all parties. It is not a reply, and the timer keeps running until you send one. Use this when you don’t have time to respond but want the parent to know you have seen the message.'}
-    ]},
-    {h:'Send, Ask Admin, and End Conversation', items:[
-      {t:'Send', d:'Sends your reply to the sender (family or admin or other staff member). Visible to the recipient and admin.'},
-      // [1.359] — rewritten with the button. It no longer shares the
-      // conversation, asks for a note, or lets admin's reply discharge it.
-      {t:'Ask Admin', d:'Opens your own message thread with admin, with the family’s name already filled in. Write your question there. Admin can already see every family conversation, so nothing is copied or forwarded — and the family never sees any of it. The response countdown keeps running until you reply to the family or the conversation is ended.'},
-      {t:'End conversation', d:'Conversations can be ended by teacher or admin. When ending a conversation, the conversation has reached its natural conclusion and can be archived to the Archived Conversations area. If the family sends another message, it moves back to Messages so you’ll always have full context on message history with your families, other staff, and admin.'}
-    ]}
-  ],
+  // [1.759] — the old fold-out guide ("How to use Messages", AC's copy of
+  // 3 September, revised through [1.354]) is replaced by the Guide tab's
+  // GUIDE_COPY, which carries its reply-time sentences forward. Git has the old text.
   // [1.276] — AC'S OWN COPY, approved string by string on 6 September. Not
   // placeholders any more, and the two that are gone are as much his decision
   // as the three that stayed: "Unsend this message?" went with the confirm
@@ -12625,7 +12672,11 @@ function _rMore(t, cRow, r){
   var items=[];
   items.push(['openSendLater()', TCH_COPY.sendLater]);
   items.push(['askAdminAbout()', CMP_COPY.askAdmin]);
-  var canClose = (t.messages||[]).length && !(cRow&&Number(cRow.waitingSince)) && !(cRow&&cRow.closed);
+  // [1.759] — AC, 4 October 2026: "Teachers should have to option to mark 'end
+  // conversation' if not response is required. They are adults." Offered
+  // whenever there is something to end; closeConversation() asks "End
+  // conversation without a reply?" when a reply is still owed.
+  var canClose = (t.messages||[]).length && !(cRow&&cRow.closed);
   if(canClose) items.push(['closeConversation()', TCH_COPY.closeConversation]);
   var list=items.map(function(it){
     return '<button type="button" class="more-item" onclick="_moreDo(function(){'+it[0]+'})">'+esc(it[1])+'</button>';
@@ -14366,7 +14417,7 @@ function _tchRunSame(a,b){
   return !!a && !!b && String(a.senderId||'')===String(b.senderId||'') &&
          String(a.senderName||'')===String(b.senderName||'') &&
          !_tIsTruthy(a.isAuto) && !_tIsTruthy(b.isAuto) &&
-         a.noteKind!=='seen' && b.noteKind!=='seen';
+         a.noteKind!=='seen' && b.noteKind!=='seen' && a.noteKind!=='reminder' && b.noteKind!=='reminder';
 }
 function rMessageBubble(m, prev, next){
   var mine = m.senderId===TEACHER_ID;
@@ -14387,7 +14438,7 @@ function rMessageBubble(m, prev, next){
   // The "seen" note (1.220) — two lines, no bubble, no button, sent by hand.
   // Checked BEFORE the auto branch: it carries isAuto so that nothing counts
   // it as a reply, but it must not collapse like an away message.
-  if(m.noteKind==='seen') return rNoteLine(m);
+  if(m.noteKind==='seen'||m.noteKind==='reminder') return rNoteLine(m);   // [1.759]
   if(_tIsTruthy(m.isAuto)) return rAutoBubble(m,mine);
   // [1.232], AC: "Otherwise, the person doesn't know which message they
   // marked, and this will easily get lost." The white circle on the roster

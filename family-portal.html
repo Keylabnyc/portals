@@ -564,8 +564,18 @@ button:active:not(:disabled),
 .kl-about-pill{border:1px solid var(--border,#E3E3DE);background:var(--bg2,#F6F6F4);border-radius:20px;
   padding:2px 10px;cursor:pointer;font-weight:600}
 .kl-about-pill.on{background:var(--acc,#1747C0);border-color:var(--acc,#1747C0);color:#fff}
-.kl-afterhours{background:var(--bg2,#F6F6F4);border:1px solid var(--border,#E3E3DE);color:var(--text3,#5A5A55);
-  border-radius:8px;padding:9px 11px;font-size:11.5px;line-height:1.45;margin-bottom:.6rem;white-space:pre-wrap}
+/* [1.756] — AC, 4 October 2026: the after-hours notice in the same red as the
+   away notice. */
+.kl-sup-row{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:.7rem 0;border-top:1px solid var(--border,#E3E3DE)}
+.kl-sup-row:first-of-type{border-top:0}
+.kl-sup-t{flex:1 1 260px;font-size:13px;line-height:1.45}
+.kl-sup-t b{display:block;font-size:14px;margin-bottom:.15rem}
+.kl-sup-t span{color:var(--text3,#5A5A55)}
+.kl-sup-b{display:flex;gap:6px;flex-wrap:wrap}
+.kl-sup-body{padding:.25rem 0 .75rem}
+.kl-afterhours{background:#FDECEC;border:1px solid #DC2626;color:#B91C1C;border-radius:8px;
+  padding:9px 11px;font-size:12px;line-height:1.45;margin-bottom:.6rem;white-space:pre-wrap}
+.kl-away a,.kl-afterhours a{color:#B91C1C;text-decoration:underline;font-weight:600}
 /* [1.361] — the composer STACKS now. It was a horizontal row of textarea and
    Send, which is right for a box and a button and wrong the moment there is
    anything else in it: adding the file rules and the chips to a side-by-side
@@ -748,6 +758,10 @@ function _fmtFamilyTs(iso){
     if(yr<100) yr+=2000;
     if(mo>=1&&mo<=12) return months[mo-1]+' '+dy+', '+yr;
   }
+  // [1.762] — a bare day (a timestamp cell Sheets flattened) is that calendar
+  // day, never new Date('yyyy-MM-dd') (UTC, the evening before in the US).
+  var dm = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if(dm) return months[+dm[2]-1]+' '+(+dm[3])+', '+dm[1];
   var d = new Date(iso);
   if(isNaN(d.getTime())) return String(iso);
   return months[d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear();
@@ -758,6 +772,7 @@ function _fmtFamilyTime(iso){
   var s = String(iso).trim();
   var m = s.match(/^\d{1,2}\/\d{1,2}\/\d{2,4}\s+(\d{1,2}):(\d{2})\s*([AP]M)$/i);
   if(m) return m[1]+':'+m[2]+' '+m[3].toUpperCase();
+  if(/^\d{4}-\d{2}-\d{2}$/.test(s)) return '';   // [1.762] — a day has no time; never invent one
   var d = new Date(iso);
   if(isNaN(d.getTime())) return '';
   var h = d.getHours(), mnt = d.getMinutes();
@@ -904,6 +919,20 @@ var AFTER_HOURS_COPY = "If you have a question about your children's lesson assi
   "instrument, or have another musical question, [TEACHER] is happy to help! They aren't scheduled to work "+
   "right now and may not see your message right away, but they will do their best to respond asap, and "+
   "within 24 hours at most. For enrollment, scheduling, or billing questions, please contact admin.";
+// [1.756] — a web address in the studio's away or after-hours notice becomes a
+// link (AC: admin may include hyperlinks). Runs on text that is ALREADY
+// escaped, so it can only ever add an <a> around characters that were there;
+// "keylab.opus1.io/login" with no https:// is a link too. A full stop or
+// bracket at the end of a sentence is left outside the link.
+function _klLinkify(escaped){
+  return String(escaped||'').replace(/\b((?:https?:\/\/)?(?:[a-z0-9-]+\.)+[a-z]{2,}(?:\/[^\s<]*)?)/gi,function(m){
+    var tail='';
+    while(/[.,;:!?)\]]$/.test(m)){ tail=m.slice(-1)+tail; m=m.slice(0,-1); }
+    if(!/\//.test(m) && !/^https?:/i.test(m) && !/^www\./i.test(m)) return m+tail;   // "e.g." or a bare name is not a link
+    var href=/^https?:\/\//i.test(m)?m:'https://'+m;
+    return '<a href="'+href+'" target="_blank" rel="noopener">'+m+'</a>'+tail;
+  });
+}
 function _afterHoursCopy(teacherName){
   var first=String(teacherName||'').trim().split(/\s+/)[0];
   return AFTER_HOURS_COPY.replace('[TEACHER]', first||'your teacher');
@@ -1002,11 +1031,13 @@ var _srOpen = {};
 // on each render; ontoggle keeps it in sync with clicks without forcing a
 // render itself, same approach as _srOpen above.
 var _supportAccOpen = {};
-function _klAcc(key, summaryHtml, bodyHtml){
-  var open=!!_supportAccOpen[key];
-  return '<details class="kl-acc"'+(open?' open':'')+' ontoggle="_supportAccOpen['+jsq(key)+']=this.open">'+
-    '<summary>'+summaryHtml+'</summary>'+bodyHtml+'</details>';
-}
+// [1.760] — the scheduling and billing site, one address for every button that
+// goes there: Settings' Scheduling & Billing URL, or the studio's login page
+// when Settings has none. Five buttons used to read the setting each on their
+// own, and with it blank four of them opened a blank copy of this page.
+function _klBillingUrl(){ return publicCfg.schedulingBillingUrl||'https://keylab.opus1.io/login'; }
+// [1.760] — _klAcc (the Support accordions) is gone with them; the contact
+// details open under their row, keyed by the same _supportAccOpen.
 
 // Blanks every per-child field on SC (instrument, availability, notes,
 // etc.) without touching studentId, page/tab state, or anything family-wide.
@@ -1245,10 +1276,7 @@ function klEstimateMonthly(o) {
   }
   return Math.ceil(year / months / rnd) * rnd;
 }
-function _estTodayYMD(){
-  var d=new Date();
-  return d.getFullYear()+'-'+(d.getMonth()<9?'0':'')+(d.getMonth()+1)+'-'+(d.getDate()<10?'0':'')+d.getDate();
-}
+function _estTodayYMD(){ return _klNyTodayYmd(); }   // [1.762] — the studio's day
 // Returns raw monthly estimate before discounts, or null before the studio's
 // figures have arrived. [1.676] — it takes no teacher premium any more: the
 // card is the price whoever teaches the lesson, so the estimate a family reads
@@ -1493,6 +1521,9 @@ function _maskDob(el){
 // non-future calendar date. Mirrors _formatPhone()'s normalize-at-
 // validation-time approach rather than reformatting on every keystroke.
 function _parseDob(raw){
+  // [1.762] — a pasted or autofilled 2015-03-14 is read as that date.
+  var _iso=String(raw||'').trim().match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if(_iso) raw=('0'+_iso[2]).slice(-2)+('0'+_iso[3]).slice(-2)+_iso[1];
   var digits=String(raw||'').replace(/\D/g,'');
   if(digits.length!==8) return null;
   var mo=parseInt(digits.substring(0,2),10), da=parseInt(digits.substring(2,4),10), yr=parseInt(digits.substring(4,8),10);
@@ -1500,6 +1531,7 @@ function _parseDob(raw){
   var d=new Date(yr,mo-1,da);
   if(d.getFullYear()!==yr||d.getMonth()!==mo-1||d.getDate()!==da) return null;
   if(d.getTime()>Date.now()) return null;
+  if(yr<1900) return null;   // [1.762] — 01/01/0201 is a typo, not a child aged 1,825
   return d;
 }
 // Formats a birth-date string into a consistent 'MM/DD/YYYY' display, or
@@ -2924,14 +2956,39 @@ function rBackBtn(label, onclick){
 }
 
 function rHomeMsgGuide(){
+  // [1.760] — AC, 4 October 2026: "Review family support area and update
+  // language, instructions, buttons, and general flow". One Cancel a Lesson
+  // button on the page's Schedule header and one in Support, not a third here;
+  // and, AC: "Support can stay at the bottom but the families may not know
+  // about it, so you can tell them to go to the support area".
   return '<div class="kl-guide"><ul>'+
     '<li>We will respond to your message as soon as possible, and within 1 business day maximum.</li>'+
-    '<li>You can contact your teacher directly if you are running late or need lesson support</li>'+
-    '<li>Click here to cancel a lesson (your teacher will be notified automatically)'+
-      '<div style="margin-top:.35rem"><a class="btn btn-d btn-sm" href="'+esc(publicCfg.schedulingBillingUrl||'')+'" target="_blank">Cancel a Lesson</a></div>'+
-      '</li>'+
-    '<li>Contact admin for billing and general administrative assistance.</li>'+
+    '<li>You can contact your teacher directly if you are running late or need lesson support.</li>'+
+    '<li>To cancel a lesson, use Cancel a Lesson at the top of Schedule. Your teacher will be notified automatically.</li>'+
+    '<li>Contact Admin for billing and general administrative assistance.</li>'+
+    '<li>For more help, see Keylab Support at the bottom of this page.'+
+      '<div style="margin-top:.35rem"><button type="button" class="btn btn-p btn-sm" onclick="_klGoTo(\'kl-support\')">Keylab Support</button></div></li>'+
     '</ul></div>';
+}
+// Scroll to a card by its id (the Support card, Messages).
+function _klGoTo(id){
+  var el=document.getElementById(id);
+  // Instant, not smooth: the page redraws itself on its five-second poll, and a
+  // smooth scroll still running when that lands stops where it is.
+  if(el&&el.scrollIntoView) el.scrollIntoView(true);
+}
+// [1.760] — Support's Message rows: open that conversation and go to it.
+function _klMessage(teacherId, teacherName){
+  if(!(HOME_EXPANDED && HOME_EXPANDED.teacherId===teacherId)) toggleHomeThread(teacherId, teacherName);
+  setTimeout(function(){ _klGoTo('kl-messages'); },0);
+}
+// [1.760] — "View Policies" opens the first enrolled child's enrollment details,
+// which is where the policies the family accepted are drawn, and goes there.
+function _klOpenPolicies(){
+  var s=_klEnrolled()[0];
+  if(!s) return;
+  _homeEnrOpen[s.studentId]=true; render();
+  setTimeout(function(){ _klGoTo('kl-enr-'+s.studentId); },0);
 }
 
 // Initials for a contact's avatar. Two letters where we have two names, one
@@ -3232,13 +3289,13 @@ function rHomeThreadView(){
   // "available" state — a green badge on a parent's screen would read as a
   // promise of an immediate reply (AC, 1 Sept: families get no status banner).
   if(c.teacherAway && c.teacherAwayMessage){
-    h+='<div class="kl-away">'+esc(c.teacherAwayMessage)+'</div>';
+    h+='<div class="kl-away">'+_klLinkify(esc(c.teacherAwayMessage))+'</div>';
   }
   // BACKLOG 1.132 — the after-hours line moves with it, for the same reason
   // and to the same place: two notices about the same thing must not end up
   // on opposite sides of the box.
   if(c.teacherAfterHours && !c.teacherAway){
-    h+='<div class="kl-afterhours">'+esc(c.teacherAfterHoursMessage||_afterHoursCopy(c.teacherName))+'</div>';
+    h+='<div class="kl-afterhours">'+_klLinkify(esc(c.teacherAfterHoursMessage||_afterHoursCopy(c.teacherName)))+'</div>';
   }
   return h;
 }
@@ -4666,60 +4723,10 @@ function loadSchedTeachers(){
 // ============================================================
 // HOME TAB
 // ============================================================
-function _rHomeQuickActions(){
-  // NOTE: Calendar & Dates body text (item 8) is hardcoded below.
-  // Future improvement: make these admin-configurable from the Settings tab
-  // so they can be updated year-over-year without changing code.
-  var qa=[
-    ['\ud83d\udcc5','Check your child\'s lesson schedule',
-      'View upcoming lessons, cancellations, and schedule changes.'],
-    ['\ud83d\uddd3\ufe0f','View the Keylab studio calendar',
-      'See all important Keylab dates like studio closures, holidays, and special events.',
-      'View Calendar','https://keylab.nyc/calendar'],
-    ['\u274c','Cancel a lesson',
-      'Make-ups / credits not guaranteed. See cancellation policies for details.'],
-    ['\ud83e\udd12','If your child is ill',
-      'Keep them home. You can cancel the lesson and request a virtual lesson or written assignment.'],
-    ['\ud83d\udcac','Contact your teacher',
-      'Contact your teacher to discuss educational or lesson-related topics and request assignment details. Teachers do not manage scheduling or billing matters.'],
-    ['\ud83d\udce7','Contact admin',
-      'Contact admin for all scheduling, billing, and administrative assistance.'],
-    ['\ud83d\udcb3','Scheduling &amp; billing',
-      'View your lesson schedule, all payments, download invoices, and update your payment details.',
-      'Scheduling &amp; Billing',publicCfg.schedulingBillingUrl],
-    ['\ud83d\udcc6','Calendar &amp; Dates',
-      'Regular lessons end Saturday, June 12, 2026. Performance Party week is June 14\u201318, 2026.',
-      'View Calendar','https://keylab.nyc/calendar']
-  ];
-  var h='<div class="card">';
-  h+='<div style="display:flex;align-items:center;justify-content:space-between">';
-  h+='<div><h2 style="margin-bottom:2px">Managing Your Enrollment</h2>'+
-    '<div style="font-size:12px;color:var(--text3)">How to check your schedule, cancel a lesson, communicate with Keylab staff, review policies, and more</div></div>';
-  h+='<button class="btn btn-p btn-sm" onclick="_qaOpen=!_qaOpen;render()">'+(_qaOpen?'Hide':'View')+'</button>';
-  h+='</div>';
-  if(_qaOpen){
-    h+='<div style="display:flex;flex-wrap:wrap;gap:8px;margin:.85rem 0 0">';
-    h+='<a class="btn btn-p btn-sm" href="'+publicCfg.schedulingBillingUrl+'" target="_blank">Scheduling &amp; Billing</a>';
-    h+='<button class="btn btn-p btn-sm" onclick="gotoEnrollment()">Review Policies</button>';
-    h+='<a class="btn btn-d btn-sm" href="'+publicCfg.schedulingBillingUrl+'" target="_blank">Cancel a Lesson</a>';
-    h+='<button class="btn btn-p btn-sm" onclick="showMsg(&apos;Coming soon!&apos;,&apos;a&apos;)">Change to Virtual Lesson</button>';
-    h+='<button class="btn btn-p btn-sm" onclick="showMsg(&apos;Coming soon!&apos;,&apos;a&apos;)">Contact Teacher</button>';
-    h+='<a class="btn btn-p btn-sm" href="mailto:info@keylab.nyc">Contact Admin</a>';
-    h+='</div>';
-    h+='<ul style="list-style:none;padding:0;margin:.85rem 0 0">';
-    qa.forEach(function(item){
-      h+='<li style="display:flex;gap:10px;align-items:flex-start;padding:.6rem 0;border-bottom:.5px solid var(--border)">'+
-        '<span style="font-size:16px;flex-shrink:0;width:22px;text-align:center;margin-top:1px">'+item[0]+'</span>'+
-        '<div><div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:2px">'+item[1]+'</div>'+
-        '<div style="font-size:12px;color:var(--text3);line-height:1.55">'+item[2]+'</div>'+
-        (item[3]?'<div style="margin-top:6px"><a class="btn btn-p btn-sm" href="'+item[4]+'" target="_blank">'+item[3]+'</a></div>':'')+
-        '</div></li>';
-    });
-    h+='</ul>';
-  }
-  h+='</div>';
-  return h;
-}
+// [1.760] — _rHomeQuickActions ("Managing Your Enrollment") is gone: it was
+// drawn only for an enrolled family on this page, and an enrolled family is
+// always sent to the one-page Home, so it could not appear. It still held a
+// June 2026 date line and "Coming soon!" buttons.
 
 // studentId is passed through to gotoEnrollment() so a one-page family lands
 // on that specific child's proposal rather than being snapped back Home
@@ -4727,7 +4734,7 @@ function _rHomeQuickActions(){
 function _rHomeActionButtons(mainLabel, studentId){
   var h='<div style="margin-top:.6rem;display:flex;flex-direction:column;gap:12px">';
   h+='<div><button class="btn btn-p btn-sm" onclick="gotoEnrollment('+(studentId?''+jsq(studentId)+'':'')+')">'+esc(mainLabel)+'</button></div>';
-  h+='<div><a class="btn btn-p btn-sm" href="'+publicCfg.schedulingBillingUrl+'" target="_blank">Scheduling / Billing Portal</a>'+
+  h+='<div><a class="btn btn-p btn-sm" href="'+esc(_klBillingUrl())+'" target="_blank">Scheduling / Billing Portal</a>'+
     '<p style="font-size:12px;color:var(--text3);margin-top:.3rem">Check your schedule, cancel a lesson, review and update billing &amp; payment details.</p></div>';
   h+='</div>';
   return h;
@@ -4742,9 +4749,13 @@ function _rHomeActionButtons(mainLabel, studentId){
 // same child.
 function _klStudentAge(s){
   if(s&&s.birthdate){
-    var bd=new Date(s.birthdate);
+    // [1.762] — the birthdate as its calendar day (new Date('2016-10-05') is UTC
+    // midnight, the evening before in the US, so a child turned a year older a
+    // day early — and the self-release offer came with it), and today as New York's.
+    var _b=String(s.birthdate).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    var bd=_b?new Date(+_b[1],+_b[2]-1,+_b[3]):new Date(NaN);
     if(!isNaN(bd.getTime())){
-      var now=new Date();
+      var now=_klNyToday();
       var a=now.getFullYear()-bd.getFullYear();
       var mo=now.getMonth()-bd.getMonth();
       if(mo<0||(mo===0&&now.getDate()<bd.getDate())) a--;
@@ -4826,7 +4837,7 @@ function _klIsLs(s){
 }
 // Its next lesson still to come, {date, time}, or null once they are over.
 function _klLsNext(s){
-  var today=new Date();today.setHours(0,0,0,0);
+  var today=_klNyToday();   // [1.762]
   var l=_klLsLessons(s).filter(function(x){var d=_parseYMD(x.date);return !isNaN(d.getTime())&&d>=today;});
   l.sort(function(a,b){return a.date<b.date?-1:a.date>b.date?1:0;});
   return l[0]||null;
@@ -5129,7 +5140,7 @@ function _rChildStatusSummary(s, opts){
     if(s.teacher) details.push(s.teacher);
     if(s.lessonLocation) details.push(locMap[s.lessonLocation]||s.lessonLocation);
     if(details.length&&!_inDetail) h+='<div style="font-size:13px;color:var(--text3);margin-bottom:.3rem">'+esc(details.join(' \u00b7 '))+'</div>';
-    if(s.startDate&&!_inDetail) h+='<div style="font-size:12px;color:var(--text3);margin-bottom:.3rem">Starts '+esc(_fmtFamilyDate(s.startDate))+'</div>';
+    if(s.startDate&&!_inDetail) h+='<div style="font-size:12px;color:var(--text3);margin-bottom:.3rem">Starts '+esc(_fmtFamilyDate(_klFirstLessonYmd(_isLsS?'':s.day,s.startDate,s)))+'</div>';   // [1.762]
     // [1.651] — an expired change's price is not one anybody can accept.
     if(s.monthlyPrice&&!_inDetail&&!_klPropExpired(s)) h+=_isLsS?_klLsBlockHtml(s,false):_fmtPriceBox(s,false);   // [1.715] row 17
     if(isEnrolled){
@@ -5170,7 +5181,7 @@ function _rChildStatusSummary(s, opts){
   } else if(hasProp&&!isAccepted){
     var propDur=_effDur(s.durationBase,s.durationExtra)||s.durationBase||'';
     var propInstr=s.instrument||'';
-    var propStart=s.startDate?_fmtFamilyDate(s.startDate):'';
+    var propStart=s.startDate?_fmtFamilyDate(_klFirstLessonYmd(_klIsLs(s)?'':s.day,s.startDate,s)):'';   // [1.762]
     // [1.715] row 17 — this sentence describes weekly lessons; a May–June proposal's own block says when.
     if(s.day&&s.time&&s.teacher&&propDur&&propInstr&&!_klIsLs(s)){
       var propSentence='Please review and accept '+esc(firstName)+'\u2019s proposal for '+esc(propDur)+' minute ';
@@ -5238,6 +5249,33 @@ function _p2(n){ return (n<10?'0':'')+n; }
 function _parseYMD(s){ var p=String(s).split('-'); return new Date(Number(p[0]),Number(p[1])-1,Number(p[2])); }
 
 var KL_DAYIDX={sunday:0,monday:1,tuesday:2,wednesday:3,thursday:4,friday:5,saturday:6};
+// [1.762] — a lesson day however it is written ("Monday", "monday", "Mon",
+// "Mondays"), or undefined. The server reads days the same way.
+// [1.762] — the first lesson a start date leads to: on the lesson weekday, past
+// closures and the teacher's days away. Admin sets most start dates to the first
+// day of the school year (a Monday), so a Wednesday child's page read "to begin
+// on Monday, September 14th" while the Schedule card said Wednesday the 16th.
+// Falls back to the start date itself when there is no weekday to go by.
+function _klFirstLessonYmd(day, startDate, s){
+  if(!startDate) return '';
+  var d=day?_nextLessonDate(day, startDate, s, true):null;
+  return d ? d.getFullYear()+'-'+_p2(d.getMonth()+1)+'-'+_p2(d.getDate()) : startDate;
+}
+function _klMonthName(m){
+  var n=parseInt(m,10);
+  return (n>=1&&n<=12)?['January','February','March','April','May','June','July','August','September','October','November','December'][n-1]:String(m||'');
+}
+function _klDayIdx(name){
+  var i=['sun','mon','tue','wed','thu','fri','sat'].indexOf(String(name||'').trim().toLowerCase().slice(0,3));
+  return i===-1?undefined:i;
+}
+// [1.762] — the studio's calendar day (New York), whatever the family's own
+// time zone: as yyyy-MM-dd, and as a local-midnight Date for date comparisons.
+function _klNyTodayYmd(){
+  try{ return new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()); }
+  catch(e){ var d=new Date(); return d.getFullYear()+'-'+_p2(d.getMonth()+1)+'-'+_p2(d.getDate()); }
+}
+function _klNyToday(){ return _parseYMD(_klNyTodayYmd()); }
 
 // Next real occurrence of a weekly lesson, skipping studio closures — so a
 // family whose Tuesday falls on Thanksgiving sees the following Tuesday, not a
@@ -5260,19 +5298,32 @@ function _klFloorDate(iso){
   return d;
 }
 
-function _nextLessonDate(dayName, startDate){
-  var idx=KL_DAYIDX[String(dayName||'').trim().toLowerCase()];
+// [1.762] — the next day this child actually has a lesson: on their weekday,
+// not before today (New York's) or their start date or the school year, and not
+// on a studio closure OR a day their teacher is away (s.absenceDates — the
+// Upcoming dates list beside it said "No lesson" while this named the same
+// day); none after the school year ends or the child's withdrawal date.
+function _nextLessonDate(dayName, startDate, s, fromStart){
+  var idx=_klDayIdx(dayName);
   if(idx===undefined) return null;
   var closures=publicCfg.closures||{};
-  var start=new Date(); start.setHours(0,0,0,0);
+  var away={};
+  ((s&&s.absenceDates)||[]).forEach(function(a){ if(a&&a.date) away[a.date]=1; });
+  // fromStart: the FIRST lesson from the start date, whatever today is.
+  var start=fromStart?new Date(0):_klNyToday();
   [_klFloorDate(publicCfg.schoolYearStart), _klFloorDate(startDate)].forEach(function(f){
     if(f && f>start) start=f;
   });
-  for(var i=0;i<120;i++){
-    var c=new Date(start.getTime()+i*86400000);
+  var end=_klFloorDate(publicCfg.schoolYearEnd);
+  var wd=_klFloorDate(s&&s.withdrawalDate);
+  if(wd&&(!end||wd<end)) end=wd;
+  var c=new Date(start.getTime());
+  for(var i=0;i<120;i++,c.setDate(c.getDate()+1)){
+    if(end && c>end) return null;
     if(c.getDay()!==idx) continue;
-    if(closures[c.getFullYear()+'-'+_p2(c.getMonth()+1)+'-'+_p2(c.getDate())]) continue;
-    return c;
+    var key=c.getFullYear()+'-'+_p2(c.getMonth()+1)+'-'+_p2(c.getDate());
+    if(closures[key]||away[key]) continue;
+    return new Date(c.getTime());
   }
   return null;
 }
@@ -5347,7 +5398,7 @@ function _klLessonDays(){
   var multiEnrollment=enrolled.length>1;
   enrolled.forEach(function(s){
     var _ls=_klIsLs(s);   // [1.715] row 17 — a May–June child's days are its dates
-    var idx=KL_DAYIDX[String(s.day||'').trim().toLowerCase()];
+    var idx=_klDayIdx(s.day);   // [1.762]
     if(idx===undefined&&!_ls) return;
     var first=s.studentName?s.studentName.trim().split(' ')[0]:'';
     if(!first) return;
@@ -5391,7 +5442,7 @@ function _klEventDates(ev){
 // off once passed (AC, 19 Aug) — the same today-filter as everything else, so
 // the two can't drift apart.
 function _klScheduleEvents(){
-  var today=new Date(); today.setHours(0,0,0,0);
+  var today=_klNyToday();   // [1.762]
   var out=(publicCfg.upcomingDates||[]).map(function(d){
     return {event:d.event||'', startDate:d.startDate, endDate:d.endDate||d.startDate,
             closed:!!d.closed, studioOpen:!!d.studioOpen, kind:'calendar'};   // [1.582]
@@ -5408,7 +5459,7 @@ function _klScheduleEvents(){
   enrolled.forEach(function(s){
     if(!s.startDate) return;
     var d=_klFloorDate(s.startDate);
-    if(!d||d<today) return;   // lessons have already begun for this enrollment
+    if(!d) return;
     var first=s.studentName?s.studentName.trim().split(' ')[0]:'';
     // The date shown is the first ACTUAL lesson, not the raw start date. Admin
     // typically sets every student's startDate to the first day of the school
@@ -5416,8 +5467,13 @@ function _klScheduleEvents(){
     // told their first lesson is that Monday, while the Next lesson section
     // directly above said Wednesday. Same calculation as that section, so the
     // two halves of this card can't contradict each other.
-    var _lsF=_klIsLs(s)?_klLsLessons(s)[0]:null;   // [1.715] row 17 — its first dated lesson
-    var actual=_lsF?_parseYMD(_lsF.date):_nextLessonDate(s.day, s.startDate);
+    var _lsF=_klIsLs(s)?_klLsLessons(s).slice().sort(function(a,b){return a.date<b.date?-1:a.date>b.date?1:0;})[0]:null;   // [1.715] row 17 — its first dated lesson ([1.762]: the earliest, sorted)
+    var actual=_lsF?_parseYMD(_lsF.date):_nextLessonDate(s.day, s.startDate, s, true);
+    // [1.762] — the row is about the FIRST lesson: shown until that lesson has
+    // happened (it used to vanish once the start date passed, even with the
+    // first real lesson still days away).
+    if(actual && actual<today) return;
+    if(!actual && d<today) return;
     var ymd=actual
       ? actual.getFullYear()+'-'+_p2(actual.getMonth()+1)+'-'+_p2(actual.getDate())
       : s.startDate;
@@ -5528,7 +5584,7 @@ function _klDayFilteredHits(){
   if(!Object.keys(byDay).length) return [];
   var hits=[];
   _klScheduleEvents().forEach(function(e){
-    if(e.kind==='start'){ hits.push({e:e, when:_fmtDateRange(e.startDate,e.endDate), who:''}); return; }
+    if(e.kind==='start'){ hits.push({e:e, when:_fmtDateRange(e.startDate,e.endDate), who:'', sort:_parseYMD(e.startDate).getTime()}); return; }
     // [1.345] — an ABSENCE already belongs to one child and says so in its own
     // words. The `who` column here answers "which of your children has a lesson
     // on this weekday", which is the right question for a studio closure and
@@ -5546,6 +5602,9 @@ function _klDayFilteredHits(){
       hits.push({e:e, when:_fmtLessonDate(d), who:who.join(' & '), sort:d.getTime()});
     });
   });
+  // [1.762] — in date order: a range expanded day by day used to sit ahead of a
+  // single date inside it, and the three-row summary could skip an earlier day.
+  hits.sort(function(a,b){ return (a.sort||0)-(b.sort||0); });
   return hits;
 }
 function rHomeDayFilteredDates(){
@@ -5575,8 +5634,14 @@ function toggleAllDates(){ _klAllDatesOpen=!_klAllDatesOpen; render(); }
 var _klAllDatesOpen=false;
 
 function rHomeSchedule(){
-  var h='<div class="card"><h2>Schedule</h2>';
-  var sb=esc(publicCfg.schedulingBillingUrl||'');
+  // [1.756] — AC, 4 October 2026: a red "Cancel a lesson" button on the
+  // Schedule header. The address is Settings' Scheduling & Billing one, the
+  // same the Messages tab's Cancel a Lesson button uses, so the two cannot
+  // point at different places; keylab.opus1.io/login if Settings has none.
+  var _cxl=_klBillingUrl();
+  var h='<div class="card"><h2 style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">Schedule'+
+    '<a class="btn btn-d btn-sm" href="'+esc(_cxl)+'" target="_blank" rel="noopener" style="text-transform:none;letter-spacing:normal">Cancel a Lesson</a></h2>';
+  var sb=esc(_klBillingUrl());
 
   // ── Next lesson, soonest first — the child who has one tomorrow belongs
   // above the one who has one next week.
@@ -5588,7 +5653,7 @@ function rHomeSchedule(){
       return;
     }
     if(!s.day) return;
-    lessons.push({ s:s, d:_nextLessonDate(s.day, s.startDate) });
+    lessons.push({ s:s, d:_nextLessonDate(s.day, s.startDate, s) });
   });
   lessons.sort(function(a,b){
     if(!a.d && !b.d) return 0;
@@ -5932,7 +5997,7 @@ function _klEnrollmentFactsHtml(s){
     ['Lesson', _klIsLs(s)?'':[g.day, g.time].filter(Boolean).join(', ')],
     ['Length', _effDur(g.durationBase,g.durationExtra)?_effDur(g.durationBase,g.durationExtra)+' minutes':''],
     ['Location', locMap[g.lessonLocation]||g.lessonLocation],
-    ['Start date', (g.startDate&&!_klIsLs(s))?_fmtFamilyDate(g.startDate):'']
+    ['Start date', (g.startDate&&!_klIsLs(s))?_fmtFamilyDate(_klFirstLessonYmd(g.day,g.startDate,s)):'']   // [1.762]
   ].filter(function(r){ return r[1]; });
   rows=_klInHomeRows(rows,g.lessonLocation);   // [1.751]
   rows.forEach(function(r){
@@ -6077,7 +6142,7 @@ function _klCurrentEnrollmentFactsHtml(s){
     ['Lesson', _ceLs?'':[ce.day, ce.time].filter(Boolean).join(', ')],
     ['Length', _effDur(ce.durationBase,ce.durationExtra)?_effDur(ce.durationBase,ce.durationExtra)+' minutes':''],
     ['Location', locMap[ce.lessonLocation]||ce.lessonLocation],
-    ['Start date', ce.startDate?_fmtFamilyDate(ce.startDate):'']
+    ['Start date', ce.startDate?_fmtFamilyDate(_klFirstLessonYmd(_ceLs?'':ce.day,ce.startDate,s)):'']   // [1.762]
   ].filter(function(r){ return r[1]; });
   rows=_klInHomeRows(rows,ce.lessonLocation);   // [1.751]
   var h='';
@@ -6116,7 +6181,7 @@ function _rHomeEnrDetailsToggle(s){
   // was removed from Support) -- same button, same one-click behavior,
   // just sourcing facts from the un-overlaid currentEnrollment snapshot.
   var isChange=!!s.currentEnrollment;
-  var h='<div style="margin-top:.6rem">';
+  var h='<div style="margin-top:.6rem" id="kl-enr-'+esc(s.studentId)+'">';   // [1.760] — Support's "View Policies" lands here
   h+='<p style="font-size:12px;color:var(--text3);margin-bottom:.4rem">Review '+esc(first)+'\u2019s enrollment details and studio policies.</p>';
   h+='<button class="btn btn-p btn-sm" onclick="_homeEnrOpen['+jsq(s.studentId)+']=!_homeEnrOpen['+jsq(s.studentId)+'];render()">'+(open?'Hide Details':'Show Details')+'</button>';
   // ── [1.575] — ONE call, because the policies were being drawn twice ─────
@@ -6187,7 +6252,7 @@ function _rHomeChildActionCard(s){
         '<div style="font-size:15px;font-weight:700;color:var(--bt);margin-bottom:.4rem">'+(_isReturningTenure?'Welcome Back! What Happens Next':'What Happens Next')+'</div>'+
         (_needsInvoice
           ?('<p style="font-size:14px;color:var(--bt);margin:0">Only one more step to finish '+esc(firstName)+'&rsquo;s enrollment \u2014 click below to pay the invoice. You\u2019ll sign in with the login info from your proposal acceptance confirmation email.</p>'+
-            '<div style="margin-top:.75rem"><a href="'+publicCfg.schedulingBillingUrl+'" target="_blank" class="btn btn-p btn-sm">Pay Invoice</a></div>')
+            '<div style="margin-top:.75rem"><a href="'+esc(_klBillingUrl())+'" target="_blank" class="btn btn-p btn-sm">Pay Invoice</a></div>')
           :_klIsLs(s)?('<p style="font-size:14px;color:var(--bt);margin:0">'+esc(KL_LS_COPY.next.replace('{name}',firstName))+'</p>')   // [1.715] row 17 — the same as the proposal card's
           :('<p style="font-size:14px;color:var(--bt);margin:0">I\u2019ll schedule '+esc(firstName)+'&rsquo;s lessons for the school year and process their enrollment on the admin side using the payment method on file. '+_klBillingSentence(s,firstName)+' Check your email for confirmation and details and let us know if you need any help!</p>'))+
         '</div>';
@@ -6332,7 +6397,7 @@ function rHomeOnePage(){
   // before [1.329] — the two ends stay where they were and only the mixed
   // family, which had no correct answer before, gets one.
   var _schedule=rHomeSchedule();
-  var _messages='<div class="card">'+rHomeMessages()+'</div>';
+  var _messages='<div class="card" id="kl-messages">'+rHomeMessages()+'</div>';   // [1.760] — Support's "Go to Messages" lands here
 
   h+= _todo + _schedule + _messages + _settledCards;
 
@@ -6359,25 +6424,57 @@ function rHomeOnePage(){
   // All copy below already existed in the portal; AC approved reusing it
   // rather than writing new text. Note "reschedule" is deliberately absent —
   // families cannot reschedule (AC, 19 Aug).
-  var sb=esc(publicCfg.schedulingBillingUrl||'');
-  h+='<div class="card"><h2>Keylab Support</h2>'+
-    '<p style="font-size:12px;margin-bottom:.5rem">See Keylab\u2019s full studio policies for helpful info on managing your child\u2019s enrollment</p>'+
-    _klAcc('trial','Book A Trial Lesson For Another Child',
-      '<p>If you want to enroll another child, you can book a trial lesson directly here. The trial lesson will hold the time slot as the intended spot for the school year. You\u2019ll have two days after the trial to decide if you want to enroll or not.</p>'+
-      '<a class="btn btn-p btn-sm" href="https://keylab.opus1.io/w/kids-trial-lesson" target="_blank">Book a Trial Lesson</a>')+
-    _klAcc('schedule','Check your schedule or cancel a lesson',
-      '<p>View upcoming lessons or cancel a lesson. See cancellation policies for details.</p>'+
-      '<a class="btn btn-p btn-sm" href="'+sb+'" target="_blank">Scheduling &amp; Billing</a>')+
-    _klAcc('billing','Billing info &amp; payment history',
-      '<p>View all payments, download invoices, and update your payment details.</p>'+
-      '<a class="btn btn-p btn-sm" href="'+sb+'" target="_blank">Scheduling &amp; Billing</a>')+
-    // "Your child's details" (editable name/DOB/school, BACKLOG 1.56),
-    // "Read the studio policies" and "Contact admin" all removed 26 Aug
-    // (AC's call \u2014 "not necessary"; admin is already reachable from the
-    // Messages block's contact list above, so nothing there was lost).
-    // "Your contact details" relabeled to "Update your contact info" per
-    // AC's exact wording, same session.
-    _klAcc('contactDetails','Update your contact info', rHomeContactDetails())+
+  // [1.760] — AC, 4 October 2026: "Review family support area and update
+  // language, instructions, buttons, and general flow to make that area more
+  // helpful to families." Approved as a draft the same day. Each row is one
+  // heading, one sentence saying what happens, and one button. The trial and
+  // contact-info wording is the copy AC approved on 26 August; "Message your
+  // teacher or the office" and "Studio policies" come back as ROWS that go to
+  // the Messages card and the child's enrollment details, rather than the
+  // separate items AC removed on 26 August as "not necessary", because a
+  // family reading Support had no way to find either.
+  var sb=esc(_klBillingUrl());
+  var _supRow=function(head, text, btn){
+    return '<div class="kl-sup-row"><div class="kl-sup-t"><b>'+head+'</b><span>'+text+'</span></div><div class="kl-sup-b">'+btn+'</div></div>';
+  };
+  // [1.760] — AC, 4 October 2026, the rows by name and in this order: "Keep
+  // functions separate, even if they use the same button": Cancel A Lesson,
+  // See All Scheduled Lessons, Message [teacher], Message Admin, Studio
+  // Policies, Request A Spot For A Sibling, Update Your Contact or Billing Info.
+  // Message rows appear only while messaging is open to the family, and only
+  // for a teacher they can still write to (one row per teacher).
+  var _contacts=(HOME_CONVOS.list||[]);
+  var _tchs=_contacts.filter(function(c){ return c.teacherId!=='admin' && c.canReply!==false; });
+  var _adm=_contacts.filter(function(c){ return c.teacherId==='admin'; })[0];
+  h+='<div class="card" id="kl-support"><h2>Keylab Support</h2>'+
+    '<p style="font-size:13px;margin-bottom:.5rem">Find what you need to manage your child\u2019s lessons below.</p>'+
+    _supRow('Cancel A Lesson',
+      'Cancel a lesson on our scheduling and billing site. It opens in a new tab and has its own sign-in. Your teacher is notified automatically.',
+      '<a class="btn btn-d btn-sm" href="'+sb+'" target="_blank" rel="noopener">Cancel a Lesson</a>')+
+    _supRow('See All Scheduled Lessons',
+      'See every upcoming lesson on the same site.',
+      '<a class="btn btn-p btn-sm" href="'+sb+'" target="_blank" rel="noopener">See Scheduled Lessons</a>')+
+    _tchs.map(function(c){
+      var first=String(c.teacherName||'').trim().split(/\s+/)[0]||'your teacher';
+      return _supRow('Message '+esc(c.teacherName||'your teacher'),
+        'Write to '+esc(first)+' about lessons, practice, or if you are running late.',
+        '<button type="button" class="btn btn-p btn-sm" onclick="_klMessage('+jsq(c.teacherId)+','+jsq(c.teacherName||'')+')">Message '+esc(first)+'</button>');
+    }).join('')+
+    (_adm ? _supRow('Message Admin',
+      'Write to Admin about scheduling, billing, enrollment or anything else.',
+      '<button type="button" class="btn btn-p btn-sm" onclick="_klMessage(\'admin\','+jsq(_adm.teacherName||'Admin')+')">Message Admin</button>') : '')+
+    (_klEnrolled().length ? _supRow('Studio Policies',
+      'Read the studio policies, including cancellations and make-ups, in your child\u2019s enrollment details.',
+      '<button type="button" class="btn btn-p btn-sm" onclick="_klOpenPolicies()">View Policies</button>') : '')+
+    _supRow('Request A Spot For A Sibling',
+      'Book a trial lesson for your child\u2019s brother or sister. The trial lesson will hold the time slot as the intended spot for the school year, and you\u2019ll have two days after the trial to decide if you want to enroll.',
+      '<a class="btn btn-p btn-sm" href="https://keylab.opus1.io/w/kids-trial-lesson" target="_blank" rel="noopener">Book a Trial Lesson</a>')+
+    _supRow('Update Your Contact or Billing Info',
+      'Update your phone number, address or other contact details here. Update your payment details on our scheduling and billing site.',
+      '<button type="button" class="btn btn-p btn-sm" onclick="_supportAccOpen.contactDetails=!_supportAccOpen.contactDetails;render()">'+(_supportAccOpen.contactDetails?'Close Contact Info':'Update Contact Info')+'</button>'+
+      '<a class="btn btn-p btn-sm" href="'+sb+'" target="_blank" rel="noopener">Update Billing Info</a>')+
+    (_supportAccOpen.contactDetails ? '<div class="kl-sup-body">'+rHomeContactDetails()+'</div>' : '')+
+    '<p style="font-size:13px;color:var(--text3);margin:.75rem 0 0">Questions? Email us at <a href="mailto:info@keylab.nyc">info@keylab.nyc</a>.</p>'+
     // "Your enrollment details" removed 26 Aug -- Enrollment Change
     // students now get the same record (and, unlike this old item, the
     // accepted policy text too) from _rHomeEnrDetailsToggle() on their own
@@ -6455,7 +6552,6 @@ function rHome(){
   // student with more than one enrollment (e.g. two instruments) should
   // only see the self-release control once, not once per enrollment card.
   var _srShownFor={};
-  var anyEnrolled=false;
   students.forEach(function(s){
     var ph=s.phase||'';
     var firstName=s.studentName?(s.studentName.trim().split(' ')[0]):'';
@@ -6485,7 +6581,7 @@ function rHome(){
           '<div style="font-size:15px;font-weight:700;color:var(--bt);margin-bottom:.4rem">'+(_isReturningTenure?'Welcome Back! What Happens Next':'What Happens Next')+'</div>'+
           (_needsInvoice
             ?('<p style="font-size:14px;color:var(--bt);margin:0">Only one more step to finish '+esc(firstName)+'&rsquo;s enrollment \u2014 click below to pay the invoice. You\u2019ll sign in with the login info from your proposal acceptance confirmation email.</p>'+
-              '<div style="margin-top:.75rem"><a href="'+publicCfg.schedulingBillingUrl+'" target="_blank" class="btn btn-p btn-sm">Pay Invoice</a></div>')
+              '<div style="margin-top:.75rem"><a href="'+esc(_klBillingUrl())+'" target="_blank" class="btn btn-p btn-sm">Pay Invoice</a></div>')
             :_klIsLs(s)?('<p style="font-size:14px;color:var(--bt);margin:0">'+esc(KL_LS_COPY.next.replace('{name}',firstName))+'</p>')   // [1.715] row 17 — the same as the proposal card's
             :('<p style="font-size:14px;color:var(--bt);margin:0">I\u2019ll schedule '+esc(firstName)+'&rsquo;s lessons for the school year and process their enrollment on the admin side using the payment method on file. '+_klBillingSentence(s,firstName)+' Check your email for confirmation and details and let us know if you need any help!</p>'))+
           '</div>';
@@ -6499,7 +6595,6 @@ function rHome(){
       }
       h+='</div>';
       hadDashboard=true;
-      if(isEnrolled) anyEnrolled=true;
     } else {
       // ── Non-dashboard states ──
       h+='<div class="card-stu">';
@@ -6522,7 +6617,6 @@ function rHome(){
       h+='</div>';
     }
   });
-  if(hadDashboard&&anyEnrolled) h+=_rHomeQuickActions();
   h+='<hr class="divider">';
   h+=_rHomeParent2();
   h+='<p style="font-size:12px;color:var(--text4)">Questions? Email us at <a href="mailto:info@keylab.nyc">info@keylab.nyc</a>.</p>';
@@ -8151,7 +8245,7 @@ function rEnrollment(scopeStudentId){
         ['Time',s.time],
         ['Duration',_effDur(s.durationBase,s.durationExtra)?_effDur(s.durationBase,s.durationExtra)+' minutes':null],
         ['Location',locMap[s.lessonLocation]||s.lessonLocation||null],
-        ['Start Date',s.startDate?_fmtFamilyDate(s.startDate):(s.startMonth?'Starting month '+s.startMonth:null)]
+        ['Start Date',s.startDate?_fmtFamilyDate(_klFirstLessonYmd(_klIsLs(s)?'':s.day,s.startDate,s)):(s.startMonth?_klMonthName(s.startMonth):null)]   // [1.762]
       ];
       _npRows=_klInHomeLocRows(_npRows,s.lessonLocation);   // [1.752]
       _npRows.forEach(function(row){
@@ -8212,7 +8306,7 @@ function rEnrollment(scopeStudentId){
         ['Time',s.time],
         ['Duration',_effDur(s.durationBase,s.durationExtra)?_effDur(s.durationBase,s.durationExtra)+' minutes':null],
         ['Location',locMap[s.lessonLocation]||s.lessonLocation||null],
-        ['Start Date',s.startDate?_fmtFamilyDate(s.startDate):(s.startMonth?'Starting month '+s.startMonth:null)]
+        ['Start Date',s.startDate?_fmtFamilyDate(_klFirstLessonYmd(_klIsLs(s)?'':s.day,s.startDate,s)):(s.startMonth?_klMonthName(s.startMonth):null)]   // [1.762]
       ];
       rows=_klInHomeLocRows(rows,s.lessonLocation);   // [1.752]
       if((s.proposalKind==='lateSpring'||s.enrollmentKind==='lateSpring')) h+=_klLsBlockHtml(s,!(isAccepted||isFullyEnrolled)&&!_klPropExpired(s));
@@ -8248,7 +8342,7 @@ function rEnrollment(scopeStudentId){
             '<div style="font-size:15px;font-weight:700;color:var(--bt);margin-bottom:.4rem">'+(_isReturningTenure2?'Welcome Back! What Happens Next':'What Happens Next')+'</div>'+
             (_needsInvoice2
               ?('<p style="font-size:14px;color:var(--bt);margin:0">Only one more step to finish '+esc(firstName)+'&rsquo;s enrollment \u2014 click below to pay the invoice. You\u2019ll sign in with the login info from your proposal acceptance confirmation email.</p>'+
-                '<div style="margin-top:.75rem"><a href="'+publicCfg.schedulingBillingUrl+'" target="_blank" class="btn btn-p btn-sm">Pay Invoice</a></div>')
+                '<div style="margin-top:.75rem"><a href="'+esc(_klBillingUrl())+'" target="_blank" class="btn btn-p btn-sm">Pay Invoice</a></div>')
               :(s.proposalKind==='lateSpring'||s.enrollmentKind==='lateSpring')?('<p style="font-size:14px;color:var(--bt);margin:0">'+esc(KL_LS_COPY.next.replace('{name}',firstName))+'</p>')   // [1.715] row 17
               :('<p style="font-size:14px;color:var(--bt);margin:0">I\u2019ll schedule '+esc(firstName)+'&rsquo;s lessons for the school year and process their enrollment on the admin side using the payment method on file. '+_klBillingSentence(s,firstName)+' Check your email for confirmation and details and let us know if you need any help!</p>'))+
             '</div>';
@@ -8298,7 +8392,7 @@ function rEnrollment(scopeStudentId){
           h+='<div style="border-top:1px solid var(--border);margin-top:1rem;padding-top:1rem">';
           h+='<div style="font-size:11px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem">Scheduling &amp; Billing</div>';
           h+='<p style="font-size:13px;color:var(--text2);margin-bottom:.75rem">Your lesson schedule and billing are managed through your Keylab scheduling and billing account. To check your upcoming lesson schedule, cancel a lesson, view invoices, or update your payment method, visit your scheduling and billing account.</p>';
-          h+='<a href="'+publicCfg.schedulingBillingUrl+'" target="_blank" class="btn btn-p btn-sm" style="display:inline-flex">Scheduling &amp; Billing</a>';
+          h+='<a href="'+esc(_klBillingUrl())+'" target="_blank" class="btn btn-p btn-sm" style="display:inline-flex">Scheduling &amp; Billing</a>';
           h+='<p style="font-size:11px;color:var(--text4);margin-top:.75rem">Keylab uses two systems \u2014 this portal for enrollment, communication, and resources; your scheduling and billing account for your lesson schedule and payments.</p>';
           h+='</div>';
 
@@ -8467,7 +8561,7 @@ function _rPolicyTextBuiltIn(isInHome){
     '<h3>LESSON SCHEDULING</h3><ul>'+
     '<li>Lessons are scheduled weekly in your chosen time slot from the date of your child\'s first lesson through the end of Keylab\'s school year in June, excluding holidays and studio closures</li>'+
     '<li>We generally follow the NYC public school calendar, but our schedule may differ slightly \u2014 please check the <a href="https://keylab.nyc/calendar" target="_blank">Keylab calendar</a> for full details</li>'+
-    '<li>You can view your child\'s full lesson schedule in your <a href="'+publicCfg.schedulingBillingUrl+'" target="_blank">account portal</a></li>'+
+    '<li>You can view your child\'s full lesson schedule in your <a href="'+esc(_klBillingUrl())+'" target="_blank">account portal</a></li>'+
     '<li>Schedule reminders are sent via email and text \u2014 you can adjust notification preferences in your account</li>'+
     '</ul>'+
 
@@ -8492,7 +8586,7 @@ function _rPolicyTextBuiltIn(isInHome){
     '</ul>'+
 
     '<h3>CLIENT CANCELLATIONS &amp; MAKE-UP LESSONS</h3><ul>'+
-    '<li>Clients must cancel lessons directly through the booking system at <a href="'+publicCfg.schedulingBillingUrl+'" target="_blank">your account portal</a></li>'+
+    '<li>Clients must cancel lessons directly through the booking system at <a href="'+esc(_klBillingUrl())+'" target="_blank">your account portal</a></li>'+
     '<li>Keylab does not offer make-up lessons or credits for client-canceled lessons, but if you have to miss a lesson, let us know and we\'ll coordinate with your teacher to provide an assignment for your child</li>'+
     '<li>Courtesy credits may be offered at our discretion for emergencies or special cases, but these are rare and are not guaranteed</li>'+
     '<li>To book a make-up lesson using a courtesy credit, do not email us, and instead click \u201cuse\u201d on the credit to book your make-up online</li>'+

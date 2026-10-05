@@ -1282,6 +1282,23 @@ input[type=checkbox]{width:13px;height:13px;padding:0;margin:0;border:0;border-r
 .guide-tbl{border-collapse:collapse;width:100%;margin:0 0 .7rem;font-size:13.5px}
 .guide-tbl th,.guide-tbl td{border-top:1px solid var(--border);padding:6px;text-align:left;vertical-align:top}
 .guide-tbl th{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--text3)}
+/* [1.770] — the quick-start guide: search, the tab's sections in one row, and
+   each function's name on the left with how to use it on the right */
+.guide-q{display:block;width:100%;box-sizing:border-box;padding:10px 12px;font-size:15px;font-family:inherit;border:1px solid var(--border2);border-radius:var(--r);background:#fff;margin:0 0 .6rem}
+.guide-page .guide-toc{flex-wrap:nowrap;overflow-x:auto;border-bottom:0;padding-bottom:0;margin:0;-webkit-overflow-scrolling:touch}
+.guide-page .guide-toc .btn{flex:0 0 auto;width:auto;min-height:0;padding:7px 12px;font-size:12.5px}
+#guide-body{margin-top:.75rem;border-top:1px solid var(--border)}
+.guide-row{display:grid;grid-template-columns:minmax(0,180px) minmax(0,1fr);gap:2px 16px;padding:.6rem 0;border-bottom:1px solid var(--border)}
+.guide-name{font-weight:700;font-size:13.5px;color:var(--text);overflow-wrap:anywhere}
+.guide-where{display:block;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text4);margin-bottom:1px}
+.guide-how p{margin:0}
+.guide-more-btn{background:none;border:1px solid var(--border2);border-radius:var(--r);padding:1px 7px;font-family:inherit;font-size:11.5px;font-weight:600;color:var(--acc);cursor:pointer;white-space:nowrap;margin-left:2px}
+.guide-more-btn:hover{background:rgba(0,0,0,.06)}
+.guide-more{margin-top:.5rem;padding:.6rem .8rem;background:rgba(255,255,255,.55);border-left:3px solid var(--acc);border-radius:var(--r)}
+.guide-more p{margin:0 0 .5rem}.guide-more ul{margin:0 0 .5rem;padding-left:1.2rem}
+.guide-more > :last-child{margin-bottom:0}
+mark.guide-hit{background:var(--bbg);color:inherit;border-radius:2px;padding:0 1px}
+.guide-none{color:var(--text4);margin-top:.8rem}
 .tt-guide{margin:0 0 1rem}
 /* [1.732] My Students */
 .ms-sm{width:auto;padding:5px 10px;font-size:12px}
@@ -1456,6 +1473,27 @@ input[type=checkbox]{width:13px;height:13px;padding:0;margin:0;border:0;border-r
   .att-x{min-width:44px;min-height:44px}
   .bubble-time{font-size:12.5px;color:var(--text3)}
 }
+/* [1.770] — AC, 5 October 2026: on a phone the tab row ran off the right edge
+   and the Guide tab could not be reached ("yes, fix this"). Below 900 pixels
+   the page is one column no wider than 420 (about 380 inside), and five
+   letter-spaced tabs need about 425 — so it overflowed on every phone and on
+   a portrait tablet too, not only under 560. Here the tabs shrink to fit one
+   row: smaller type, no letter spacing, each tab only as wide as its words.
+   The guide follows the same width: its four section buttons in one row, and
+   a narrower name column so the how-to line keeps its width. Desktop (900 and
+   up) is unchanged. */
+@media(max-width:899px){
+  .tabbar{gap:2px;padding:4px}
+  .tab{flex:1 1 auto;padding:8px 3px;font-size:11px;letter-spacing:0;line-height:1.25}
+  .guide-page{padding:.8rem}
+  .guide-row{grid-template-columns:96px minmax(0,1fr);gap:2px 10px}
+  .guide-name{font-size:13px}
+  .guide-page .guide-toc{gap:4px}
+  .guide-page .guide-toc .btn{flex:1 1 auto;padding:7px 6px;font-size:11.5px;letter-spacing:0}
+}
+/* [1.770] — the smallest phones (320 pixels wide) still fit both rows. */
+@media(max-width:370px){.guide-page .guide-toc .btn{padding:6px 4px;font-size:11px}}
+@media(max-width:350px){.tabbar{gap:1px;padding:3px}.tab{padding:7px 2px;font-size:9.5px}.guide-page .guide-toc .btn{padding:6px 3px;font-size:10.5px}}
 @media (min-width:900px){
   .wrap{max-width:1120px;padding:2rem 2rem 2.5rem}
   .only-lg{display:block}
@@ -2940,121 +2978,187 @@ function rTimerKey(){
 // 4 October; the reply-time sentences and the three guidance lines are his.
 // {{Label}} marks an on-screen label, drawn highlighted so a teacher can find
 // it; every one is the label the tool actually draws.
+// ── [1.770] — a quick-start guide: the function, and how to use it ─────────
+//
+// AC, 5 October 2026: the guide should be "searchable, and laid out with less
+// explanatory text, and more like a helpful quickstart guide. If a teacher
+// wants to learn more, they should be able to click to see the full
+// explanatory text." Its twelve contents buttons were "messy, unorganized, and
+// difficult to sort through", so the sections are the portal's own tabs.
+// And: "No one 'holds' a conversation with admin and with other teachers. They
+// message admin and other teachers."
+//
+// Then, on the mock-up: "there is no need for a 'Guide' section … The buttons
+// are too big on the phone. A nice left to right flow would be better …
+// Reduce words, too many words. Find your Way around doesn't help here. Keep it
+// simple. They know how to use apps. List the function name, tell the teacher
+// how to use. Simple." And: "Teachers can cancel a lesson in Opus. When
+// teachers cancel, they will be prompted to leave a message for the client in
+// Opus during the cancel process."
+//
+// So each row is the function's on-screen name (n) on the left and how to use
+// it (q) on the right, with the full explanation (m) behind Learn more where
+// there is one. AC's own sentences — the colour sentence, the studio promise,
+// what a reply clears, "Asking admin does not stop the reminders" — are carried
+// word for word into the full explanations. k is never shown; it is searched,
+// so a teacher's own words ("vacation", "homework", "undo") find the function.
 var GUIDE_COPY={
   tab:'Guide',
   openBtn:'Open Teacher\u2019s Guide',   // AC, 4 October 2026
   title:'Teacher Guide',
-  contents:'In this guide',
+  searchPh:'Search the guide',
+  more:'Learn more',
+  less:'Show less',
+  noMatch:'No results for \u201c{q}\u201d. For help, message admin from {{Admin & staff}}.',
   absentBanner:'You are on a day off from your record, back [return date].',
+  // AC, 5 October 2026: '"turn on away" is not the function. The function is
+  // "Away Message" and they can turn it on or off.' — then 'Right, "Away / Busy
+  // Message". Use the word "Click" not press. See upcoming trial lessons, not
+  // your next trial lessons. … your choice of wording is clunky and not
+  // professional.' So every row is named for the function as its tab shows it,
+  // in the tab's order, and every line is a plain instruction that starts with
+  // what the teacher does.
   sections:[
-    {h:'Welcome', b:[
-      'This portal is where you message families and the office, keep notes on your students, send practice assignments, and file trial lesson reports. Families use their own portal, called the Family Portal, and see only the conversations they have with you and with admin.',
-      'Everything here is described using the names you see on screen. If something in this guide does not match what you see, please message admin.'
-    ]},
-    {h:'Signing in', b:[
-      'Sign in with your email address and password, then press {{Sign In}}. Tick {{Remember me}} on your own phone or computer so you stay signed in. Leave it unticked on a shared computer.',
-      'Every email the portal sends you has a button that signs you straight in and opens the right conversation. The button works on the first phone or computer you open it on. If you open it somewhere else, you will be asked to sign in.',
-      'If you forget your password, press {{Forgot your password?}} and we will email you a link to set a new one. To sign out, press {{Sign Out}} at the top right.'
-    ]},
-    {h:'The Messages tab', b:[
-      'The list on the left is in this order:',
-      {ul:[
-        '{{New Message}} takes you to the search box. Type a student’s or parent’s name to find their family and start writing.',
-        '{{Scheduled messages}} appears only when you have a message waiting to be sent later.',
-        '{{Messages}} lists every conversation that is waiting on you or still open.',
-        '{{My Students}} lists each of your students and their parents. Press a row to open that family’s conversation.',
-        '{{Admin & staff}} holds your conversation with admin and with other teachers.',
-        '{{My Library}} opens your saved files, links and templates.',
-        '{{Archived Conversations}} holds conversations that have been ended. A family writing again brings the conversation back to {{Messages}}.'
+    {id:'messages', h:'Messages', topics:[
+      {n:'New Message', k:'new compose write start contact find family search parent student',
+       q:'Search for a student or parent by name to start a new message.'},
+      {n:'Send', k:'reply answer respond write back read receipt parents child sibling about',
+       q:'Type your reply in the message box, then click {{Send}}.', m:[
+        'Opening a conversation marks it read. There is nothing to click. The reply clock starts when a message arrives, not when you open it. Reading a message or clicking {{Mark seen}} does not stop its timer. Only your reply does.',
+        'If the family has two parents, select who should receive your reply. If you teach more than one child in the family, use the {{About}} buttons to choose which child the message is about.',
+        'Once the family reads your message, \u201cRead by\u201d appears with their name and the time.'
       ]},
-      {h4:'What the colors mean'},
-      // AC's own sentence (3 September), less "(you'll also receive an automated
-      // reminder)" after "orange at 12 hours": there is no reminder at 12 hours
-      // since [1.755].
-      'The left side of a conversation has a vertical colored strip that shows how long the message has been waiting without a response. Blue - waiting for a reply, amber at the 4 hour mark, orange at 12 hours, Red when past the response deadline. Grey means nothing is waiting on you. The key is shown above the list.',
-      'A solid blue number shows how many messages are waiting for your reply. One reply answers all of them, so read every message before you write back. An outline number shows how many messages you have saved for review.'
-    ]},
-    {h:'Reading and replying', b:[
-      'Opening a conversation marks it read. There is nothing to click. The reply clock starts when a message arrives, not when you open it, and reading a message or pressing {{Mark seen}} does not stop its timer. Only your reply does.',
-      'Type your reply in the box at the bottom and press {{Send}}. If the family has two parents, tick the parents who should receive it. If you teach more than one child in the family, choose which child the message is about using the {{About}} buttons.',
-      'For 10 seconds after sending, before the family reads it, you can press {{Edit}} to change your message or {{Unsend}} to take it back. The family’s email waits for those 10 seconds, so an unsent message never reaches their inbox.',
-      'When a family has read your message, you will see “Read by” with their name and the time.',
-      {h4:'Formatting, files and links'},
-      {ul:[
-        'Press {{Aa}} for bold, italic, underline and lists.',
-        'Press {{Add file}} to attach a file from your device, from your saved files, or from the {{Keylab Master Library}}. You can also drag a file into your message or paste one in. Each file can be up to 10 MB, and you can send up to 10 files in one message. Press {{Accepted file types}} to see which kinds of file work.',
-        'Press {{Add link}}, paste the web address, add the text you want the family to see, and press {{Insert link}}.',
-        'Press {{Templates}} to use a message you have saved, or to save the message you are writing as a new template.'
+      {n:'Edit / Unsend', k:'undo mistake typo delete recall take back change fix',
+       q:'Click {{Edit}} or {{Unsend}} within 10 seconds of sending to change or retract a message.', m:[
+        'This is available until the family reads the message. The family\u2019s email is not sent until those 10 seconds pass, so an unsent message never reaches their inbox.'
+      ]},
+      {n:'Reply by', k:'deadline due response time how fast quickly late weekend friday monday policy rules reply times',
+       q:'Shows when your reply is due, at the top of each conversation. Reply within a few hours, and within 24 hours at most.', m:[
+        // The studio's promise, word for word what admin's key says (check.js holds them together).
+        'Respond to family messages within a few hours, and in 24 hours at most whenever possible. Time sensitive messages should be responded to or sent for admin review asap. Messages sent on Friday before 5pm should be responded to by Saturday 12pm. Messages sent after 5pm on Friday or over the weekend that are not time sensitive should be responded to by Monday 12pm.',
+        'Each new-message email also tells you when to reply:',
+        {table:[
+          ['The message was sent','The email says'],
+          ['Before 12pm, Monday to Friday','Please respond by asap today, or this evening at the latest.'],
+          ['After 12pm, Monday to Friday before 5pm','Please respond this evening or by 12pm tomorrow at the latest.'],
+          ['From 5pm Friday, or over the weekend','Please respond asap if you can, or by 12pm Monday at the latest.']
+        ]}
+      ]},
+      {n:'Message Response Timer Key', k:'color strip blue amber orange red grey gray badge number count overdue late urgent',
+       q:'Explains the colored strip on each conversation, which shows how long a family has been waiting. Red means your reply is past due.', m:[
+        // AC's own sentence (3 September), less "(you'll also receive an automated
+        // reminder)" after "orange at 12 hours": there is no reminder at 12 hours
+        // since [1.755].
+        'The left side of a conversation has a vertical colored strip that shows how long the message has been waiting without a response. Blue - waiting for a reply, amber at the 4 hour mark, orange at 12 hours, Red when past the response deadline. Grey means nothing is waiting on you. The key is shown above the list.',
+        'A solid blue number shows how many messages are waiting for your reply. One reply answers all of them, so read every message before you write back. An outline number shows how many messages you have saved for review.'
+      ]},
+      {n:'Mark seen', k:'acknowledge seen busy later read',
+       q:'Click {{Mark seen}} to let the family know you have read their message and will reply soon. It does not count as a reply.', m:[
+        'The reply clock keeps running. Follow up as soon as you can, especially if the message is time sensitive.'
+      ]},
+      {n:'Save for review', k:'flag bookmark star remember follow up later',
+       q:'Select {{Save for review}} to flag a message to return to. Only you can see the flag.', m:[
+        'Clear the flag when you are done. When you reply to a message, your message queue is cleared, but messages saved for review are not.'
+      ]},
+      {n:'Add file', k:'attachment attach upload photo picture image pdf document video size limit',
+       q:'Click {{Add file}} to attach up to 10 files, 10 MB each. You can also drag and drop or paste files into a message.', m:[
+        'Attach files from your device, your saved files, or the {{Keylab Master Library}}. Click {{Accepted file types}} to see supported formats.'
+      ]},
+      {n:'Add link', k:'url website web address',
+       q:'Click {{Add link}}, paste the web address, enter the text the family will see, and click {{Insert link}}.'},
+      {n:'Aa', k:'format formatting bold italic underline list bullet',
+       q:'Click {{Aa}} to format text with bold, italics, underlining and lists.'},
+      {n:'Templates', k:'saved message reuse quick reply canned',
+       q:'Click {{Templates}} to insert a saved message, or to save the message you are writing as a template.', m:[
+        'You can also create templates in {{My Library}} with {{Create a new template}}.'
+      ]},
+      {n:'Schedule Send', k:'later delay timer future time date schedule scheduled messages',
+       q:'Click {{More}}, then {{Schedule Send}}, and choose a date and time.', m:[
+        'Scheduled messages appear under {{Scheduled messages}}, where you can {{Edit}} them or click {{Cancel Send}}.'
+      ]},
+      {n:'Ask Admin', k:'help question office adrian',
+       q:'Click {{More}}, then {{Ask Admin}}, to message admin about a family. The family cannot see these messages.', m:[
+        'Asking admin does not stop the reminders \u2014 the family is still waiting for an answer.'
+      ]},
+      {n:'End Conversation', k:'archive archived close resolve resolved done finish no reply needed',
+       q:'Click {{More}}, then {{End Conversation}}, to close a resolved conversation. It moves to {{Archived Conversations}}.', m:[
+        'Use it when a conversation is resolved or a message needs no reply. If a reply is still owed, you will be asked to confirm. If you have messages saved for review, you will be asked to clear them first. If the family writes again, the conversation returns to {{Messages}}.'
+      ]},
+      {n:'Admin & staff', k:'office staff colleague teacher adrian help problem broken bug support contact private',
+       q:'Message admin or other teachers, including for help with the portal. Families cannot see these messages.'},
+      {n:'My Library', k:'saved files links tags organize delete remove master library',
+       q:'Store the files, links and templates you use most, ready to add to any message.', m:[
+        {ul:[
+          'Click {{Add files}} or {{Add links}} to add new items.',
+          'Organize items with tags, and use {{Filter by tag}} to find them. {{Studio tags}} are shared across the studio, and {{Custom tags}} are your own.',
+          '{{Remove from my library}} removes a file from your list but keeps it in messages already sent. {{Delete file}} removes it everywhere, including past conversations.'
+        ]}
       ]}
     ]},
-    {h:'How quickly to reply', b:[
-      // The studio's promise, word for word what admin's key says (check.js holds them together).
-      'Respond to family messages within a few hours, and in 24 hours at most whenever possible. Time sensitive messages should be responded to or sent for admin review asap. Messages sent on Friday before 5pm should be responded to by Saturday 12pm. Messages sent after 5pm on Friday or over the weekend that are not time sensitive should be responded to by Monday 12pm.',
-      'Every email about a new family message reminds you when to reply:',
-      {table:[
-        ['The message was sent','The email says'],
-        ['Before 12pm, Monday to Friday','Please respond by asap today, or this evening at the latest.'],
-        ['After 12pm, Monday to Friday before 5pm','Please respond this evening or by 12pm tomorrow at the latest.'],
-        ['From 5pm Friday, or over the weekend','Please respond asap if you can, or by 12pm Monday at the latest.']
+    {id:'students', h:'My Students', topics:[
+      {n:'Last week / Next week', k:'schedule calendar lessons week day closure holiday today',
+       q:'Click {{\u2190 Last week}} or {{Next week \u2192}} to change weeks. Click a lesson to open the student\u2019s card.', m:[
+        'Studio closures and your days off are marked, and trial lessons are labeled {{Trial}}.'
       ]},
-      'If you can’t reply fully straight away, open the message and press {{Mark seen}}. The family is told you have seen their message and will be in touch soon. Then reply properly as soon as you can, especially if the message is time sensitive.',
-      'The {{Reply by}} time at the top of an open conversation shows when the reply is due.',
-      {h4:'The emails you will receive'},
-      {ul:[
-        'A new message email as soon as a family writes, between 9am and 7pm. Messages that arrive after 7pm are saved for the next morning.',
-        'A morning email at 9am, Monday to Saturday, when anything is waiting. It lists every message you have not answered yet.',
-        'A reminder if a message is close to its reply time and still has no reply, and a final notice if the reply time passes. Admin is told about final notices, and both are noted in your conversation with admin.'
+      {n:'Create Assignment', k:'homework practice assignment parents',
+       q:'Send practice notes and materials to parents by message and email.', m:[
+        'Choose the lesson under {{For the lesson on}}, add an optional message, and review the practice list under {{Practice this week}}, which is drawn from that lesson\u2019s activities. Select the materials to include, then click {{Send to}}. Any link or file you add is also saved to {{My Library}}.'
       ]},
-      'No emails are sent between 7pm and 9am, and no reminders are sent on Sundays.'
+      {n:'Notes about [student]', k:'private notes student',
+       q:'Keep private notes on each student. Only you can see them, and they save automatically.'},
+      {n:'Lesson Summary', k:'lesson notes activities materials books resources',
+       q:'Record what you covered under {{Lesson Activities}}, and add books, files and links under {{Materials & Resources}}.'},
+      {n:'Search Lessons', k:'history old previous earlier find',
+       q:'Search past lessons by keyword or date.'},
+      // AC, 5 October 2026 — cancelling happens in Opus, not in this portal.
+      {n:'Cancellations', k:'cancel cancellation cancelling sick makeup make up opus lesson',
+       q:'Cancel lessons in Opus. During cancellation, Opus prompts you to leave a message for the family.'}
     ]},
-    {h:'Tools on each message', b:[
-      {ul:[
-        '{{Mark seen}} lets the family know you have seen their message and will reply soon. It does not count as a reply.',
-        '{{Save for review}} keeps a message marked so you can come back to it. Only you can see this mark. Untick it when you are done. When you reply to a message, your message queue is cleared, but messages saved for review are not.'
+    {id:'trials', h:'Trial Lessons', topics:[
+      {n:'Trial lesson guidelines', k:'rules policy how to run',
+       q:'Review the studio\u2019s guidelines for running trial lessons.'},
+      {n:'Report due', k:'trial report form questions deadline submit',
+       q:'Answer every question and click {{Send report to Adrian}} by 11 AM the day after the lesson.', m:[
+        'Your answers save automatically, so you can return and finish later.'
       ]},
-      'Press {{More}} next to {{Send}} for these three:',
-      {ul:[
-        '{{Schedule Send}} lets you choose a date and time for your message to go out. Scheduled messages are listed under {{Scheduled messages}}, where you can {{Edit}} them or press {{Cancel Send}}.',
-        '{{Ask Admin}} opens your conversation with admin, with the family’s name already filled in. The family does not see this conversation. Asking admin does not stop the reminders \u2014 the family is still waiting for an answer.',
-        '{{End Conversation}} moves the conversation to {{Archived Conversations}}. Use it when the conversation is resolved, or when a message does not need a reply. If a reply is still owed, you will be asked to confirm. If you have messages saved for review, you will be asked to clear them first.'
+      {n:'Upcoming', k:'trial new student summary next',
+       q:'See upcoming trial lessons and the summary admin sent for each.'},
+      {n:'Reports sent', k:'trial report past answers',
+       q:'Click a report to review your answers.'}
+    ]},
+    {id:'settings', h:'Settings', topics:[
+      {n:'Away / Busy Message', k:'away vacation holiday out of office sick busy unavailable auto reply automatic day off days off absence time off return back',
+       q:'Click {{Turn on away}} when you are unavailable, and {{Turn off away}} when you return.', m:[
+        // AC's sentence from the Settings box itself.
+        'When enabled, families, other staff, and admin see this before they compose their message to you. If they send you a message, it also appears in the thread as an auto-generated message.',
+        'You can also turn it on or off from the banner at the top of any tab.',
+        'Days off on your record with the studio are handled automatically. Families see that you are away and when you will return. You receive no morning emails or reminders while away, and reply times resume on the day you return.'
+      ]},
+      {n:'After hours', k:'evening night working hours weekend',
+       q:'Families who message you outside your working hours see the studio\u2019s after-hours note before they write.', m:[
+        'The studio writes this note, and you can read it in {{Settings}}.'
+      ]},
+      // AC, 5 October 2026: "does the guide explain to teachers how notifications
+      // work? … with gated notifications from families in the inbox weekdays 9am,
+      // etc?" — then 'language like "your 9am morning email" mean nothing to the
+      // teacher. They don't know the tool … you need to explain it to them and
+      // help them understand how to use it.' So the emails are named by what
+      // lands in the inbox (their subjects and the button), never by the tool's
+      // own words for them; check.js holds each quoted subject to Code.js.
+      {n:'Email notifications', k:'email notification notify alert inbox reminder morning summary overnight weekend saturday sunday button link sign in',
+       q:'Family messages are emailed to you between 9am and 7pm, and messages sent overnight arrive in one email at 9am. Click the button in any email to open the conversation and reply.', m:[
+        'A family message sent between 9am and 7pm is emailed to you right away, with the subject \u201cNew family message from\u201d and the parent\u2019s name.',
+        'Messages that arrive between 7pm and 9am appear in the portal right away, but no email is sent. At 9am, Monday to Saturday, if any family messages are still unanswered, you receive one email titled \u201cMessages waiting for your reply\u201d that lists them all. There is no Sunday email, so messages that arrive after 7pm on Saturday are included on Monday.',
+        'If your reply is nearly due and you have not answered, you receive a reminder. If it becomes overdue, you receive a final notice, and admin is notified. No emails are sent between 7pm and 9am, and no reminders are sent on Sundays.',
+        'Messages from admin and other teachers are not emailed, so check {{Admin & staff}} on the {{Messages}} tab. Admin may also email you when something is urgent.',
+        'The button in each email signs you in on the first phone or computer you use it on. On any other device, you will be asked to sign in.'
       ]}
-    ]},
-    {h:'When you are away', b:[
-      'If you can’t check messages for a while, press {{Turn on away}} in the banner at the top of any tab, or in {{Settings}}. Families then see the studio’s away message before they write to you, and get it as an automatic reply. Press {{Turn off away}} when you are back.',
-      'You do not need to do anything for days off that are on your record with the studio. On those days families automatically see that you are away and the day you will be back. You get no morning emails or reminders while you are away, and reply times start again on the day you return.',
-      'Outside your teaching hours, families see a note saying you are not working right now. The away and after-hours messages are written by the studio, and you can read them in {{Settings}}.'
-    ]},
-    {h:'Talking to admin and other teachers', b:[
-      'Open {{Admin & staff}} to write to admin or to another teacher. These conversations are private to the people in them, and families never see them. Use {{Ask Admin}} from a family’s conversation when you need help with that family.'
-    ]},
-    {h:'My Students', b:[
-      'The {{My Students}} tab shows your week. Use {{← Last week}} and {{Next week →}} to move between weeks. Days with a studio closure or your own day off are marked.',
-      'Press a lesson to open the student’s card. On the card:',
-      {ul:[
-        '{{Notes about}} the student is for your own notes. Only you can see them, and they save as you type.',
-        '{{Lesson Summary}} has one entry for each lesson. Write what you worked on under {{Lesson Activities}}. Add books, links and files under {{Materials & Resources}} with {{+ Add book, file or link}}.',
-        '{{Search Lessons}} finds past lessons by a word or a date.'
-      ]},
-      {h4:'Sending an assignment'},
-      'Press {{Create Assignment}} on the student’s card. Choose the lesson under {{For the lesson on}}, add a short message if you like, and check the practice list under {{Practice this week}}, which is taken from that lesson’s activities. Tick the materials to include, then press the {{Send to}} button. Parents receive the assignment as a message and an email. A link or file you add is also saved to {{My Library}}.'
-    ]},
-    {h:'My Library', b:[
-      '{{My Library}} keeps the files, links and templates you use often, so you can add them to any message.',
-      {ul:[
-        'Press {{Add files}} or {{Add links}} to save something new.',
-        'Use tags to group things, and {{Filter by tag}} to find them. {{Studio tags}} are shared by the studio, and {{Custom tags}} are your own.',
-        '{{Create a new template}} saves a message you send often. Use it from {{Templates}} when writing.',
-        '{{Remove from my library}} takes a file off your list but leaves it in messages already sent. {{Delete file}} removes it everywhere, including from past conversations.'
-      ]}
-    ]},
-    {h:'Trial Lessons', b:[
-      'The {{Trial Lessons}} tab lists your trial lessons under {{Report due}}, {{Upcoming}} and {{Reports sent}}. After a trial lesson, open it and answer every question in the report. Your answers save as you type, so you can close the report and finish it later. Press {{Send report to Adrian}} when you are done. Reports are due by 11 AM the day after the lesson. Press {{Trial lesson guidelines}} to read how the studio runs trial lessons.'
-    ]},
-    {h:'Getting help', b:[
-      'If something does not work or you are not sure what to do, message admin from {{Admin & staff}}. For a problem with a particular family, use {{Ask Admin}} from that family’s conversation.'
     ]}
   ]
 };
+// Which section is showing, what is typed in the search box, and which rows
+// have their full explanation open. Kept across the 5-second poll's render().
+var GD={sec:'messages',q:'',open:{}};
 // {{Label}} → the label, highlighted. Escaped first, so the guide can only ever
 // add its own <b> around text it already holds.
 function _guideText(t){
@@ -3069,21 +3173,117 @@ function _guideBlock(x){
   }).join('')+'</table>';
   return '';
 }
-function guideJump(i){
-  var el=document.getElementById('guide-sec-'+i);
-  if(el&&el.scrollIntoView){ try{ el.scrollIntoView({block:'start',behavior:'smooth'}); }catch(e){ el.scrollIntoView(true); } }
+// ── Search ────────────────────────────────────────────────────────────────
+// Every word that matters has to be found, at the START of a word ("late"
+// finds "later", never "templates"). Words like "how", "do" and "I" are
+// skipped, so "how do I turn on away" works; a plural finds its singular;
+// curly and straight apostrophes are the same.
+var _GUIDE_SKIP=' a an and are be can do does for from get how i if in is it me my of on or that the this to what when where why will with you your ';
+function _guideNorm(s){ return String(s||'').toLowerCase().replace(/[\u2018\u2019]/g,"'"); }
+function _guideWords(q){
+  return _guideNorm(q).split(/[^a-z0-9']+/).filter(function(w){ return w&&_GUIDE_SKIP.indexOf(' '+w+' ')===-1; })
+    .map(function(w){ return /ies$/.test(w)&&w.length>4 ? w.slice(0,-3)+'y' : (/[^s]s$/.test(w)&&w.length>3 ? w.slice(0,-1) : w); });
 }
+function _guidePlain(x){
+  if(x==null) return '';
+  if(typeof x==='string') return x.replace(/\{\{|\}\}/g,'');
+  if(Array.isArray(x)) return x.map(_guidePlain).join(' ');
+  return _guidePlain(x.h4)+' '+_guidePlain(x.ul)+' '+_guidePlain(x.table);
+}
+function _guideRe(w,flags){
+  return new RegExp('(^|[^a-z0-9])('+w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&').replace(/'/g,"['\u2019]")+')',flags);
+}
+// The words found, marked in the text only — never inside a tag or an entity.
+function _guideHi(html,words){
+  if(!words.length) return html;
+  return html.replace(/(<[^>]*>|&[#\w]+;)|([^<&]+)/g,function(m,tag,txt){
+    if(tag) return tag;
+    words.forEach(function(w){ txt=txt.replace(_guideRe(w,'gi'),'$1\u0001$2\u0002'); });
+    return txt.replace(/\u0001/g,'<mark class="guide-hit">').replace(/\u0002/g,'</mark>');
+  });
+}
+// A row's score: a word in the function's name counts most, then the hidden
+// search words, then the how-to line, then the full explanation. 0 = no match.
+function _guideScore(tp,words){
+  var parts=[_guideNorm(tp.n),_guideNorm(tp.k),_guideNorm(_guidePlain(tp.q)),_guideNorm(_guidePlain(tp.m))];
+  var score=0, deep=false;
+  for(var i=0;i<words.length;i++){
+    var re=_guideRe(words[i],'');
+    if(re.test(parts[0])) score+=4;
+    else if(re.test(parts[1])) score+=3;
+    else if(re.test(parts[2])) score+=2;
+    else if(re.test(parts[3])){ score+=1; deep=true; }
+    else return {score:0};
+  }
+  return {score:score,deep:deep};
+}
+function _guideRow(tp,key,forced,words,label){
+  var G=GUIDE_COPY, has=!!(tp.m&&tp.m.length);
+  var open=has&&(GD.open[key]===undefined?forced:GD.open[key]);
+  return '<div class="guide-row">'+
+    '<div class="guide-name">'+(label?'<span class="guide-where">'+esc(label)+'</span>':'')+_guideHi(esc(tp.n),words)+'</div>'+
+    '<div class="guide-how"><p>'+_guideHi(_guideText(tp.q),words)+
+      (has?' <button type="button" class="guide-more-btn" aria-expanded="'+open+'" onclick="guideMore(\''+key+'\','+(open?1:0)+')">'+
+        esc(open?G.less:G.more)+'</button>':'')+'</p>'+
+      (open?'<div class="guide-more">'+_guideHi(tp.m.map(_guideBlock).join(''),words)+'</div>':'')+
+    '</div>'+
+  '</div>';
+}
+function _guideToc(){
+  var searching=!!_guideWords(GD.q).length;
+  return GUIDE_COPY.sections.map(function(sec){
+    var on=!searching&&GD.sec===sec.id;
+    return '<button type="button" class="btn '+(on?'btn-p':'btn-s')+'" aria-pressed="'+on+'" onclick="guideSection(\''+sec.id+'\')">'+esc(sec.h)+'</button>';
+  }).join('');
+}
+function _guideBody(){
+  var G=GUIDE_COPY, words=_guideWords(GD.q), out='';
+  if(!words.length){
+    var sec=G.sections.filter(function(s){ return s.id===GD.sec; })[0]||G.sections[0];
+    sec.topics.forEach(function(tp,i){ out+=_guideRow(tp,sec.id+'.'+i,false,words,''); });
+    return out;
+  }
+  // Searching: every section, best matches first, each labelled with its tab.
+  var hits=[];
+  G.sections.forEach(function(sec){
+    sec.topics.forEach(function(tp,i){
+      var s=_guideScore(tp,words);
+      if(s.score) hits.push({sec:sec,tp:tp,i:i,score:s.score,deep:s.deep,n:hits.length});
+    });
+  });
+  hits.sort(function(a,b){ return (b.score-a.score)||(a.n-b.n); });
+  hits.forEach(function(h){
+    // A match found only in the full explanation opens it, so it is on screen.
+    out+=_guideRow(h.tp,h.sec.id+'.'+h.i,h.deep,words,h.sec.h);
+  });
+  if(!out){
+    var p=G.noMatch.split('{q}');
+    out='<p class="guide-none">'+_guideText(p[0])+esc(GD.q.trim())+_guideText(p[1]||'')+'</p>';
+  }
+  return out;
+}
+// Typing redraws the section buttons and the rows only — the search box
+// itself is never rebuilt under the teacher's fingers.
+function _guideRedraw(){
+  var t=document.getElementById('guide-toc'), b=document.getElementById('guide-body');
+  if(t) t.innerHTML=_guideToc();
+  if(b) b.innerHTML=_guideBody();
+}
+function guideSearch(v){ GD.q=String(v||''); GD.open={}; _guideRedraw(); }
+function guideSection(id){
+  GD.sec=id; GD.q=''; GD.open={};
+  var s=document.getElementById('guide-q'); if(s) s.value='';
+  _guideRedraw();
+}
+function guideMore(key,wasOpen){ GD.open[key]=!wasOpen; _guideRedraw(); }
 function rGuidePage(){
   var G=GUIDE_COPY;
   return '<div class="card guide-page">'+
     '<h2 class="guide-title">'+esc(G.title)+'</h2>'+
-    '<div class="guide-toc"><div class="guide-toc-h">'+esc(G.contents)+'</div>'+
-      G.sections.map(function(sec,i){
-        return '<button type="button" class="btn btn-s" onclick="guideJump('+i+')">'+esc(sec.h)+'</button>';
-      }).join('')+'</div>'+
-    G.sections.map(function(sec,i){
-      return '<section class="guide-sec" id="guide-sec-'+i+'"><h3>'+esc(sec.h)+'</h3>'+sec.b.map(_guideBlock).join('')+'</section>';
-    }).join('')+
+    '<input type="search" id="guide-q" class="guide-q" placeholder="'+esc(G.searchPh)+'" value="'+esc(GD.q)+'"'+
+      ' autocomplete="off" aria-label="'+esc(G.searchPh)+'" oninput="guideSearch(this.value)">'+
+    '<div class="guide-toc" id="guide-toc">'+_guideToc()+'</div>'+
+    '<div id="guide-body">'+_guideBody()+'</div>'+
   '</div>';
 }
 function rHome(){

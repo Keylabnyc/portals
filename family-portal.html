@@ -2134,42 +2134,42 @@ function rLookup(){
       btn+'</div>'+
       '<p style="font-size:13px;color:var(--text3)">Already have an account? <button type="button" class="lnk-btn" onclick="PAGE=&apos;login&apos;;render()">Sign in here.</button></p>';
   }
-  if(!LK.matches.length){
-    return '<h1>Create Your Account</h1>'+
+  // Checked and not on file. (An address that IS on file never reaches here —
+  // doLookup sends it to sign-in.)
+  return '<h1>Create Your Account</h1>'+
       '<p>We don\'t have that email on file. Click here to create your account and submit your children\'s availability for lessons. We\'ll be in touch within 2 business days with an update.</p>'+
       '<button class="btn btn-p" style="margin-bottom:.75rem" onclick="RF.parent1Email=LK.email;PAGE=&apos;register&apos;;render()">Create Account</button>'+
       '<br><button class="btn btn-p btn-sm" style="margin-top:.4rem" onclick="LK={email:&apos;&apos;,matches:[],done:false};render()">Try a different email</button>';
-  }
-  var cards=LK.matches.map(function(m,i){
-    var child=m.firstChildFirstName?'Child on file: '+esc(m.firstChildFirstName):(m.childCount+' student'+(m.childCount!==1?'s':'')+' on file');
-    return '<div class="card" style="margin-bottom:.6rem">'+
-      '<div style="font-weight:500;margin-bottom:.2rem">'+esc(m.parent1Name)+'</div>'+
-      '<div style="font-size:12px;color:var(--text3);margin-bottom:.75rem">'+child+'</div>'+
-      '<button class="btn btn-p btn-sm" onclick="selectMatch('+i+')">This is my family</button>'+
-      '</div>';
-  }).join('');
-  return '<h1>Is this your family?</h1>'+
-    '<p>We found the following'+(LK.matches.length>1?' records':' record')+' for "'+esc(LK.email)+'":</p>'+
-    cards+
-    '<button class="btn btn-p btn-sm" style="margin-top:.25rem" onclick="PAGE=&apos;register&apos;;render()">This isn\'t me -- start fresh</button>'+
-    '<p style="font-size:12px;color:var(--text4);margin-top:.75rem">If nothing looks right, go ahead and start fresh. You can also email us at <a href="mailto:info@keylab.nyc">info@keylab.nyc</a>.</p>';
 }
 
+// [1.767] — AN ADDRESS ALREADY ON FILE GOES STRAIGHT TO SIGN-IN. This page
+// used to show "Is this your family?" with the parent's name and a child's
+// first name, to anyone who typed a parent's email. AC, 5 October 2026:
+// *"typing a parent's email should show less, only what is needed."* The
+// server now answers found or not found and nothing else, and the sign-in
+// form opens with the address filled in under the message "This is my family"
+// always led to.
+//
+// A lookup that FAILED used to be read as "not on file" and offered Create
+// Account. It says it went wrong now, and the visitor tries again.
 function doLookup(){
   var email=(document.getElementById('lkn')||{}).value||LK.email;
   LK.email=email.trim();
   if(!LK.email){showMsg('Please enter your email address.','e');return;}
   busy=true; render();
   api({action:'familyLookup', data:{email:LK.email}}, function(e,r){
-    busy=false; LK.done=true;
-    LK.matches=(r&&r.found&&r.matches)?r.matches:[];
+    busy=false;
+    if(e||!r||!r.ok){ showMsg((r&&r.error)||'Something went wrong. Please try again.','e'); return; }
+    if(r.found){
+      LF.email=LK.email.toLowerCase(); LF.step='email'; LF.emailNotFound=false;
+      LK={email:'',matches:[],done:false};
+      PAGE='login';
+      showMsg('Great! Sign in below to access your enrollment portal.','s');
+      return;
+    }
+    LK.done=true; LK.matches=[];
     render();
   });
-}
-
-function selectMatch(i){
-  PAGE='login';
-  showMsg('Great! Sign in below to access your enrollment portal.','s');
 }
 
 // ============================================================

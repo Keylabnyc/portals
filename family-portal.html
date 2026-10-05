@@ -571,6 +571,7 @@ button:active:not(:disabled),
 .kl-sup-t{flex:1 1 260px;font-size:13px;line-height:1.45}
 .kl-sup-t b{display:block;font-size:14px;margin-bottom:.15rem}
 .kl-sup-t span{color:var(--text3,#5A5A55)}
+.kl-sup-t span:empty{display:none}
 .kl-sup-b{display:flex;gap:6px;flex-wrap:wrap}
 .kl-sup-body{padding:.25rem 0 .75rem}
 .kl-afterhours{background:#FDECEC;border:1px solid #DC2626;color:#B91C1C;border-radius:8px;
@@ -6446,34 +6447,42 @@ function rHomeOnePage(){
   var _contacts=(HOME_CONVOS.list||[]);
   var _tchs=_contacts.filter(function(c){ return c.teacherId!=='admin' && c.canReply!==false; });
   var _adm=_contacts.filter(function(c){ return c.teacherId==='admin'; })[0];
+  // [1.764] — AC's own wording, 4 October 2026, replacing Claude's ("you wrote
+  // all of your own keylab support language … needs to be rewritten"). Every
+  // heading, sentence and button label below is his; "See [first]'s Full
+  // Schedule" has no sentence by his choice ("no explanation text").
   h+='<div class="card" id="kl-support"><h2>Keylab Support</h2>'+
-    '<p style="font-size:13px;margin-bottom:.5rem">Find what you need to manage your child\u2019s lessons below.</p>'+
     _supRow('Cancel A Lesson',
-      'Cancel a lesson on our scheduling and billing site. It opens in a new tab and has its own sign-in. Your teacher is notified automatically.',
+      'You must cancel lessons directly here so that your teacher is notified.',
       '<a class="btn btn-d btn-sm" href="'+sb+'" target="_blank" rel="noopener">Cancel a Lesson</a>')+
-    _supRow('See All Scheduled Lessons',
-      'See every upcoming lesson on the same site.',
-      '<a class="btn btn-p btn-sm" href="'+sb+'" target="_blank" rel="noopener">See Scheduled Lessons</a>')+
+    _klEnrolled().map(function(st){
+      var f=String(st.studentName||'').trim().split(/\s+/)[0]||'your child';
+      return _supRow('See '+esc(f)+'\u2019s Full Schedule','',
+        '<a class="btn btn-p btn-sm" href="'+sb+'" target="_blank" rel="noopener">See Full Schedule</a>');
+    }).filter(function(x,i,arr){ return arr.indexOf(x)===i; }).join('')+
     _tchs.map(function(c){
       var first=String(c.teacherName||'').trim().split(/\s+/)[0]||'your teacher';
       return _supRow('Message '+esc(c.teacherName||'your teacher'),
-        'Write to '+esc(first)+' about lessons, practice, or if you are running late.',
+        'Contact your teacher for all teaching related matters, including lesson assignments, instrument advice, etc.',
         '<button type="button" class="btn btn-p btn-sm" onclick="_klMessage('+jsq(c.teacherId)+','+jsq(c.teacherName||'')+')">Message '+esc(first)+'</button>');
     }).join('')+
     (_adm ? _supRow('Message Admin',
-      'Write to Admin about scheduling, billing, enrollment or anything else.',
+      'Contact admin for all scheduling, billing, and enrollment matters.',
       '<button type="button" class="btn btn-p btn-sm" onclick="_klMessage(\'admin\','+jsq(_adm.teacherName||'Admin')+')">Message Admin</button>') : '')+
     (_klEnrolled().length ? _supRow('Studio Policies',
-      'Read the studio policies, including cancellations and make-ups, in your child\u2019s enrollment details.',
+      'Read the studio policies for help understanding how to manage your child\u2019s enrollment and lesson schedule.',
       '<button type="button" class="btn btn-p btn-sm" onclick="_klOpenPolicies()">View Policies</button>') : '')+
+    // AC, 4 October: "that actually is a good button the trial lesson button …
+    // that was correct". The sentence is AC's approved wording of 26 August,
+    // verbatim, under his new heading.
     _supRow('Request A Spot For A Sibling',
-      'Book a trial lesson for your child\u2019s brother or sister. The trial lesson will hold the time slot as the intended spot for the school year, and you\u2019ll have two days after the trial to decide if you want to enroll.',
+      'If you want to enroll another child, you can book a trial lesson directly here. The trial lesson will hold the time slot as the intended spot for the school year. You\u2019ll have two days after the trial to decide if you want to enroll or not.',
       '<a class="btn btn-p btn-sm" href="https://keylab.opus1.io/w/kids-trial-lesson" target="_blank" rel="noopener">Book a Trial Lesson</a>')+
-    _supRow('Update Your Contact or Billing Info',
-      'Update your phone number, address or other contact details here. Update your payment details on our scheduling and billing site.',
-      '<button type="button" class="btn btn-p btn-sm" onclick="_supportAccOpen.contactDetails=!_supportAccOpen.contactDetails;render()">'+(_supportAccOpen.contactDetails?'Close Contact Info':'Update Contact Info')+'</button>'+
-      '<a class="btn btn-p btn-sm" href="'+sb+'" target="_blank" rel="noopener">Update Billing Info</a>')+
+    _supRow('Update Your Contact Info','',
+      '<button type="button" class="btn btn-p btn-sm" onclick="_supportAccOpen.contactDetails=!_supportAccOpen.contactDetails;render()">'+(_supportAccOpen.contactDetails?'Close':'Update Contact')+'</button>')+
     (_supportAccOpen.contactDetails ? '<div class="kl-sup-body">'+rHomeContactDetails()+'</div>' : '')+
+    _supRow('Update Your Billing Info','',
+      '<a class="btn btn-p btn-sm" href="'+sb+'" target="_blank" rel="noopener">Update Billing</a>')+
     '<p style="font-size:13px;color:var(--text3);margin:.75rem 0 0">Questions? Email us at <a href="mailto:info@keylab.nyc">info@keylab.nyc</a>.</p>'+
     // "Your enrollment details" removed 26 Aug -- Enrollment Change
     // students now get the same record (and, unlike this old item, the

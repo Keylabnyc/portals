@@ -1327,6 +1327,14 @@ mark.guide-hit{background:var(--bbg);color:inherit;border-radius:2px;padding:0 1
 .ms-lc.old .ms-lc-h{background:var(--acc)}
 .ms-lf{padding:10px 12px}.ms-lf+.ms-lf{border-top:1px solid var(--bg4)}
 .ms-lab{font-size:12px;font-weight:700;color:var(--text2);margin-bottom:4px}
+/* [1.774] — saved lesson notes are read-only until Edit */
+.ms-ro{white-space:pre-wrap;font-size:13px;line-height:1.45;background:#fff;border:1px solid var(--bg4);border-radius:var(--r);padding:7px 9px;min-height:2.2em}
+.ms-ro.ms-empty{color:var(--text4);background:transparent;border-style:dashed}
+.ms-lc-b{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.ms-lc-err{color:var(--red);font-weight:600}
+/* [1.775] — what was done for a lesson, on its row in the week */
+.ms-done{display:block;font-size:11.5px;color:var(--green);margin-top:1px}
+.ms-done.no{color:var(--text4)}
 .ms-lc-f{display:flex;justify-content:space-between;align-items:center;gap:8px;background:var(--bg5);border-top:1px solid var(--bg4);padding:7px 12px;font-size:12px;color:var(--text4)}
 .ms-mat{display:flex;gap:8px;align-items:center;font-size:12.5px;padding:3px 0}
 .ms-k{font-size:10px;font-weight:700;text-transform:uppercase;border-radius:4px;padding:1px 6px;background:#fff;border:1px solid var(--border);color:var(--text3);min-width:34px;text-align:center}
@@ -1357,6 +1365,8 @@ mark.guide-hit{background:var(--bbg);color:inherit;border-radius:2px;padding:0 1
 .tt-btn{width:100%;background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer;text-align:left}
 .tt-meta{font-size:12px;color:var(--text4)}
 .tt-sum{margin-top:.55rem;background:#fff;border:1px solid var(--border);border-radius:var(--r);padding:10px 12px;font-size:13px;white-space:pre-wrap}
+.tt-arch-h{display:block;width:100%;text-align:left;background:none;border:0;padding:10px 0 6px;font:inherit;font-size:13px;font-weight:700;color:var(--text3);cursor:pointer}
+.tt-sent-row{display:flex;align-items:center;gap:8px}.tt-sent-row .tt-btn{flex:1 1 auto;width:auto;min-width:0}   /* [1.773] */
 .tt-pill{display:inline-block;font-size:11px;font-weight:700;padding:1px 8px;border-radius:10px;white-space:nowrap}
 .tt-pill.bad{background:var(--rbg);color:var(--red)}.tt-pill.ok{background:var(--gbg);color:var(--green)}
 .tt-kv{border-collapse:collapse;font-size:13px;margin:.4rem 0 .2rem}.tt-kv th{text-align:left;font-size:11px;color:var(--text4);font-weight:600;padding:3px 12px 3px 0}.tt-kv td{padding:3px 0}
@@ -1367,6 +1377,14 @@ mark.guide-hit{background:var(--bbg);color:inherit;border-radius:2px;padding:0 1
 .tt-a.tt-miss{border:2px solid #DC2626}   /* [1.736] row 2 */
 .tt-a-ro{font-size:13px;white-space:pre-wrap}
 .tt-info{background:var(--bbg);color:var(--bt);border-radius:var(--r);padding:6px 10px;font-size:12px;margin-top:.6rem}
+/* [1.771] — Opus, the source of truth for the schedule: light blue, the tool's
+   colour for information, with buttons rather than text links (AC). */
+.opus-bar{background:var(--bbg);color:var(--bt);border-radius:var(--r);padding:9px 10px;margin:0 0 10px}
+.opus-bar p{margin:0 0 7px;font-size:13px;font-weight:600}
+.opus-btns{display:flex;flex-wrap:wrap;gap:6px;margin-top:.45rem}
+.opus-btns .btn{width:auto;flex:1 1 auto;text-decoration:none}
+.opus-bar .opus-btns{margin-top:0}
+.guide-how .opus-btns .btn{flex:0 0 auto;padding:7px 14px;font-size:12.5px;min-height:0}   /* in a guide row, the size of its words */
 .tt-err{color:var(--red);font-size:12px;font-weight:600;margin-top:.6rem}
 .guide-toggle{background:none;border:0;padding:2px 0;font-family:inherit;font-size:12px;font-weight:600;
   color:var(--acc);cursor:pointer;display:inline-flex;align-items:center;gap:4px}
@@ -3096,23 +3114,30 @@ var GUIDE_COPY={
       ]}
     ]},
     {id:'students', h:'My Students', topics:[
+      // [1.771] — the two Opus buttons at the top of the tab, each drawn in its
+      // row as the real button (AC: "Use buttons not text links").
+      {n:'View My Schedule in Opus', btn:'view', k:'opus schedule calendar lessons source truth latest current',
+       q:'Opus is the source of truth for all lessons. The week on {{My Students}} shows your general schedule only, so check Opus for your current lessons.'},
+      // AC, 5 October 2026 — cancelling happens in Opus, not in this portal.
+      {n:'Cancel a Lesson in Opus', btn:'cancel', k:'cancel cancellation cancelling sick makeup make up opus lesson',
+       q:'Cancel lessons in Opus. During cancellation, Opus prompts you to leave a message for the family.'},
       {n:'Last week / Next week', k:'schedule calendar lessons week day closure holiday today',
        q:'Click {{\u2190 Last week}} or {{Next week \u2192}} to change weeks. Click a lesson to open the student\u2019s card.', m:[
+        // [1.775]
+        'Each lesson up to today shows when lesson notes were added, and when an assignment was sent and to whom.',
         'Studio closures and your days off are marked, and trial lessons are labeled {{Trial}}.'
       ]},
       {n:'Create Assignment', k:'homework practice assignment parents',
        q:'Send practice notes and materials to parents by message and email.', m:[
-        'Choose the lesson under {{For the lesson on}}, add an optional message, and review the practice list under {{Practice this week}}, which is drawn from that lesson\u2019s activities. Select the materials to include, then click {{Send to}}. Any link or file you add is also saved to {{My Library}}.'
+        'Choose the lesson under {{For the lesson on}}, add an optional message, and review the practice list under {{Practice this week}}, which is drawn from that lesson\u2019s notes. Select the materials to include, then click {{Send to}}. Any link or file you add is also saved to {{My Library}}.'
       ]},
       {n:'Notes about [student]', k:'private notes student',
        q:'Keep private notes on each student. Only you can see them, and they save automatically.'},
-      {n:'Lesson Summary', k:'lesson notes activities materials books resources',
-       q:'Record what you covered under {{Lesson Activities}}, and add books, files and links under {{Materials & Resources}}.'},
+      // [1.774] — read-only until Edit; "Lesson Activities" is "Lesson Notes" (AC).
+      {n:'Lesson Summary', k:'lesson notes activities materials books resources edit save',
+       q:'Click {{Edit}} to add or change {{Lesson Notes}} and {{Materials & Resources}}, then click {{Save}}. Nothing changes until you save.'},
       {n:'Search Lessons', k:'history old previous earlier find',
-       q:'Search past lessons by keyword or date.'},
-      // AC, 5 October 2026 — cancelling happens in Opus, not in this portal.
-      {n:'Cancellations', k:'cancel cancellation cancelling sick makeup make up opus lesson',
-       q:'Cancel lessons in Opus. During cancellation, Opus prompts you to leave a message for the family.'}
+       q:'Search past lessons by keyword or date.'}
     ]},
     {id:'trials', h:'Trial Lessons', topics:[
       {n:'Trial lesson guidelines', k:'rules policy how to run',
@@ -3123,8 +3148,11 @@ var GUIDE_COPY={
       ]},
       {n:'Upcoming', k:'trial new student summary next',
        q:'See upcoming trial lessons and the summary admin sent for each.'},
-      {n:'Reports sent', k:'trial report past answers',
-       q:'Click a report to review your answers.'}
+      {n:'Reports sent', k:'trial report past answers archive hide',
+       q:'Click a report to review your answers. Click {{Archive}} to move it to {{Archived}}.'},
+      // [1.773]
+      {n:'Archived', k:'trial report archive restore hide',
+       q:'Click {{Archived}} to see your archived reports. Click {{Restore}} to move one back to {{Reports sent}}.'}
     ]},
     {id:'settings', h:'Settings', topics:[
       {n:'Away / Busy Message', k:'away vacation holiday out of office sick busy unavailable auto reply automatic day off days off absence time off return back',
@@ -3225,6 +3253,7 @@ function _guideRow(tp,key,forced,words,label){
     '<div class="guide-how"><p>'+_guideHi(_guideText(tp.q),words)+
       (has?' <button type="button" class="guide-more-btn" aria-expanded="'+open+'" onclick="guideMore(\''+key+'\','+(open?1:0)+')">'+
         esc(open?G.less:G.more)+'</button>':'')+'</p>'+
+      (tp.btn?'<div class="opus-btns">'+rOpusButton(tp.btn)+'</div>':'')+   // [1.771]
       (open?'<div class="guide-more">'+_guideHi(tp.m.map(_guideBlock).join(''),words)+'</div>':'')+
     '</div>'+
   '</div>';
@@ -3310,6 +3339,7 @@ function rHome(){
   // [1.731] — loaded once per sign-in from here, so every way into the portal
   // (sign-in, a kept session, a password set) gets the tab's count.
   if(TOKEN&&!TT.asked) loadTrials(true);
+  if(TOKEN&&!OPUS.asked) loadOpusUrl();   // [1.771]
   var body = HOME_TAB==='guide' ? rGuidePage()   // [1.759]
            : HOME_TAB==='settings' ? rTeacherSettings()
            : HOME_TAB==='trials' ? rTrialsTab()
@@ -3436,9 +3466,12 @@ var TT_COPY={
   send:'Send report to Adrian',sending:'Sending…',
   autosave:'Your answers save as you type, so you can close this and finish later.',
   saveFail:'Your last answers were not saved. Check your connection.',
-  missing:function(n){return 'Answer every question before sending ('+n+' left).';}   // PLACEHOLDER — AC's wording
+  missing:function(n){return 'Answer every question before sending ('+n+' left).';},   // PLACEHOLDER — AC's wording
+  // [1.773] — AC, 5 October 2026: "Allow teachers to archive trial messages
+  // that have reports that have been sent to admin". PLACEHOLDER wording.
+  archive:'Archive',restore:'Restore',archivedH:'Archived'
 };
-var TT={asked:false,loading:false,data:null,guideOpen:false,ans:{},timer:{},sending:{},err:{},open:{},miss:{}};
+var TT={showArch:false,asked:false,loading:false,data:null,guideOpen:false,ans:{},timer:{},sending:{},err:{},open:{},miss:{}};
 function loadTrials(quiet){
   TT.asked=true;if(!quiet)TT.loading=true;
   api({action:'teacherTrials',data:{teacherToken:TOKEN}},function(e,r){
@@ -3484,7 +3517,8 @@ function rTrialsTab(){
     esc(TT.guideOpen?TT_COPY.guideClose:TT_COPY.guide)+'</button>'+
     (TT.guideOpen?'<div class="tt-guide-body">'+_ttGuideHTML(d.guidelines)+'</div>':'')+'</div>';
   var due=(d.taught||[]).filter(function(t){return !t.submittedAt;});
-  var done=(d.taught||[]).filter(function(t){return t.submittedAt;});
+  var done=(d.taught||[]).filter(function(t){return t.submittedAt&&!t.teacherArchivedAt;});
+  var arch=(d.taught||[]).filter(function(t){return t.submittedAt&&t.teacherArchivedAt;});   // [1.773]
   if(!(d.upcoming||[]).length&&!due.length&&!done.length)h+='<div class="empty-state">'+esc(TT_COPY.none)+'</div>';
   if(due.length){
     h+='<h2>'+esc(TT_COPY.due)+'</h2>';
@@ -3500,15 +3534,34 @@ function rTrialsTab(){
   }
   if(done.length){
     h+='<h2>'+esc(TT_COPY.sent)+'</h2>';
-    done.forEach(function(t){
-      var on=!!TT.open[t.key];
-      h+='<div class="card tt-card"><button type="button" class="tt-row tt-btn" onclick="ttToggle('+jsq(t.key)+')">'+
-        '<span><span class="caret">'+(on?'▾':'▸')+'</span> <b>'+esc(_nameAge(t.studentName,t.age))+'</b></span>'+
-        '<span class="tt-pill ok">'+esc(TT_COPY.sentOn(_ttWhen(t.submittedAt)))+'</span></button>'+
-        (on?_ttAnswersHTML(t):'')+'</div>';
-    });
+    done.forEach(function(t){h+=_ttSentCard(t,false);});
+  }
+  // [1.773] — archived reports, closed until asked for, still readable and
+  // one click from coming back.
+  if(arch.length){
+    h+='<button type="button" class="tt-arch-h" onclick="TT.showArch=!TT.showArch;render()"><span class="caret">'+(TT.showArch?'▾':'▸')+'</span> '+
+      esc(TT_COPY.archivedH)+' ('+arch.length+')</button>';
+    if(TT.showArch)arch.forEach(function(t){h+=_ttSentCard(t,true);});
   }
   return h;
+}
+function _ttSentCard(t,archived){
+  var on=!!TT.open[t.key];
+  return '<div class="card tt-card"><div class="tt-sent-row"><button type="button" class="tt-row tt-btn" onclick="ttToggle('+jsq(t.key)+')">'+
+    '<span><span class="caret">'+(on?'▾':'▸')+'</span> <b>'+esc(_nameAge(t.studentName,t.age))+'</b></span>'+
+    '<span class="tt-pill ok">'+esc(TT_COPY.sentOn(_ttWhen(t.submittedAt)))+'</span></button>'+
+    '<button type="button" class="btn btn-s ms-sm" onclick="ttArchive('+jsq(t.key)+','+(archived?'false':'true')+')">'+esc(archived?TT_COPY.restore:TT_COPY.archive)+'</button></div>'+
+    (on?_ttAnswersHTML(t):'')+'</div>';
+}
+// [1.773] — moved at once, and put back if the server says no.
+function ttArchive(k,on){
+  var t=((TT.data&&TT.data.taught)||[]).filter(function(x){return x.key===k;})[0];if(!t)return;
+  var was=t.teacherArchivedAt||'';
+  t.teacherArchivedAt=on?(was||'now'):'';TT.open[k]=false;render();
+  api({action:'teacherArchiveTrial',data:{teacherToken:TOKEN,key:k,archived:!!on}},function(e,r){
+    if(e||!r||!r.ok){t.teacherArchivedAt=was;showMsg((r&&r.error)||TT_COPY.saveFail,'e');render();return;}
+    t.teacherArchivedAt=r.teacherArchivedAt||'';render();
+  });
 }
 function ttToggle(k){TT.open[k]=!TT.open[k];render();}
 function _ttPill(t){
@@ -3613,7 +3666,7 @@ var MS_COPY={
   noLessons:'No lessons',trial:'Trial',back:'← Back to the week',
   notesAbout:function(f){return 'Notes about '+f;},onlyYou:'Only you see these',
   summary:'Lesson Summary',summaryHint:'One for each lesson',
-  activities:'Lesson Activities',materials:'Materials & Resources',
+  activities:'Lesson Notes',materials:'Materials & Resources',   // [1.774] — AC: 'Change lesson activities to lesson notes'
   addMat:'+ Add book, file or link',book:'Book',link:'Link',file:'File',
   bookPh:'Title, page',linkLabelPh:'What it is',linkUrlPh:'https://…',pickFile:'Choose from My Library',uploadFile:'Or upload a file',
   add:'Add',cancel:'Cancel',remove:'Remove',
@@ -3622,13 +3675,62 @@ var MS_COPY={
   openAll:'Open all',closeAll:'Close all',open:'Open',close:'Close',noMatch:'No lessons match.',
   trialH:function(d){return 'Trial lesson — '+d;},trialSummary:'Summary you were sent',trialReport:'Your report',
   asgH:function(f){return 'Assignment for '+f;},to:'To',forLesson:'For the lesson on',message:'Message',
-  messagePh:'A line to the family (optional)',practice:'Practice this week',practiceHint:'Taken from Lesson Activities. Editing here does not change your note.',
+  messagePh:'A line to the family (optional)',practice:'Practice this week',practiceHint:'Taken from Lesson Notes. Editing here does not change your note.',
   mats:'Materials',inLib:'In My Library',willAdd:'Will be added to My Library',
   libNote:'A link or file you add here is saved to My Library and put in the message.',
   addFileLink:'+ Add a file or link',send:function(n){return 'Send to '+n;},sending:'Sending…',sent:'Sent',
-  saved:'Saved',saveFail:'Not saved. Check your connection.'
+  saved:'Saved',saveFail:'Not saved. Check your connection.',
+  // [1.774] — AC, 5 October 2026: "a read-only state and an edit and save
+  // function to make sure that teachers don't accidentally overwrite lesson
+  // notes when reviewing". PLACEHOLDER wording for AC except Edit and Save.
+  edit:'Edit',save:'Save',saving:'Saving\u2026',noNotes:'No lesson notes yet.',
+  // [1.775] — AC: "lesson notes added and the date. Lesson assignment sent who
+  // it was sent to and the date." The two "no" lines are the resting state.
+  notesAdded:function(w){return 'Lesson notes added '+w;},noNotesRow:'No lesson notes yet',
+  sentTo:function(who,w){return 'Assignment sent'+(who?' to '+who:'')+', '+w;},noAsg:'No assignment sent'
 };
-var MS={asked:false,loading:false,week:null,weekStart:'',card:null,cardStu:'',cardDate:'',cardTime:'',cardLoading:false,
+// ── [1.771] — Opus, one click away ────────────────────────────────────────
+//
+// AC, 5 October 2026: "Please put buttons for Opus so that teachers can use them
+// to cancel lessons or to check their schedule and opus. It's also important to
+// let teachers know that Opus is the source of Truth for current schedule" —
+// and "Use buttons not text links".
+//
+// The week on this tab is drawn from the studio's own records, and Opus is where
+// a lesson is actually scheduled and cancelled, so the tab says which one wins
+// and puts Opus a click away. The address is the one Settings keeps for the
+// studio's Opus login (Scheduling & Billing URL — the same login families use),
+// read once with no sign-in from getPublicConfig; until it answers, or if
+// Settings is blank, the studio's login page, which is the family page's own
+// fallback. Both buttons open the same page in a new tab: Opus has no address
+// for "cancel" or "schedule" that this tool knows of, and inventing one would
+// send teachers to a page that does not exist.
+// AC, the same afternoon, on the week: "it's important that teachers know that
+// Opus is the source of Truth for all lessons and that this is just a list of
+// their general schedule".
+var OPUS_COPY={
+  truth:'Opus is the source of truth for all lessons. This list shows your general schedule only.',
+  view:'View My Schedule in Opus',
+  cancel:'Cancel a Lesson in Opus'
+};
+var OPUS={url:'',asked:false};
+function _opusHref(){
+  return OPUS.url||'https://keylab.opus1.io/login';
+}
+function loadOpusUrl(){
+  OPUS.asked=true;
+  api({action:'getPublicConfig',data:{}},function(e,r){
+    var u=(!e&&r&&r.ok&&/^https:\/\//.test(String(r.schedulingBillingUrl||'')))?String(r.schedulingBillingUrl):'';
+    if(u&&u!==OPUS.url){ OPUS.url=u; render(); }
+  });
+}
+function rOpusButton(kind){
+  return '<a class="btn btn-s" href="'+esc(_opusHref())+'" target="_blank" rel="noopener">'+esc(kind==='cancel'?OPUS_COPY.cancel:OPUS_COPY.view)+'</a>';
+}
+function rOpusBar(){
+  return '<div class="opus-bar"><p>'+esc(OPUS_COPY.truth)+'</p><div class="opus-btns">'+rOpusButton('view')+rOpusButton('cancel')+'</div></div>';
+}
+var MS={edits:{},asked:false,loading:false,week:null,weekStart:'',card:null,cardStu:'',cardDate:'',cardTime:'',cardLoading:false,
   open:{},trialOpen:{},q:'',qDate:'',note:null,lesson:{},timer:{},st:'',adding:null,asg:null,lib:null,busy:false,err:''};
 var _MS_MO=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 var _MS_DAY=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
@@ -3649,7 +3751,8 @@ function msWeekNav(n){loadWeek(_msAdd(MS.weekStart,7*n));}
 function rMyStudents(){
   if(MS.cardStu)return rMsCard();
   if(!MS.week)return '<div class="empty-state">'+(MS.loading?'<span class="spin">↻</span>':'')+'</div>';
-  var w=MS.week,h='<div class="ms-nav"><button type="button" class="btn btn-s ms-sm" onclick="msWeekNav(-1)">'+esc(MS_COPY.lastWeek)+'</button>'+
+  var w=MS.week,h=rOpusBar()+   // [1.771]
+    '<div class="ms-nav"><button type="button" class="btn btn-s ms-sm" onclick="msWeekNav(-1)">'+esc(MS_COPY.lastWeek)+'</button>'+
     '<b>'+esc(_msShort(w.weekStart)+' – '+_msShort(_msAdd(w.weekStart,6)))+'</b>'+
     '<button type="button" class="btn btn-s ms-sm" onclick="msWeekNav(1)">'+esc(MS_COPY.nextWeek)+'</button></div>';
   var shown=0;
@@ -3665,18 +3768,31 @@ function rMyStudents(){
       h+='<button type="button" class="ms-row" onclick="msOpen('+jsq(l.studentId)+',\''+d.date+'\','+jsq(l.time)+')">'+
         '<span class="ms-t">'+esc(String(l.time||'').replace(/\s*[AP]M$/i,''))+'</span><span><b>'+esc(_nameAge(l.studentName,l.age))+'</b>'+
         (l.trial?' <span class="tt-pill bad">'+esc(MS_COPY.trial)+'</span>':'')+
-        '<span class="ms-s">'+esc([l.instrument,l.duration?l.duration+' min':'',l.room].filter(Boolean).join(' · '))+'</span></span></button>';
+        '<span class="ms-s">'+esc([l.instrument,l.duration?l.duration+' min':'',l.room].filter(Boolean).join(' · '))+'</span>'+
+        _msDoneLines(l.done)+'</span></button>';
     });
     h+='</div>';
   });
   if(!shown)h+='<div class="empty-state">'+esc(MS_COPY.noLessons)+'</div>';
   return h;
 }
+// [1.775] — on a lesson up to today: when its notes were added, and each
+// assignment sent for it, to whom and when. Nothing on a lesson still to come.
+function _msNames(a){a=(a||[]).filter(Boolean);return a.length<3?a.join(' and '):a.slice(0,-1).join(', ')+' and '+a[a.length-1];}
+function _msDoneLines(dn){
+  if(!dn)return '';
+  var h=dn.notesOn?'<span class="ms-done">'+esc(MS_COPY.notesAdded(_msShort(dn.notesOn)))+'</span>'
+                  :'<span class="ms-done no">'+esc(MS_COPY.noNotesRow)+'</span>';
+  var sent=dn.sent||[];
+  h+=sent.length?sent.map(function(x){return '<span class="ms-done">'+esc(MS_COPY.sentTo(_msNames(x.to),_msShort(x.on)))+'</span>';}).join('')
+                :'<span class="ms-done no">'+esc(MS_COPY.noAsg)+'</span>';
+  return h;
+}
 function msOpen(stuId,date,time){
   MS.cardStu=stuId;MS.cardDate=date;MS.cardTime=time||'';MS.card=null;MS.note=null;MS.lesson={};MS.open={};MS.q='';MS.qDate='';MS.asg=null;MS.adding=null;MS.st='';
   render();window.scrollTo(0,0);_msLoadCard();
 }
-function msBack(){MS.cardStu='';MS.card=null;MS.asg=null;render();}
+function msBack(){MS.cardStu='';MS.card=null;MS.asg=null;render();if(MS.weekStart)loadWeek(MS.weekStart);}   // [1.775] — the row's lines, current
 function _msLoadCard(){
   MS.cardLoading=true;
   api({action:'teacherStudentCard',data:{teacherToken:TOKEN,studentId:MS.cardStu}},function(e,r){
@@ -3747,19 +3863,71 @@ function _msReport(a,qs){
   return qs.map(function(sec,si){return '<div class="tt-sec">'+esc(sec.h)+'</div>'+sec.q.map(function(q,qi){
     return '<div class="tt-q">'+esc(q)+'</div><div class="tt-a-ro">'+esc(a[si+'.'+qi]||'—')+'</div>';}).join('');}).join('');
 }
+// [1.774] — AC, 5 October 2026: "a read-only state and an edit and save
+// function to make sure that teachers don't accidentally overwrite lesson notes
+// when reviewing". A lesson's notes and materials are shown as they were saved;
+// Edit opens a copy, and nothing reaches the server until Save. Cancel throws
+// the copy away. The copy is kept per student and lesson for the session, so
+// leaving the card and coming back finds the words where they were left.
+function _msEditKey(d){return MS.cardStu+'|'+d;}
 function _msLessonCard(d,current){
   var l=_msLes(d),n=_msNoteOf(d),sent=(n&&n.sent)||[],today=MS.card&&d===MS.card.today;
-  var id=d.replace(/-/g,'');
+  var id=d.replace(/-/g,''),ed=MS.edits[_msEditKey(d)];
   var h='<div class="ms-lc'+(current?'':' old')+'"><div class="ms-lc-h"><span>'+esc((today?MS_COPY.today+' · ':'')+_msLong(d)+(l.lessonTime?' · '+l.lessonTime:''))+'</span>'+
-    (current?'':'<button type="button" class="ms-oc-b light" onclick="msToggle(\''+d+'\')">'+esc(MS_COPY.close)+'</button>')+'</div>'+
-    '<div class="ms-lf"><div class="ms-lab">'+esc(MS_COPY.activities)+'</div>'+
-    '<textarea id="ms-act-'+id+'" class="tt-a" rows="3" oninput="msActInput(\''+d+'\',this.value)">'+esc(l.activities||'')+'</textarea></div>'+
-    '<div class="ms-lf"><div class="ms-lab">'+esc(MS_COPY.materials)+'</div>'+
-    (l.materials||[]).map(function(m,i){return _msMatRow(m,'<button type="button" class="ms-x" title="'+esc(MS_COPY.remove)+'" onclick="msMatRemove(\''+d+'\','+i+')">✕</button>');}).join('')+
-    _msAddUI('les:'+d)+'</div>'+
+    (current?'':'<button type="button" class="ms-oc-b light" onclick="msToggle(\''+d+'\')">'+esc(MS_COPY.close)+'</button>')+'</div>';
+  if(ed){
+    h+='<div class="ms-lf"><div class="ms-lab">'+esc(MS_COPY.activities)+'</div>'+
+      '<textarea id="ms-act-'+id+'" class="tt-a" rows="4" oninput="msEditInput(\''+d+'\',this.value)"'+(ed.busy?' disabled':'')+'>'+esc(ed.activities||'')+'</textarea></div>'+
+      '<div class="ms-lf"><div class="ms-lab">'+esc(MS_COPY.materials)+'</div>'+
+      (ed.materials||[]).map(function(m,i){return _msMatRow(m,'<button type="button" class="ms-x" title="'+esc(MS_COPY.remove)+'" onclick="msMatRemove(\''+d+'\','+i+')">✕</button>');}).join('')+
+      _msAddUI('les:'+d)+'</div>'+
+      '<div class="ms-lc-f"><span class="ms-lc-err">'+esc(ed.err||'')+'</span><span class="ms-lc-b">'+
+      '<button type="button" class="btn btn-s ms-sm" onclick="msEditCancel(\''+d+'\')"'+(ed.busy?' disabled':'')+'>'+esc(MS_COPY.cancel)+'</button>'+
+      '<button type="button" class="btn btn-p ms-sm" onclick="msEditSave(\''+d+'\')"'+(ed.busy?' disabled':'')+'>'+esc(ed.busy?MS_COPY.saving:MS_COPY.save)+'</button></span></div>';
+  }else{
+  h+='<div class="ms-lf"><div class="ms-lab">'+esc(MS_COPY.activities)+'</div>'+
+    (String(l.activities||'').trim()?'<div class="ms-ro">'+esc(l.activities)+'</div>':'<div class="ms-ro ms-empty">'+esc(MS_COPY.noNotes)+'</div>')+'</div>'+
+    ((l.materials||[]).length?'<div class="ms-lf"><div class="ms-lab">'+esc(MS_COPY.materials)+'</div>'+
+      l.materials.map(function(m){return _msMatRow(m,'');}).join('')+'</div>':'')+
     '<div class="ms-lc-f"><span>'+esc(sent.length?sent.map(function(x){return MS_COPY.sentOn(_msShort(_msYmdOf(x.sentAt||x.sendAt)));}).join(' · '):MS_COPY.notSent)+'</span>'+
-    '<button type="button" class="btn btn-p ms-sm" onclick="msAsgOpen(\''+d+'\')">'+esc(MS_COPY.create)+'</button></div></div>';
-  return h;
+    '<span class="ms-lc-b"><button type="button" class="btn btn-s ms-sm" onclick="msEdit(\''+d+'\')">'+esc(MS_COPY.edit)+'</button>'+
+    '<button type="button" class="btn btn-p ms-sm" onclick="msAsgOpen(\''+d+'\')">'+esc(MS_COPY.create)+'</button></span></div>';
+  }
+  return h+'</div>';
+}
+function msEdit(d){
+  var l=_msLes(d);
+  MS.edits[_msEditKey(d)]={activities:l.activities||'',materials:(l.materials||[]).slice(),busy:false,err:''};
+  render();
+  // The cursor goes into the notes, after the last word, ready to add to them.
+  setTimeout(function(){
+    var t=document.getElementById('ms-act-'+d.replace(/-/g,''));if(!t)return;
+    _focusNoScroll(t);try{var n=t.value.length;t.setSelectionRange(n,n);}catch(e){}
+  },30);
+}
+// Typing never redraws; the words wait in the copy until Save.
+function msEditInput(d,v){
+  var ed=MS.edits[_msEditKey(d)];if(ed)ed.activities=v;
+}
+function msEditCancel(d){
+  delete MS.edits[_msEditKey(d)];
+  if(MS.adding&&MS.adding.target==='les:'+d)MS.adding=null;
+  render();
+}
+function msEditSave(d){
+  var k=_msEditKey(d),ed=MS.edits[k],l=_msLes(d);if(!ed||ed.busy)return;
+  ed.busy=true;ed.err='';render();
+  api({action:'teacherSaveLessonNote',data:{teacherToken:TOKEN,studentId:MS.cardStu,lessonDate:d,lessonTime:l.lessonTime||'',activities:ed.activities||'',materials:ed.materials||[]}},function(e,r){
+    if(e||!r||!r.ok){ed.busy=false;ed.err=(r&&r.error)||MS_COPY.saveFail;render();return;}
+    l.activities=ed.activities;l.materials=ed.materials.slice();
+    var n=_msNoteOf(d);
+    if(n){n.activities=l.activities;n.materials=l.materials.slice();}
+    else if(MS.card){MS.card.notes.push({lessonDate:d,lessonTime:l.lessonTime||'',activities:l.activities,materials:l.materials.slice(),sent:[]});
+      MS.card.notes.sort(function(x,y){return x.lessonDate<y.lessonDate?1:-1;});}
+    delete MS.edits[k];
+    if(MS.adding&&MS.adding.target==='les:'+d)MS.adding=null;
+    showMsg(MS_COPY.saved,'s');render();
+  });
 }
 function _msYmdOf(ms){return _nyYmdOf(Number(ms)||0);}   // [1.762] — the New York day it was sent
 function _msMatRow(m,tail,head){
@@ -3802,7 +3970,7 @@ function msAddDo(){
   var val=function(id){var el=document.getElementById(id);return el?String(el.value||'').trim():'';};
   var done=function(m){
     if(a.target==='asg'){MS.asg.mats.push(Object.assign({on:true},m));}
-    else{var d=a.target.slice(4);_msLes(d).materials.push(m);_msSaveLesson(d);}
+    else{var ed=MS.edits[_msEditKey(a.target.slice(4))];if(ed)ed.materials.push(m);}   // [1.774] — the copy, until Save
     MS.adding=null;render();
   };
   if(a.kind==='book'){var b=val('ms-add-label');if(!b)return;done({kind:'book',label:b});return;}
@@ -3829,7 +3997,7 @@ function msAddDo(){
   };
   reader.readAsDataURL(file);
 }
-function msMatRemove(d,i){_msLes(d).materials.splice(i,1);_msSaveLesson(d);render();}
+function msMatRemove(d,i){var ed=MS.edits[_msEditKey(d)];if(!ed)return;ed.materials.splice(i,1);render();}   // [1.774] — the copy, until Save
 // Typing never redraws; the words go to the server a moment after typing stops.
 function msNoteInput(v){
   MS.note=v;clearTimeout(MS.timer._note);
@@ -3838,19 +4006,6 @@ function msNoteInput(v){
       var st=(e||!r||!r.ok)?MS_COPY.saveFail:MS_COPY.saved;if(st!==MS.st){MS.st=st;render();}
     });
   },900);
-}
-function msActInput(d,v){
-  _msLes(d).activities=v;clearTimeout(MS.timer[d]);
-  MS.timer[d]=setTimeout(function(){_msSaveLesson(d);},900);
-}
-function _msSaveLesson(d){
-  var l=_msLes(d);clearTimeout(MS.timer[d]);
-  api({action:'teacherSaveLessonNote',data:{teacherToken:TOKEN,studentId:MS.cardStu,lessonDate:d,lessonTime:l.lessonTime||'',activities:l.activities||'',materials:l.materials||[]}},function(e,r){
-    MS.timer[d]=null;
-    if(e||!r||!r.ok){showMsg((r&&r.error)||MS_COPY.saveFail,'e');return;}
-    if(MS.card&&!_msNoteOf(d)){MS.card.notes.push({lessonDate:d,lessonTime:l.lessonTime||'',activities:l.activities,materials:l.materials,sent:[]});
-      MS.card.notes.sort(function(x,y){return x.lessonDate<y.lessonDate?1:-1;});}
-  });
 }
 function msToggle(d){MS.open[d]=!MS.open[d];render();}
 function msOpenAll(on){(MS.card&&MS.card.notes||[]).forEach(function(n){MS.open[n.lessonDate]=!!on;});render();}
@@ -15237,7 +15392,7 @@ function doSignOut(){
   LIB_MINE=[]; LIB_SHELF_STUDIO=[]; LIB_TAGS=[]; _libLoaded=false; _libInFlight=false;
   if(_pollTimer){ clearTimeout(_pollTimer); _pollTimer=null; }
   TT={asked:false,loading:false,data:null,guideOpen:false,ans:{},timer:{},sending:{},err:{},open:{},miss:{}};   // [1.731]
-  MS={asked:false,loading:false,week:null,weekStart:'',card:null,cardStu:'',cardDate:'',cardTime:'',cardLoading:false,
+  MS={edits:{},asked:false,loading:false,week:null,weekStart:'',card:null,cardStu:'',cardDate:'',cardTime:'',cardLoading:false,
     open:{},trialOpen:{},q:'',qDate:'',note:null,lesson:{},timer:{},st:'',adding:null,asg:null,lib:null,busy:false,err:''};   // [1.732]
   TOKEN=''; TEACHER_ID=''; TEACHER_NAME='';
   LF={email:'', password:'', remember:true};

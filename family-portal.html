@@ -574,6 +574,9 @@ button:active:not(:disabled),
 .kl-sup-t span:empty{display:none}
 .kl-sup-b{display:flex;gap:6px;flex-wrap:wrap}
 .kl-sup-body{padding:.25rem 0 .75rem}
+/* [1.772] — the Schedule header's red Cancel a Lesson button, inside a notice:
+   the notice's own link colour and underline must not reach it. */
+.kl-cancel-btn,.kl-away a.kl-cancel-btn,.kl-afterhours a.kl-cancel-btn{margin:2px 2px;text-transform:none;letter-spacing:normal;text-decoration:none;font-style:normal;vertical-align:middle;color:var(--rt)}
 .kl-afterhours{background:#FDECEC;border:1px solid #DC2626;color:#B91C1C;border-radius:8px;
   padding:9px 11px;font-size:12px;line-height:1.45;margin-bottom:.6rem;white-space:pre-wrap}
 .kl-away a,.kl-afterhours a{color:#B91C1C;text-decoration:underline;font-weight:600}
@@ -932,6 +935,25 @@ function _klLinkify(escaped){
     if(!/\//.test(m) && !/^https?:/i.test(m) && !/^www\./i.test(m)) return m+tail;   // "e.g." or a bare name is not a link
     var href=/^https?:\/\//i.test(m)?m:'https://'+m;
     return '<a href="'+href+'" target="_blank" rel="noopener">'+m+'</a>'+tail;
+  });
+}
+// [1.772] — AC, 5 October 2026: "In teacher away and after hours messages seen
+// by parents, can you put a cancel lesson button instead of the opus text link?"
+// So the studio's Opus address in those notices — and in the away auto-reply
+// in the conversation — is the same red Cancel a Lesson button the Schedule
+// header has ([1.756]), in the place the address was; any other address stays
+// a link. "The studio's Opus address" is its login page: Settings' Scheduling &
+// Billing address, or any *.opus1.io with no path or /login. A trial-booking
+// page (/w/…) is not a cancel page and keeps its link.
+function _klIsCancelUrl(href){
+  var u=String(href||'').replace(/\/+$/,'');
+  return u===String(_klBillingUrl()).replace(/\/+$/,'') || /^https:\/\/[a-z0-9-]+\.opus1\.io(\/login)?$/i.test(u);
+}
+function _klNoticeHtml(escaped){
+  return _klLinkify(escaped).replace(/<a href="([^"]+)" target="_blank" rel="noopener">[^<]*<\/a>/g,function(m,href){
+    return _klIsCancelUrl(href)
+      ? '<a class="btn btn-d btn-sm kl-cancel-btn" href="'+href+'" target="_blank" rel="noopener">Cancel a Lesson</a>'
+      : m;
   });
 }
 function _afterHoursCopy(teacherName){
@@ -3290,13 +3312,13 @@ function rHomeThreadView(){
   // "available" state — a green badge on a parent's screen would read as a
   // promise of an immediate reply (AC, 1 Sept: families get no status banner).
   if(c.teacherAway && c.teacherAwayMessage){
-    h+='<div class="kl-away">'+_klLinkify(esc(c.teacherAwayMessage))+'</div>';
+    h+='<div class="kl-away">'+_klNoticeHtml(esc(c.teacherAwayMessage))+'</div>';   // [1.772]
   }
   // BACKLOG 1.132 — the after-hours line moves with it, for the same reason
   // and to the same place: two notices about the same thing must not end up
   // on opposite sides of the box.
   if(c.teacherAfterHours && !c.teacherAway){
-    h+='<div class="kl-afterhours">'+_klLinkify(esc(c.teacherAfterHoursMessage||_afterHoursCopy(c.teacherName)))+'</div>';
+    h+='<div class="kl-afterhours">'+_klNoticeHtml(esc(c.teacherAfterHoursMessage||_afterHoursCopy(c.teacherName)))+'</div>';   // [1.772]
   }
   return h;
 }
@@ -4620,15 +4642,17 @@ var KL_LINK_CLAIMED='This link has already been used on another device. Please l
 var KL_LINK_EXPIRED='This link has expired. Please log in.';
 var KL_NOTE_LABEL_SEEN='System Message:';
 var KL_NOTE_LABEL_AUTO='auto-reply:';
-function _rKlNote(label, at, text){
+function _rKlNote(label, at, text, html){
   return '<div class="kl-note">'+
     '<div class="kl-note-head">'+esc(fmtMsgTime(at))+'</div>'+
     '<div class="kl-note-body"><span class="kl-note-label">'+esc(label)+'</span>'+
-      esc(text||'')+'</div>'+
+      (html!=null?html:esc(text||''))+'</div>'+
     '</div>';
 }
 function rKlAutoBubble(m,mine){
-  return _rKlNote(KL_NOTE_LABEL_AUTO, m.sentAt, m.messageText);
+  // [1.772] — the away auto-reply carries the studio's notice, so its Opus
+  // address is the Cancel a Lesson button too (and any other address a link).
+  return _rKlNote(KL_NOTE_LABEL_AUTO, m.sentAt, m.messageText, _klNoticeHtml(esc(m.messageText||'')));
 }
 
 // Which child a message is about (BACKLOG 1.161 #4). Shown only where it says

@@ -1314,6 +1314,17 @@ mark.guide-hit{background:var(--bbg);color:inherit;border-radius:2px;padding:0 1
 .ms-day-none{padding:9px 12px;font-size:12.5px;color:var(--text4)}
 .ms-row{display:grid;grid-template-columns:48px 1fr;gap:10px;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--bg4);padding:8px 12px;font:inherit;font-size:13px;cursor:pointer;color:var(--text)}
 .ms-row:first-of-type{border-top:0}.ms-row:hover{background:var(--bbg)}
+/* [1.779] — AC, 6 October 2026: "there is no visual separation between
+   students. Student rows should look like the family tab, but should be more
+   clearly distinct with darker grey background and lighter student cards."
+   So a day on the week is a darker grey band and each lesson a light card on
+   it, set apart by a gap, the way admin's Families list sets out each family. */
+.ms-wk{background:var(--bg2)}
+.ms-wk .ms-day-note,.ms-wk .ms-day-none{background:var(--bg2)}
+.ms-wk .ms-row{background:#F5F6F8;border:1px solid #B9BDC4;border-radius:8px;width:calc(100% - 16px);margin:6px 8px 0}
+.ms-wk .ms-row:last-child{margin-bottom:8px}
+.ms-wk .ms-row:first-of-type{border-top:1px solid #B9BDC4}
+.ms-wk .ms-row:hover{background:var(--bbg)}
 .ms-t{font-weight:700;font-variant-numeric:tabular-nums}
 .ms-s{display:block;font-size:11.5px;color:var(--text4)}
 .ms-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:10px}
@@ -1333,7 +1344,8 @@ mark.guide-hit{background:var(--bbg);color:inherit;border-radius:2px;padding:0 1
 .ms-lc-b{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
 .ms-lc-err{color:var(--red);font-weight:600}
 /* [1.775] — what was done for a lesson, on its row in the week */
-.ms-done{display:block;font-size:11.5px;color:var(--green);margin-top:1px}
+.ms-done-row{display:flex;flex-wrap:wrap;gap:1px 16px;margin-top:2px}   /* [1.779] — side by side, AC */
+.ms-done{font-size:11.5px;color:var(--green)}
 .ms-done.no{color:var(--text4)}
 .ms-lc-f{display:flex;justify-content:space-between;align-items:center;gap:8px;background:var(--bg5);border-top:1px solid var(--bg4);padding:7px 12px;font-size:12px;color:var(--text4)}
 .ms-mat{display:flex;gap:8px;align-items:center;font-size:12.5px;padding:3px 0}
@@ -1380,9 +1392,16 @@ mark.guide-hit{background:var(--bbg);color:inherit;border-radius:2px;padding:0 1
 /* [1.771] — Opus, the source of truth for the schedule: light blue, the tool's
    colour for information, with buttons rather than text links (AC). */
 .opus-bar{background:var(--bbg);color:var(--bt);border-radius:var(--r);padding:9px 10px;margin:0 0 10px}
-.opus-bar p{margin:0 0 7px;font-size:13px;font-weight:600}
+.opus-bar p{margin:0 0 7px;font-size:13px;font-weight:600}   /* see [1.779] below */
 .opus-btns{display:flex;flex-wrap:wrap;gap:6px;margin-top:.45rem}
-.opus-btns .btn{width:auto;flex:1 1 auto;text-decoration:none}
+/* [1.779] — AC: "view my schedule button and cancel a lesson button are
+   really big … Cancel lesson buttons should be red. Check schedule in opus
+   button should be blue". The size of their words, on a phone too: 36px is
+   tall enough to tap, and nothing needs the full width. */
+.opus-btns .btn{width:auto;flex:0 0 auto;text-decoration:none;padding:7px 12px;font-size:12.5px;min-height:34px}
+.btn-cancel{background:#B91C1C;color:#fff;border-color:#B91C1C}.btn-cancel:hover{background:#991B1B;border-color:#991B1B}
+.opus-bar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px 12px}
+.opus-bar p{margin:0}
 .opus-bar .opus-btns{margin-top:0}
 .guide-how .opus-btns .btn{flex:0 0 auto;padding:7px 14px;font-size:12.5px;min-height:0}   /* in a guide row, the size of its words */
 .tt-err{color:var(--red);font-size:12px;font-weight:600;margin-top:.6rem}
@@ -3725,7 +3744,8 @@ function loadOpusUrl(){
   });
 }
 function rOpusButton(kind){
-  return '<a class="btn btn-s" href="'+esc(_opusHref())+'" target="_blank" rel="noopener">'+esc(kind==='cancel'?OPUS_COPY.cancel:OPUS_COPY.view)+'</a>';
+  // [1.779] — View My Schedule blue, Cancel a Lesson red (AC).
+  return '<a class="btn '+(kind==='cancel'?'btn-cancel':'btn-p')+'" href="'+esc(_opusHref())+'" target="_blank" rel="noopener">'+esc(kind==='cancel'?OPUS_COPY.cancel:OPUS_COPY.view)+'</a>';
 }
 function rOpusBar(){
   return '<div class="opus-bar"><p>'+esc(OPUS_COPY.truth)+'</p><div class="opus-btns">'+rOpusButton('view')+rOpusButton('cancel')+'</div></div>';
@@ -3760,7 +3780,7 @@ function rMyStudents(){
     var isToday=d.date===w.today;
     if(!d.off&&!d.lessons.length&&!isToday)return;
     shown++;
-    h+='<div class="ms-day'+(isToday?' today':'')+(d.off?' off':'')+'"><div class="ms-day-h"><span>'+esc(d.dayName+', '+_msShort(d.date))+'</span>'+
+    h+='<div class="ms-day ms-wk'+(isToday?' today':'')+(d.off?' off':'')+'"><div class="ms-day-h"><span>'+esc(d.dayName+', '+_msShort(d.date))+'</span>'+
       (isToday?'<span class="ms-tag">'+esc(MS_COPY.today)+'</span>':'')+'</div>';
     if(d.off)h+='<div class="ms-day-note">'+esc(d.off.kind==='absence'?MS_COPY.absence:MS_COPY.closed(d.off.name))+'</div>';
     else if(!d.lessons.length)h+='<div class="ms-day-none">'+esc(MS_COPY.noLessons)+'</div>';
@@ -3781,12 +3801,13 @@ function rMyStudents(){
 function _msNames(a){a=(a||[]).filter(Boolean);return a.length<3?a.join(' and '):a.slice(0,-1).join(', ')+' and '+a[a.length-1];}
 function _msDoneLines(dn){
   if(!dn)return '';
+  // [1.779] — on one line, side by side (AC: "so the list is more compact").
   var h=dn.notesOn?'<span class="ms-done">'+esc(MS_COPY.notesAdded(_msShort(dn.notesOn)))+'</span>'
                   :'<span class="ms-done no">'+esc(MS_COPY.noNotesRow)+'</span>';
   var sent=dn.sent||[];
   h+=sent.length?sent.map(function(x){return '<span class="ms-done">'+esc(MS_COPY.sentTo(_msNames(x.to),_msShort(x.on)))+'</span>';}).join('')
                 :'<span class="ms-done no">'+esc(MS_COPY.noAsg)+'</span>';
-  return h;
+  return '<span class="ms-done-row">'+h+'</span>';
 }
 function msOpen(stuId,date,time){
   MS.cardStu=stuId;MS.cardDate=date;MS.cardTime=time||'';MS.card=null;MS.note=null;MS.lesson={};MS.open={};MS.q='';MS.qDate='';MS.asg=null;MS.adding=null;MS.st='';

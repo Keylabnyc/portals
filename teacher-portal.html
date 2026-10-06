@@ -772,6 +772,10 @@ input[type=checkbox]{width:13px;height:13px;padding:0;margin:0;border:0;border-r
 .sched-stopped{cursor:default;border-color:var(--red);position:relative;padding-right:28px}
 .sched-stop-x{position:absolute;top:6px;right:6px;background:none;border:0;color:var(--text4);font-size:14px;line-height:1;cursor:pointer;padding:2px 4px}
 .sched-stop-note{font-size:12px;color:var(--red);font-weight:600;margin:.3rem 0 .4rem}
+/* [1.782] — a scheduled message that missed its time: the notice under the status line, in the Away line's own red so the two read as one kind of thing; the whole line opens the conversation. */
+.sched-missed-list{display:flex;flex-direction:column;gap:6px;margin:0 0 .75rem}
+.sched-missed{display:block;width:100%;text-align:left;background:#FDECEC;border:1px solid #DC2626;border-radius:var(--r);color:#B91C1C;font:inherit;font-size:13px;font-weight:600;padding:8px 12px;cursor:pointer}
+.sched-missed b{text-decoration:underline}
 /* A colour set directly on the label beats one inherited from its parent, no
    matter how specific the parent's selector is — so the dark-on-dark fault
    comes straight back without this line. */
@@ -1883,6 +1887,20 @@ var FAMILY_VIEW = 'list';
 // Every assignment to either flag goes through here, and check.js asserts that
 // no other line in this file assigns one, so a third caller cannot reintroduce
 // the state where both say 'thread'.
+// ── [1.782] — WHICH conversation is open, asked of the pane, not the tab ──
+//
+// HOME_TAB said which conversation was open while Family and Staff were two
+// tabs. AC merged them into one Messages page on 3 September and the tab stayed
+// family whichever conversation was opened from it — so in a conversation with
+// the office or another teacher, five things asked the wrong question and got
+// the family answer: Schedule Send did nothing at all, Edit, Unsend and Cancel
+// Send had no thread to act on, the open conversation was never re-checked for
+// new messages, a seen line named nobody, and (after Ask Admin set the tab to
+// staff) merge tags in a family conversation filled nothing. Found driving
+// Schedule Send in the office conversation; the five now ask this.
+//
+// _openPane holds at most one conversation open, so the open one IS the answer.
+function _openKind(){ return ACTIVE_STAFF_THREAD ? 'staff' : 'family'; }
 function _openPane(kind){
   FAMILY_VIEW = (kind==='family') ? 'thread' : 'list';
   STAFF_VIEW  = (kind==='staff')  ? 'thread' : 'list';
@@ -2393,6 +2411,7 @@ function _libOverlaySync(){
 function _renderBody(){
   var el=document.getElementById('app');
   if(!el) return;
+  _amendOrphanCheck();   // [1.782] — an edit whose thread has gone is cancelled, not left holding a message
   _libOverlaySync();   // [1.607]
   var h='';
   if(MSG.m) h+='<div class="msg m'+esc(MSG.t)+'">'+esc(MSG.m)+'</div>';
@@ -3367,7 +3386,7 @@ function rHome(){
   return '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">'+
     '<div class="login-brand" style="margin:0">KEYLAB</div>'+
     '<button type="button" class="lnk-btn"  onclick="doSignOut()">Sign Out</button></div>'+
-    rStatusBanner()+tabs+body;
+    rStatusBanner()+rSchedMissedNotice()+tabs+body;   // [1.782] — AC: "a top level dashboard message"
 }
 
 // AC, 1 Sept: red "Away/Busy" when away is on, green "Status: Available" when
@@ -6259,8 +6278,10 @@ function openFamilyThread(familyId, p1, p2, focusReview){
   // with the composer holding somebody else's words is how the wrong message
   // gets overwritten. [1.277] — and a file picked for one family must not
   // follow the teacher into another's thread.
-  AMEND={messageId:'', kind:'', stash:''};
-  SCHED={mode:'', messageId:'', at:''};   // [1.371] — a picker or a confirm belongs to the thread it was opened in
+  // [1.782] — and leaving it is CANCELLING it: the server is told, so a
+  // scheduled message is not held past its time, and the thread gets back
+  // the words it had before Edit borrowed its box.
+  _amendAbandon();
   _attClear();
   _focusReview=!!focusReview;   // [1.235]
   var _row=(FAMILY_THREADS.list||[]).filter(function(x){return x.familyId===familyId;})[0]||{};
@@ -6301,7 +6322,7 @@ function openFamilyThread(familyId, p1, p2, focusReview){
     // [1.371] — the sender's own scheduled messages for this thread, in their
     // own array. Never merged into messages: their sentAt is when they were
     // WRITTEN, and adopting it would move the poll's watermark backwards.
-    ACTIVE_THREAD.scheduled=r.scheduled||[];
+    ACTIVE_THREAD.scheduled=_schedLive(r.scheduled); setTimeout(_schedClaimMissed,0);   /* [1.782] */
     THREAD_CACHE[_threadCacheKey(_req)]=ACTIVE_THREAD.messages;
     _applyPendingReviews(ACTIVE_THREAD);   // [1.231]
     actClear('thread');   // [1.562] — a success clears the last failure rather than leaving it standing
@@ -6326,7 +6347,7 @@ function refreshFamilyThread(){
     // [1.371] — the sender's own scheduled messages for this thread, in their
     // own array. Never merged into messages: their sentAt is when they were
     // WRITTEN, and adopting it would move the poll's watermark backwards.
-    ACTIVE_THREAD.scheduled=r.scheduled||[];
+    ACTIVE_THREAD.scheduled=_schedLive(r.scheduled); setTimeout(_schedClaimMissed,0);   /* [1.782] */
     THREAD_CACHE[_threadCacheKey(_req)]=ACTIVE_THREAD.messages;
     _applyPendingReviews(ACTIVE_THREAD);   // [1.231]
     actClear('thread');   // [1.562] — a success clears the last failure rather than leaving it standing
@@ -6698,6 +6719,32 @@ function _setRowReviewCount(t, n){
 // Written into THREADS.list and nowhere else — FAMILY_THREADS/STAFF_THREADS are
 // computed views and a write to one lands in an object nobody keeps ([1.311]).
 // Returns what it overwrote so a failed send can put it back.
+// ── [1.782] — the server says whether it is waiting, and the page believes it ─
+//
+// A send carries an id so a retry after a lost answer is not written twice. If
+// the first press was Schedule Send and the retry was Send (or the other way
+// round), the server answers with the FIRST one — and the page used to file it
+// by the second press, showing as sent a message still waiting for its time.
+// The answer now says which, and the bubble moves to the list it belongs in.
+function _schedReconcile(t, pending, sendAt, r, rowUndo){
+  var isSched=!!(r && r.message && r.message.sendAt);
+  if(isSched===!!sendAt) return false;
+  if(isSched){
+    t.messages=(t.messages||[]).filter(function(m){ return m!==pending; });
+    pending.sendAt=r.message.sendAt;
+    t.scheduled=(t.scheduled||[]).concat([pending]);
+    _undoRowAnswered(rowUndo);   // a waiting message is not a reply
+  } else {
+    t.scheduled=(t.scheduled||[]).filter(function(m){ return m!==pending; });
+    delete pending.sendAt;
+    t.messages=(t.messages||[]).concat([pending]);
+  }
+  t._sendInFlight=false;
+  actClear(send);
+  _schedInvalidate();
+  render();
+  return true;
+}
 function _setRowAnswered(t){
   if(!t) return null;
   var kind = t.familyId ? 'family' : (t.contactType==='admin' ? 'admin' : 'staff');
@@ -7185,6 +7232,7 @@ function sendFamilyMessage(sendAt){
       if(r.message.sendAt) pending.sendAt=r.message.sendAt;   // [1.371]
       if(r.message.attachments) pending.attachments=r.message.attachments;   // [1.277]
     }
+    if(_schedReconcile(t, pending, sendAt, r, _rowUndo)) return;   // [1.782]
     // [1.371] — the Scheduled count changed, and it is on the screen behind
     // this thread. Refreshed here rather than on a poll, because the teacher
     // has just this moment created the thing it counts.
@@ -7757,8 +7805,7 @@ function openStaffThread(contactType, otherId, otherName, focusReview){
   // with the composer holding somebody else's words is how the wrong message
   // gets overwritten. [1.277] — and a file picked for one family must not
   // follow the teacher into another's thread.
-  AMEND={messageId:'', kind:'', stash:''};
-  SCHED={mode:'', messageId:'', at:''};   // [1.371] — a picker or a confirm belongs to the thread it was opened in
+  _amendAbandon();   // [1.782] — leaving an edit is cancelling it; see openFamilyThread
   _attClear();
   _focusReview=!!focusReview;   // [1.235]
   var reqData = contactType==='admin'
@@ -7785,7 +7832,7 @@ function openStaffThread(contactType, otherId, otherName, focusReview){
     // question, so they share one banner.
     if(e||!r||!r.ok){ actFail('thread',(r&&r.error)||TCH_COPY.loadFailed); render(); return; }
     ACTIVE_STAFF_THREAD.messages=_mergeLoaded(r.messages||[], ACTIVE_STAFF_THREAD.messages);   // [1.493]
-    ACTIVE_STAFF_THREAD.scheduled=r.scheduled||[];   // [1.371] — see openFamilyThread
+    ACTIVE_STAFF_THREAD.scheduled=_schedLive(r.scheduled); setTimeout(_schedClaimMissed,0);   /* [1.782] */   // [1.371] — see openFamilyThread
     THREAD_CACHE[_threadCacheKey(reqData)]=ACTIVE_STAFF_THREAD.messages;
     _applyPendingReviews(ACTIVE_STAFF_THREAD);   // [1.231]
     actClear('thread');   // [1.562] — a success clears the last failure rather than leaving it standing
@@ -7817,7 +7864,7 @@ function refreshStaffThread(){
     ACTIVE_STAFF_THREAD.refreshing=false;
     if(e||!r||!r.ok){ actFail('thread',(r&&r.error)||TCH_COPY.refreshFailed); render(); return; }
     ACTIVE_STAFF_THREAD.messages=r.messages||[];
-    ACTIVE_STAFF_THREAD.scheduled=r.scheduled||[];   // [1.371] — see openFamilyThread
+    ACTIVE_STAFF_THREAD.scheduled=_schedLive(r.scheduled); setTimeout(_schedClaimMissed,0);   /* [1.782] */   // [1.371] — see openFamilyThread
     THREAD_CACHE[_threadCacheKey(reqData)]=ACTIVE_STAFF_THREAD.messages;
     _applyPendingReviews(ACTIVE_STAFF_THREAD);   // [1.231]
     actClear('thread');   // [1.562] — a success clears the last failure rather than leaving it standing
@@ -12163,7 +12210,7 @@ function _tplValuesFor(t, stuId){
   return v;
 }
 function _tplValues(){
-  var t=(HOME_TAB==='family') ? ACTIVE_THREAD : null;
+  var t=(_openKind()==='family') ? ACTIVE_THREAD : null;   // [1.782]
   return _tplValuesFor(t, t?_threadStudentId(t):'');
 }
 function _tplMergeWith(html, v){
@@ -12840,6 +12887,10 @@ var TCH_COPY={
   deleteScheduled:'Delete',
   scheduledSection:'Scheduled messages',
   scheduledEmpty:'Nothing scheduled.',
+  // [1.782] — AC's words, 6 October 2026, verbatim. A scheduled message whose
+  // time passed while it was being edited, so it was not sent: on the notice at
+  // the top of the portal, and beside Send when it happens in the open thread.
+  schedMissed:'The scheduled time for your message to [recipient] has passed. This message has reverted to a draft.',
   saveEdit:'Send',
   saveForReview:'Save for review',
   // AC, 3 Sept (second pass): "the checkbox label follows its state."
@@ -14112,11 +14163,13 @@ function rPickRow(f, composerId){
 // off a teacher's open thread.
 function _applySchedPoll(t, r){
   if(!r || typeof r.scheduled === 'undefined') return false;
-  var before=(t.scheduled||[]).map(function(m){ return m.messageId+':'+m.sendAt+':'+(m.messageText||''); }).join('|');
-  var after=(r.scheduled||[]).map(function(m){ return m.messageId+':'+m.sendAt+':'+(m.messageText||''); }).join('|');
+  // [1.782] — never a message this page has already taken back ([1.440]).
+  var incoming=_schedLive(r.scheduled);
+  var before=(t.scheduled||[]).map(function(m){ return m.messageId+':'+m.sendAt+':'+(m.messageText||'')+':'+(m.schedMissedAt||''); }).join('|');
+  var after=incoming.map(function(m){ return m.messageId+':'+m.sendAt+':'+(m.messageText||'')+':'+(m.schedMissedAt||''); }).join('|');
   if(before===after) return false;
-  t.scheduled=r.scheduled||[];
-  return true;
+  t.scheduled=incoming;
+  return true;   // [1.782] — the caller puts a missed one back in the box (_schedClaimMissed)
 }
 function _applyPoll(list, r){
   var gone={};
@@ -14273,10 +14326,10 @@ function _schedSetAt(v){ SCHED.at=v; }
 // than a dialog because it belongs to the message being written — a modal here
 // would be the second screen PROCESS.md calls a defect.
 function rSendLaterPanel(){
-  // [1.446] — the same picker for a NEW time and a CHANGED one. A second panel
-  // that looked the same and behaved differently is how the two would drift.
-  if(SCHED.mode!=='picking' && SCHED.mode!=='rescheduling') return '';
-  var _re=SCHED.mode==='rescheduling';
+  // [1.782] — the Reschedule half of this panel ([1.446]) went with its button
+  // in [1.537] and was reached by nothing since; removed with confirmReschedule.
+  // A new time is Cancel Send, then Schedule Send.
+  if(SCHED.mode!=='picking') return '';
   return '<div class="sched-panel">'+
     '<label class="sched-lbl">'+esc(TCH_COPY.schedulePick)+'</label>'+
     '<input type="datetime-local" class="sched-input" id="sched-at"'+
@@ -14287,8 +14340,8 @@ function rSendLaterPanel(){
     (SCHED.at?'<div class="sched-preview">'+esc(TCH_COPY.schedulePreview)+' '+
        esc(fmtMsgTime(_schedLocalInputToMs(SCHED.at)))+'?</div>':'')+
     '<div class="sched-acts">'+
-      '<button type="button" class="btn btn-p" onclick="'+(_re?'confirmReschedule()':'confirmSendLater()')+'">'+
-        esc(_re?TCH_COPY.reschedule:TCH_COPY.scheduleGo)+'</button>'+
+      '<button type="button" class="btn btn-p" onclick="confirmSendLater()">'+
+        esc(TCH_COPY.scheduleGo)+'</button>'+
       '<button type="button" class="btn btn-s" onclick="closeSchedule()">'+esc(TCH_COPY.scheduleCancel)+'</button>'+
     '</div></div>';
 }
@@ -14308,45 +14361,11 @@ function confirmSendLater(){
   // which is a different thing and the one that was missing.
   actStart('send', TCH_COPY.schedulingMsg);
   _schedJustSetAt=at;
-  if(HOME_TAB==='family') sendFamilyMessage(at); else sendStaffMessage(at);
+  if(_openKind()==='family') sendFamilyMessage(at); else sendStaffMessage(at);   // [1.782]
 }
 var _schedJustSetAt=0;
 
-function confirmReschedule(){
-  var c=_amendCtx(); if(!c) return;
-  var id=SCHED.messageId;
-  var el=document.getElementById('sched-at');
-  var at=_schedLocalInputToMs(el?el.value:SCHED.at);
-  if(!at || at < Date.now()+60*1000){ showMsg(TCH_COPY.schedulePast,'e'); return; }
-  if(at > Date.now()+14*24*60*60*1000 && !confirm(TCH_COPY.scheduleFar)) return;
-  SCHED={mode:'', messageId:'', at:''};
-  actStart('send', TCH_COPY.schedulingMsg);
-  render();
-  api({action:'rescheduleMessage', data:Object.assign({}, c.req, {messageId:id, sendAt:String(at)})},
-      function(e,r){
-    if(e||!r||!r.ok){ actFail('send',(r&&r.error)||'Could not change that time.'); render(); return; }
-    // The bubble moves with the time it is showing. Reading it back off the
-    // server's answer rather than off the input keeps this the same shape as
-    // every other amend: the row is what happened, the input was only a request.
-    (c.t.scheduled||[]).forEach(function(m){
-      if(m.messageId===id){ m.sendAt=r.sendAt||at; m.schedMissedAt=''; }
-    });
-    // [1.462] — NO DUPLICATE BANNER. AC, 9 September 2026, one line: *"no
-    // duplicate banner."*
-    //
-    // The scheduled bubble already reads "Message scheduled. It will be sent on
-    // …" — his own wording from [1.415] — so a banner saying it again is two
-    // things saying one thing, which is [1.455] in a different place. He timed the
-    // gap between them at 5-8 seconds and it was confusing at any gap.
-    //
-    // **The WORKING state stays**: it explains the wait, and nothing else does.
-    // **The FAILED state stays**: it is the one a person must act on. Only the
-    // second confirmation goes.
-    actClear('send');
-    _schedInvalidate();
-    render();
-  });
-}
+// [1.782] — confirmReschedule removed: its button went in [1.537] and nothing reached it.
 
 // ── The scheduled bubble ───────────────────────────────────────────────
 // Drawn after the thread's real messages, because that is where it will
@@ -14354,6 +14373,10 @@ function confirmReschedule(){
 // is not a message yet, and making it look like one is the mistake the second
 // line of copy exists to correct.
 function rScheduledBubble(m){
+  // [1.782] — a message whose time passed while it was being edited is not
+  // scheduled any more: it is a draft, and _schedClaimMissed is putting it
+  // back in the box. Drawing it as waiting is what kept it hidden before.
+  if(m.schedMissedAt || SCHED_GONE[m.messageId]) return '';
   var id=esc(m.messageId||'');
   // [1.371] — the bubble is drawn the instant Schedule Send is pressed, before
   // the server has answered with an id. For that moment none of the four
@@ -14439,65 +14462,123 @@ function rScheduledBubble(m){
 // are all that's really needed here."* Each was Cancel Send plus an obvious next
 // step, and `cancelSend` appends the words to any draft rather than replacing
 // one — so nothing they did is lost, it is two presses instead of one on three
-// rare actions. `deleteScheduled` stays: the Scheduled list elsewhere still uses
-// it. Removed rather than left orphaned, which the dead-code check insists on.
+// rare actions. ~~`deleteScheduled` stays: the Scheduled list elsewhere still
+// uses it~~ — nothing did; it went with [1.782].
 function cancelSend(id){
   var c=_amendCtx(); if(!c) return;
   if(!_oncePress('cancel:'+id)) return;   // [1.534]
+  var row=null; (c.t.scheduled||[]).forEach(function(m){ if(m.messageId===id) row=m; });
+  if(!row){ _onceDone('cancel:'+id); return; }
+  _schedToDraft(c, row, {done:function(){ _onceDone('cancel:'+id); }});   // [1.534] — the answer releases it
+}
+
+// ── [1.782] — a scheduled message back into its box, and nothing lost ────
+//
+// ONE step for the two ways a scheduled message becomes a draft again: Cancel
+// Send, and a message whose time passed while it was being edited (AC, 6
+// October 2026: "revert the message to a draft").
+//
+// [1.440] — Cancel Send "sometimes needs pressing twice, and sometimes deletes
+// the message". Two causes, both closed here:
+//
+//   • The words came back only in the server's ANSWER. An answer lost on a
+//     dropped connection, after the server had cancelled, left the message
+//     gone and the words nowhere. The page already holds them — they are the
+//     bubble it is drawing — so they go into the box on the press. If the
+//     server refuses and the message is still waiting, they come out again.
+//     With no answer at all it asks once more; the server answers a second
+//     asking as done ([1.782]), so the second answer is the truth.
+//   • A five-second check asked before the press and answered after it put
+//     the bubble straight back, and it was pressed again. SCHED_GONE keeps a
+//     message this page has taken back off every list the server sends.
+var SCHED_GONE={};      // messageId -> true: taken back here, not to be drawn again
+var SCHED_CLAIMED={};   // messageId -> true: a missed one already put back once on this page
+function _schedLive(list){
+  return (list||[]).filter(function(m){ return m && !SCHED_GONE[m.messageId]; });
+}
+function _schedAttRows(m){
+  var a=m && m.attachments;
+  if(typeof a==='string'){ try{ a=JSON.parse(a||'[]'); }catch(e){ a=[]; } }
+  return (a||[]).filter(function(x){ return x && x.attachmentId; });
+}
+function _schedRecipient(c, id){
+  var hit=null; SCHED_LIST.rows.forEach(function(x){ if(x.messageId===id) hit=x; });
+  if(hit && hit.to) return hit.to;
+  if(c.t.familyId) return [c.t.parent1Name, c.t.parent2Name].filter(Boolean).join(' & ')||'Family';
+  return c.t.otherName||'';
+}
+function _schedToDraft(c, row, opts){
+  opts=opts||{};
+  var id=row.messageId;
+  var who=opts.missed ? _schedRecipient(c, id) : '';   // before the row leaves the list it is named from
   SCHED={mode:'', messageId:'', at:''};
-  var keep=(c.t.scheduled||[]).slice();
-  var row=null; keep.forEach(function(m){ if(m.messageId===id) row=m; });
-  if(!row) return;
-  c.t.scheduled=keep.filter(function(m){ return m.messageId!==id; });
+  SCHED_GONE[id]=true;
+  c.t.scheduled=(c.t.scheduled||[]).filter(function(m){ return m.messageId!==id; });
+  SCHED_LIST.rows=SCHED_LIST.rows.filter(function(x){ return x.messageId!==id; });
+  // The words first, from this page's own copy — the sanitized one the server
+  // sent, which is what would have gone out. Whatever is already in the box
+  // stays first: neither text is thrown away ([1.43]).
+  var before=String(c.t.draft||'');
+  var back=row.messageHtml||_plainToComposerHtml(row.messageText||'');
+  var cur=before.trim();
+  c.t.draft = cur ? (cur+'<br><br>'+back) : back;
+  var after=c.t.draft;
+  _draftKeep(c.t, c.t.draft);
+  // [1.277] — and its files, as chips. The server unbinds them, so the next
+  // send claims them as if they had just been uploaded.
+  var added=[];
+  _schedAttRows(row).forEach(function(a){
+    if(ATT_PENDING.some(function(p){ return p.attachmentId===a.attachmentId; })) return;
+    ATT_PENDING.push({tempId:'t'+a.attachmentId, fileName:a.fileName,
+      mimeType:a.mimeType, sizeBytes:a.sizeBytes, uploading:false, attachmentId:a.attachmentId});
+    added.push(a.attachmentId);
+  });
+  if(opts.missed) actFail('send', TCH_COPY.schedMissed.replace('[recipient]', who));
   render();
-  api({action:'unscheduleMessage', data:Object.assign({}, c.req, {messageId:id})}, function(e,r){
-    _onceDone('cancel:'+id);   // [1.534] — the answer releases it
-    if(e||!r||!r.ok){
-      c.t.scheduled=keep;
+  var box=document.getElementById(c.composerId);
+  if(box && !opts.missed) box.focus();
+  var tries=0;
+  (function ask(){
+    tries++;
+    api({action:'unscheduleMessage', data:Object.assign({}, c.req, {messageId:id})}, function(e,r){
+      if(e && tries<2){ setTimeout(ask, 1500); return; }   // no answer: ask once more
+      if(opts.done) opts.done();
+      if(!e && r && r.ok){ _schedInvalidate(); return; }
+      if(e){
+        // Twice without an answer: the words stay in the box, and the list is
+        // let go so the next look at the server shows whether it is still
+        // waiting.
+        delete SCHED_GONE[id];
+        actFail('send', TCH_COPY.cancelSendFailed);
+        _schedInvalidate();
+        return;
+      }
+      // Refused, so it is still waiting: put it back exactly as it was.
+      delete SCHED_GONE[id];
+      c.t.scheduled=(c.t.scheduled||[]).concat([row]).sort(function(a,b){ return (Number(a.sendAt)||0)-(Number(b.sendAt)||0); });
+      if(String(c.t.draft||'')===after){ c.t.draft=before; _draftKeep(c.t, before); }
+      ATT_PENDING=ATT_PENDING.filter(function(p){ return added.indexOf(p.attachmentId)===-1; });
+      if(opts.missed) actClear('send');
       actFail('msg:'+id,(r&&r.error)||TCH_COPY.cancelSendFailed);   // [1.562] — on the bubble
-      render();
-      return;
-    }
-    // The server's copy of the words, not the client's — it is the sanitized
-    // one, and it is what would have been sent.
-    var back=r.messageHtml||_plainToComposerHtml(r.messageText||'');
-    var cur=String(c.t.draft||'').trim();
-    c.t.draft = cur ? (cur+'<br><br>'+back) : back;
-    _draftKeep(c.t, c.t.draft);
-    // [1.277] — the files come back as chips, already uploaded and unbound, so
-    // the ids are good and the next send claims them.
-    (r.attachments||[]).forEach(function(a){
-      ATT_PENDING.push({tempId:'t'+a.attachmentId, fileName:a.fileName,
-        mimeType:a.mimeType, sizeBytes:a.sizeBytes, uploading:false, attachmentId:a.attachmentId});
+      _schedInvalidate();
     });
-    _schedInvalidate();
-    render();
-    var box=document.getElementById(c.composerId);
-    if(box) box.focus();
+  })();
+}
+// A missed message in the thread on screen is put back in its box as soon as
+// the thread knows about it — on opening, on a refresh, on the five-second
+// check. Once per message per page: one the server will not give back is left
+// to the notice rather than asked about every five seconds.
+function _schedClaimMissed(){
+  var c=_amendCtx(); if(!c) return;
+  (c.t.scheduled||[]).slice().forEach(function(m){
+    if(!m.schedMissedAt || !m.messageId || SCHED_GONE[m.messageId] || SCHED_CLAIMED[m.messageId]) return;
+    if(AMEND.messageId===m.messageId) return;   // the save's own answer puts it back
+    SCHED_CLAIMED[m.messageId]=true;
+    _schedToDraft(c, m, {missed:true});
   });
 }
 
-// Delete. It is retractMessage — the same unsend the sent bubble uses, on a
-// message that was never sent — so it leaves exactly what an unsent one does:
-// nothing anybody can see, and no email.
-function deleteScheduled(id){
-  var c=_amendCtx(); if(!c) return;
-  if(!_oncePress('del:'+id)) return;   // [1.534]
-  SCHED={mode:'', messageId:'', at:''};
-  var keep=(c.t.scheduled||[]).slice();
-  c.t.scheduled=keep.filter(function(m){ return m.messageId!==id; });
-  render();
-  api({action:'retractMessage', data:Object.assign({}, c.req, {messageId:id})}, function(e,r){
-    _onceDone('del:'+id);   // [1.534] — the answer releases it
-    if(e||!r||!r.ok){
-      c.t.scheduled=keep;
-      showMsg((r&&r.error)||'Could not cancel that message.','e');
-      render();
-      return;
-    }
-    _schedInvalidate();
-  });
-}
+// [1.782] — deleteScheduled removed: nothing called it (the Scheduled list's Remove is removeStoppedScheduled).
 
 // ── [1.373] — the Scheduled list ───────────────────────────────────────
 // A scheduled message lives in one thread and is visible only with that thread
@@ -14529,7 +14610,11 @@ var SCHED_DUE_RECHECK_MS=30000;
 function _schedAnyDue(){
   var now=Date.now();
   for(var i=0;i<SCHED_LIST.rows.length;i++){
-    var at=Number(SCHED_LIST.rows[i] && SCHED_LIST.rows[i].sendAt)||0;
+    var x=SCHED_LIST.rows[i];
+    // [1.782] — a missed or stopped message is past its time for good; it is
+    // not waiting to be released, so it is no reason to ask again every 30s.
+    if(!x || x.missed || x.stopped) continue;
+    var at=Number(x.sendAt)||0;
     if(at && at<=now) return true;
   }
   return false;
@@ -14552,7 +14637,7 @@ function loadScheduled(){
     SCHED_LIST.loading=false;
     if(e||!r||!r.ok) return;   // a list that will not load is not worth a toast
     SCHED_LIST.loaded=true;
-    SCHED_LIST.rows=r.scheduled||[];
+    SCHED_LIST.rows=_schedLive(r.scheduled);   // [1.782]
     render();
   });
 }
@@ -14560,15 +14645,42 @@ function loadScheduled(){
 // and a control that only ever appears when something IS wrong reads as broken
 // — so this one appears when there is something to see and is simply absent
 // otherwise.
+// [1.782] — a missed message is a draft now, not scheduled: it is on the notice
+// at the top of the portal, and counting it here would say it is still going.
+function _schedWaitingRows(){ return SCHED_LIST.rows.filter(function(x){ return x && !x.missed; }); }
 function rScheduledLine(){
   if(!SCHED_LIST.rows.length) return '';
+  var rows=_schedWaitingRows();   // [1.782] — missed ones are drafts, on the notice
+  if(!rows.length) return '';
   return '<button type="button" class="sched-line" onclick="SCHED_LIST.open=!SCHED_LIST.open;render()">'+
-    esc(TCH_COPY.scheduledSection)+' ('+SCHED_LIST.rows.length+')'+
+    esc(TCH_COPY.scheduledSection)+' ('+rows.length+')'+
     '<span class="sched-caret">'+(SCHED_LIST.open?'▾':'▸')+'</span></button>'+
     (SCHED_LIST.open?rScheduledList():'');
 }
+// ── [1.782] — the notice at the top of the portal ────────────────────────
+//
+// AC, 6 October 2026: a message whose scheduled time passed while it was being
+// edited should "say that the scheduled time has passed and revert the message
+// to a draft with a top level dashboard message on the main teacher or admin
+// portal so they are aware and don't miss this by not seeing it until they
+// look at the actual thread". His words for it, the same day: "The scheduled
+// time for your message to [recipient] has passed. This message has reverted
+// to a draft."
+//
+// Under the status line, on every tab — the same place the Away line is, which
+// is the one a teacher cannot miss. One line per message; pressing it opens the
+// conversation, where the words are already back in the box, and the line goes.
+function rSchedMissedNotice(){
+  var rows=SCHED_LIST.rows.filter(function(x){ return x && x.missed && !SCHED_GONE[x.messageId]; });
+  if(!rows.length) return '';
+  return '<div class="sched-missed-list">'+rows.map(function(x){
+    var parts=TCH_COPY.schedMissed.split('[recipient]');
+    return '<button type="button" class="sched-missed" onclick="openScheduled('+jsq(x.messageId)+')">'+
+      esc(parts[0])+'<b>'+esc(x.to||'')+'</b>'+esc(parts.slice(1).join(''))+'</button>';
+  }).join('')+'</div>';
+}
 function rScheduledList(){
-  return '<div class="sched-list">'+SCHED_LIST.rows.map(function(x){
+  return '<div class="sched-list">'+_schedWaitingRows().map(function(x){
     // [1.753] — refused when its time came (the family moved to another
     // teacher, or the person it was for is no longer active). It never went,
     // and opening its conversation may not be possible any more, so the list
@@ -14615,6 +14727,9 @@ function openScheduled(id){
   SCHED_LIST.rows.forEach(function(x){ if(x.messageId===id) row=x; });
   if(!row) return;
   SCHED_LIST.open=false;
+  // [1.782] — the missed-message notice is on every tab, so pressing it from My
+  // Students has to bring the teacher to Messages, where the conversation opens.
+  HOME_TAB='family';
   if(row.conversationType==='family_teacher'){
     // [1.384] — with the parent names. Called bare, the thread header read
     // "Family" and the two-parent recipient checkboxes disappeared until the
@@ -14631,7 +14746,7 @@ function openScheduled(id){
 // Both tabs use the same four functions below; without this they would be
 // eight.
 function _amendCtx(){
-  if(HOME_TAB==='family'){
+  if(_openKind()==='family'){   // [1.782]
     var t=ACTIVE_THREAD; if(!t) return null;
     return {t:t, composerId:'family-composer',
             req:{conversationType:'family_teacher', familyId:t.familyId,
@@ -14654,19 +14769,41 @@ function _amendFind(id){
   return found;
 }
 function cancelAmend(){
-  var c=_amendCtx();
-  // [1.424] — a scheduled message held open by this edit is released now
-  // rather than waiting out the expiry. A teacher who opened Edit and thought
-  // better of it changed nothing, and their message should go at the time they
-  // picked. Fired and forgotten: if it never lands, the expiry catches it.
-  if(c && AMEND.kind==='edit' && AMEND.messageId){
-    api({action:'cancelMessageEdit', data:Object.assign({}, c.req, {messageId:AMEND.messageId})}, function(){});
+  _amendAbandon();
+  render();
+}
+// ── [1.782] — leaving an edit is cancelling it, however it is left ───────
+//
+// [1.424] released a held scheduled message only from the Cancel button.
+// Opening another conversation, going back to the list or signing out dropped
+// the edit without telling the server, so the message stayed held for thirty
+// minutes — and one whose time fell in them was never sent ([1.782] row 1).
+// The thread also kept the message's words as its own draft, where Send would
+// have sent them a second time.
+//
+// So every way out is this one function, which does what Cancel always did:
+// the server is told (a scheduled message then goes at its time with the words
+// it had), and the thread gets back what was in its box before Edit borrowed
+// it. The edit remembers WHICH thread and request it belongs to, because by the
+// time a page has moved on, the thread on screen is a different one.
+// Fired and forgotten: if it never lands, the hold's expiry catches it.
+function _amendAbandon(){
+  if(AMEND.kind==='edit' && AMEND.messageId){
+    var c=AMEND.req ? {t:AMEND.t, req:AMEND.req} : _amendCtx();
+    if(c && c.req) api({action:'cancelMessageEdit', data:Object.assign({}, c.req, {messageId:AMEND.messageId})}, function(){});
+    // Editing borrowed the composer; give the thread back whatever was in it.
+    if(c && c.t){ c.t.draft=AMEND.stash||''; _draftKeep(c.t, c.t.draft); }
   }
-  // Editing borrowed the composer; give the teacher back whatever was in it.
-  if(c && AMEND.kind==='edit'){ c.t.draft=AMEND.stash||''; _draftKeep(c.t, c.t.draft); }
   AMEND={messageId:'', kind:'', stash:''};
   SCHED={mode:'', messageId:'', at:''};   // [1.371] — a picker or a confirm belongs to the thread it was opened in
-  render();
+}
+// The net under every path that drops a thread without calling the above —
+// Back on a phone, the day panel taking the pane, any later one. Asked on
+// every draw, and free when no edit is open.
+function _amendOrphanCheck(){
+  if(AMEND.kind!=='edit' || !AMEND.messageId || !AMEND.t) return;
+  if(AMEND.t===ACTIVE_THREAD || AMEND.t===ACTIVE_STAFF_THREAD) return;
+  _amendAbandon();
 }
 function unsendMessage(id){
   var c=_amendCtx(); if(!c) return;
@@ -14698,7 +14835,7 @@ function startEditMessage(id){
   var m=_amendFind(id); if(!m) return;
   var el=document.getElementById(c.composerId);
   var cur=el?_composerClean(el):(c.t.draft||'');
-  AMEND={messageId:id, kind:'edit', stash:cur};
+  AMEND={messageId:id, kind:'edit', stash:cur, t:c.t, req:c.req};   // [1.782] — which thread it belongs to
   // [1.276] — told to the server, not decided here: opening an edit buys two
   // minutes and holds the family's email with it. Fired in the BACKGROUND and
   // the composer opens immediately — a round trip before the box opens would
@@ -14768,6 +14905,10 @@ function saveEditMessage(){
     // The server re-sanitizes, so what it returns is authoritative — the
     // composer's own cleaning is a convenience, never the boundary.
     if(m&&r.message){ m.messageText=r.message.messageText; m.messageHtml=r.message.messageHtml; _threadCacheWrite(c); render(); }
+    // [1.782] — saved after its time had passed, so it was not sent ([1.424]):
+    // the edited words go back in the box as a draft, and AC's line says why,
+    // beside Send. Before this the bubble went on saying it was scheduled.
+    if(m && r.schedMissedAt){ SCHED_CLAIMED[id]=true; _schedToDraft(c, m, {missed:true}); }
   });
 }
 function _threadCacheWrite(c){
@@ -14897,7 +15038,7 @@ function _readMark(m, mine){
 // reader is the parent; the office thread's is Admin. Named rather than
 // guessed: "Read at" with no name is better than the wrong name.
 function _readWho(){
-  if(HOME_TAB==='family'){
+  if(_openKind()==='family'){   // [1.782]
     var t=ACTIVE_THREAD;
     return t ? String(_rosterParentLine(t)||t.parent1Name||'').trim() : '';
   }
@@ -15250,6 +15391,7 @@ function sendStaffMessage(sendAt){
       if(r.message.sendAt) pending.sendAt=r.message.sendAt;   // [1.371]
       if(r.message.attachments) pending.attachments=r.message.attachments;   // [1.277]
     }
+    if(_schedReconcile(t, pending, sendAt, r, _rowUndo)) return;   // [1.782]
     if(sendAt){
       // [1.404] — the act is confirmed here, on the server's answer, not when
       // the button was pressed. A confirmation shown before the round trip is
@@ -15332,7 +15474,7 @@ var _thrPollBusyAt=0;   // [1.400] — when, so the guard can expire
 function _pollTick(){
   if(document.hidden || !TOKEN) return;
   _schedSweepDue();   // [1.410] — no request unless something is actually due
-  if(HOME_TAB==='family'){
+  if(_openKind()==='family'){   // [1.782]
     // BACKLOG 1.124 #1. This was gated on FAMILY_VIEW==='list', which was
     // right while a thread REPLACED the roster and wrong the moment @650 put
     // both panes on screen: unread badges and previews froze for as long as a
@@ -15356,6 +15498,7 @@ function _pollTick(){
         // cancelled on a phone. A tick that returned early would leave the old
         // bubble on screen until the thread was reopened.
         var _sch=_applySchedPoll(ACTIVE_THREAD, r);
+        if(_sch) setTimeout(_schedClaimMissed,0);   // [1.782]
         if(!_res.changed){ if(_sch) render(); return; }
         ACTIVE_THREAD.messages=_res.list;
         THREAD_CACHE[_threadCacheKey({conversationType:'family_teacher', familyId:ft.familyId, teacherId:TEACHER_ID})]=ACTIVE_THREAD.messages;
@@ -15388,6 +15531,7 @@ function _pollTick(){
         if(r.now) _ktPollAmendAt=Number(r.now)||_ktPollAmendAt;   // [1.383]
         var _res=_applyPoll(ACTIVE_STAFF_THREAD.messages, r);   // [1.276]
         var _sch=_applySchedPoll(ACTIVE_STAFF_THREAD, r);        // [1.371]
+        if(_sch) setTimeout(_schedClaimMissed,0);   // [1.782]
         if(!_res.changed){ if(_sch) render(); return; }
         ACTIVE_STAFF_THREAD.messages=_res.list;
         THREAD_CACHE[_threadCacheKey(reqData)]=ACTIVE_STAFF_THREAD.messages;
@@ -15401,6 +15545,7 @@ function _pollTick(){
 }
 
 function doSignOut(){
+  _amendAbandon();   // [1.782] — while the session can still tell the server the edit ended
   API_KEEP={}; API_KEEP_AT={}; API_THISWEEK='';   // [1.736] — nothing held survives signing out
   _ktClearSession();
   // [1.336] — drafts are this teacher's unsent words on a shared machine.

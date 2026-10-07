@@ -600,6 +600,8 @@ button:active:not(:disabled),
 .asg-title{font-size:17px;font-weight:700;color:#111;margin-top:2px;line-height:1.25}
 .asg-body{padding:12px 14px;font-size:14px;line-height:1.5}
 .asg-intro{margin-bottom:10px}
+.asg-html{margin-bottom:10px}.asg-html ol,.asg-html ul{margin:4px 0 6px 22px;padding:0}.asg-html a{color:#1a56db}
+.asg-share{margin:0 0 8px}
 .asg-panel{background:#EEF6F8;border:1px solid #C9E0E6;border-radius:8px;padding:10px 12px}
 .asg-h{font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#111;margin-bottom:6px}
 .asg-item{display:flex;gap:8px;align-items:flex-start;padding:3px 0}
@@ -4140,7 +4142,18 @@ function _klAssignment(m){
   if(!m||!m.assignment)return null;
   try{var a=typeof m.assignment==='string'?JSON.parse(m.assignment):m.assignment;return a&&a.lessonDate?a:null;}catch(e){return null;}
 }
-var KL_ASG_COPY={practice:'Practice this week',materials:'Materials'};   // PLACEHOLDER headings, as in the email
+// [1.791] — AC: "Practice this week should be renamed 'Assignment'".
+var KL_ASG_COPY={practice:'Assignment',materials:'Materials'};   // PLACEHOLDER headings, as in the email
+// [1.794] — the lesson it is for, as the email says it. PLACEHOLDER wording.
+function _klAsgLesson(a){return 'Lesson on '+_klLongDate(a.lessonDate)+(a.lessonTime?' at '+a.lessonTime:'');}
+// AC, 7 October 2026: "If materials are included, parent should see an instruction in the email
+// notification and parent portal to 'Please share the following files and/or links with [student
+// first name]'" — files, links, or files and links, as attached; nothing when there is neither.
+function _klAsgShare(a){
+  var k={};(a.materials||[]).forEach(function(x){if(x.kind==='link'||x.kind==='file')k[x.kind]=1;});
+  if(!k.link&&!k.file)return '';
+  return 'Please share the following '+(k.file&&k.link?'files and links':k.link?'links':'files')+' with '+(a.studentFirst||'')+'.';
+}
 function _klLongDate(ymd){
   var p=String(ymd||'').split('-');if(p.length!==3)return String(ymd||'');
   var d=new Date(Date.UTC(+p[0],+p[1]-1,+p[2],12)),n=+p[2];
@@ -4158,13 +4171,16 @@ function _rKlAssignment(a){
     return '<div class="asg-m">'+inner+'</div>';
   }).join('');
   return '<div class="asg">'+
-    '<div class="asg-hero"><div class="asg-date">'+esc(_klLongDate(a.lessonDate))+'</div>'+
+    '<div class="asg-hero"><div class="asg-date">'+esc(a.html?_klAsgLesson(a):_klLongDate(a.lessonDate))+'</div>'+
       '<div class="asg-title">'+esc('Here\u2019s '+(a.studentFirst||'')+'\u2019s Assignment from '+(a.teacherFirst||'')+'!')+'</div></div>'+
     '<div class="asg-body">'+
+      // [1.794] — the teacher's formatted message, sanitized on the server when it was sent (as a
+      // formatted message's messageHtml is); older assignments keep their message and list below.
+      (a.html?'<div class="asg-html">'+a.html+'</div>':'')+
       (a.intro?'<div class="asg-intro">'+esc(a.intro).replace(/\n/g,'<br>')+'</div>':'')+
       ((a.practice||[]).length?'<div class="asg-panel"><div class="asg-h">'+esc(KL_ASG_COPY.practice)+'</div>'+
         a.practice.map(function(p,i){return '<div class="asg-item"><span class="asg-n">'+(i+1)+'</span><span>'+esc(p)+'</span></div>';}).join('')+'</div>':'')+
-      (mats?'<div class="asg-h" style="margin-top:12px">'+esc(KL_ASG_COPY.materials)+'</div>'+mats:'')+
+      (mats?'<div class="asg-h" style="margin-top:12px">'+esc(KL_ASG_COPY.materials)+'</div>'+(_klAsgShare(a)?'<div class="asg-share">'+esc(_klAsgShare(a))+'</div>':'')+mats:'')+
     '</div></div>';
 }
 function rKlAttachments(m){

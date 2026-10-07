@@ -1359,9 +1359,28 @@ mark.guide-hit{background:var(--bbg);color:inherit;border-radius:2px;padding:0 1
 .ms-add{border:1px dashed var(--border);border-radius:var(--r);padding:8px;margin-top:6px;display:flex;flex-direction:column;gap:6px}
 .ms-kinds{display:flex;gap:6px;flex-wrap:wrap}
 .ms-in{min-height:0;padding:5px 8px}
-.ms-find{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:14px 0 6px}
-.ms-find-h{font-size:11.5px;font-weight:700;color:var(--text4)}
-.ms-find .ms-in{flex:1;min-width:130px;width:auto}.ms-find .ms-date{flex:0 0 auto}
+/* [1.790] — AC, 6 October 2026: the card's parts each their own area, one
+   Search at the top of My Students, This week and Today, Create Assignment its
+   own function, and each archived lesson its own card on the grey band the week
+   uses ([1.779]). */
+.ms-find{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.ms-find .ms-in{flex:1 1 200px;min-width:0;width:auto}.ms-find .ms-date{flex:0 0 auto}   /* on a phone the date takes its own line, so the hint is never cut off */
+.ms-res{border-top:1px solid var(--bg4);padding-bottom:8px}
+.ms-res .ms-row:first-of-type{border-top:1px solid #B9BDC4}
+.ms-grp{font-size:11.5px;font-weight:700;color:var(--text3);padding:8px 10px 0;letter-spacing:.02em}
+.ms-range{text-align:center;font-weight:700;font-size:13px;margin:0 0 6px}
+.ms-wkbtns{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px}
+.ms-wkbtns .btn{padding:6px 4px}
+.ms-hdhint{font-size:11px;font-weight:400;opacity:.9}
+.ms-asg-slot{background:#fff;border:1px solid var(--border);border-radius:var(--rl);padding:10px 12px;margin:0 0 12px}
+.ms-asg-slot .btn{width:auto}
+.ms-arch{padding-bottom:8px}
+.ms-arch .ms-oc{padding:8px 8px 0;margin:0}
+.ms-arch .ms-past{background:#F5F6F8;border:1px solid #B9BDC4;border-radius:8px;width:calc(100% - 16px);margin:6px 8px 0;padding:9px 10px}
+.ms-arch .ms-past:hover{background:var(--bbg)}
+.ms-arch .ms-entry{margin:6px 8px 0}.ms-arch .ms-entry .ms-lc{margin-bottom:0}
+.ms-matbtns{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+#pick-panel-mat{margin-top:8px}
 .ms-oc{display:flex;justify-content:flex-end;gap:6px;margin-bottom:6px}
 .ms-past{display:grid;grid-template-columns:auto 1fr auto auto;gap:8px;align-items:center;width:100%;font:inherit;font-size:12.5px;padding:7px 10px;border:1px solid var(--bg4);border-radius:var(--r);margin-bottom:4px;background:#fff;cursor:pointer;text-align:left;color:var(--text)}
 .ms-past-d{font-weight:700}.ms-past-t{color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -1754,6 +1773,201 @@ mark.guide-hit{background:var(--bbg);color:inherit;border-radius:2px;padding:0 1
 @media (pointer:coarse){
   input:not([type=checkbox]):not([type=radio]),select,textarea,[contenteditable="true"]{font-size:16px!important}
 }
+/* ── [1.793]/[1.794] — My Students around a student list, the status box, the Library tab,
+   and Create Assignment as the composer: the mock-up AC approved on 7 October 2026, as built.
+   Later rules here refine earlier ones, in the order AC asked for them. ── */
+.mst-hdr-r{display:inline-flex;gap:8px;align-items:center}
+.st-tog{display:inline-flex;align-items:center;gap:6px;padding:6px 11px;border-radius:var(--r);background:#fff;border:1px solid;font-family:"Inter",sans-serif;font-size:12.5px;font-weight:600;line-height:1.25;cursor:pointer;white-space:nowrap}
+.st-tog.avail{color:#15803D;border-color:#16A34A}
+.st-tog.away{color:#B91C1C;border-color:#DC2626}
+.st-tog:hover:not(:disabled){box-shadow:0 0 0 2px rgba(0,0,0,.07)}
+.st-tog:disabled{cursor:default}
+.st-dot{width:8px;height:8px;border-radius:50%;background:currentColor;flex:0 0 auto}
+.mst-stnote{display:flex;justify-content:flex-end;margin:-.5rem 0 .75rem}
+.mst-stnote .act-note{margin-top:0;font-size:12px}
+.mst-pane{min-width:0}
+@media(max-width:899px){.mst-lg{display:none!important}}
+@media(min-width:900px){
+  .mst-panes{display:grid;grid-template-columns:310px minmax(0,1fr);gap:1rem;height:calc(100vh - 10.5rem);min-height:520px}
+  .mst-pane{background:rgba(255,255,255,.28);border:1px solid var(--border);border-radius:var(--rl);padding:1rem;overflow-y:auto;min-height:0}
+  .mst-sm{display:none!important}
+}
+.mst-count{min-width:22px;height:20px;padding:0 7px;border-radius:10px;background:var(--bg3);border:1px solid var(--border);font-size:11px;display:inline-flex;align-items:center;justify-content:center;color:var(--text3)}
+.mst-count.dr{background:#FFEDD5;border-color:#FB923C;color:#9A3412}
+.mst-row{display:flex;align-items:center;gap:10px;width:100%;padding:8px 11px;margin-bottom:6px;background:var(--bg5);border:1px solid var(--border);border-radius:var(--r);font:inherit;color:var(--text);cursor:pointer;text-align:left}
+.mst-row:hover{background:#fff}
+.mst-row.on{background:#fff;border-color:#1a4fc4;box-shadow:inset 3px 0 0 #1a4fc4}
+.mst-t{flex:0 0 44px;font-weight:700;font-size:12.5px;font-variant-numeric:tabular-nums;color:var(--text2)}
+.mst-rm{flex:1;min-width:0}
+.mst-rm b{display:block;font-size:13.5px;line-height:1.3}
+.mst-sub{display:block;font-size:11.5px;color:var(--text4);line-height:1.4;overflow:hidden;text-overflow:ellipsis}
+.mst-pill{flex:0 0 auto;font-size:10.5px;font-weight:700;border-radius:10px;padding:1px 8px;white-space:nowrap}
+.mst-pill.dr{color:#9A3412;background:#FFEDD5;border:1px solid #FB923C}
+.mst-pill.sc{color:var(--bt);background:var(--bbg);border:1px solid #9DBBE4}
+.mst-pill.ok{color:var(--green);background:var(--gbg);border:1px solid #86C9A0}
+.mst-back{margin-bottom:10px}.mst-back .btn{width:auto}
+.mst-head{background:#fff;border:1px solid var(--border);border-radius:var(--rl);padding:12px 14px;margin-bottom:12px}
+.mst-name{font-size:18px;font-weight:700;line-height:1.3}
+.mst-det{font-size:12.5px;color:var(--text4)}
+.cmp-lsel{font:inherit;font-size:12.5px;font-weight:700;color:var(--text);background:#fff;border:1px solid #fff;border-radius:var(--r);padding:3px 6px;max-width:100%;cursor:pointer}
+.mst-card{flex:1;min-width:0;background:#fff;border:1px solid var(--border);border-left:4px solid var(--border);border-radius:var(--rl);padding:12px 14px;margin:0 0 10px}
+.mst-card.dr{border-left-color:#FB923C}.mst-card.sc{border-left-color:#5B8ED6}.mst-card.ok{border-left-color:#16A34A}
+.mst-ctop{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.mst-ctitle{min-width:0}
+.mst-ctitle b{display:block;font-size:14px;line-height:1.3;color:var(--text)}
+.mst-ctitle span{display:block;font-size:12.5px;color:var(--text4);margin-top:1px}
+.mst-stamp{flex:0 0 auto;font-size:11.5px;font-weight:600;white-space:nowrap;padding-top:2px}
+.mst-stamp.dr{color:#C2410C}.mst-stamp.sc{color:#1a4fc4}.mst-stamp.ok{color:var(--green)}
+.mst-go{cursor:pointer}
+.mst-ctitle.mst-go:hover b,.mst-stamp.mst-go:hover{text-decoration:underline}
+.mst-cbody{display:block;margin-top:8px;font-size:13px;color:var(--text2)}
+.mst-cto{display:block;font-size:12px;color:var(--text4);margin-top:2px}
+.mst-q{display:block;font-size:11.5px;font-weight:700;color:var(--text3);margin:10px 0 3px}
+.mst-ro{display:block;white-space:pre-wrap}
+.mst-ol{margin:0 0 0 20px;line-height:1.45}
+.mst-cfoot{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}
+.mst-cfoot .btn{width:auto}
+.mst-fr .btn,.mst-fl .btn{width:auto}
+.mst-flash{margin:0 0 10px}
+.mst-sched{background:#fff;border:1px solid var(--border);border-radius:var(--rl);padding:10px 12px;margin:0 0 10px}
+.mst-form .mst-sched{margin:12px 0 0;background:var(--bg5)}
+.mst-form{background:#fff;border:2px solid #1a4fc4;border-radius:var(--rl);padding:14px 16px;margin:0 0 12px}
+.mst-tos{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:13px}
+.mst-to{display:inline-flex;align-items:center;gap:6px;text-transform:none;letter-spacing:0;font-size:13px;color:var(--text);cursor:pointer}
+.mst-to input[type=checkbox]{width:16px;height:16px}
+.mst-ffoot{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;margin-top:16px;padding-top:12px;border-top:1px solid var(--bg4)}
+.btn-s.mst-pressed{background:var(--bbg);border-color:#1a4fc4;color:var(--bt)}
+.mst-prev{width:100%;height:560px;border:1px solid var(--border);border-radius:var(--rl);background:#E9EDF3}
+.mst-sched .btn{width:auto;padding:7px 12px;font-size:12.5px;min-height:0}
+.mst-hdr-r{flex-wrap:wrap;justify-content:flex-end}
+@media(max-width:560px){.st-tog{min-height:44px;padding:10px 14px;font-size:14px}}
+@media(max-width:560px){
+  .mst-ffoot{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .mst-ffoot .btn{width:100%}
+  .mst-ffoot .btn-p{grid-column:1/-1;order:-3}
+  .mst-ffoot .mst-o2{order:-2}
+  .mst-ffoot .mst-del{grid-column:1/-1;order:1}
+}
+@media(max-width:560px){
+  .mst-ctop{flex-direction:column-reverse;align-items:stretch;gap:2px}
+  .mst-stamp{align-self:flex-end;padding-top:0}
+}
+.mst-btns{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px}
+.mst-btns .btn{width:auto}
+.btn-s.mst-on{background:var(--bbg);border-color:#1a4fc4;color:var(--bt)}
+@media(min-width:900px){.btn-s.mst-on-lg{background:var(--bbg);border-color:#1a4fc4;color:var(--bt)}}
+.mst-btns .mst-count{min-width:18px;height:18px;padding:0 6px;font-size:10.5px}
+.mst-count.sc{background:var(--bbg);border-color:#9DBBE4;color:var(--bt)}
+.mst-xlist{background:#fff;border:1px solid var(--border);border-radius:var(--rl);margin:2px 0 8px;overflow:hidden}
+.mst-xrow{display:flex;align-items:center;gap:9px;padding:0 10px;border-top:1px solid var(--bg4)}
+.mst-xlist>.mst-xrow:first-child,.mst-xlist>.mst-flash+.mst-xrow{border-top:0}
+.mst-xrow input[type=checkbox]{width:16px;height:16px}
+.mst-xopen{flex:1;min-width:0;display:flex;justify-content:space-between;gap:8px;align-items:center;background:none;border:0;padding:8px 0;font:inherit;font-size:13px;color:var(--text);cursor:pointer;text-align:left}
+.mst-xopen:hover .mst-xn{text-decoration:underline}
+.mst-xn{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mst-xd{font-size:12px;color:var(--text4);white-space:nowrap}.mst-xd.sc{color:#1a4fc4;font-weight:600}
+.mst-xnone{padding:9px 10px;font-size:12.5px;color:var(--text4)}
+.mst-xacts{display:flex;gap:6px;justify-content:flex-end;padding:8px 10px;border-top:1px solid var(--bg4);background:var(--bg5)}
+.mst-xacts .btn{width:auto}
+.mst-xlist .mst-sched{margin:0;border:0;border-top:1px solid var(--bg4);border-radius:0;background:var(--bg5)}
+.mst-xlist .mst-flash{margin:8px 10px}
+select.mst-day{width:100%;margin:6px 0 10px;padding:8px 10px;font:inherit;font-size:13.5px;font-weight:600;background:#fff;border:1px solid var(--border2);border-radius:var(--r);color:var(--text);cursor:pointer}
+.mst-lpick{padding:12px 12px 2px}
+select.cmp-lsel{font:inherit;font-size:13.5px;font-weight:700;padding:6px 8px;border:1px solid var(--border2);border-radius:var(--r);background:#fff;color:var(--text);cursor:pointer;max-width:100%}
+.mst-lesson .ms-lf+.ms-lf{border-top:1px solid var(--bg4)}
+.mst-lfoot{flex-wrap:wrap}
+.mst-lfoot .ms-lc-b .btn{width:auto}
+.mst-st.dr{color:#C2410C;font-weight:600}.mst-st.sc{color:#1a4fc4;font-weight:600}.mst-st.ok{color:var(--green);font-weight:600}
+.mst-asec{border-top:3px solid #1a4fc4;background:#EAF0FA;padding:12px}
+.mst-asec>.mst-card:last-child,.mst-asec>.mst-form{margin-bottom:0}
+.mst-asec .mst-form{border:1px solid #9DBBE4}
+.act-note.mst-red{border:1px solid #DC2626;background:#FDECEC;color:#B91C1C}
+@media(min-width:900px){.mst-panes{grid-template-columns:380px minmax(0,1fr)}}
+.mst-btns .btn{white-space:nowrap;font-size:12px;padding:7px 6px;gap:5px}
+.mst-btns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-bottom:8px}
+.mst-btns .btn{width:100%;padding:7px 8px;position:relative;justify-content:center}
+.mst-ffoot{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.mst-ffoot .btn{width:100%}
+.mst-ffoot .mst-send{grid-column:1/-1}
+.mst-ffoot.has-del .mst-send{grid-column:2/-1}
+.mst-hstate{font-weight:600;font-size:11.5px;background:#fff;color:var(--acc);border-radius:10px;padding:0 9px}
+.mst-dayh{font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--text4);margin:12px 0 6px;display:flex;align-items:center;gap:8px}
+.mst-dayh::after{content:"";flex:1;height:1px;background:var(--border)}
+.mst-empty{color:var(--text4);font-size:13px;text-align:center;padding:2.5rem 1rem}
+@media(max-width:560px){
+  .mst-btns .btn{padding:8px 6px;font-size:13px;white-space:normal;line-height:1.2}
+  .mst-ffoot{grid-template-columns:1fr 1fr}
+  .mst-ffoot .mst-send,.mst-ffoot.has-del .mst-send{grid-column:1/-1;order:-3}
+  .mst-ffoot .mst-del{grid-column:1/-1;order:1}
+}
+.mst-archpad{height:2px}
+.mst-back .btn{width:auto;padding:8px 16px}
+.mst-empty{margin-top:3rem}
+.mst-qb{background:#fff;border:1.5px solid;font-weight:700}
+.mst-qb.dr{color:#9A3412;border-color:#FB923C}.mst-qb.dr:hover,.mst-qb.dr.on{background:#FFEDD5}
+.mst-qb.sc{color:var(--bt);border-color:#5B8ED6}.mst-qb.sc:hover,.mst-qb.sc.on{background:var(--bbg)}
+.mst-qb.on{box-shadow:inset 0 0 0 1px currentColor}
+.mst-sep{height:0;border-top:2px solid var(--border2);margin:12px 0 4px}
+.mst-xd{font-size:12px}
+.mst-btns{grid-template-columns:repeat(3,minmax(0,1fr))}
+.mst-btns .btn{white-space:nowrap}
+.mst-qo{font-weight:700}
+.mst-form .composer-wrap{margin-top:10px}
+.mst-form .cmp-rich{min-height:180px;max-height:none;background:#fff}
+.mst-mats{margin:10px 0 6px;padding-top:8px;border-top:1px solid var(--bg4)}
+.mst-html{margin-top:6px;font-size:13px;line-height:1.5;color:var(--text)}
+.mst-html ol,.mst-html ul{margin:4px 0 6px 22px}
+.mst-libpage{background:rgba(255,255,255,.28);border:1px solid var(--border);border-radius:var(--rl);padding:1rem}
+.mst-form .mst-ffoot{margin-top:8px;padding-top:10px}
+#pick-panel-mat .cmp-linkrow,.cmp-linkpanel .cmp-linkrow{flex-wrap:wrap;align-items:flex-end;gap:8px}
+.cmp-ll{display:flex;flex-direction:column;gap:3px;flex:1 1 180px;min-width:0;text-transform:none;letter-spacing:0;font-size:12px;font-weight:700;color:#0A0A0A}
+.cmp-ll input{margin:0;width:100%}
+.mst-form .lib-panel{margin:8px 0}
+.mst-form .lib-panel.pick-in-thread{max-height:none;overflow:visible;margin:8px 0 10px;padding:10px 12px}
+.mst-form .lib-panel .lib-hd{margin-bottom:6px}
+.mst-form .lib-panel .lib-list{max-height:120px;overflow-y:auto}
+.mst-form .lib-panel .lib-shelf{padding:6px 8px}
+.mst-form .lib-panel .lib-shelf+.lib-shelf{margin-top:8px}
+.mst-form .lib-panel .lib-foot{margin-top:6px}
+.lib-panel.cmp-panel{position:relative;max-height:none;overflow:visible;margin:8px 0 10px;padding:10px 40px 10px 12px;background:var(--bg5)}
+.cmp-linkpanel .cmp-linkrow{margin-bottom:6px}
+.cmp-px{position:absolute;top:6px;right:6px;width:28px;height:28px;border-radius:50%;border:1px solid var(--border2);background:#fff;cursor:pointer;font-size:13px;line-height:1;color:var(--text)}
+.cmp-ls{flex:none}
+.cmp-ls select{margin:0;width:100%;padding:7px 8px;font:inherit;font-size:13px;font-weight:400;border:1px solid var(--border2);border-radius:var(--r);background:#fff;color:var(--text)}
+.lib-panel.cmp-panel{margin:6px 0 8px;padding:6px 30px 6px 8px}
+.cmp-px{top:5px;right:5px;width:20px;height:20px;font-size:10px;padding:0}
+.cmp-linkpanel .cmp-linkrow{gap:6px;margin-bottom:5px;flex-wrap:nowrap;align-items:flex-end}
+.cmp-linkpanel .cmp-ll{font-size:11px;gap:2px;flex:1 1 0}
+.cmp-linkpanel .cmp-ll input,.cmp-linkpanel .cmp-ls select{height:26px;padding:3px 7px;font-size:12px;line-height:1.2}
+.cmp-linkpanel .cmp-ll input{flex:none}
+.cmp-linkpanel .cmp-mini{height:26px;padding:0 9px;font-size:11.5px;white-space:nowrap}
+.cmp-linkpanel .cmp-ls{flex-direction:row;align-items:center;gap:6px;width:100%}
+.cmp-linkpanel .cmp-ls span{white-space:nowrap}
+.cmp-linkpanel .cmp-ls select{flex:1 1 auto;width:auto;min-width:0}
+.cmp-tpls{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:4px;max-height:96px;overflow-y:auto}
+.cmp-tpl{display:block;width:100%;min-width:0;height:26px;padding:0 8px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font:inherit;font-size:12px;color:var(--text);background:#fff;border:1px solid var(--border2);border-radius:var(--r);cursor:pointer}
+.cmp-tpl:hover{border-color:#1a4fc4;color:#1a4fc4}
+.cmp-tpl-none{font-size:12px;color:var(--text3);padding:3px 0}
+.cmp-row2 .cmp-tb-pick{white-space:nowrap;padding:0 6px}
+.mst-form .tpl-saveas{padding-top:4px}
+.cmp-linkpanel .cmp-linkrow{flex-wrap:wrap}
+.cmp-linkpanel .cmp-linkrow .cmp-ll:first-child{flex:1 1 190px}
+.cmp-linkpanel .cmp-linkrow .cmp-ll:nth-child(2){flex:1 1 120px}
+.cmp-linkpanel .cmp-linkrow input{min-width:0;width:100%}
+/* a phone keeps 16px in a typing box (smaller and the iPhone zooms the page in), with less padding */
+@media(max-width:560px){
+.cmp-linkpanel .cmp-linkrow{flex-wrap:wrap}
+.cmp-linkpanel .cmp-ll{flex:1 1 120px}
+.cmp-linkpanel .cmp-ll input,.cmp-linkpanel .cmp-ls select{height:34px;padding:4px 8px;font-size:16px}
+.cmp-linkpanel .cmp-mini{height:34px;padding:0 8px;font-size:12.5px}
+.cmp-linkpanel .cmp-ll input{padding:4px 7px}
+.cmp-linkpanel .cmp-ll input::placeholder{font-size:13px}
+.cmp-linkpanel .cmp-ls{flex-direction:column;align-items:stretch;gap:2px}
+.cmp-linkpanel .cmp-ls select{width:100%}
+.cmp-tpls{grid-template-columns:minmax(0,1fr);max-height:150px}
+.cmp-tpl{height:34px;font-size:13px}
+.cmp-row2 .cmp-tb-pick{font-size:12px}
+}
 </style>
 </head>
 <body>
@@ -1766,7 +1980,7 @@ mark.guide-hit{background:var(--bbg);color:inherit;border-radius:2px;padding:0 1
 // PAGE values: boot | login | needsSetup | forgotpw | setpw | home
 var PAGE = 'boot';
 var TOKEN = '', TEACHER_ID = '', TEACHER_NAME = '';
-var HOME_TAB = 'family'; // 'family' | 'staff' | 'settings'
+var HOME_TAB = 'students'; // 'students' | 'family' | 'staff' | 'library' | 'trials' | 'guide' — [1.792] no 'settings'; [1.794] AC: "My students should be the main tab for teachers"
 // The teacher's own status and settings (BACKLOG 1.125, 1.132). Loaded once
 // at sign-in, because the banner is on every screen.
 var TSET = {tpls:null, tplEdit:-1, tplDel:-1, tplBackup:null, tplsSaved:false, tplsErr:'',
@@ -2097,7 +2311,8 @@ function _bootTeacher(){
     var tr=(r.parts||{}).teacherTrials;
     if(tr && !TT.data){ TT.asked=true; TT.loading=false; TT.data=tr;
       (tr.taught||[]).forEach(function(t){ if(!TT.timer[t.key]) TT.ans[t.key]=Object.assign({},t.report||{}); }); }
-    if(!MS.week && API_KEEP['w|'+API_THISWEEK]){ MS.asked=true; MS.week=_apiCopy(API_KEEP['w|'+API_THISWEEK]); MS.weekStart=MS.week.weekStart; }
+    var _ms=(r.parts||{}).teacherMyStudents;   // [1.793] — the student list, its drafts and scheduled
+    if(_ms && !MS.roster){ MS.rosterAsked=true; MS.roster=_ms; }
     render();
   });
 }
@@ -2117,7 +2332,11 @@ function _ktToSignIn(){
 }
 function _apiFetch(payload, cb){
   var _cb=cb;
-  cb=function(e,r){ if(!e && _ktSessionGone(r)){ _ktToSignIn(); return; } _cb(e,r); };
+  // [1.794] — the request that found the session ended is answered FIRST, then the page
+  // goes to sign-in. It went straight to sign-in: a send's own failure path never ran, so
+  // the words it had taken out of the box were lost and Send stayed "Sending…" after
+  // signing back in (found by the pre-launch audit, 7 October 2026).
+  cb=function(e,r){ if(!e && _ktSessionGone(r)){ try{ _cb(e,r); }catch(x){} _ktToSignIn(); return; } _cb(e,r); };
   fetch(GAS_URL, {
     method:'POST',
     headers:{'Content-Type':'text/plain;charset=utf-8'},
@@ -2545,7 +2764,16 @@ function _renderBody(){
   var _attWas=_lastAttCount;
   _lastAttCount=(typeof ATT_PENDING!=='undefined'&&ATT_PENDING)?ATT_PENDING.length:0;
   var _pickChanged=(_pickWas!==_lastPickState)||(_attWas!==_lastAttCount);
+  // [1.793] — My Students' two panes scroll on their own on a desktop, and a
+  // rebuild puts each back at the top: every five seconds, mid-sentence. Kept;
+  // a student just opened starts at the top of their page.
+  var _mstL=document.getElementById('mst-left'), _mstR=document.getElementById('mst-right');
+  var _mstLTop=_mstL?_mstL.scrollTop:0, _mstRTop=_mstR?_mstR.scrollTop:0;
   el.innerHTML=h;
+  var _mstL2=document.getElementById('mst-left'), _mstR2=document.getElementById('mst-right');
+  if(_mstL2) _mstL2.scrollTop=_mstLTop;
+  if(_mstR2) _mstR2.scrollTop=MST.top?0:_mstRTop;
+  MST.top=false;
   // [1.127] — an arrow-key reorder has to leave the focus ON THE ROW IT MOVED,
   // and that cannot be done at the call site: the save that follows re-renders
   // twice more and each rebuild throws the focus back to the body. Found by
@@ -3075,6 +3303,43 @@ var GUIDE_COPY={
   // in the tab's order, and every line is a plain instruction that starts with
   // what the teacher does.
   sections:[
+    // [1.793]/[1.794] — the tab as AC approved it on 7 October 2026: a student list, the one
+    // row of Opus Schedule, Drafts and Scheduled, and Create Assignment as the composer. Rows
+    // DRAFTED in AC's guide voice from the labels on screen, for his review.
+    {id:'students', h:'Students', topics:[
+      // [1.771] — the Opus button drawn in its row as the real button (AC: "Use buttons not text links").
+      {n:'Opus Schedule', btn:'view', k:'opus schedule calendar lessons source truth latest current',
+       q:'Click {{Opus Schedule}} to see your current lessons in Opus, the source of truth for all lessons.'},
+      // AC, 5 October 2026 — cancelling happens in Opus, not in this portal; since 7 October
+      // {{Opus Schedule}} is the one way into Opus from this tab.
+      {n:'Cancel a Lesson in Opus', btn:'cancel', k:'cancel cancellation cancelling sick makeup make up opus lesson',
+       q:'Cancel lessons in Opus: click {{Opus Schedule}}. During cancellation, Opus prompts you to leave a message for the family.'},
+      {n:'All days', k:'student list day week schedule find today lesson students',
+       q:'Your students are listed by the day of their lesson. Choose a day from {{All days}} to see only that day\u2019s students, and click a student to open their page.', m:[
+        'A student\u2019s latest lesson is marked {{Draft}}, {{Scheduled}} or {{Sent}} when it has an assignment. Trial students are labeled {{Trial}}.'
+      ]},
+      {n:'Drafts', k:'draft drafts saved later unsent send several many bulk together',
+       q:'Click {{Drafts}} to see the assignments you have saved. Click a student to open the draft, or tick several and click {{Send}} or {{Schedule Send}} to send them together.'},
+      {n:'Scheduled', k:'scheduled later time waiting queue cancel send',
+       q:'Click {{Scheduled}} to see the assignments waiting to send and when each will go. Click a student to open it.'},
+      {n:'Notes about [student]', k:'private notes student',
+       q:'Keep private notes on each student. Only you can see them, and they save automatically.'},
+      // [1.774] — read-only until Edit; "Lesson Activities" is "Lesson Notes" (AC).
+      // [1.790] — AC: open blank, Save, and Edit only for saved notes.
+      {n:'Lesson Summary', k:'lesson notes activities materials books resources edit save file link date',
+       q:'Choose the lesson date, type your lesson notes and add {{Materials & Resources}}, then click {{Save}}. To change saved notes, click {{Edit}}. Nothing changes until you save.', m:[
+        'Click {{Add file}} or {{Add link}} to add materials from your device, your saved files and links, or the {{Keylab Master Library}}.'
+      ]},
+      {n:'Create Assignment', k:'homework practice assignment parents file link library master template draft schedule preview',
+       q:'Click {{Create Assignment for}} the student at the bottom of the {{Lesson Summary}}. The assignment opens already written from your lesson notes, ready to edit.', m:[
+        'Edit it with the formatting buttons, {{Add file}}, {{Add link}} and {{Templates}}, as in a message. Tick which parents to send it to, then click {{Send to}}.',
+        'Click {{Save Draft}} to come back to it, {{Schedule Send}} to choose when it goes, or {{Preview}} to see the family\u2019s email.',
+        'Files you add are listed under {{Materials}}, and the family is asked to share them with the student.',
+        'To change a scheduled assignment, click {{Cancel Send}}. It returns to {{Drafts}} with nothing lost.'
+      ]},
+      {n:'Archived Lessons', k:'history old previous earlier past lessons open trial',
+       q:'Click {{Archived Lessons}} to see earlier lessons and trial lessons. Click {{Open}} to read one, with any assignment sent for it.'}
+    ]},
     {id:'messages', h:'Messages', topics:[
       {n:'New Message', k:'new compose write start contact find family search parent student',
        q:'Search for a student or parent by name to start a new message.'},
@@ -3121,12 +3386,15 @@ var GUIDE_COPY={
         'Attach files from your device, your saved files, or the {{Keylab Master Library}}. Click {{Accepted file types}} to see supported formats.'
       ]},
       {n:'Add link', k:'url website web address',
-       q:'Click {{Add link}}, paste the web address, enter the text the family will see, and click {{Insert link}}.'},
+       q:'Highlight words in your message and click {{Add link}}, then paste the address under {{Paste Link Here}} and click {{Insert link}}.', m:[
+        'The words in {{Display Text}} become the link. Left empty, the address itself is shown.',
+        'Choose from {{Saved Links}} to add a link you have saved, or one from the {{Keylab Master Library}}.'
+      ]},
       {n:'Aa', k:'format formatting bold italic underline list bullet',
        q:'Click {{Aa}} to format text with bold, italics, underlining and lists.'},
       {n:'Templates', k:'saved message reuse quick reply canned',
-       q:'Click {{Templates}} to insert a saved message, or to save the message you are writing as a template.', m:[
-        'You can also create templates in {{My Library}} with {{Create a new template}}.'
+       q:'Click {{Templates}} and choose one to insert it where your cursor is. To keep the message you are writing, click {{Save as a new template}}.', m:[
+        'You can also create templates on the {{Library}} tab with {{Create a new template}}.'
       ]},
       {n:'Schedule Send', k:'later delay timer future time date schedule scheduled messages',
        q:'Click {{More}}, then {{Schedule Send}}, and choose a date and time.', m:[
@@ -3142,67 +3410,17 @@ var GUIDE_COPY={
       ]},
       {n:'Admin & staff', k:'office staff colleague teacher adrian help problem broken bug support contact private',
        q:'Message admin or other teachers, including for help with the portal. Families cannot see these messages.'},
-      {n:'My Library', k:'saved files links tags organize delete remove master library',
-       q:'Store the files, links and templates you use most, ready to add to any message.', m:[
-        {ul:[
-          'Click {{Add files}} or {{Add links}} to add new items.',
-          'Organize items with tags, and use {{Filter by tag}} to find them. {{Studio tags}} are shared across the studio, and {{Custom tags}} are your own.',
-          '{{Remove from my library}} removes a file from your list but keeps it in messages already sent. {{Delete file}} removes it everywhere, including past conversations.'
-        ]}
-      ]}
-    ]},
-    {id:'students', h:'My Students', topics:[
-      // [1.771] — the two Opus buttons at the top of the tab, each drawn in its
-      // row as the real button (AC: "Use buttons not text links").
-      {n:'View My Schedule in Opus', btn:'view', k:'opus schedule calendar lessons source truth latest current',
-       q:'Opus is the source of truth for all lessons. The week on {{My Students}} shows your general schedule only, so check Opus for your current lessons.'},
-      // AC, 5 October 2026 — cancelling happens in Opus, not in this portal.
-      {n:'Cancel a Lesson in Opus', btn:'cancel', k:'cancel cancellation cancelling sick makeup make up opus lesson',
-       q:'Cancel lessons in Opus. During cancellation, Opus prompts you to leave a message for the family.'},
-      {n:'Last week / Next week', k:'schedule calendar lessons week day closure holiday today',
-       q:'Click {{\u2190 Last week}} or {{Next week \u2192}} to change weeks. Click a lesson to open the student\u2019s card.', m:[
-        // [1.775]
-        'Each lesson up to today shows when lesson notes were added, and when an assignment was sent and to whom.',
-        'Studio closures and your days off are marked, and trial lessons are labeled {{Trial}}.'
-      ]},
-      {n:'Create Assignment', k:'homework practice assignment parents',
-       q:'Send practice notes and materials to parents by message and email.', m:[
-        'Choose the lesson under {{For the lesson on}}, add an optional message, and review the practice list under {{Practice this week}}, which is drawn from that lesson\u2019s notes. Select the materials to include, then click {{Send to}}. Any link or file you add is also saved to {{My Library}}.'
-      ]},
-      {n:'Notes about [student]', k:'private notes student',
-       q:'Keep private notes on each student. Only you can see them, and they save automatically.'},
-      // [1.774] — read-only until Edit; "Lesson Activities" is "Lesson Notes" (AC).
-      {n:'Lesson Summary', k:'lesson notes activities materials books resources edit save',
-       q:'Click {{Edit}} to add or change {{Lesson Notes}} and {{Materials & Resources}}, then click {{Save}}. Nothing changes until you save.'},
-      {n:'Search Lessons', k:'history old previous earlier find',
-       q:'Search past lessons by keyword or date.'}
-    ]},
-    {id:'trials', h:'Trial Lessons', topics:[
-      {n:'Trial lesson guidelines', k:'rules policy how to run',
-       q:'Review the studio\u2019s guidelines for running trial lessons.'},
-      {n:'Report due', k:'trial report form questions deadline submit',
-       q:'Answer every question and click {{Send report to Adrian}} by 11 AM the day after the lesson.', m:[
-        'Your answers save automatically, so you can return and finish later.'
-      ]},
-      {n:'Upcoming', k:'trial new student summary next',
-       q:'See upcoming trial lessons and the summary admin sent for each.'},
-      {n:'Reports sent', k:'trial report past answers archive hide',
-       q:'Click a report to review your answers. Click {{Archive}} to move it to {{Archived}}.'},
-      // [1.773]
-      {n:'Archived', k:'trial report archive restore hide',
-       q:'Click {{Archived}} to see your archived reports. Click {{Restore}} to move one back to {{Reports sent}}.'}
-    ]},
-    {id:'settings', h:'Settings', topics:[
-      {n:'Away / Busy Message', k:'away vacation holiday out of office sick busy unavailable auto reply automatic day off days off absence time off return back',
-       q:'Click {{Turn on away}} when you are unavailable, and {{Turn off away}} when you return.', m:[
+      // [1.792] — from the Settings section, which went with the Settings tab.
+      {n:'Away / Busy Message', k:'away vacation holiday out of office sick busy unavailable auto reply automatic day off days off absence time off return back turn on off status available',
+       q:'Click {{Status: Available}} beside {{Sign Out}} when you are unavailable, and it reads {{Status: Away}}. Click it again when you return.', studio:'away', m:[
         // AC's sentence from the Settings box itself.
         'When enabled, families, other staff, and admin see this before they compose their message to you. If they send you a message, it also appears in the thread as an auto-generated message.',
-        'You can also turn it on or off from the banner at the top of any tab.',
         'Days off on your record with the studio are handled automatically. Families see that you are away and when you will return. You receive no morning emails or reminders while away, and reply times resume on the day you return.'
       ]},
       {n:'After hours', k:'evening night working hours weekend',
-       q:'Families who message you outside your working hours see the studio\u2019s after-hours note before they write.', m:[
-        'The studio writes this note, and you can read it in {{Settings}}.'
+       q:'Families who message you outside your working hours see the studio\u2019s after-hours note before they write.', studio:'after', m:[
+        // [1.792] — AC's line from the Settings box, moved with it ([1.238]).
+        "You'll receive email notifications between 9 am and 7 pm for all family messages. Email notifications for messages sent after 7pm will be sent at 9am the next morning. You do not have to respond to messages sent after 5 pm on Friday or over the weekend until Monday 12 pm, but if the message is time sensitive please try to respond or forward to admin."
       ]},
       // AC, 5 October 2026: "does the guide explain to teachers how notifications
       // work? … with gated notifications from families in the inbox weekdays 9am,
@@ -3219,12 +3437,38 @@ var GUIDE_COPY={
         'Messages from admin and other teachers are not emailed, so check {{Admin & staff}} on the {{Messages}} tab. Admin may also email you when something is urgent.',
         'The button in each email signs you in on the first phone or computer you use it on. On any other device, you will be asked to sign in.'
       ]}
+    ]},
+    // [1.794] — the Library tab, after Messages (AC, 7 October 2026).
+    {id:'library', h:'Library', topics:[
+      {n:'My Library', k:'saved files links tags organize delete remove master library',
+       q:'Store the files, links and templates you use most, ready to add to any message.', m:[
+        {ul:[
+          'Click {{Add files}} or {{Add links}} to add new items.',
+          'Organize items with tags, and use {{Filter by tag}} to find them. {{Studio tags}} are shared across the studio, and {{Custom tags}} are your own.',
+          '{{Remove from my library}} removes a file from your list but keeps it in messages already sent. {{Delete file}} removes it everywhere, including past conversations.'
+        ]}
+      ]}
+    ]},
+    {id:'trials', h:'Trials', topics:[
+      {n:'Trial lesson guidelines', k:'rules policy how to run',
+       q:'Review the studio\u2019s guidelines for running trial lessons.'},
+      {n:'Report due', k:'trial report form questions deadline submit',
+       q:'Answer every question and click {{Send report to Adrian}} by 11 AM the day after the lesson.', m:[
+        'Your answers save automatically, so you can return and finish later.'
+      ]},
+      {n:'Upcoming', k:'trial new student summary next',
+       q:'See upcoming trial lessons and the summary admin sent for each.'},
+      {n:'Reports sent', k:'trial report past answers archive hide',
+       q:'Click a report to review your answers. Click {{Archive}} to move it to {{Archived}}.'},
+      // [1.773]
+      {n:'Archived', k:'trial report archive restore hide',
+       q:'Click {{Archived}} to see your archived reports. Click {{Restore}} to move one back to {{Reports sent}}.'}
     ]}
   ]
 };
 // Which section is showing, what is typed in the search box, and which rows
 // have their full explanation open. Kept across the 5-second poll's render().
-var GD={sec:'messages',q:'',open:{}};
+var GD={sec:'students',q:'',open:{}};   // [1.794] — the first tab's section first
 // {{Label}} → the label, highlighted. Escaped first, so the guide can only ever
 // add its own <b> around text it already holds.
 function _guideText(t){
@@ -3292,6 +3536,7 @@ function _guideRow(tp,key,forced,words,label){
       (has?' <button type="button" class="guide-more-btn" aria-expanded="'+open+'" onclick="guideMore(\''+key+'\','+(open?1:0)+')">'+
         esc(open?G.less:G.more)+'</button>':'')+'</p>'+
       (tp.btn?'<div class="opus-btns">'+rOpusButton(tp.btn)+'</div>':'')+   // [1.771]
+      (tp.studio?_guideStudio(tp.studio):'')+   // [1.792]
       (open?'<div class="guide-more">'+_guideHi(tp.m.map(_guideBlock).join(''),words)+'</div>':'')+
     '</div>'+
   '</div>';
@@ -3367,26 +3612,35 @@ function rHome(){
   // The section headers carry the counts the tab badges used to
   // ([1.161] #1's guarantee — a teacher must not have to open something to
   // discover a message is waiting — now met by having nothing to open).
+  // [1.794] — AC, 7 October 2026: "My students should be the main tab for teachers", "move My
+  // Library to a new tab after messages tab", and "buttons can be condenses: students messages
+  // library trials guide". So: Students · Messages · Library · Trials · Guide.
+  var T=MST_COPY.tabs,msgOn=['students','trials','guide','library'].indexOf(HOME_TAB)<0;
   var tabs='<div class="tabbar">'+
-    '<div class="tab'+(HOME_TAB!=='settings'&&HOME_TAB!=='trials'&&HOME_TAB!=='students'&&HOME_TAB!=='guide'?' on':'')+'" onclick="switchTab(\'family\')">Messages'+rTabBadge(famUnread+staffUnread)+'</div>'+
-    '<div class="tab'+(HOME_TAB==='students'?' on':'')+'" onclick="switchTab(\'students\')">'+esc(MS_COPY.tab)+'</div>'+   // [1.732]
-    '<div class="tab'+(HOME_TAB==='trials'?' on':'')+'" onclick="switchTab(\'trials\')">'+esc(TT_COPY.tab)+rTabBadge(_ttDueCount())+'</div>'+   // [1.731]
-    '<div class="tab'+(HOME_TAB==='settings'?' on':'')+'" onclick="switchTab(\'settings\')">Settings</div>'+
-    '<div class="tab'+(HOME_TAB==='guide'?' on':'')+'" onclick="switchTab(\'guide\')">'+esc(GUIDE_COPY.tab)+'</div>'+   // [1.759]
+    '<div class="tab'+(HOME_TAB==='students'?' on':'')+'" onclick="switchTab(\'students\')">'+esc(T.students)+'</div>'+   // [1.732]
+    '<div class="tab'+(msgOn?' on':'')+'" onclick="switchTab(\'family\')">'+esc(T.messages)+rTabBadge(famUnread+staffUnread)+'</div>'+
+    '<div class="tab'+(HOME_TAB==='library'?' on':'')+'" onclick="switchTab(\'library\')">'+esc(T.library)+'</div>'+
+    '<div class="tab'+(HOME_TAB==='trials'?' on':'')+'" onclick="switchTab(\'trials\')">'+esc(T.trials)+rTabBadge(_ttDueCount())+'</div>'+   // [1.731]
+    // [1.792] — no Settings tab. AC, 6 October 2026: "With the new design
+    // improvements there is no need for a settings tab at all in the teacher
+    // portal the away busy button should just be on the messages panel like it
+    // always is." The switch is the banner above the tabs; the studio's away and
+    // after-hours wording, which Settings showed for reference, is in the guide.
+    '<div class="tab'+(HOME_TAB==='guide'?' on':'')+'" onclick="switchTab(\'guide\')">'+esc(T.guide)+'</div>'+   // [1.759]
     '</div>';
   // [1.731] — loaded once per sign-in from here, so every way into the portal
   // (sign-in, a kept session, a password set) gets the tab's count.
   if(TOKEN&&!TT.asked) loadTrials(true);
   if(TOKEN&&!OPUS.asked) loadOpusUrl();   // [1.771]
   var body = HOME_TAB==='guide' ? rGuidePage()   // [1.759]
-           : HOME_TAB==='settings' ? rTeacherSettings()
            : HOME_TAB==='trials' ? rTrialsTab()
            : HOME_TAB==='students' ? rMyStudents()
+           : HOME_TAB==='library' ? mstLibraryPage()   // [1.794]
            : rTimerKey()+rMessagesPage();
   return '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">'+
     '<div class="login-brand" style="margin:0">KEYLAB</div>'+
-    '<button type="button" class="lnk-btn"  onclick="doSignOut()">Sign Out</button></div>'+
-    rStatusBanner()+rSchedMissedNotice()+tabs+body;   // [1.782] — AC: "a top level dashboard message"
+    '<span class="mst-hdr-r">'+mstStatusBtn()+'<button type="button" class="lnk-btn"  onclick="doSignOut()">Sign Out</button></span></div>'+
+    mstStatusNote()+rSchedMissedNotice()+tabs+body;   // [1.782] — AC: "a top level dashboard message"; [1.793] the status box
 }
 
 // AC, 1 Sept: red "Away/Busy" when away is on, green "Status: Available" when
@@ -3417,25 +3671,9 @@ function rHome(){
 // The label follows the STATE, never naming the state it is in: a button
 // reading "Set away" while away is on is the trap this began as. Same two
 // words as the Settings pair, so the tool has one vocabulary for one act.
-function rStatusBanner(){
-  if(!TSET.loaded) return '';
-  // Disabled mid-save so a second press cannot queue a second write of a
-  // setting whose whole meaning is which of two states it is in.
-  var busy=TSET.saving;
-  // [1.759] — on a day off on the teacher's record the server treats them as
-  // away ([1.757]) whatever the switch says, so the banner says so too, and
-  // offers no switch that would change nothing.
-  if(TSET.absentUntil){
-    return '<div class="status-banner away"><span>Away/Busy</span>'+
-      '<span style="font-size:12px">'+esc(GUIDE_COPY.absentBanner.replace('[return date]',TSET.absentUntil))+'</span></div>';
-  }
-  if(TSET.awayEnabled){
-    return '<div class="status-banner away"><span>Away/Busy</span>'+
-      '<button type="button" class="lnk-btn"'+(busy?' disabled':'')+' onclick="setAway(false)">Turn off away</button></div>';
-  }
-  return '<div class="status-banner avail"><span>Status: Available</span>'+
-    '<button type="button" class="lnk-btn"'+(busy?' disabled':'')+' onclick="setAway(true)">Turn on away</button></div>';
-}
+// [1.793] — the banner became a small box beside Sign Out (AC, 7 October 2026:
+// "slim down the whole available/away area"): mstStatusBtn and mstStatusNote, in
+// My Students' code. Still one switch, still setAway.
 
 // ============================================================
 // SETTINGS — away notice (1.125) and the after-hours line (1.132)
@@ -3451,6 +3689,15 @@ function rStatusBanner(){
 // so a teacher always knows what goes out when they write nothing. The text
 // comes from the server (the sentence actually sent); nothing is drawn until
 // it has arrived.
+// [1.792] — drawn in the guide's Away / Busy Message and After hours rows,
+// since Settings is gone: the studio's wording as a family reads it, with this
+// teacher's name in it.
+function _guideStudio(kind){
+  if(typeof TSET==='undefined'||!TSET.loaded) return '';
+  return kind==='away'
+    ? _tsetStudioCopy(String(TSET.awayDefaultCopy||'').replace(/\[TEACHER\]|\[teacher first name\]/gi,String(TEACHER_NAME||'').trim().split(/\s+/)[0]||'your teacher'))
+    : _tsetStudioCopy(TSET.afterHoursDefaultCopy);
+}
 function _tsetStudioCopy(txt){
   if(!txt)return '';
   return '<div style="margin-top:.75rem;padding:.6rem .75rem;background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px">'+
@@ -3459,33 +3706,10 @@ function _tsetStudioCopy(txt){
 }
 var TSET_COPY={
   // [1.756] — "(sent when yours is blank)" came off with the teacher's own box.
-  studioLabel:'Studio message',   // PLACEHOLDER — AC's wording
-  awayHeading:'Away / Busy Message',
-  // AC's third revision of this sentence on 3 September.
-  // [1.756] — AC, 4 October 2026: the studio's wording only. His sentence
-  // with the part that offered a teacher their own removed, nothing added.
-  awayBody:'When enabled, families, other staff, and admin see this before they compose their message to you. If they send you a message, it also appears in the thread as an auto-generated message.',
-  afterHeading:'After hours',
-  afterBody:'Shown to a family before creating a message and sending outside of your set working hours.',   // [1.756] — as awayBody
-  // [1.238] — AC's copy, 3 September, replacing his own line from earlier the
-  // same day. The delay is now DOCUMENTED to the teacher in his words rather
-  // than being invisible, and that was the actual defect all along: A1 was
-  // reported as "messages are not reaching the teacher" when the message had
-  // arrived in the portal within seconds and only the email was held, with
-  // nothing anywhere saying so.
-  //
-  // One sentence in it was flagged to him rather than silently corrected,
-  // because it is his: "the following day at 9am" is right for a message sent
-  // at 8pm and wrong for one sent at 2am, which is delivered the SAME day at
-  // 9am — and the 2am case is the exact one that opened this investigation.
-  // AC: "Adjust the language as suggested." It reads "at 9am the next
-  // morning" below.
-  //
-  // His previous line — "Family messages and notifications are only sent
-  // within your regular working hours, but admin may email you outside your
-  // working hours if something is time sensitive" — is stale the moment the
-  // window stops being per teacher, which is why it could not simply stay.
-  hoursNote:"You'll receive email notifications between 9 am and 7 pm for all family messages. Email notifications for messages sent after 7pm will be sent at 9am the next morning. You do not have to respond to messages sent after 5 pm on Friday or over the weekend until Monday 12 pm, but if the message is time sensitive please try to respond or forward to admin."
+  // [1.792] — the Settings screen's headings and lines went with it; the away
+  // sentence is in the guide's Away / Busy Message row and the hours line in its
+  // After hours row.
+  studioLabel:'Studio message'   // PLACEHOLDER — AC's wording
 };
 // ============================================================
 // [1.731] TRIAL LESSONS — the studio's guidelines, the summary admin sends
@@ -3577,7 +3801,7 @@ function rTrialsTab(){
   // [1.773] — archived reports, closed until asked for, still readable and
   // one click from coming back.
   if(arch.length){
-    h+='<button type="button" class="tt-arch-h" onclick="TT.showArch=!TT.showArch;render()"><span class="caret">'+(TT.showArch?'▾':'▸')+'</span> '+
+    h+='<button type="button" class="tt-arch-h" onclick="TT.showArch=!TT.showArch;render()">'+
       esc(TT_COPY.archivedH)+' ('+arch.length+')</button>';
     if(TT.showArch)arch.forEach(function(t){h+=_ttSentCard(t,true);});
   }
@@ -3586,7 +3810,7 @@ function rTrialsTab(){
 function _ttSentCard(t,archived){
   var on=!!TT.open[t.key];
   return '<div class="card tt-card"><div class="tt-sent-row"><button type="button" class="tt-row tt-btn" onclick="ttToggle('+jsq(t.key)+')">'+
-    '<span><span class="caret">'+(on?'▾':'▸')+'</span> <b>'+esc(_nameAge(t.studentName,t.age))+'</b></span>'+
+    '<span><b>'+esc(_nameAge(t.studentName,t.age))+'</b></span>'+
     '<span class="tt-pill ok">'+esc(TT_COPY.sentOn(_ttWhen(t.submittedAt)))+'</span></button>'+
     '<button type="button" class="btn btn-s ms-sm" onclick="ttArchive('+jsq(t.key)+','+(archived?'false':'true')+')">'+esc(archived?TT_COPY.restore:TT_COPY.archive)+'</button></div>'+
     (on?_ttAnswersHTML(t):'')+'</div>';
@@ -3613,7 +3837,7 @@ function _ttReportCard(t){
   // and expand to complete and submit"* — closed, the card is its heading only.
   var on=!!TT.open[t.key];
   var head='<button type="button" class="tt-row tt-btn" onclick="ttToggle('+jsq(t.key)+')">'+
-    '<span><span class="caret">'+(on?'\u25be':'\u25b8')+'</span> <b>'+esc(_nameAge(t.studentName,t.age))+'</b><span class="tt-sub">'+esc(t.details)+'</span></span>'+_ttPill(t)+'</button>';
+    '<span><b>'+esc(_nameAge(t.studentName,t.age))+'</b><span class="tt-sub">'+esc(t.details)+'</span></span>'+_ttPill(t)+'</button>';
   return '<div class="card tt-card">'+head+(on?_ttReportForm(t,i,a,d):'')+'</div>';
 }
 function _ttReportForm(t,i,a,d){
@@ -3699,33 +3923,32 @@ function ttSubmit(i){
 // Lesson Activities, Materials & Resources, Search Lessons, Open, Close,
 // Create Assignment); PLACEHOLDER for the rest.
 var MS_COPY={
-  tab:'My Students',lastWeek:'← Last week',nextWeek:'Next week →',today:'Today',
-  absence:'Teacher absence — no lessons',closed:function(n){return 'Studio closed'+(n?' — '+n:'');},
-  noLessons:'No lessons',trial:'Trial',back:'← Back to the week',
+  trial:'Trial',
   notesAbout:function(f){return 'Notes about '+f;},onlyYou:'Only you see these',
-  summary:'Lesson Summary',summaryHint:'One for each lesson',
+  summary:'Lesson Summary',   // [1.790] — AC's words; its line is MST_COPY.summaryHint ([1.793])
   activities:'Lesson Notes',materials:'Materials & Resources',   // [1.774] — AC: 'Change lesson activities to lesson notes'
-  addMat:'+ Add book, file or link',book:'Book',link:'Link',file:'File',
-  bookPh:'Title, page',linkLabelPh:'What it is',linkUrlPh:'https://…',pickFile:'Choose from My Library',uploadFile:'Or upload a file',
-  add:'Add',cancel:'Cancel',remove:'Remove',
-  notSent:'Not sent to the family yet.',sentPill:'Assignment sent',sentOn:function(w){return 'Assignment sent '+w;},
-  create:'Create Assignment',search:'Search Lessons',searchPh:'Search words, e.g. scales',
-  openAll:'Open all',closeAll:'Close all',open:'Open',close:'Close',noMatch:'No lessons match.',
-  trialH:function(d){return 'Trial lesson — '+d;},trialSummary:'Summary you were sent',trialReport:'Your report',
-  asgH:function(f){return 'Assignment for '+f;},to:'To',forLesson:'For the lesson on',message:'Message',
-  messagePh:'A line to the family (optional)',practice:'Practice this week',practiceHint:'Taken from Lesson Notes. Editing here does not change your note.',
-  mats:'Materials',inLib:'In My Library',willAdd:'Will be added to My Library',
-  libNote:'A link or file you add here is saved to My Library and put in the message.',
-  addFileLink:'+ Add a file or link',send:function(n){return 'Send to '+n;},sending:'Sending…',sent:'Sent',
+  // [1.790] — the kinds a saved material is drawn with. A book is no longer
+  // added (AC: "If we added a book it would be a file"); one typed earlier is
+  // still shown as it was saved.
+  book:'Book',link:'Link',file:'File',
+  cancel:'Cancel',remove:'Remove',
+  notSent:'Not sent to the family yet.',sentOn:function(w){return 'Assignment sent '+w;},
+  // [1.790] — AC, 6 October 2026: "create assignment for [student first name]",
+  // and the mock-up's Archived Lessons ("otherwise this is good").
+  createFor:function(f){return 'Create Assignment for '+f;},archived:'Archived Lessons',
+  open:'Open',close:'Close',
+  trialSummary:'Summary you were sent',trialReport:'Your report',
+  message:'Message',practice:'Assignment',   // [1.791] — AC: "Practice this week should be renamed 'Assignment'"
+  inLib:'In My Library',willAdd:'Will be added to My Library',
+  send:function(n){return 'Send to '+n;},
   saved:'Saved',saveFail:'Not saved. Check your connection.',
   // [1.774] — AC, 5 October 2026: "a read-only state and an edit and save
   // function to make sure that teachers don't accidentally overwrite lesson
   // notes when reviewing". PLACEHOLDER wording for AC except Edit and Save.
-  edit:'Edit',save:'Save',saving:'Saving\u2026',noNotes:'No lesson notes yet.',
-  // [1.775] — AC: "lesson notes added and the date. Lesson assignment sent who
-  // it was sent to and the date." The two "no" lines are the resting state.
-  notesAdded:function(w){return 'Lesson notes added '+w;},noNotesRow:'No lesson notes yet',
-  sentTo:function(who,w){return 'Assignment sent'+(who?' to '+who:'')+', '+w;},noAsg:'No assignment sent'
+  edit:'Edit',save:'Save',saving:'Saving\u2026',noNotes:'No lesson notes yet.'
+  // [1.793] — This week, Today, Last week / Next week, Search and the week's lesson lines went
+  // with the week (AC, 7 October 2026: "Remove search functions altogether"; "remove the 'this
+  // week' button. Just show all students listed by day of the week in master list").
 };
 // ── [1.771] — Opus, one click away ────────────────────────────────────────
 //
@@ -3747,8 +3970,10 @@ var MS_COPY={
 // Opus is the source of Truth for all lessons and that this is just a list of
 // their general schedule".
 var OPUS_COPY={
-  truth:'Opus is the source of truth for all lessons. This list shows your general schedule only.',
-  view:'View My Schedule in Opus',
+  // [1.793] — the sentence "Opus is the source of truth for all lessons. This list shows your
+  // general schedule only." went from the tab (AC, 7 October 2026: "No need for the Opus is the
+  // source of truth sentence … Remove."); the guide's Opus Schedule row still says it.
+  view:'Opus Schedule',   // [1.794] — AC, 7 October 2026: "one row, left to right: Opus Schedule, Drafts, Scheduled"
   cancel:'Cancel a Lesson in Opus'
 };
 var OPUS={url:'',asked:false};
@@ -3766,73 +3991,24 @@ function rOpusButton(kind){
   // [1.779] — View My Schedule blue, Cancel a Lesson red (AC).
   return '<a class="btn '+(kind==='cancel'?'btn-cancel':'btn-p')+'" href="'+esc(_opusHref())+'" target="_blank" rel="noopener">'+esc(kind==='cancel'?OPUS_COPY.cancel:OPUS_COPY.view)+'</a>';
 }
-function rOpusBar(){
-  return '<div class="opus-bar"><p>'+esc(OPUS_COPY.truth)+'</p><div class="opus-btns">'+rOpusButton('view')+rOpusButton('cancel')+'</div></div>';
-}
-var MS={edits:{},asked:false,loading:false,week:null,weekStart:'',card:null,cardStu:'',cardDate:'',cardTime:'',cardLoading:false,
-  open:{},trialOpen:{},q:'',qDate:'',note:null,lesson:{},timer:{},st:'',adding:null,asg:null,lib:null,busy:false,err:''};
+var MS={edits:{},asked:false,roster:null,rosterAsked:false,rosterLoading:false,card:null,cardStu:'',cardDate:'',cardTime:'',cardLoading:false,
+  open:{},trialOpen:{},note:null,lesson:{},timer:{},st:'',pick:null,asg:null};
 var _MS_MO=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 var _MS_DAY=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 function _msDow(ymd){var p=ymd.split('-');return new Date(Date.UTC(+p[0],+p[1]-1,+p[2],12)).getUTCDay();}
 function _msShort(ymd){var p=String(ymd||'').split('-');return p.length===3?_MS_MO[+p[1]-1]+' '+(+p[2]):String(ymd||'');}
 function _msLong(ymd){return /^\d{4}-\d{2}-\d{2}$/.test(ymd||'')?_MS_DAY[_msDow(ymd)]+', '+_msShort(ymd):String(ymd||'');}
 function _msAdd(ymd,n){var d=new Date(ymd+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10);}
-function loadWeek(ws){
-  MS.asked=true;MS.loading=true;
-  api({action:'teacherWeek',data:{teacherToken:TOKEN,weekStart:ws||MS.weekStart||''}},function(e,r){
-    MS.loading=false;
-    if(!e&&r&&r.ok){MS.week=r;MS.weekStart=r.weekStart;}
-    else showMsg((r&&r.error)||'The week could not be loaded','e');
-    render();
-  });
+// The student's latest lesson on or before today, so their card opens on it.
+function _msLastLesson(s,today){
+  var i=_MS_DAY.indexOf(s.day);if(i<0)return today;
+  var d=today;while(_msDow(d)!==i)d=_msAdd(d,-1);return d;
 }
-function msWeekNav(n){loadWeek(_msAdd(MS.weekStart,7*n));}
-function rMyStudents(){
-  if(MS.cardStu)return rMsCard();
-  if(!MS.week)return '<div class="empty-state">'+(MS.loading?'<span class="spin">↻</span>':'')+'</div>';
-  var w=MS.week,h=rOpusBar()+   // [1.771]
-    '<div class="ms-nav"><button type="button" class="btn btn-s ms-sm" onclick="msWeekNav(-1)">'+esc(MS_COPY.lastWeek)+'</button>'+
-    '<b>'+esc(_msShort(w.weekStart)+' – '+_msShort(_msAdd(w.weekStart,6)))+'</b>'+
-    '<button type="button" class="btn btn-s ms-sm" onclick="msWeekNav(1)">'+esc(MS_COPY.nextWeek)+'</button></div>';
-  var shown=0;
-  w.days.forEach(function(d){
-    var isToday=d.date===w.today;
-    if(!d.off&&!d.lessons.length&&!isToday)return;
-    shown++;
-    h+='<div class="ms-day ms-wk'+(isToday?' today':'')+(d.off?' off':'')+'"><div class="ms-day-h"><span>'+esc(d.dayName+', '+_msShort(d.date))+'</span>'+
-      (isToday?'<span class="ms-tag">'+esc(MS_COPY.today)+'</span>':'')+'</div>';
-    if(d.off)h+='<div class="ms-day-note">'+esc(d.off.kind==='absence'?MS_COPY.absence:MS_COPY.closed(d.off.name))+'</div>';
-    else if(!d.lessons.length)h+='<div class="ms-day-none">'+esc(MS_COPY.noLessons)+'</div>';
-    d.lessons.forEach(function(l){
-      h+='<button type="button" class="ms-row" onclick="msOpen('+jsq(l.studentId)+',\''+d.date+'\','+jsq(l.time)+')">'+
-        '<span class="ms-t">'+esc(String(l.time||'').replace(/\s*[AP]M$/i,''))+'</span><span><b>'+esc(_nameAge(l.studentName,l.age))+'</b>'+
-        (l.trial?' <span class="tt-pill bad">'+esc(MS_COPY.trial)+'</span>':'')+
-        '<span class="ms-s">'+esc([l.instrument,l.duration?l.duration+' min':'',l.room].filter(Boolean).join(' · '))+'</span>'+
-        _msDoneLines(l.done)+'</span></button>';
-    });
-    h+='</div>';
-  });
-  if(!shown)h+='<div class="empty-state">'+esc(MS_COPY.noLessons)+'</div>';
-  return h;
-}
-// [1.775] — on a lesson up to today: when its notes were added, and each
-// assignment sent for it, to whom and when. Nothing on a lesson still to come.
 function _msNames(a){a=(a||[]).filter(Boolean);return a.length<3?a.join(' and '):a.slice(0,-1).join(', ')+' and '+a[a.length-1];}
-function _msDoneLines(dn){
-  if(!dn)return '';
-  // [1.779] — on one line, side by side (AC: "so the list is more compact").
-  var h=dn.notesOn?'<span class="ms-done">'+esc(MS_COPY.notesAdded(_msShort(dn.notesOn)))+'</span>'
-                  :'<span class="ms-done no">'+esc(MS_COPY.noNotesRow)+'</span>';
-  var sent=dn.sent||[];
-  h+=sent.length?sent.map(function(x){return '<span class="ms-done">'+esc(MS_COPY.sentTo(_msNames(x.to),_msShort(x.on)))+'</span>';}).join('')
-                :'<span class="ms-done no">'+esc(MS_COPY.noAsg)+'</span>';
-  return '<span class="ms-done-row">'+h+'</span>';
-}
 function msOpen(stuId,date,time){
-  MS.cardStu=stuId;MS.cardDate=date;MS.cardTime=time||'';MS.card=null;MS.note=null;MS.lesson={};MS.open={};MS.q='';MS.qDate='';MS.asg=null;MS.adding=null;MS.st='';
+  MS.cardStu=stuId;MS.cardDate=date;MS.cardTime=time||'';MS.card=null;MS.note=null;MS.lesson={};MS.open={};MS.asg=null;MS.pick=null;MS.st='';
   render();window.scrollTo(0,0);_msLoadCard();
 }
-function msBack(){MS.cardStu='';MS.card=null;MS.asg=null;render();if(MS.weekStart)loadWeek(MS.weekStart);}   // [1.775] — the row's lines, current
 function _msLoadCard(){
   MS.cardLoading=true;
   api({action:'teacherStudentCard',data:{teacherToken:TOKEN,studentId:MS.cardStu}},function(e,r){
@@ -3849,59 +4025,675 @@ function _msLes(d){
   if(!MS.lesson[d]){var n=_msNoteOf(d);MS.lesson[d]={activities:n?n.activities:'',materials:n?(n.materials||[]).slice():[],lessonTime:n?n.lessonTime:(d===MS.cardDate?MS.cardTime:'')};}
   return MS.lesson[d];
 }
-function rMsCard(){
-  var c=MS.card,h='<button type="button" class="btn btn-s ms-sm" style="margin-bottom:10px" onclick="msBack()">'+esc(MS_COPY.back)+'</button>';
-  if(!c)return h+'<div class="empty-state">'+(MS.cardLoading?'<span class="spin">↻</span>':'')+'</div>';
-  var s=c.student;
-  h+='<div class="ms-head"><div><div class="ms-name">'+esc(_nameAge(s.studentName,s.age))+'</div><div class="ms-det">'+
-    esc([s.day?s.day+'s':'',s.time,s.duration?s.duration+' min':'',s.grade?s.grade+' grade':'',s.level].filter(Boolean).join(' · '))+'</div></div>'+
-    '<button type="button" class="btn btn-p ms-sm" onclick="msAsgOpen(\''+MS.cardDate+'\')">'+esc(MS_COPY.create)+'</button></div>';
-  if(MS.asg)h+=rMsAsg();
-  h+='<div class="ms-day"><div class="ms-day-h"><span>'+esc(MS_COPY.notesAbout(s.first))+'</span><span class="ms-tag">'+esc(MS_COPY.onlyYou)+'</span></div>'+
-    '<div class="ms-sec"><textarea id="ms-note" class="tt-a" rows="3" oninput="msNoteInput(this.value)">'+esc(MS.note||'')+'</textarea>'+
-    (MS.st?'<div class="ms-st">'+esc(MS.st)+'</div>':'')+'</div>';
-  h+='<div class="ms-sec"><div class="ms-sec-h"><span>'+esc(MS_COPY.summary)+'</span><span class="ms-hint">'+esc(MS_COPY.summaryHint)+'</span></div>';
-  h+=_msLessonCard(MS.cardDate,true);
-  // Search Lessons: every other lesson with a note or an Assignment.
-  var others=(c.notes||[]).filter(function(n){return n.lessonDate!==MS.cardDate;});
-  if(others.length){
-    var q=MS.q.trim().toLowerCase();
-    var hits=others.filter(function(n){
-      if(MS.qDate&&n.lessonDate!==MS.qDate)return false;
-      if(!q)return true;
-      var l=_msLes(n.lessonDate);
-      var hay=[l.activities,(l.materials||[]).map(function(m){return m.label;}).join(' '),(n.sent||[]).map(function(x){return (x.practice||[]).join(' ')+' '+x.intro;}).join(' ')].join(' ').toLowerCase();
-      return hay.indexOf(q)>-1;
-    });
-    h+='<div class="ms-find"><span class="ms-find-h">'+esc(MS_COPY.search)+'</span>'+
-      '<input id="ms-q" class="tt-a ms-in" placeholder="'+esc(MS_COPY.searchPh)+'" value="'+esc(MS.q)+'" oninput="MS.q=this.value;render()">'+
-      '<input id="ms-qd" type="date" class="tt-a ms-in ms-date" value="'+esc(MS.qDate)+'" onchange="MS.qDate=this.value;render()"></div>'+
-      '<div class="ms-oc"><button type="button" class="btn btn-s ms-sm" onclick="msOpenAll(true)">'+esc(MS_COPY.openAll)+'</button>'+
-      '<button type="button" class="btn btn-s ms-sm" onclick="msOpenAll(false)">'+esc(MS_COPY.closeAll)+'</button></div>';
-    if(!hits.length)h+='<div class="ms-hint" style="padding:6px 0">'+esc(MS_COPY.noMatch)+'</div>';
-    hits.forEach(function(n){
-      if(MS.open[n.lessonDate])h+=_msLessonCard(n.lessonDate,false);
-      else{
-        var l=_msLes(n.lessonDate);
-        h+='<button type="button" class="ms-past" onclick="msToggle(\''+n.lessonDate+'\')"><span class="ms-past-d">'+esc(_msLong(n.lessonDate).replace(/^(\w{3})\w*/,'$1'))+'</span>'+
-          '<span class="ms-past-t">'+esc(String(l.activities||'').split('\n')[0])+'</span>'+
-          ((n.sent||[]).length?'<span class="tt-pill ok">'+esc(MS_COPY.sentPill)+'</span>':'')+'<span class="ms-oc-b">'+esc(MS_COPY.open)+'</span></button>';
-      }
-    });
-  }
-  h+='</div></div>';
-  (c.trials||[]).forEach(function(t){
-    var on=!!MS.trialOpen[t.trialDate];
-    h+='<div class="ms-day off"><button type="button" class="ms-day-h ms-hbtn" onclick="MS.trialOpen['+jsq(t.trialDate)+']=!MS.trialOpen['+jsq(t.trialDate)+'];render()"><span>'+
-      esc(MS_COPY.trialH(_msShort(t.trialDate)))+'</span><span>'+esc(on?MS_COPY.close:MS_COPY.open)+'</span></button>'+
-      (on?'<div class="ms-sec">'+(t.summary?'<div class="ms-lab">'+esc(MS_COPY.trialSummary)+'</div><div class="tt-sum">'+esc(t.summary)+'</div>':'')+
-        (t.report?'<div class="ms-lab" style="margin-top:8px">'+esc(MS_COPY.trialReport)+'</div>'+_msReport(t.report,c.questions||[]):'')+'</div>':'')+'</div>';
-  });
-  return h;
+// [1.790] — AC, 6 October 2026: "improved visual separation between areas.
+// Notes about the student need a separate area … Create assignment should be a
+// separate function visually outside of the lesson notes area, but should still
+// pull data from there and function the same." Each part is its own area: the
+// private notes, the Lesson Summary, Create Assignment, the archived lessons, and
+// the trials, as before. [1.793] — the search went (AC, 7 October: "Remove search
+// functions altogether"), and the trials are among the Archived Lessons.
+function _msArea(title,right,body,cls){
+  return '<div class="ms-day'+(cls?' '+cls:'')+'"><div class="ms-day-h"><span>'+esc(title)+'</span>'+(right||'')+'</div>'+body+'</div>';
 }
 function _msReport(a,qs){
   return qs.map(function(sec,si){return '<div class="tt-sec">'+esc(sec.h)+'</div>'+sec.q.map(function(q,qi){
     return '<div class="tt-q">'+esc(q)+'</div><div class="tt-a-ro">'+esc(a[si+'.'+qi]||'—')+'</div>';}).join('');}).join('');
+}
+// ═══════════════════════════════════════════════════════════════════════
+// [1.793] — My Students around a student list; [1.791] — Draft Assignments
+// and Scheduled; [1.794] — Create Assignment IS the message composer
+// ═══════════════════════════════════════════════════════════════════════
+// AC, 7 October 2026: "A teacher needs a way to easily see a student list,
+// click on the student to add lesson notes and materials and create and send
+// assignments." Then, on the composer: "I like the flow of clicking on the
+// student and being able to take lesson notes and then generate a rough
+// assignment to be edited, scheduled, etc. How can we integrate the two with
+// the minimum number of clicks and steps for the teacher?" — and, on the
+// mock-up that answered it (17 versions, every one clicked through by AC):
+// "ok, this works" and "This is good."
+//
+// The list is every student, by day of the week, from teacherMyStudents (in
+// teacherBootstrap at sign-in, and fresh on every visit to the tab). One row:
+// Opus Schedule, Drafts, Scheduled. A student opens beside the list on a
+// desktop and on its own on a phone. The lesson's box holds its notes and, at
+// the bottom, Create Assignment — which opens the composer itself, already
+// written: AC's greeting for the ticked parents, an Assignment list from the
+// notes, and his sign-off. Drafts live on the server (ASSIGNMENT_DRAFTS).
+var MST_COPY={
+  stAvail:'Status: Available',stAway:'Status: Away',                         // AC, 7 October
+  stTitle:'Click to change',                                                 // PLACEHOLDER
+  tabs:{students:'Students',messages:'Messages',library:'Library',trials:'Trials',guide:'Guide'},   // AC, 7 October
+  drafts:'Drafts',sched:'Scheduled',                                         // AC, 7 October (Opus Schedule is OPUS_COPY.view)
+  allDays:'All days',                                                        // PLACEHOLDER — the day menu's first line
+  choose:'Choose a student to open them.',                                   // PLACEHOLDER (Messages: "Choose a conversation to open it.")
+  // AC, 7 October: "Draft assignments needs to indicate 'for lesson on Tue, Oct 6' … Scheduled
+  // assignments should say 'scheduled to send on Oct 7, 8:00 am'".
+  forLesson:function(d){return 'for lesson on '+d;},sendsOn:function(w){return 'scheduled to send on '+w;},
+  noDrafts:'No draft assignments.',noSched:'No scheduled assignments.',     // PLACEHOLDER
+  noMats:'Nothing added. Click Add file or Add link above.',                 // PLACEHOLDER
+  back:'All Students',                                                       // AC, 7 October ("No arrows ever!")
+  parents:'Parents',
+  summaryHint:'Add lesson notes here',                                       // AC, 7 October
+  notesFor:function(d){return 'Lesson notes for '+d;},                       // AC, 7 October
+  draftFor:function(n){return 'Draft Assignment for '+n;},                   // AC, 7 October
+  schedFor:function(n){return 'Scheduled Assignment for '+n;},               // PLACEHOLDER
+  newFor:function(n){return 'Create Assignment for '+n;},                    // AC, 7 October
+  lessonDate:function(w){return 'Lesson date: '+w;},                         // AC, 7 October
+  sentFor:function(n){return 'Assignment for '+n;},
+  savedOn:function(w){return 'Draft saved '+w;},                             // AC, 7 October
+  schedOn:function(w){return 'Scheduled for '+w;},                           // PLACEHOLDER
+  sentOn:function(w){return 'Sent '+w;},                                     // PLACEHOLDER
+  to:'To',sendTo:'Send to',assignment:'Assignment',mats:'Materials',         // AC, 6 October
+  // AC, 7 October: "Hi [parent first name] (and the other parent if both selected). Here is
+  // [student first name]'s assignment for their lesson on [date]. Please let me know if you
+  // have any questions." … "Thanks!\n[teacher first name]".
+  greet:function(parents,student,date){return 'Hi '+parents+'. Here is '+student+'’s assignment for their lesson on '+date+'. Please let me know if you have any questions.';},
+  thanks:'Thanks!',
+  pasteLink:'Paste Link Here',displayText:'Display Text',                    // AC, 7 October
+  savedLinks:'Saved Links',chooseSaved:'Choose a saved link',                // PLACEHOLDER
+  open:'Open',saveDraft:'Save Draft',schedule:'Schedule Send',preview:'Preview',hidePreview:'Hide preview',
+  cancel:'Cancel',delDraft:'Delete Draft',cancelSend:'Cancel Send',
+  previewH:'What the family receives',                                       // PLACEHOLDER
+  pillDraft:'Draft',pillSched:'Scheduled',pillSent:'Sent',                   // PLACEHOLDER
+  lineDraft:'Assignment draft saved',lineSched:function(w){return 'Assignment scheduled for '+w;},   // PLACEHOLDER
+  sendN:function(n){return 'Send '+n;},schedN:function(n){return 'Schedule Send '+n;},
+  send:'Send',
+  sentN:function(n){return n+(n===1?' assignment':' assignments')+' sent';},                          // PLACEHOLDER
+  schedNDone:function(n,w){return n+(n===1?' assignment':' assignments')+' scheduled for '+w;},      // PLACEHOLDER
+  bulkStopped:function(name,why){return 'Stopped at '+name+': '+why;},                                // PLACEHOLDER
+  saving:'Saving…',sending:'Sending…',scheduling:'Scheduling…',
+  failed:'Not done. Check your connection and try again.',                   // PLACEHOLDER
+  openInStudents:'Open in Students',                                         // PLACEHOLDER — a scheduled assignment's button in Messages
+  unfilled:'This assignment still has a template field to fill in, such as [studentFirst].'   // PLACEHOLDER
+};
+var MST_CID='asg-composer';
+var MST={view:'',day:'',open:'',arch:false,tick:{},bulk:false,bulkAt:'',sched:false,schedAt:'',preview:false,previewHtml:'',
+  flash:'',top:false,busy:'',err:'',errFor:'',bulkErr:'',bulkBusy:false,listErr:''};
+var MST_DAYS=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+var _MST_MONTH=['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+// ── The list's data ─────────────────────────────────────────────────────
+function loadMyStudents(){
+  MS.rosterAsked=true;MS.rosterLoading=true;
+  api({action:'teacherMyStudents',data:{teacherToken:TOKEN}},function(e,r){
+    MS.rosterLoading=false;
+    if(!e&&r&&r.ok){MS.roster=r;MST.listErr='';}
+    else if(!MS.roster)MST.listErr=(r&&r.error)||MST_COPY.failed;
+    render();
+  });
+}
+function _mstR(){return MS.roster||{students:[],drafts:[],scheduled:[],today:_nyYmdOf()};}
+function _mstToday(){return _mstR().today||_nyYmdOf();}
+function _mstStu(id){
+  if(MS.card&&MS.cardStu===id&&MS.card.student&&String(MS.card.student.studentId)===String(id))return Object.assign({},_mstR().students.filter(function(s){return s.studentId===id;})[0]||{},MS.card.student);
+  return _mstR().students.filter(function(s){return s.studentId===id;})[0]||(API_KEEP['c|'+id]&&API_KEEP['c|'+id].student)||{studentId:id};
+}
+function _mstDraft(id,d){return _mstR().drafts.filter(function(x){return x.studentId===id&&x.lessonDate===d;})[0]||null;}
+function _mstSched(id,d){return _mstR().scheduled.filter(function(x){return x.studentId===id&&x.lessonDate===d;})[0]||null;}
+function _mstDraftKey(x){return x.studentId+'|'+x.lessonDate;}
+
+// ── Dates the way AC wrote them: "Tuesday, Oct 6th • 4pm", "Oct 6, 5:40 pm" ──
+function mstOrd(n){var s=['th','st','nd','rd'],v=n%100;return n+(s[(v-20)%10]||s[v]||s[0]);}
+function mstTime(t){
+  var m=String(t||'').match(/^(\d{1,2})(?::(\d{2}))?\s*([AP])M$/i);if(!m)return String(t||'');
+  return m[1]+(m[2]&&m[2]!=='00'?':'+m[2]:'')+m[3].toLowerCase()+'m';
+}
+function mstMins(t){var m=String(t||'').match(/^(\d{1,2})(?::(\d{2}))?\s*([AP])M$/i);if(!m)return 9999;return (+m[1]%12+(/p/i.test(m[3])?12:0))*60+(+m[2]||0);}
+function mstDate(ymd){var p=String(ymd||'').split('-');if(p.length!==3)return String(ymd||'');return _MS_DAY[_msDow(ymd)]+', '+_MS_MO[+p[1]-1]+' '+mstOrd(+p[2]);}
+function mstLongDate(ymd){var p=String(ymd||'').split('-');if(p.length!==3)return String(ymd||'');return _MS_DAY[_msDow(ymd)]+', '+_MST_MONTH[+p[1]-1]+' '+mstOrd(+p[2]);}
+function mstLessonLine(ymd,t){return mstDate(ymd)+(t?' • '+mstTime(t):'');}
+// In the device's time, as every other time in this portal is ([1.371]).
+function mstStamp(ms){
+  if(!ms)return '';
+  var d=new Date(Number(ms)),h=d.getHours(),m=d.getMinutes();
+  return _MS_MO[d.getMonth()]+' '+d.getDate()+', '+((h%12)||12)+':'+(m<10?'0':'')+m+' '+(h<12?'am':'pm');
+}
+function _mstShortDay(ymd){return _msLong(ymd).replace(/^(\w{3})\w*/,'$1');}
+
+// ── Who it goes to ──────────────────────────────────────────────────────
+function mstParents(s){return [s.parent1Name,s.parent2Name].filter(Boolean);}
+// The ticks as the server takes them: undefined when there is one parent to choose from.
+function mstNotify(s,to){if(!(s.parent1Name&&s.parent2Name))return undefined;var a=[];if(to.p1)a.push('parent1');if(to.p2)a.push('parent2');return a;}
+function mstTo(np){return {p1:!np||np.indexOf('parent1')>-1,p2:!np||np.indexOf('parent2')>-1};}
+function mstPicked(s,to){var a=[];if(s.parent1Name&&(!to||to.p1))a.push(s.parent1Name);if(s.parent2Name&&(!to||to.p2))a.push(s.parent2Name);return a;}
+function mstWho(s,to){return _msNames(mstPicked(s,to));}
+function mstFirst(n){return String(n||'').trim().split(/\s+/)[0];}
+
+// ── The status switch: a small box beside Sign Out ──────────────────────
+// AC, 7 October 2026: "slim down the whole available/away area. It just needs a
+// small box with a button toggle with two states and status indicator. Click to
+// change state … Status: Away in red font and button outline with white
+// background. Status: Available green font and button outline with white
+// background. You could put this same size next to the signout button." On a
+// day off from the teacher's record ([1.759]) it reads Away and cannot be
+// clicked, and the day-off sentence sits under it, red ("You're away banner
+// should be red not green").
+function mstStatusBtn(){
+  if(!TSET.loaded)return '';
+  var off=!!TSET.absentUntil,away=off||!!TSET.awayEnabled;
+  return '<button type="button" class="st-tog '+(away?'away':'avail')+'"'+(off||TSET.saving?' disabled':'')+
+    ' aria-pressed="'+(away?'true':'false')+'" title="'+esc(off?GUIDE_COPY.absentBanner.replace('[return date]',TSET.absentUntil):MST_COPY.stTitle)+'"'+
+    ' onclick="setAway('+(TSET.awayEnabled?'false':'true')+')"><span class="st-dot"></span>'+esc(away?MST_COPY.stAway:MST_COPY.stAvail)+'</button>';
+}
+// The switch's own line ([1.404]), under it.
+function mstStatusNote(){
+  if(!TSET.loaded)return '';
+  if(TSET.absentUntil)return '<div class="mst-stnote"><div class="act-note mst-red">'+esc(GUIDE_COPY.absentBanner.replace('[return date]',TSET.absentUntil))+'</div></div>';
+  var a=ACT.away;if(!a)return '';
+  if(a.state==='done'&&TSET.awayEnabled)return '<div class="mst-stnote"><div class="act-note mst-red">'+esc(a.text||'')+'</div></div>';
+  return '<div class="mst-stnote">'+rAct('away')+'</div>';
+}
+// AC, 7 October: "move My Library to a new tab after messages tab". The panel the overlay draws.
+function mstLibraryPage(){LIB_STANDALONE=true;var p=rLibraryPanel('');LIB_STANDALONE=false;return '<div class="mst-libpage">'+p+'</div>';}
+
+// ── My Students: the list, and what is open beside it ────────────────────
+function rMyStudents(){
+  if(!MS.roster)return '<div class="empty-state">'+(MS.rosterLoading?'<span class="spin">↻</span>':esc(MST.listErr||''))+'</div>';
+  var v=MST.view;
+  return '<div class="mst-panes">'+
+    '<div class="mst-pane mst-left'+(v?' mst-lg':'')+'" id="mst-left">'+mstListPane()+'</div>'+
+    '<div class="mst-pane mst-right'+(v?'':' mst-lg')+'" id="mst-right">'+(v==='student'?mstStudent():'<div class="mst-empty">'+esc(MST_COPY.choose)+'</div>')+'</div></div>';
+}
+// AC, 7 October: "the 'my students' button should say 'All Students' and should not be gray and hidden."
+function mstPhoneBack(){return '<div class="mst-sm mst-back"><button type="button" class="btn btn-p ms-sm" onclick="mstBack()">'+esc(MST_COPY.back)+'</button></div>';}
+function mstBack(){MST.view='';_mstFormReset();MS.asg=null;render();window.scrollTo(0,0);}
+function _mstFormReset(){MS.pick=null;if(PICK&&_libComposerId===MST_CID)PICK='';if(TPL_FOR===MST_CID)TPL_OPEN=false;MST.sched=false;MST.preview=false;MST.previewHtml='';MST.err='';MST.errFor='';MST.busy='';}
+function mstOpen(id,date,time){
+  var s=_mstStu(id);
+  if(!date)date=s.trialDate||(s.day?_msLastLesson(s,_mstToday()):_mstToday());
+  if(!time)time=s.trialDate&&date===s.trialDate?s.trialTime:s.time||'';
+  MST.view='student';MST.top=true;MST.arch=false;_mstFormReset();
+  msOpen(id,date,time);
+}
+function mstToggleList(which){MST.open=MST.open===which?'':which;MST.bulk=false;MST.flash='';MST.bulkErr='';render();}
+
+// The left pane. AC, 7 October: "one row, left to right: Opus Schedule, Drafts,
+// Scheduled", a separator, then "all students listed by day of the week", with a
+// menu to "isolate a certain day's students".
+function mstListPane(){
+  var R=_mstR(),drafts=R.drafts,sched=R.scheduled;
+  var b=function(label,n,cls,on,click){
+    // AC: "these buttons should not be gray" — drafts orange, scheduled blue.
+    return '<button type="button" class="btn ms-sm mst-qb '+cls+(on?' on':'')+'" aria-expanded="'+(on?'true':'false')+'" onclick="'+click+'">'+
+      esc(label)+'<span class="mst-count'+(n?' '+cls:'')+'">'+n+'</span></button>';
+  };
+  // [1.771]/[1.779] — Opus in a new tab; both of its old buttons opened the same page.
+  var h='<div class="mst-btns"><a class="btn btn-p ms-sm mst-qo" href="'+esc(_opusHref())+'" target="_blank" rel="noopener">'+esc(OPUS_COPY.view)+'</a>'+
+    b(MST_COPY.drafts,drafts.length,'dr',MST.open==='drafts','mstToggleList(\'drafts\')')+
+    b(MST_COPY.sched,sched.length,'sc',MST.open==='sched','mstToggleList(\'sched\')')+'</div>';
+  if(MST.open==='drafts')h+=mstDraftList(drafts);
+  if(MST.open==='sched')h+=mstSchedList(sched);
+  var by={};
+  R.students.forEach(function(s){var d=mstDayOf(s);if(d)(by[d]=by[d]||[]).push(s);});
+  var days=MST_DAYS.filter(function(d){return by[d];});
+  if(MST.day&&!by[MST.day])MST.day='';
+  h+='<div class="mst-sep" role="separator"></div><select id="mst-day" class="mst-day" aria-label="'+esc(MST_COPY.allDays)+'" onchange="MST.day=this.value;render()">'+
+    '<option value="">'+esc(MST_COPY.allDays+' ('+R.students.length+')')+'</option>'+
+    days.map(function(d){return '<option value="'+d+'"'+(MST.day===d?' selected':'')+'>'+esc(d+' ('+by[d].length+')')+'</option>';}).join('')+'</select>';
+  (MST.day?[MST.day]:days).forEach(function(d){
+    h+='<div class="mst-dayh">'+esc(d)+'</div>';
+    by[d].sort(function(a,b){return mstMins(mstTimeOf(a))-mstMins(mstTimeOf(b))||(a.studentName<b.studentName?-1:1);}).forEach(function(s){h+=mstRow(s);});
+  });
+  return h;
+}
+// A trial student has no day of their own: the day is their trial lesson's.
+function mstDayOf(s){return s.day||(s.trialDate?_MS_DAY[_msDow(s.trialDate)]:'');}
+function mstTimeOf(s){return s.day?s.time:s.trialTime;}
+function mstLessonOf(s){return s.day?_msLastLesson(s,_mstToday()):(s.trialDate||'');}
+function mstState(id,d){
+  if(_mstDraft(id,d))return 'dr';
+  if(_mstSched(id,d))return 'sc';
+  var s=_mstR().students.filter(function(x){return x.studentId===id;})[0];
+  return s&&(s.sentDates||[]).indexOf(d)>-1?'ok':'';
+}
+function mstPill(st){
+  if(!st)return '';
+  return '<span class="mst-pill '+st+'">'+esc(st==='dr'?MST_COPY.pillDraft:st==='sc'?MST_COPY.pillSched:MST_COPY.pillSent)+'</span>';
+}
+function mstRow(s){
+  var id=s.studentId,trial=!s.day,date=mstLessonOf(s);
+  var on=MST.view==='student'&&MS.cardStu===id;
+  return '<button type="button" class="mst-row'+(on?' on':'')+'" onclick="mstOpen('+jsq(id)+')">'+
+    '<span class="mst-t">'+esc(mstTime(mstTimeOf(s)))+'</span>'+
+    '<span class="mst-rm"><b>'+esc(_nameAge(s.studentName,s.age))+(trial?' <span class="tt-pill bad">'+esc(MS_COPY.trial)+'</span>':'')+'</b>'+
+    '<span class="mst-sub">'+esc([s.instrument,s.duration?s.duration+' min':''].filter(Boolean).join(' · '))+'</span></span>'+
+    (date&&!trial?mstPill(mstState(id,date)):'')+'</button>';
+}
+
+// ── Drafts and Scheduled: one line per student ──────────────────────────
+// AC, 7 October: "Clicking Assignments to send expands single line list of
+// students with draft assignments. Scheduled Assignments expands to show list of
+// students with messages scheduled and the date/time scheduled for." Ticks on the
+// drafts, and Send / Schedule Send for the ticked ones ([1.791]: "schedule send
+// bulk created assignments").
+function mstDraftList(list){
+  var h='';
+  if(MST.flash)h+='<div class="act-note act-done mst-flash">\u2713 '+esc(MST.flash)+'</div>';
+  if(!list.length)h+='<div class="mst-xnone">'+esc(MST_COPY.noDrafts)+'</div>';
+  else h+=_mstDraftRows(list);
+  return '<div class="mst-xlist">'+h+'</div>';
+}
+function _mstDraftRows(list){
+  var h='';
+  var n=list.filter(function(x){return MST.tick[_mstDraftKey(x)];}).length;
+  list.forEach(function(x){
+    var k=_mstDraftKey(x);
+    h+='<div class="mst-xrow"><input type="checkbox" aria-label="'+esc(x.studentName)+'"'+(MST.tick[k]?' checked':'')+(MST.bulkBusy?' disabled':'')+
+      ' onclick="MST.tick['+jsq(k)+']=this.checked;MST.flash=\'\';MST.bulkErr=\'\';render()">'+
+      '<button type="button" class="mst-xopen" onclick="mstOpenDraft('+jsq(x.studentId)+','+jsq(x.lessonDate)+')"><span class="mst-xn">'+esc(x.studentName||x.studentId)+'</span>'+
+      '<span class="mst-xd">'+esc(MST_COPY.forLesson(_mstShortDay(x.lessonDate)))+'</span></button></div>';
+  });
+  h+='<div class="mst-xacts"><button type="button" class="btn btn-s ms-sm'+(MST.bulk?' mst-on':'')+'"'+(n&&!MST.bulkBusy?'':' disabled')+
+      ' onclick="MST.bulk=!MST.bulk;if(MST.bulk&&!MST.bulkAt)MST.bulkAt=_schedDefault();render()">'+esc(n?MST_COPY.schedN(n):MST_COPY.schedule)+'</button>'+
+    '<button type="button" class="btn btn-p ms-sm"'+(n&&!MST.bulkBusy?'':' disabled')+' onclick="mstBulk(0)">'+esc(MST.bulkBusy==='send'?MST_COPY.sending:n?MST_COPY.sendN(n):MST_COPY.send)+'</button></div>';
+  if(MST.bulkErr)h+='<div class="tt-err mst-xerr">'+esc(MST.bulkErr)+'</div>';
+  if(MST.bulk&&n)h+=mstSchedPanel('bulk');
+  return h;
+}
+function mstSchedList(list){
+  var h='';
+  if(!list.length)h='<div class="mst-xnone">'+esc(MST_COPY.noSched)+'</div>';
+  list.forEach(function(x){
+    h+='<div class="mst-xrow"><button type="button" class="mst-xopen" onclick="mstOpenAt('+jsq(x.studentId)+','+jsq(x.lessonDate)+','+jsq(x.lessonTime)+')"><span class="mst-xn">'+esc(x.studentName||x.studentId)+'</span>'+
+      '<span class="mst-xd sc">'+esc(MST_COPY.sendsOn(mstStamp(x.sendAt)))+'</span></button></div>';
+  });
+  return '<div class="mst-xlist">'+h+'</div>';
+}
+// Open a student at a lesson; once their card has arrived, bring its assignment into view.
+function mstOpenAt(id,d,t,then){
+  mstOpen(id,d,t);
+  var tries=0;
+  (function go(){
+    if(!MS.card||MS.cardStu!==id){if(tries++<60)setTimeout(go,50);return;}
+    if(then)then();else setTimeout(mstToAsg,30);
+  })();
+}
+function mstOpenDraft(id,d){var x=_mstDraft(id,d);mstOpenAt(id,d,x&&x.lessonTime,function(){mstEditDraft(id,d);});}
+function mstToAsg(){
+  var el=document.getElementById('ms-asg-area'),p=document.getElementById('mst-right');
+  if(!el)return;
+  if(p&&getComputedStyle(p).overflowY==='auto')p.scrollTop+=el.getBoundingClientRect().top-p.getBoundingClientRect().top-8;
+  else if(el.scrollIntoView)el.scrollIntoView({block:'start'});
+}
+
+// ── The student ──────────────────────────────────────────────────────────
+function mstStudent(){
+  var c=MS.card,h=mstPhoneBack();
+  if(!c)return h+'<div class="empty-state">'+(MS.cardLoading?'<span class="spin">↻</span>':'')+'</div>';
+  var s=_mstStu(MS.cardStu),par=mstParents(s);
+  h+='<div class="mst-head"><div class="mst-name">'+esc(_nameAge(s.studentName,s.age))+'</div>'+
+    '<div class="mst-det">'+esc([s.instrument,s.day?s.day+'s '+mstTime(s.time):'',s.duration?s.duration+' min':'',s.grade?s.grade+' grade':'',s.level].filter(Boolean).join(' · '))+'</div>'+
+    (par.length?'<div class="mst-det">'+esc(MST_COPY.parents+': '+_msNames(par))+'</div>':'')+'</div>';
+  h+=_msArea(MS_COPY.notesAbout(s.first),'<span class="ms-tag">'+esc(MS_COPY.onlyYou)+'</span>',
+    '<div class="ms-sec"><textarea id="ms-note" class="tt-a" rows="3" oninput="msNoteInput(this.value)">'+esc(MS.note||'')+'</textarea>'+
+    (MS.st?'<div class="ms-st">'+esc(MS.st)+'</div>':'')+'</div>');
+  // AC, 7 October: "Create assignment button located at bottom of lesson notes box, not in
+  // separate box. Expands in same box with clear visual separation."
+  h+=_msArea(MS_COPY.summary,'<span class="ms-hdhint">'+esc(MST_COPY.summaryHint)+'</span>',
+    '<div class="mst-lpick">'+mstLessonPick()+'</div>'+mstLessonBody(MS.cardDate,true),'mst-lesson');
+  // AC, 7 October: "Archived lessons header expands/collapses if clicked, include trial
+  // lesson in the archived lessons, not separate", and "remove open all and close all".
+  var items=(c.notes||[]).filter(function(n){return n.lessonDate!==MS.cardDate;}).map(function(n){return {d:n.lessonDate,n:n};})
+    .concat((c.trials||[]).map(function(t){return {d:t.trialDate,t:t};}))
+    .sort(function(x,y){return x.d<y.d?1:x.d>y.d?-1:0;});
+  if(items.length){
+    h+='<div class="ms-day ms-wk ms-arch mst-arch"><button type="button" class="ms-day-h ms-hbtn" aria-expanded="'+(MST.arch?'true':'false')+'" onclick="MST.arch=!MST.arch;render()"><span>'+
+      esc(MS_COPY.archived+' ('+items.length+')')+'</span><span class="mst-hstate">'+esc(MST.arch?MS_COPY.close:MS_COPY.open)+'</span></button>';
+    if(MST.arch){
+      h+='<div class="mst-archpad"></div>';
+      items.forEach(function(x){
+        var short=_mstShortDay(x.d);
+        if(x.t){
+          var t=x.t;
+          if(MS.trialOpen[t.trialDate]){
+            h+='<div class="ms-entry"><div class="ms-lc old"><div class="ms-lc-h"><span>'+esc(mstDate(t.trialDate)+' · '+MS_COPY.trial)+'</span>'+
+              '<button type="button" class="ms-oc-b light" onclick="MS.trialOpen['+jsq(t.trialDate)+']=false;render()">'+esc(MS_COPY.close)+'</button></div><div class="ms-lf">'+
+              (t.summary?'<div class="ms-lab">'+esc(MS_COPY.trialSummary)+'</div><div class="tt-sum">'+esc(t.summary)+'</div>':'')+
+              (t.report?'<div class="ms-lab" style="margin-top:8px">'+esc(MS_COPY.trialReport)+'</div>'+_msReport(t.report,c.questions||[]):'')+'</div></div></div>';
+          }else{
+            h+='<button type="button" class="ms-past" onclick="MS.trialOpen['+jsq(t.trialDate)+']=true;render()"><span class="ms-past-d">'+esc(short)+'</span>'+
+              '<span class="ms-past-t">'+esc(String(t.summary||'').split('\n')[0])+'</span><span class="tt-pill bad">'+esc(MS_COPY.trial)+'</span><span class="ms-oc-b">'+esc(MS_COPY.open)+'</span></button>';
+          }
+          return;
+        }
+        var n=x.n;
+        if(MS.open[n.lessonDate]){
+          h+='<div class="ms-entry"><div class="ms-lc old"><div class="ms-lc-h"><span>'+esc(mstDate(n.lessonDate))+'</span>'+
+            '<button type="button" class="ms-oc-b light" onclick="msToggle(\''+n.lessonDate+'\')">'+esc(MS_COPY.close)+'</button></div>'+
+            mstLessonBody(n.lessonDate,false)+'</div></div>';
+          return;
+        }
+        var l=_msLes(n.lessonDate),st=mstState(MS.cardStu,n.lessonDate);
+        h+='<button type="button" class="ms-past" onclick="msToggle(\''+n.lessonDate+'\')"><span class="ms-past-d">'+esc(short)+'</span>'+
+          '<span class="ms-past-t">'+esc(String(l.activities||'').split('\n')[0])+'</span>'+
+          (st?mstPill(st):'<span></span>')+'<span class="ms-oc-b">'+esc(MS_COPY.open)+'</span></button>';
+      });
+    }
+    h+='</div>';
+  }
+  return h;
+}
+// AC, 7 October: "date dropdown does not need to say 'Today' just list the dates and remove the time".
+function mstLessonDates(){
+  var c=MS.card,s=_mstStu(MS.cardStu),set={},today=_mstToday();
+  (c.notes||[]).forEach(function(n){set[n.lessonDate]=n.lessonTime||s.time||'';});
+  _mstR().drafts.concat(_mstR().scheduled).forEach(function(x){if(x.studentId===MS.cardStu&&!set[x.lessonDate])set[x.lessonDate]=x.lessonTime||'';});
+  if(s.day){var d=_msLastLesson(s,today);for(var i=0;i<6;i++){if(!set[d])set[d]=s.time||'';d=_msAdd(d,-7);}}
+  if(s.trialDate&&!set[s.trialDate])set[s.trialDate]=s.trialTime||'';
+  if(MS.cardDate&&!set[MS.cardDate])set[MS.cardDate]=MS.cardTime||s.time||'';
+  return Object.keys(set).sort().reverse().map(function(d){return {d:d,t:set[d]};});
+}
+function mstLessonPick(){
+  return '<select id="mst-lsel" class="mst-lsel" aria-label="'+esc(MS_COPY.summary)+'" onchange="mstLesson(this.value)">'+
+    mstLessonDates().map(function(x){return '<option value="'+x.d+'"'+(x.d===MS.cardDate?' selected':'')+'>'+esc(mstDate(x.d))+'</option>';}).join('')+'</select>';
+}
+function mstLesson(d){
+  var x=mstLessonDates().filter(function(y){return y.d===d;})[0];
+  MS.cardDate=d;MS.cardTime=x?x.t:'';MS.asg=null;_mstFormReset();render();
+}
+// A lesson's box: "Lesson notes for [date]", Materials & Resources, then the footer with
+// what happened to its assignment and the buttons — Create Assignment at the bottom — and,
+// below a divider, the assignment itself.
+function mstLessonBody(d,current){
+  var l=_msLes(d),id=d.replace(/-/g,''),ed=current?_msEditOf(d):MS.edits[_msEditKey(d)],s=_mstStu(MS.cardStu);
+  var n=_msNoteOf(d),sent=(n&&n.sent)||[];
+  var h='<div class="ms-lf"><div class="ms-lab">'+esc(MST_COPY.notesFor(mstDate(d)))+'</div>'+
+    (ed?'<textarea id="ms-act-'+id+'" class="tt-a" rows="4" oninput="msEditInput(\''+d+'\',this.value)"'+(ed.busy?' disabled':'')+'>'+esc(ed.activities||'')+'</textarea>'
+      :String(l.activities||'').trim()?'<div class="ms-ro">'+esc(l.activities)+'</div>':'<div class="ms-ro ms-empty">'+esc(MS_COPY.noNotes)+'</div>')+'</div>';
+  if(ed){
+    h+='<div class="ms-lf"><div class="ms-lab">'+esc(MS_COPY.materials)+'</div>'+
+      (ed.materials||[]).map(function(m,i){return _msMatRow(m,'<button type="button" class="ms-x" title="'+esc(MS_COPY.remove)+'" onclick="msMatRemove(\''+d+'\','+i+')">✕</button>');}).join('')+
+      _msAddUI('les:'+d)+'</div>';
+  }else{
+    h+=((l.materials||[]).length?'<div class="ms-lf"><div class="ms-lab">'+esc(MS_COPY.materials)+'</div>'+l.materials.map(function(m){return _msMatRow(m,'');}).join('')+'</div>':'');
+  }
+  var dr=_mstDraft(MS.cardStu,d),sc=_mstSched(MS.cardStu,d),formHere=!!(MS.asg&&MS.asg.date===d&&current);
+  var line=dr?'<span class="mst-st dr">'+esc(MST_COPY.lineDraft)+'</span>'
+    :sc?'<span class="mst-st sc">'+esc(MST_COPY.lineSched(mstStamp(sc.sendAt)))+'</span>'
+    :sent.length?'<span class="mst-st ok">'+esc(sent.map(function(x){return MS_COPY.sentOn(_msShort(_msYmdOf(x.sentAt||x.sendAt)));}).join(' · '))+'</span>'
+    :'<span>'+esc(MS_COPY.notSent)+'</span>';
+  var btns=ed?(ed.blank?'':'<button type="button" class="btn btn-s ms-sm" onclick="msEditCancel(\''+d+'\')"'+(ed.busy?' disabled':'')+'>'+esc(MS_COPY.cancel)+'</button>')+
+      '<button type="button" class="btn btn-p ms-sm" onclick="msEditSave(\''+d+'\')"'+(ed.busy?' disabled':'')+'>'+esc(ed.busy?MS_COPY.saving:MS_COPY.save)+'</button>'
+    :'<button type="button" class="btn btn-s ms-sm" onclick="msEdit(\''+d+'\')">'+esc(MS_COPY.edit)+'</button>';
+  // One assignment waiting per lesson: a draft opens, a scheduled one is cancelled back to a draft first.
+  if(current&&!formHere&&!dr&&!sc)btns+='<button type="button" class="btn btn-p ms-sm" onclick="mstAsgNew()">'+esc(MS_COPY.createFor(s.first))+'</button>';
+  h+='<div class="ms-lc-f mst-lfoot">'+(ed&&ed.err?'<span class="ms-lc-err">'+esc(ed.err)+'</span>':line)+'<span class="ms-lc-b">'+btns+'</span></div>';
+  var sec=sent.map(function(x){return mstCard(d,x,'ok');}).join('')+(formHere?mstForm():dr?mstCard(d,dr,'dr'):sc?mstCard(d,sc,'sc'):'');
+  if(sec)h+='<div class="mst-asec"'+(current?' id="ms-asg-area"':'')+'>'+sec+'</div>';
+  return h;
+}
+// One card for every assignment that is not the form. AC, 7 October: the status "small, upper
+// right … clickable like the body to open the draft", Open "in the lower right corner", padding;
+// the heading "Draft Assignment for Mia Chen", "Monday, Oct 5th • 5pm" under it.
+function mstCard(d,m,st){
+  var s=_mstStu(MS.cardStu);
+  var title=st==='dr'?MST_COPY.draftFor(s.studentName):st==='sc'?MST_COPY.schedFor(s.studentName):MST_COPY.sentFor(s.studentName);
+  var stamp=st==='dr'?MST_COPY.savedOn(mstStamp(m.savedAt)):st==='sc'?MST_COPY.schedOn(mstStamp(m.sendAt)):MST_COPY.sentOn(mstStamp(m.sentAt||m.sendAt));
+  var time=m.lessonTime||(_msNoteOf(d)||{}).lessonTime||s.time;
+  var go=st==='dr'?'mstEditDraft('+jsq(MS.cardStu)+','+jsq(d)+')':'';
+  var cl=function(cls,inner){return '<div class="'+cls+(go?' mst-go" role="button" tabindex="0" onclick="'+go+'"':'"')+'>'+inner+'</div>';};
+  var to=(m.toNames&&m.toNames.length)?_msNames(m.toNames):mstWho(s,mstTo(m.notifyParents));
+  var lines=m.html?[]:(m.practice||[]).map(function(x){return String(x).trim();}).filter(Boolean),mats=m.materials||[];
+  var body='<span class="mst-cto">'+esc(MST_COPY.to+': '+to)+'</span>'+
+    (m.html?'<div class="mst-html">'+m.html+'</div>':'')+   // sanitized on the server ([1.794])
+    (!m.html&&m.intro?'<span class="mst-q">'+esc(MS_COPY.message)+'</span><span class="mst-ro">'+esc(m.intro)+'</span>':'')+
+    (lines.length?'<span class="mst-q">'+esc(MST_COPY.assignment)+'</span><ol class="mst-ol">'+lines.map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ol>':'')+
+    (mats.length?'<span class="mst-q">'+esc(MST_COPY.mats)+'</span>'+mats.map(function(x){return _msMatRow(x,'');}).join('').replace(/<a /g,'<a onclick="event.stopPropagation()" '):'');
+  var foot=st==='dr'?'<button type="button" class="btn btn-s ms-sm" onclick="'+go+'">'+esc(MST_COPY.open)+'</button>'
+    :st==='sc'?'<button type="button" class="btn btn-s ms-sm"'+(MST.busy?' disabled':'')+' onclick="mstCancelSend('+jsq(m.messageId)+')">'+esc(MST_COPY.cancelSend)+'</button>':'';
+  return '<div class="mst-card '+st+'"><div class="mst-ctop">'+
+    cl('mst-ctitle','<b>'+esc(title)+'</b><span>'+esc(MST_COPY.lessonDate(mstLessonLine(d,time)))+'</span>')+
+    cl('mst-stamp '+st,esc(stamp))+'</div>'+cl('mst-cbody',body)+
+    (foot?'<div class="mst-cfoot">'+foot+'</div>':'')+(st==='sc'&&MST.err&&MST.errFor===m.messageId?'<div class="tt-err">'+esc(MST.err)+'</div>':'')+'</div>';
+}
+// Cancel Send: the server takes it back and returns it to Drafts, every word kept ([1.794]).
+function mstCancelSend(id){
+  var sc=_mstR().scheduled.filter(function(x){return x.messageId===id;})[0];if(!sc||MST.busy)return;
+  MST.busy='cancel';MST.err='';render();
+  api({action:'unscheduleMessage',data:{conversationType:'family_teacher',familyId:sc.familyId,teacherId:TEACHER_ID,teacherToken:TOKEN,messageId:id}},function(e,r){
+    MST.busy='';
+    if(e||!r||!r.ok){MST.err=(r&&r.error)||MST_COPY.failed;MST.errFor=id;render();return;}
+    SCHED_GONE[id]=true;
+    _mstRosterPatch(function(R){
+      R.scheduled=R.scheduled.filter(function(x){return x.messageId!==id;});
+      if(r.assignmentDraft)R.drafts=R.drafts.filter(function(x){return _mstDraftKey(x)!==_mstDraftKey(r.assignmentDraft);}).concat([r.assignmentDraft]);
+    });
+    loadMyStudents();if(typeof loadScheduled==='function')loadScheduled(true);
+  });
+}
+function _mstRosterPatch(fn){if(MS.roster)fn(MS.roster);render();}
+
+// ── Create Assignment: the message composer itself, already written ─────
+// The assignment as the composer holds it: AC's greeting for the ticked parents, an
+// Assignment list made from the Lesson Notes, and his sign-off — the teacher's to edit
+// with the full toolbar. It follows the ticks until the teacher changes the words.
+function mstPrefill(parents,student,longDate,lines,teacher){
+  return esc(MST_COPY.greet(parents,student,longDate))+'<br><br>'+
+    (lines.length?'<b>'+esc(MST_COPY.assignment)+'</b><ol>'+lines.map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ol>':'')+
+    esc(MST_COPY.thanks)+'<br>'+esc(teacher);
+}
+function mstLines(src){return String((src&&src.activities)||'').split('\n').map(function(x){return x.replace(/^\s*[-*•]\s*/,'').trim();}).filter(Boolean);}
+function mstBody(s,to,d,lines){return mstPrefill(mstPicked(s,to).map(mstFirst).join(' and '),s.first,mstLongDate(d),lines,mstFirst(TEACHER_NAME));}
+function mstSyncHtml(){var el=document.getElementById(MST_CID);if(el&&MS.asg)MS.asg.html=el.innerHTML;}
+function mstAsgNew(){
+  var d=MS.cardDate,l=_msLes(d),ed=MS.edits[_msEditKey(d)],s=_mstStu(MS.cardStu),to={p1:true,p2:true};
+  var src=ed&&(String(ed.activities||'').trim()||(ed.materials||[]).length)?ed:l,lines=mstLines(src);
+  // One click: Create Assignment saves the notes too, so there is no separate Save first.
+  if(src===ed&&!ed.busy)msEditSave(d);
+  MS.asg={date:d,time:l.lessonTime||MS.cardTime||'',html:mstBody(s,to,d,lines),lines:lines,dirty:false,to:to,
+    mats:(src.materials||[]).map(function(m){return Object.assign({},m);})};
+  _mstFormOpened();
+}
+function mstEditDraft(id,d){
+  var x=_mstDraft(id,d);if(!x)return;
+  if(MS.cardDate!==d){MS.cardDate=d;MS.cardTime=x.lessonTime||'';}
+  MS.asg={date:d,time:x.lessonTime||'',html:x.html,lines:[],dirty:true,to:mstTo(x.notifyParents),mats:(x.materials||[]).map(function(m){return Object.assign({},m);}),fromDraft:true};
+  _mstFormOpened();
+}
+function _mstFormOpened(){_mstFormReset();MS.asg.sendKey='';loadLibrary();loadSavedTpls();render();setTimeout(mstToAsg,30);}
+// The greeting follows the ticks until the teacher changes the words.
+function mstSetTo(slot,on){mstSyncHtml();var a=MS.asg;a.to[slot]=on;if(!a.dirty)a.html=mstBody(_mstStu(MS.cardStu),a.to,a.date,a.lines);render();}
+function mstMatRemove(i){mstSyncHtml();MS.asg.mats.splice(i,1);render();}
+function mstForm(){
+  var a=MS.asg,s=_mstStu(MS.cardStu),two=!!(s.parent1Name&&s.parent2Name),who=mstWho(s,a.to);
+  var dr=_mstDraft(MS.cardStu,a.date);
+  var libTag=function(m){
+    if(m.kind==='book')return '';
+    var sh=_msLibShelf(m);
+    return '<span class="ms-lib'+(sh?'':' new')+'">'+esc(sh==='studio'?TLIB_COPY.studio:sh?MS_COPY.inLib:MS_COPY.willAdd)+'</span>';
+  };
+  var tick=function(slot,name){return '<label class="mst-to"><input type="checkbox"'+(a.to[slot]?' checked':'')+' onclick="mstSetTo(\''+slot+'\',this.checked)"> '+esc(name)+'</label>';};
+  var mats='<div class="mst-mats"><div class="ms-lab">'+esc(MST_COPY.mats)+'</div>'+
+    (a.mats.length?a.mats.map(function(m,i){return _msMatRow(m,libTag(m)+'<button type="button" class="ms-x" title="'+esc(MS_COPY.remove)+'" onclick="mstMatRemove('+i+')">✕</button>');}).join('')
+      :'<div class="ms-hint">'+esc(MST_COPY.noMats)+'</div>')+'</div>';
+  var busy=!!MST.busy;
+  var btns='<div class="mst-ffoot'+(dr?' has-del':'')+'">'+
+      '<button type="button" class="btn btn-s ms-sm"'+(busy?' disabled':'')+' onclick="mstPreview()">'+esc(MST.preview?MST_COPY.hidePreview:MST_COPY.preview)+'</button>'+
+      '<button type="button" class="btn btn-s ms-sm mst-o2"'+(busy?' disabled':'')+' onclick="mstSaveDraft()">'+esc(MST.busy==='draft'?MST_COPY.saving:MST_COPY.saveDraft)+'</button>'+
+      '<button type="button" class="btn btn-s ms-sm mst-o2'+(MST.sched?' mst-on':'')+'"'+(who&&!busy?'':' disabled')+' onclick="mstSyncHtml();MST.sched=!MST.sched;if(MST.sched&&!MST.schedAt)MST.schedAt=_schedDefault();render()">'+esc(MST.busy==='sched'?MST_COPY.scheduling:MST_COPY.schedule)+'</button>'+
+      '<button type="button" class="btn btn-s ms-sm"'+(busy?' disabled':'')+' onclick="mstAsgClose()">'+esc(MST_COPY.cancel)+'</button>'+
+      (dr?'<button type="button" class="btn btn-danger ms-sm mst-del"'+(busy?' disabled':'')+' onclick="mstDeleteDraft()">'+esc(MST_COPY.delDraft)+'</button>':'')+
+      '<button type="button" class="btn btn-p ms-sm mst-send"'+(who&&!busy?'':' disabled')+' onclick="mstSend(0)">'+esc(MST.busy==='send'?MST_COPY.sending:MS_COPY.send(who||'…'))+'</button></div>'+
+      (MST.err&&!MST.errFor?'<div class="tt-err">'+esc(MST.err)+'</div>':'');
+  var comp=rComposer(MST_CID,a.html,'MS.asg.html=this.innerHTML;MS.asg.dirty=true',btns,{noFiles:true,asg:true,beforeActions:mats+(MST.sched?mstSchedPanel('one'):'')});
+  var h='<div class="mst-form"><div class="mst-ctop"><div class="mst-ctitle"><b>'+esc((dr?MST_COPY.draftFor:MST_COPY.newFor)(s.studentName))+'</b>'+
+      '<span>'+esc(MST_COPY.lessonDate(mstLessonLine(a.date,a.time)))+'</span></div>'+
+      (dr?'<span class="mst-stamp dr">'+esc(MST_COPY.savedOn(mstStamp(dr.savedAt)))+'</span>':'')+'</div>'+
+    '<label class="tt-q">'+esc(MST_COPY.sendTo)+'</label><div class="mst-tos">'+
+      (two?tick('p1',s.parent1Name)+tick('p2',s.parent2Name):'<span>'+esc(s.parent1Name||s.parent2Name||'')+'</span>')+'</div>'+
+    comp;
+  if(MST.preview)h+='<div class="mst-q" style="margin-top:14px">'+esc(MST_COPY.previewH)+'</div>'+
+    (MST.previewHtml?'<iframe class="mst-prev" title="'+esc(MST_COPY.previewH)+'" sandbox="" srcdoc="'+esc(MST.previewHtml)+'"></iframe>':'<div class="empty-state"><span class="spin">↻</span></div>');
+  return h+'</div>';
+}
+// The composer's own Schedule Send panel and words ([1.371], [1.415]), in the device's time.
+function mstSchedPanel(which){
+  var key=which==='bulk'?'bulkAt':'schedAt',at=MST[key],ms=_schedLocalInputToMs(at);
+  return '<div class="sched-panel mst-sched">'+
+    '<label class="sched-lbl">'+esc(TCH_COPY.schedulePick)+'</label>'+
+    '<input type="datetime-local" class="sched-input" id="mst-at-'+which+'" min="'+esc(_schedMin())+'" value="'+esc(at)+'" oninput="MST.'+key+'=this.value;_mstSchedPreview(\''+which+'\')">'+
+    '<div class="sched-preview" id="mst-atp-'+which+'">'+(ms?esc(TCH_COPY.schedulePreview)+' '+esc(fmtMsgTime(ms))+'?':'')+'</div>'+
+    '<div class="sched-acts"><button type="button" class="btn btn-p" onclick="'+(which==='bulk'?'mstBulk(1)':'mstScheduleOne()')+'">'+esc(TCH_COPY.scheduleGo)+'</button>'+
+    '<button type="button" class="btn btn-s" onclick="MST.'+(which==='bulk'?'bulk':'sched')+'=false;render()">'+esc(TCH_COPY.scheduleCancel)+'</button></div></div>';
+}
+// Typing a time redraws its question and nothing else.
+function _mstSchedPreview(which){
+  var el=document.getElementById('mst-atp-'+which),ms=_schedLocalInputToMs(MST[which==='bulk'?'bulkAt':'schedAt']);
+  if(el)el.textContent=ms?TCH_COPY.schedulePreview+' '+fmtMsgTime(ms)+'?':'';
+}
+// A time that will be refused is refused here, in the composer's words ([1.371]).
+function _mstPickTime(v){
+  var at=_schedLocalInputToMs(v);
+  if(!at||at<Date.now()+60*1000){MST.err=TCH_COPY.schedulePast;MST.errFor='';render();return 0;}
+  if(at>Date.now()+14*24*60*60*1000&&!confirm(TCH_COPY.scheduleFar))return 0;
+  return at;
+}
+function mstAsgClose(){_mstFormReset();LINK_OFFER=null;MS.asg=null;render();}
+// What the composer holds, as the server takes it: cleaned the composer's way.
+function _mstCleanHtml(html){
+  var el=document.getElementById(MST_CID);
+  if(el&&MS.asg&&html===undefined)return _composerClean(el);
+  var tmp=document.createElement('div');tmp.innerHTML=String(html===undefined?(MS.asg&&MS.asg.html)||'':html);
+  return _composerClean(tmp);
+}
+// The materials as a draft keeps them: a file is its LIBRARY id, attached only when sent.
+function _mstDraftMats(list){
+  return (list||[]).map(function(m){
+    return m.kind==='file'?{kind:'file',label:m.label,attachmentId:m.attachmentId}:m.kind==='link'?{kind:'link',label:m.label,url:m.url}:{kind:m.kind,label:m.label};
+  });
+}
+function mstSaveDraft(){
+  var a=MS.asg;if(!a||MST.busy)return;
+  mstSyncHtml();
+  var s=_mstStu(MS.cardStu),html=_mstCleanHtml();
+  MST.busy='draft';MST.err='';MST.errFor='';render();
+  api({action:'teacherSaveAsgDraft',data:{teacherToken:TOKEN,studentId:MS.cardStu,lessonDate:a.date,lessonTime:a.time,html:html,
+    notifyParents:mstNotify(s,a.to),materials:_mstDraftMats(a.mats)}},function(e,r){
+    MST.busy='';
+    if(e||!r||!r.ok){MST.err=(r&&r.error)||MST_COPY.failed;render();return;}
+    _mstRosterPatch(function(R){R.drafts=R.drafts.filter(function(x){return _mstDraftKey(x)!==_mstDraftKey(r.draft);}).concat([r.draft]);});
+    _mstFormReset();LINK_OFFER=null;MS.asg=null;render();
+  });
+}
+function mstDeleteDraft(){
+  var a=MS.asg;if(!a||MST.busy)return;
+  MST.busy='del';MST.err='';render();
+  api({action:'teacherDeleteAsgDraft',data:{teacherToken:TOKEN,studentId:MS.cardStu,lessonDate:a.date}},function(e,r){
+    MST.busy='';
+    if(e||!r||!r.ok){MST.err=(r&&r.error)||MST_COPY.failed;render();return;}
+    var key=MS.cardStu+'|'+a.date;
+    _mstRosterPatch(function(R){R.drafts=R.drafts.filter(function(x){return _mstDraftKey(x)!==key;});});
+    _mstFormReset();MS.asg=null;render();
+  });
+}
+function mstPreview(){
+  if(MST.preview){MST.preview=false;MST.previewHtml='';render();return;}
+  mstSyncHtml();
+  var a=MS.asg,s=_mstStu(MS.cardStu);
+  MST.preview=true;MST.previewHtml='';render();
+  api({action:'teacherAsgPreview',data:{teacherToken:TOKEN,familyId:s.familyId,notifyParents:mstNotify(s,a.to),
+    assignment:{studentId:MS.cardStu,lessonDate:a.date,lessonTime:a.time,html:_mstCleanHtml(),materials:_mstDraftMats(a.mats)}}},function(e,r){
+    if(!MST.preview)return;
+    if(e||!r||!r.ok){MST.preview=false;MST.err=(r&&r.error)||MST_COPY.failed;render();return;}
+    MST.previewHtml=r.html;render();
+  });
+}
+function mstScheduleOne(){var at=_mstPickTime(MST.schedAt);if(at)mstSend(at);}
+
+// ── Sending: the composer's send, with the assignment as what is sent ────
+// [1.794] — one send for an assignment, wherever it is pressed from: a link in
+// Materials not yet in the library goes into My Library ([1.790]), each file is
+// attached from its shelf (a fresh copy per message), then the message, with
+// the parent ticks, a time when it is scheduled, and the same send id for the
+// same words so a send whose answer was lost is not sent twice ([1.753]).
+function _mstSendOne(o,done){
+  var s=o.s,files=o.mats.filter(function(m){return m.kind==='file';}),newLinks=o.mats.filter(function(m){return m.kind==='link'&&!_msLibShelf(m);});
+  var html=o.html;
+  if(_tplUnfilledTags(html).length)return done({error:MST_COPY.unfilled});
+  // The server binds ten files to a message; an eleventh would be a card row that opens nothing.
+  if(files.length>ATT_MAX_FILES)return done({error:TCH_COPY.attachTooMany});
+  // The same id for the same words until it goes, so a send whose answer was lost is not sent twice.
+  var key='asg:'+s.studentId+'|'+o.date+'|'+(o.at||0),cid=_sendIdFor(key,html);
+  var out=[],att=[],i=0;
+  var step=function(){
+    if(i<newLinks.length){
+      var m=newLinks[i++];
+      api({action:'addLibraryLinks',data:{urls:m.url,label:m.label||'',teacherId:TEACHER_ID,teacherToken:TOKEN}},function(e,r){if(e||!r||!r.ok)return done(r||{});step();});
+      return;
+    }
+    var j=i-newLinks.length;
+    if(j<files.length){
+      i++;
+      api({action:'attachFromLibrary',data:{attachmentId:files[j].attachmentId,teacherId:TEACHER_ID,teacherToken:TOKEN}},function(e,r){
+        if(e||!r||!r.ok||!r.attachment)return done(r||{});
+        files[j]._sendId=r.attachment.attachmentId;att.push(r.attachment.attachmentId);step();
+      });
+      return;
+    }
+    o.mats.forEach(function(m){out.push(m.kind==='file'?{kind:'file',label:m.label,attachmentId:m._sendId,libId:m.attachmentId}:{kind:m.kind,label:m.label,url:m.url});});
+    api({action:'sendMessage',data:{conversationType:'family_teacher',familyId:s.familyId,teacherId:TEACHER_ID,teacherToken:TOKEN,studentId:s.studentId,
+      attachmentIds:att,notifyParents:o.notify,clientMsgId:cid,sendAt:o.at||'',
+      assignment:{studentId:s.studentId,lessonDate:o.date,lessonTime:o.time,html:html,materials:out}}},function(e,r){
+      if(e||!r||!r.ok){_sendFailed(key,cid,html,[],'');return done(r||{});}
+      _sendSucceeded(key);done(null,r);
+    });
+  };
+  step();
+}
+function mstSend(at){
+  var a=MS.asg;if(!a||MST.busy)return;
+  mstSyncHtml();
+  var s=_mstStu(MS.cardStu);if(!mstWho(s,a.to))return;
+  var html=_mstCleanHtml();
+  MST.busy=at?'sched':'send';MST.err='';MST.errFor='';render();
+  _mstSendOne({s:s,date:a.date,time:a.time,html:html,mats:a.mats.map(function(m){return Object.assign({},m);}),notify:mstNotify(s,a.to),at:at},function(err,r){
+    MST.busy='';
+    if(err){MST.err=err.error||MST_COPY.failed;render();return;}
+    var key=MS.cardStu+'|'+a.date;
+    _mstRosterPatch(function(R){R.drafts=R.drafts.filter(function(x){return _mstDraftKey(x)!==key;});});
+    _mstFormReset();LINK_OFFER=null;MS.asg=null;render();
+    _mstAfterSend([s.studentId],!!at);
+  });
+}
+// The list, the card and the conversation, fresh behind it.
+function _mstAfterSend(ids,scheduled){
+  loadMyStudents();
+  // The held card is the one from before the send: dropped, so the card is asked for afresh.
+  ids.forEach(function(id){delete API_KEEP['c|'+id];delete API_KEEP_AT['c|'+id];if(id===MS.cardStu)_msLoadCard();});
+  loadLibrary(true,true);   // a new link in Materials is on the shelf now ([1.790])
+  if(typeof loadFamilyThreads==='function')loadFamilyThreads(true);
+  if(scheduled&&typeof loadScheduled==='function')loadScheduled(true);
+}
+// Send or Schedule Send the ticked drafts, one after another, each its own assignment
+// email. A refusal stops the run and names the student; the ones already sent are gone
+// from Drafts (the server removes each as it sends).
+function mstBulk(scheduled){
+  if(MST.bulkBusy)return;
+  var at=0;
+  if(scheduled){at=_schedLocalInputToMs(MST.bulkAt);if(!at||at<Date.now()+60*1000){MST.bulkErr=TCH_COPY.schedulePast;render();return;}
+    if(at>Date.now()+14*24*60*60*1000&&!confirm(TCH_COPY.scheduleFar))return;}
+  var list=_mstR().drafts.filter(function(x){return MST.tick[_mstDraftKey(x)];});if(!list.length)return;
+  MST.bulkBusy=scheduled?'sched':'send';MST.bulkErr='';MST.flash='';render();
+  var n=0,ids=[];
+  var next=function(k){
+    if(k>=list.length){
+      MST.bulkBusy='';MST.tick={};MST.bulk=false;MST.flash=scheduled?MST_COPY.schedNDone(n,mstStamp(at)):MST_COPY.sentN(n);
+      _mstAfterSend(ids,!!scheduled);render();return;
+    }
+    var x=list[k],s=_mstStu(x.studentId);
+    if(!s.familyId)s=Object.assign({},s,{familyId:x.familyId});
+    _mstSendOne({s:s,date:x.lessonDate,time:x.lessonTime,html:x.html,mats:(x.materials||[]).map(function(m){return Object.assign({},m);}),notify:x.notifyParents||undefined,at:at},function(err){
+      if(err){
+        MST.bulkBusy='';MST.bulkErr=MST_COPY.bulkStopped(x.studentName||x.studentId,err.error||MST_COPY.failed);
+        if(n)MST.flash=scheduled?MST_COPY.schedNDone(n,mstStamp(at)):MST_COPY.sentN(n);
+        _mstAfterSend(ids,!!scheduled);render();return;
+      }
+      n++;ids.push(x.studentId);delete MST.tick[_mstDraftKey(x)];
+      _mstRosterPatch(function(R){R.drafts=R.drafts.filter(function(y){return _mstDraftKey(y)!==_mstDraftKey(x);});});
+      next(k+1);
+    });
+  };
+  next(0);
 }
 // [1.774] — AC, 5 October 2026: "a read-only state and an edit and save
 // function to make sure that teachers don't accidentally overwrite lesson notes
@@ -3910,30 +4702,15 @@ function _msReport(a,qs){
 // the copy away. The copy is kept per student and lesson for the session, so
 // leaving the card and coming back finds the words where they were left.
 function _msEditKey(d){return MS.cardStu+'|'+d;}
-function _msLessonCard(d,current){
-  var l=_msLes(d),n=_msNoteOf(d),sent=(n&&n.sent)||[],today=MS.card&&d===MS.card.today;
-  var id=d.replace(/-/g,''),ed=MS.edits[_msEditKey(d)];
-  var h='<div class="ms-lc'+(current?'':' old')+'"><div class="ms-lc-h"><span>'+esc((today?MS_COPY.today+' · ':'')+_msLong(d)+(l.lessonTime?' · '+l.lessonTime:''))+'</span>'+
-    (current?'':'<button type="button" class="ms-oc-b light" onclick="msToggle(\''+d+'\')">'+esc(MS_COPY.close)+'</button>')+'</div>';
-  if(ed){
-    h+='<div class="ms-lf"><div class="ms-lab">'+esc(MS_COPY.activities)+'</div>'+
-      '<textarea id="ms-act-'+id+'" class="tt-a" rows="4" oninput="msEditInput(\''+d+'\',this.value)"'+(ed.busy?' disabled':'')+'>'+esc(ed.activities||'')+'</textarea></div>'+
-      '<div class="ms-lf"><div class="ms-lab">'+esc(MS_COPY.materials)+'</div>'+
-      (ed.materials||[]).map(function(m,i){return _msMatRow(m,'<button type="button" class="ms-x" title="'+esc(MS_COPY.remove)+'" onclick="msMatRemove(\''+d+'\','+i+')">✕</button>');}).join('')+
-      _msAddUI('les:'+d)+'</div>'+
-      '<div class="ms-lc-f"><span class="ms-lc-err">'+esc(ed.err||'')+'</span><span class="ms-lc-b">'+
-      '<button type="button" class="btn btn-s ms-sm" onclick="msEditCancel(\''+d+'\')"'+(ed.busy?' disabled':'')+'>'+esc(MS_COPY.cancel)+'</button>'+
-      '<button type="button" class="btn btn-p ms-sm" onclick="msEditSave(\''+d+'\')"'+(ed.busy?' disabled':'')+'>'+esc(ed.busy?MS_COPY.saving:MS_COPY.save)+'</button></span></div>';
-  }else{
-  h+='<div class="ms-lf"><div class="ms-lab">'+esc(MS_COPY.activities)+'</div>'+
-    (String(l.activities||'').trim()?'<div class="ms-ro">'+esc(l.activities)+'</div>':'<div class="ms-ro ms-empty">'+esc(MS_COPY.noNotes)+'</div>')+'</div>'+
-    ((l.materials||[]).length?'<div class="ms-lf"><div class="ms-lab">'+esc(MS_COPY.materials)+'</div>'+
-      l.materials.map(function(m){return _msMatRow(m,'');}).join('')+'</div>':'')+
-    '<div class="ms-lc-f"><span>'+esc(sent.length?sent.map(function(x){return MS_COPY.sentOn(_msShort(_msYmdOf(x.sentAt||x.sendAt)));}).join(' · '):MS_COPY.notSent)+'</span>'+
-    '<span class="ms-lc-b"><button type="button" class="btn btn-s ms-sm" onclick="msEdit(\''+d+'\')">'+esc(MS_COPY.edit)+'</button>'+
-    '<button type="button" class="btn btn-p ms-sm" onclick="msAsgOpen(\''+d+'\')">'+esc(MS_COPY.create)+'</button></span></div>';
-  }
-  return h+'</div>';
+// [1.790] — AC, 6 October 2026: "open them blank without clicking edit and then
+// allowing the teacher to hit a save button to save everything. They would only
+// hit edit if they wanted to edit something later." A lesson with nothing saved
+// is drawn ready to write; Edit is only for notes that are already saved.
+function _msHasSaved(d){var l=_msLes(d);return !!(String(l.activities||'').trim()||(l.materials||[]).length);}
+function _msEditOf(d){
+  var k=_msEditKey(d);
+  if(!MS.edits[k]&&!_msHasSaved(d))MS.edits[k]={activities:'',materials:[],busy:false,err:'',blank:true};
+  return MS.edits[k];
 }
 function msEdit(d){
   var l=_msLes(d);
@@ -3951,7 +4728,7 @@ function msEditInput(d,v){
 }
 function msEditCancel(d){
   delete MS.edits[_msEditKey(d)];
-  if(MS.adding&&MS.adding.target==='les:'+d)MS.adding=null;
+  if(MS.pick&&MS.pick.target==='les:'+d)MS.pick=null;
   render();
 }
 function msEditSave(d){
@@ -3965,7 +4742,7 @@ function msEditSave(d){
     else if(MS.card){MS.card.notes.push({lessonDate:d,lessonTime:l.lessonTime||'',activities:l.activities,materials:l.materials.slice(),sent:[]});
       MS.card.notes.sort(function(x,y){return x.lessonDate<y.lessonDate?1:-1;});}
     delete MS.edits[k];
-    if(MS.adding&&MS.adding.target==='les:'+d)MS.adding=null;
+    if(MS.pick&&MS.pick.target==='les:'+d)MS.pick=null;
     showMsg(MS_COPY.saved,'s');render();
   });
 }
@@ -3975,67 +4752,109 @@ function _msMatRow(m,tail,head){
   return '<div class="ms-mat">'+(head||'')+'<span class="ms-k">'+esc(k)+'</span><span class="ms-ml">'+
     (m.kind==='link'?'<a href="'+esc(m.url)+'" target="_blank" rel="noopener noreferrer">'+esc(m.label||m.url)+'</a>':esc(m.label))+'</span>'+(tail||'')+'</div>';
 }
-// The one "add a book, file or link" row, used by a lesson note and by an Assignment.
+// ── [1.790] Add file and Add link: the composer's picker, into the materials ──
+// AC, 6 October 2026: "Teachers need to be able to add links or files from their
+// library or the master key lab library in the assignment generator. This would
+// simply be the same functions as in the messaging system." Both materials
+// lists — a lesson's while it is being edited, and an Assignment's — open the
+// composer's own picker (rPickPanel): add a new one at the top, search, Your
+// saved files or links and the Keylab Master Library, tick one or several. A
+// ticked item goes into the list rather than into a message. There is no Add
+// book any more (AC: "If we added a book it would be a file").
 function _msAddUI(target){
-  var a=MS.adding;
-  if(!a||a.target!==target)return '<button type="button" class="btn btn-s ms-sm" style="margin-top:4px" onclick="msAddStart(\''+target+'\')">'+esc(target==='asg'?MS_COPY.addFileLink:MS_COPY.addMat)+'</button>';
-  var kinds=['book','link','file'].map(function(k){return '<button type="button" class="btn ms-sm '+(a.kind===k?'btn-p':'btn-s')+'" onclick="MS.adding.kind=\''+k+'\';render()">'+esc(MS_COPY[k])+'</button>';}).join('');
-  var body='';
-  if(a.kind==='book')body='<input id="ms-add-label" class="tt-a ms-in" placeholder="'+esc(MS_COPY.bookPh)+'">';
-  if(a.kind==='link')body='<input id="ms-add-label" class="tt-a ms-in" placeholder="'+esc(MS_COPY.linkLabelPh)+'"><input id="ms-add-url" class="tt-a ms-in" placeholder="'+esc(MS_COPY.linkUrlPh)+'">';
-  if(a.kind==='file'){
-    var files=MS.lib?MS.lib.files:[];
-    body='<select id="ms-add-pick" class="tt-a ms-in"><option value="">'+esc(MS.lib?MS_COPY.pickFile:'…')+'</option>'+
-      files.map(function(f){return '<option value="'+esc(f.attachmentId)+'">'+esc(f.fileName)+'</option>';}).join('')+'</select>'+
-      '<label class="ms-hint">'+esc(MS_COPY.uploadFile)+' <input id="ms-add-up" type="file"></label>';
-  }
-  return '<div class="ms-add"><div class="ms-kinds">'+kinds+'</div>'+body+
-    '<div class="ms-kinds"><button type="button" class="btn btn-p ms-sm" '+(a.busy?'disabled ':'')+'onclick="msAddDo()">'+esc(a.busy?'…':MS_COPY.add)+'</button>'+
-    '<button type="button" class="btn btn-s ms-sm" onclick="MS.adding=null;render()">'+esc(MS_COPY.cancel)+'</button></div>'+
-    (a.err?'<div class="tt-err">'+esc(a.err)+'</div>':'')+'</div>';
+  var p=MS.pick&&MS.pick.target===target?MS.pick:null;
+  var b=function(kind,label){
+    return '<button type="button" class="btn ms-sm '+(p&&p.kind===kind?'btn-p':'btn-s')+'" aria-pressed="'+(p&&p.kind===kind?'true':'false')+'"'+
+      ' onclick="msPickOpen(\''+target+'\',\''+kind+'\')">'+esc(label)+'</button>';
+  };
+  return '<div class="ms-matbtns">'+b('file',TLIB_COPY.pickFile)+b('link',TLIB_COPY.pickLink)+'</div>'+(p?rPickPanel('',p):'');
 }
-function msAddStart(target){MS.adding={target:target,kind:'book',busy:false,err:''};_msLoadLib();render();}
-function _msLoadLib(cb){
-  if(MS.lib){if(cb)cb();return;}
-  api({action:'getLibrary',data:{teacherId:TEACHER_ID,teacherToken:TOKEN}},function(e,r){
-    if(!e&&r&&r.ok){
-      MS.lib={files:(r.mine||[]).concat(r.studio||[]).map(function(f){return {attachmentId:f.attachmentId,fileName:f.fileName};}),
-        urls:(r.myLinks||[]).concat(r.studioLinks||[]).map(function(l){return String(l.url||'').trim();})};
-    }else MS.lib={files:[],urls:[]};
-    render();if(cb)cb();
+function msPickOpen(target,kind){
+  // [1.794] — the row that opened it stays where it is on the screen (see _cmpHoldRow).
+  if(target==='asg')_cmpHoldRow(MST_CID);else _holdStill(function(){return document.querySelector('.ms-matbtns');});
+  if(MS.pick&&MS.pick.target===target&&MS.pick.kind===kind){msPickClose();return;}   // the pressed button, pressed again
+  MS.pick={target:target,kind:kind,q:'',busy:0,err:'',url:'',text:'',bad:false};
+  if(target==='asg')TPL_OPEN=false;
+  loadLibrary();render();
+}
+function msPickClose(){MS.pick=null;render();}
+function msPickSearch(v){if(!MS.pick)return;MS.pick.q=String(v||'');_pickRedraw(MS.pick);}
+// The list a ticked item goes into: the Assignment's, or the lesson's copy being edited.
+function _msMatList(target){
+  if(target==='asg')return MS.asg?MS.asg.mats:null;
+  var ed=MS.edits[_msEditKey(String(target).slice(4))];return ed?ed.materials:null;
+}
+function _msMatHas(target,it){
+  return (_msMatList(target)||[]).some(function(m){
+    return it.kind==='link'?m.kind==='link'&&String(m.url||'').trim().toLowerCase()===String(it.url||'').trim().toLowerCase()
+                           :m.kind==='file'&&m.attachmentId===(it.attachmentId||it.id);
   });
 }
-function msAddDo(){
-  var a=MS.adding;if(!a||a.busy)return;
-  var val=function(id){var el=document.getElementById(id);return el?String(el.value||'').trim():'';};
-  var done=function(m){
-    if(a.target==='asg'){MS.asg.mats.push(Object.assign({on:true},m));}
-    else{var ed=MS.edits[_msEditKey(a.target.slice(4))];if(ed)ed.materials.push(m);}   // [1.774] — the copy, until Save
-    MS.adding=null;render();
-  };
-  if(a.kind==='book'){var b=val('ms-add-label');if(!b)return;done({kind:'book',label:b});return;}
-  if(a.kind==='link'){
-    var u=val('ms-add-url');if(!/^https?:\/\//i.test(u))u=u?'https://'+u:'';
-    if(!u){a.err=MS_COPY.linkUrlPh;render();return;}
-    done({kind:'link',label:val('ms-add-label')||u,url:u});return;
-  }
-  var pick=val('ms-add-pick'),up=document.getElementById('ms-add-up'),file=up&&up.files&&up.files[0];
-  if(pick){var f=(MS.lib.files||[]).filter(function(x){return x.attachmentId===pick;})[0];done({kind:'file',label:f?f.fileName:'File',attachmentId:pick});return;}
-  if(!file)return;
-  a.busy=true;a.err='';render();
-  var reader=new FileReader();
-  reader.onerror=function(){a.busy=false;a.err=MS_COPY.saveFail;render();};
+function _msMatPush(target,m){
+  var list=_msMatList(target);if(!list)return;
+  list.push(target==='asg'?Object.assign({on:true},m):m);
+}
+function msPickAdd(id){
+  var p=MS.pick,it=_pickFind(id);if(!p||!it||_msMatHas(p.target,it))return;
+  _msMatPush(p.target,it.kind==='link'?{kind:'link',label:it.label||it.fileName||it.url,url:it.url}
+                                     :{kind:'file',label:it.fileName,attachmentId:it.attachmentId||it.id});
+  render();
+}
+// A new link, typed into the same two fields the composer has.
+function msPickLink(){
+  var p=MS.pick;if(!p)return;
+  var url=_composerNormalizeUrl(p.url);
+  if(!url){p.bad=true;p.url='';render();return;}
+  _msMatPush(p.target,{kind:'link',label:String(p.text||'').trim()||url.replace(/^https?:\/\//i,''),url:url});
+  p.url='';p.text='';p.bad=false;render();
+}
+function _msPickLinkRow(){
+  var p=MS.pick;
+  return '<div class="cmp-linkrow open">'+   // [1.794] — the same two labels as the composer's Add link
+    '<label class="cmp-ll"><span>'+esc(MST_COPY.pasteLink)+'</span><input id="ms-pick-url" class="'+(p.bad?'bad':'')+'" value="'+esc(p.url)+'" placeholder="'+esc(p.bad?CMP_COPY.linkRejected:CMP_COPY.linkUrlPlaceholder)+'"'+
+      ' aria-label="'+esc(CMP_COPY.linkUrlPlaceholder)+'" oninput="MS.pick.url=this.value" onkeydown="if(event.key===\'Enter\'){event.preventDefault();msPickLink();}"></label>'+
+    '<label class="cmp-ll"><span>'+esc(MST_COPY.displayText)+'</span><input id="ms-pick-text" value="'+esc(p.text)+'" placeholder="'+esc(CMP_COPY.linkTextPlaceholder)+'" aria-label="'+esc(CMP_COPY.linkTextPlaceholder)+'"'+
+      ' oninput="MS.pick.text=this.value" onkeydown="if(event.key===\'Enter\'){event.preventDefault();msPickLink();}"></label>'+
+    '<button type="button" class="cmp-mini cmp-mini-p" onclick="msPickLink()">'+esc(CMP_COPY.linkAdd)+'</button>'+
+    (_cmpNeedsSharing(p.url)?'<div class="cmp-guide">'+esc(CMP_COPY.linkSharing)+'</div>':'')+
+  '</div>';
+}
+// Add from your device: filed into My Library, as the library's own upload is,
+// and put in the list. The composer's size and empty-file guards, and its words.
+function msPickDevice(){
+  var inp=document.createElement('input');inp.type='file';inp.multiple=true;inp.accept=_attAccept();
+  inp.onchange=function(){Array.prototype.slice.call(inp.files||[]).forEach(_msPickUpload);};
+  inp.click();
+}
+function _msPickUpload(file){
+  var p=MS.pick;if(!p)return;
+  if(file.size>ATT_MAX_BYTES){p.err=TCH_COPY.attachTooBig;render();return;}
+  if(!file.size){p.err=TCH_COPY.attachEmpty;render();return;}
+  p.busy++;p.err='';render();
+  var target=p.target,reader=new FileReader();
+  var fail=function(msg){p.busy--;p.err=msg||TLIB_COPY.attachFailed;render();};
+  reader.onerror=function(){fail();};
   reader.onload=function(){
     var b64=String(reader.result||'');b64=b64.slice(b64.indexOf(',')+1);
-    // Filed straight into the teacher's own library, as the library's own upload does.
     api({action:'uploadAttachment',data:{fileName:file.name,mimeType:file.type,dataBase64:b64,toLibrary:true,teacherId:TEACHER_ID,teacherToken:TOKEN}},function(e,r){
-      a.busy=false;
-      if(e||!r||!r.ok||!r.attachment){a.err=(r&&r.error)||MS_COPY.saveFail;render();return;}
-      if(MS.lib)MS.lib.files.push({attachmentId:r.attachment.attachmentId,fileName:r.attachment.fileName});
-      done({kind:'file',label:r.attachment.fileName,attachmentId:r.attachment.attachmentId});
+      if(e||!r||!r.ok||!r.attachment){fail(r&&r.error);return;}
+      p.busy--;
+      _msMatPush(target,{kind:'file',label:r.attachment.fileName,attachmentId:r.attachment.attachmentId});
+      loadLibrary(true,true);render();
     });
   };
   reader.readAsDataURL(file);
+}
+// Which shelf a material is on: 'mine', 'studio', or '' when it is not in the library yet.
+function _msLibShelf(m){
+  if(m.kind==='file'){
+    if(LIB_SHELF_STUDIO.some(function(f){return f.attachmentId===m.attachmentId;}))return 'studio';
+    return 'mine';   // a file is only ever added from a shelf or uploaded into My Library
+  }
+  var u=String(m.url||'').trim().toLowerCase();if(!u)return '';
+  if(LIB_STUDIO_LINKS.some(function(l){return String(l.url||'').trim().toLowerCase()===u;}))return 'studio';
+  if(_pickLinks(true).some(function(l){return String(l.url||'').trim().toLowerCase()===u;}))return 'mine';
+  return '';
 }
 function msMatRemove(d,i){var ed=MS.edits[_msEditKey(d)];if(!ed)return;ed.materials.splice(i,1);render();}   // [1.774] — the copy, until Save
 // Typing never redraws; the words go to the server a moment after typing stops.
@@ -4048,123 +4867,6 @@ function msNoteInput(v){
   },900);
 }
 function msToggle(d){MS.open[d]=!MS.open[d];render();}
-function msOpenAll(on){(MS.card&&MS.card.notes||[]).forEach(function(n){MS.open[n.lessonDate]=!!on;});render();}
-// ── Create Assignment ────────────────────────────────────────────────────
-function msAsgOpen(d){
-  var l=_msLes(d);
-  MS.asg={date:d,time:l.lessonTime||'',intro:'',practice:l.activities||'',mats:(l.materials||[]).map(function(m){return Object.assign({on:true},m);}),busy:false,err:''};
-  MS.adding=null;_msLoadLib();render();window.scrollTo(0,0);
-}
-function rMsAsg(){
-  var a=MS.asg,s=MS.card.student,to=[s.parent1Name,s.parent2Name].filter(Boolean).join(', ');
-  var dates=[MS.cardDate].concat((MS.card.notes||[]).map(function(n){return n.lessonDate;})).filter(function(x,i,arr){return x&&arr.indexOf(x)===i;});
-  var libTag=function(m){
-    if(m.kind==='book')return '';
-    var inLib=m.kind==='file'||(MS.lib&&MS.lib.urls.indexOf(String(m.url||'').trim())>-1);
-    return '<span class="ms-lib'+(inLib?'':' new')+'">'+esc(inLib?MS_COPY.inLib:MS_COPY.willAdd)+'</span>';
-  };
-  return '<div class="ms-asg"><div class="ms-asg-h"><b>'+esc(MS_COPY.asgH(s.studentName))+'</b><span class="ms-hint">'+esc(MS_COPY.to+': '+to)+'</span></div>'+
-    '<label class="tt-q">'+esc(MS_COPY.forLesson)+'</label><select id="ms-asg-date" class="tt-a" onchange="msAsgDate(this.value)">'+
-      dates.map(function(d){return '<option value="'+d+'"'+(d===a.date?' selected':'')+'>'+esc(_msLong(d))+'</option>';}).join('')+'</select>'+
-    '<label class="tt-q">'+esc(MS_COPY.message)+'</label><textarea id="ms-asg-intro" class="tt-a" rows="2" placeholder="'+esc(MS_COPY.messagePh)+'" oninput="MS.asg.intro=this.value">'+esc(a.intro)+'</textarea>'+
-    '<label class="tt-q">'+esc(MS_COPY.practice)+'</label><textarea id="ms-asg-prac" class="tt-a" rows="4" oninput="MS.asg.practice=this.value">'+esc(a.practice)+'</textarea>'+
-    '<div class="ms-hint">'+esc(MS_COPY.practiceHint)+'</div>'+
-    '<label class="tt-q">'+esc(MS_COPY.mats)+'</label>'+
-    a.mats.map(function(m,i){return _msMatRow(m,libTag(m),'<input type="checkbox"'+(m.on?' checked':'')+' onclick="MS.asg.mats['+i+'].on=this.checked">');}).join('')+
-    '<div class="tt-info">'+esc(MS_COPY.libNote)+'</div>'+_msAddUI('asg')+
-    '<div class="ms-kinds" style="margin-top:10px"><button type="button" class="btn btn-p" '+(a.busy?'disabled ':'')+'onclick="msAsgSend()">'+esc(a.busy?MS_COPY.sending:MS_COPY.send(to||s.studentName))+'</button>'+
-    '<button type="button" class="btn btn-s" onclick="MS.asg=null;MS.adding=null;render()">'+esc(MS_COPY.cancel)+'</button></div>'+
-    (a.err?'<div class="tt-err">'+esc(a.err)+'</div>':'')+'</div>';
-}
-function msAsgDate(d){var l=_msLes(d);var a=MS.asg;a.date=d;a.time=l.lessonTime||'';a.practice=l.activities||'';a.mats=(l.materials||[]).map(function(m){return Object.assign({on:true},m);});render();}
-// Links not yet in the library go in first, then each file is attached from the
-// library (a fresh copy per message, as the composer does), then the message.
-function msAsgSend(){
-  var a=MS.asg;if(!a||a.busy)return;
-  var chosen=a.mats.filter(function(m){return m.on;});
-  a.busy=true;a.err='';render();
-  var fail=function(r){a.busy=false;a.err=(r&&r.error)||MS_COPY.saveFail;render();};
-  var newLinks=chosen.filter(function(m){return m.kind==='link'&&!(MS.lib&&MS.lib.urls.indexOf(String(m.url).trim())>-1);});
-  var files=chosen.filter(function(m){return m.kind==='file';}),attIds=[],outMats=[];
-  var step=function(i){
-    if(i<newLinks.length){
-      var m=newLinks[i];
-      api({action:'addLibraryLinks',data:{urls:m.url,label:m.label||'',teacherId:TEACHER_ID,teacherToken:TOKEN}},function(e,r){
-        if(e||!r||!r.ok)return fail(r);
-        if(MS.lib)MS.lib.urls.push(String(m.url).trim());step(i+1);
-      });return;
-    }
-    var j=i-newLinks.length;
-    if(j<files.length){
-      api({action:'attachFromLibrary',data:{attachmentId:files[j].attachmentId,teacherId:TEACHER_ID,teacherToken:TOKEN}},function(e,r){
-        if(e||!r||!r.ok||!r.attachment)return fail(r);
-        attIds.push(r.attachment.attachmentId);files[j]._sendId=r.attachment.attachmentId;step(i+1);
-      });return;
-    }
-    chosen.forEach(function(m){outMats.push(m.kind==='file'?{kind:'file',label:m.label,attachmentId:m._sendId}:{kind:m.kind,label:m.label,url:m.url});});
-    var s=MS.card.student;
-    api({action:'sendMessage',data:{conversationType:'family_teacher',familyId:s.familyId,teacherId:TEACHER_ID,teacherToken:TOKEN,
-      studentId:s.studentId,attachmentIds:attIds,clientMsgId:_ktNewClientMsgId(),
-      assignment:{studentId:s.studentId,lessonDate:a.date,lessonTime:a.time,intro:a.intro,practice:a.practice,materials:outMats}}},function(e,r){
-      if(e||!r||!r.ok)return fail(r);
-      MS.asg=null;showMsg(MS_COPY.sent,'s');_msLoadCard();
-      if(typeof loadFamilyThreads==='function')loadFamilyThreads();
-    });
-  };
-  step(0);
-}
-function rTeacherSettings(){
-  if(TSET.loading&&!TSET.loaded){
-    return '<div style="text-align:center;padding:2rem;color:var(--text3)"><span class="spin" style="font-size:20px">↻</span></div>';
-  }
-  var h='<div class="card">';
-  // AC's heading and copy, 3 September — his THIRD revision of this box that
-  // day. The heading gained "Message"; the audience widened from families to
-  // families, staff and admin, which is what the code has always done; and the
-  // last sentence changed from explaining why the message appears to telling
-  // the teacher they can change it.
-  h+='<div class="thread-hd">'+esc(TSET_COPY.awayHeading)+'</div>';
-  h+='<div style="font-size:12px;color:var(--text3);margin-bottom:.6rem">'+esc(TSET_COPY.awayBody)+'</div>';
-  // [1.756] — no box for the teacher's own wording any more: admin writes the
-  // away notice in Settings (AC, 4 October 2026). The switch stays; the
-  // studio's wording is shown below as the family reads it.
-  h+='<div style="display:flex;gap:8px;align-items:center;margin-top:.6rem">'+
-     (TSET.awayEnabled
-       ? '<button class="btn btn-s" onclick="setAway(false)">Turn off away</button>'
-       : '<button class="btn btn-p" onclick="setAway(true)">Turn on away</button>')+
-     (TSET.saving?'<span class="spin">↻</span>':'')+
-     '</div>'+
-     rAct('away');   // [1.404] — beside the control, not in the corner
-  // [1.736] row 7 — the studio's wording, always visible for reference, with
-  // this teacher's name in it the way a family reads it.
-  h+=_tsetStudioCopy(String(TSET.awayDefaultCopy||'').replace(/\[TEACHER\]|\[teacher first name\]/gi,String(TEACHER_NAME||'').trim().split(/\s+/)[0]||'your teacher'));
-  h+='</div>';
-
-  h+='<div class="card" style="margin-top:.75rem">';
-  h+='<div class="thread-hd">'+esc(TSET_COPY.afterHeading)+'</div>';
-  h+='<div style="font-size:12px;color:var(--text3);margin-bottom:.6rem">'+esc(TSET_COPY.afterBody)+'</div>';
-
-  // [1.238] — the generated sentence that used to open this line is gone.
-  // It read "We only email you between 9am and 5pm, from your own
-  // availability", which is exactly the per-teacher window AC removed, and its
-  // second half would have been telling a teacher something untrue. AC's copy
-  // states the hours itself, so nothing here is derived any more.
-  h+='<div style="font-size:11px;color:var(--text4);margin-top:.5rem">'+
-     esc(TSET_COPY.hoursNote)+'</div>';
-  h+=_tsetStudioCopy(TSET.afterHoursDefaultCopy);
-  h+='</div>';
-  // ── [1.580] — the Settings link card is GONE ─────────────────────────
-  // Same fault as admin's, same sheet, same shape: this card saved a teacher's
-  // whole link block from a list loaded once per page, while the library screen
-  // edited the same `TEACHER_LINKS` rows. A link added on the shelf and then a
-  // rename saved here took the new one with it. My Library is the one editor
-  // now — it carries tags and a real delete, and it is where their files are.
-  // The server endpoints are untouched.
-  // [1.579] — the templates moved onto the library screen, which Settings does
-  // not draw. My Library is the one door to them now, the same as admin's.
-  return h;
-}
-
 // ── [1.338] — the teacher's own link library ────────────────────────────
 // AC, 5 September 2026: "teachers do not keep my links. Admin keeps admin
 // links. Teachers keep teacher links."
@@ -4815,18 +5517,20 @@ function rTabBadge(n){
 
 function switchTab(tab){
   HOME_TAB=tab;
+  // [1.794] — the Library tab is the panel the overlay draws, on its own page.
+  if(tab==='library'){ LIBRARY_OPEN=false; LIB_EDIT=''; LIB_DEL=''; loadLibrary(); ttplLoad(); window.scrollTo(0,0); }
   render();
-  if(tab==='settings' && !TSET.loaded && !TSET.loading) loadTeacherSettings();
   if(tab==='trials' && !TT.loading) loadTrials(!!TT.data);   // [1.731] — fresh each visit
   // [1.762] — a tab left open across midnight held the old week and its
   // "Today" (the cache answered first and its refresh never reached the
   // screen): when New York's day has moved on, forget the held weeks and cards
   // and load this week.
-  if(tab==='students' && MS.week && MS.week.today && MS.week.today!==_nyYmdOf()){
+  // [1.793] — the same for the student list: its "today" picks each student's latest lesson.
+  if(tab==='students' && MS.roster && MS.roster.today && MS.roster.today!==_nyYmdOf()){
     Object.keys(API_KEEP).forEach(function(k){ if(/^[wc]\|/.test(k)){ delete API_KEEP[k]; delete API_KEEP_AT[k]; } });
-    API_THISWEEK=''; MS.weekStart=''; MS.week=null; MS.cardStu=''; MS.card=null;
+    API_THISWEEK=''; MS.cardStu=''; MS.card=null; MST.view=''; MS.asg=null;
   }
-  if(tab==='students' && !MS.loading && !MS.cardStu) loadWeek();   // [1.732] — fresh each visit
+  if(tab==='students' && !MS.rosterLoading) loadMyStudents();   // [1.732]/[1.793] — fresh each visit
   if(tab==='staff' && STAFF_VIEW==='list'){
     if(!STAFF_PICKER.all.length && !STAFF_PICKER.loading) loadStaffDirectory();
     if(!STAFF_THREADS.list.length && !STAFF_THREADS.loading) loadStaffThreads();
@@ -5266,7 +5970,7 @@ function rSectionedRoster(){
     return String(a.stu.studentName||'').localeCompare(String(b.stu.studentName||''));
   });
   h+='<div class="sep" onclick="STUDENTS_OPEN=!STUDENTS_OPEN;render()">'+
-     '<span class="caret">'+(STUDENTS_OPEN?'▾':'▸')+'</span>'+esc(TCH_COPY.sectionStudents)+
+     esc(TCH_COPY.sectionStudents)+
      '<span class="sepc">'+_stuRows.length+'</span></div>';
   if(STUDENTS_OPEN){
     h+=_stuRows.length
@@ -5325,7 +6029,7 @@ function rSectionedRoster(){
   // AC's *"must include admin option"* is asking to preserve — a teacher who
   // does not know who to ask has to SEE the office in the list. A check pins it.
   h+='<div class="sep" onclick="STAFF_OPEN=!STAFF_OPEN;render()">'+
-     '<span class="caret">'+(STAFF_OPEN?'\u25be':'\u25b8')+'</span>'+esc(TCH_COPY.sectionStaff)+
+     esc(TCH_COPY.sectionStaff)+
      (staff.length?'<span class="zcount">'+staff.length+'</span>':'')+'</div>';
   if(STAFF_OPEN){
     h+=(staff.length?'<div class="thread-list">'+staff.map(rConvRow).join('')+'</div>'
@@ -5350,17 +6054,14 @@ function rSectionedRoster(){
   //
   // Collapsed to start, like My Students and Archived, and carrying its count
   // while shut so it says what it holds rather than looking empty ([1.178]).
-  var _libCount=LIB_MINE.length+LIB_MY_LINKS.length;
-  // [1.495] — opens the overlay rather than expanding in place.
-  h+='<div class="sep" onclick="libraryOpen()">'+
-     '<span class="caret">▸</span>'+esc(TLIB_COPY.manageHead)+
-     '<span class="sepc">'+_libCount+'</span></div>';
+  // [1.794] — My Library is its own tab now (AC, 7 October 2026: "move My Library to a new tab
+  // after messages tab"), so its row here went.
 
   // Closed now holds only what is actually closed, so the heading is true.
   // Still collapsed to start and still carrying its count while collapsed —
   // it says what it holds rather than looking empty ([1.178]).
   h+='<div class="sep" onclick="CLOSED_OPEN=!CLOSED_OPEN;render()">'+
-     '<span class="caret">'+(CLOSED_OPEN?'▾':'▸')+'</span>'+esc(TCH_COPY.sectionClosed)+
+     esc(TCH_COPY.sectionClosed)+
      '<span class="sepc">'+shut.length+'</span></div>';
   if(CLOSED_OPEN){
     h+=(shut.length?'<div class="thread-list">'+shut.map(rConvRow).join('')+'</div>'
@@ -8153,6 +8854,7 @@ function _composerSync(id){
   _tplOfferSync(id);   // [1.127] — the offer to keep this as a template, live
   if(id==='family-composer' && ACTIVE_THREAD){ ACTIVE_THREAD.draft=v; _draftKeep(ACTIVE_THREAD, v); }
   if(id==='staff-composer' && ACTIVE_STAFF_THREAD){ ACTIVE_STAFF_THREAD.draft=v; _draftKeep(ACTIVE_STAFF_THREAD, v); }
+  if(id===MST_CID && MS.asg){ MS.asg.html=el.innerHTML; MS.asg.dirty=true; }   // [1.794] — a link or template put in by the toolbar
 }
 // [1.336] — one place the draft is written from, so the two composers cannot
 // end up keeping it differently.
@@ -9012,9 +9714,12 @@ function pickOpen(kind, composerId){
   // it. AC: *"on mobile, we need more predictive behavior in terms of jumping
   // to the next logical step. Not on desktop."* On a desktop the picker appears
   // where the reader is already looking and [1.512] holds everything still.
-  _guideTo('.lib-panel');
+  // [1.794] — not any more where the picker opens directly under its buttons, which on a
+  // phone is always ([1.520]): the jump took the buttons away. The row is held still.
+  _cmpHoldRow(composerId||_libComposerId);
   if(PICK===kind){ pickClose(composerId); return; }   // the pressed button, pressed again
-  PICK=kind; PICK_Q='';
+  PICK=kind; PICK_Q=''; TPL_OPEN=false;
+  if(MS.pick&&MS.pick.target==='asg') MS.pick=null;
   _libComposerId=composerId||_libComposerId;
   loadLibrary();
   render();
@@ -9023,6 +9728,7 @@ function pickOpen(kind, composerId){
   if(kind==='link') _composerLinkOpen(_libComposerId);
 }
 function pickClose(composerId){
+  _cmpHoldRow(composerId||_libComposerId);   // [1.794]
   PICK=''; PICK_Q='';
   var id=composerId||_libComposerId;
   render();
@@ -9074,7 +9780,14 @@ function pickAdd(id, composerId){
   var it=_pickFind(id); if(!it) return;
   if(it.kind==='link'){
     var cid=composerId||_libComposerId;
-    _composerInsertLink(cid, it.url, it.label||it.fileName||it.url);
+    // [1.794] — AC, 7 October 2026: "there are two ways to add a link … Either should be able
+    // to be added verbatim in the body of the email, or as an embedded hyperlink using the
+    // highlight text method or the add a link by pasting and typing in the display text." One
+    // rule for both: whatever is in Display Text (the highlighted words, or words typed there)
+    // becomes the link; left empty, the link goes in as itself — a saved one under its name.
+    var _t=document.getElementById(cid+'-linktext'), _w=_t?_t.value.trim():'';
+    _composerInsertLink(cid, it.url, _w||it.label||it.fileName||it.url);
+    if(_t){ _t.value=''; _cmpLinkState(cid).text=''; }
     LINK_ADDED[id]=true;
     _pickRedraw();
     return;
@@ -9106,14 +9819,16 @@ function pickOpenItem(id){
 // are not already on the shelf by address — so nothing a teacher saved before
 // the library existed disappears from the one place they now look for it.
 function _pickFiles(mine){ return _pickFiltered(mine?LIB_MINE:LIB_SHELF_STUDIO); }
-function _pickLinks(mine){
-  if(!mine) return _pickFiltered(LIB_STUDIO_LINKS);
+// [1.790] — `all` returns the teacher's links unfiltered, for a caller that
+// filters by its own search (the materials picker) or not at all.
+function _pickLinks(mine, all){
+  if(!mine) return all?LIB_STUDIO_LINKS:_pickFiltered(LIB_STUDIO_LINKS);
   var have={}; LIB_MY_LINKS.forEach(function(l){ have[String(l.url||'').toLowerCase()]=true; });
   var extra=(SAVED_LINKS||[]).filter(function(l){ return !have[String(l.url||'').toLowerCase()]; })
     .map(function(l){ return {kind:'link', id:'q:'+l.linkId, url:l.url, label:l.label, fileName:l.label, tags:[], privateTags:[]}; });
-  return _pickFiltered(LIB_MY_LINKS.concat(extra));
+  return all?LIB_MY_LINKS.concat(extra):_pickFiltered(LIB_MY_LINKS.concat(extra));
 }
-function _pickFiltered(list){ return (list||[]).filter(function(f){ return _libMatch(f, [], PICK_Q); }); }
+function _pickFiltered(list, q){ return (list||[]).filter(function(f){ return _libMatch(f, [], q===undefined?PICK_Q:q); }); }
 function _pickFind(id){
   var it=_libFind(id); if(it) return it;
   return _pickLinks(true).filter(function(x){ return x.id===id; })[0]||null;
@@ -9121,8 +9836,8 @@ function _pickFind(id){
 // Redraws the picker and nothing else — [1.485]'s rule for the manager,
 // applied here: typing in the search must not rebuild the page under the
 // keyboard. Keeps the field's focus and caret, and each shelf's scroll.
-function _pickRedraw(){
-  var panel=document.getElementById('pick-panel');
+function _pickRedraw(mat){
+  var panel=mat?document.getElementById('pick-panel-mat'):document.getElementById('pick-panel');
   if(!panel){ render(); return; }
   var tops=[];
   Array.prototype.forEach.call(panel.querySelectorAll('.lib-list'), function(l){ tops.push(l.scrollTop); });
@@ -9131,7 +9846,7 @@ function _pickRedraw(){
   var selStart=null, selEnd=null;
   if(actId && act.setSelectionRange){ try{ selStart=act.selectionStart; selEnd=act.selectionEnd; }catch(e){} }
   var tmp=document.createElement('div');
-  tmp.innerHTML=rPickPanel(_libComposerId);
+  tmp.innerHTML=rPickPanel(mat?'':_libComposerId, mat);
   var fresh=tmp.firstChild;
   if(!fresh){ render(); return; }
   panel.innerHTML=fresh.innerHTML;
@@ -10773,7 +11488,7 @@ function rLibBandToggle(which, label, n){
   return '<div class="lib-band lib-band-wrap">'+
     '<button type="button" class="lib-band-btn"'+
       ' aria-expanded="'+(open?'true':'false')+'" onclick="libSee(\''+which+'\')">'+
-      '<span class="caret">'+(open?'\u25be':'\u25b8')+'</span>'+esc(label)+
+      esc(label)+
       '<span class="zcount">'+n+'</span></button>'+
   '</div>';
 }
@@ -11616,7 +12331,7 @@ function _libShelf(label, key, n, body){
   var open=(searching && n>0) || !!LIB_SHELF_OPEN[key];
   return '<div class="lib-shelf">'+
     '<div class="lib-group-hd lib-shelf-hd" onclick="libShelfToggle('+jsq(key)+')">'+
-      '<span class="caret">'+(open?'\u25be':'\u25b8')+'</span>'+esc(label)+
+      esc(label)+
       '<span class="zcount">'+n+'</span></div>'+
     (open?body:'')+
   '</div>';
@@ -12003,10 +12718,16 @@ function loadSavedTpls(){
     STUDIO_TPLS=(!e&&r&&r.ok&&r.templates)||[]; fin();
   });
 }
-function tplToggle(){ TPL_OPEN=!TPL_OPEN; render(); }
+// [1.794] — one open thing under the row at a time: Templates closes Add file and Add link.
+var TPL_FOR='';
+function tplToggle(id){
+  _cmpHoldRow(id||TPL_FOR);
+  var open=!(TPL_OPEN&&TPL_FOR===id);
+  TPL_OPEN=open; TPL_FOR=id||'';
+  if(open){ PICK=''; PICK_Q=''; if(MS.pick) MS.pick=null; loadSavedTpls(); }
+  render();
+}
 function rTemplateRow(id){
-  var mine=SAVED_TPLS||[], studio=STUDIO_TPLS||[];
-  var any=mine.length+studio.length;
   var h='';
   // ── [1.580] — ALWAYS drawn, empty or not ────────────────────────────────
   //
@@ -12020,22 +12741,11 @@ function rTemplateRow(id){
   // yet". This is the same, in the portal where it matters more — AC writes the
   // studio's templates, and a teacher who cannot find the button never learns
   // they exist.
-  h+='<button type="button" class="btn btn-s btn-tpl" onmousedown="event.preventDefault()"'+
-     ' onclick="tplToggle()">'+esc(TTPL_COPY.composer)+'</button>';
-  if(TPL_OPEN && !any){
-    h+='<div class="cmp-saved"><span style="font-size:11px;color:var(--text4)">'+
-       esc(TTPL_COPY.empty)+'</span></div>';
-  }
-  if(TPL_OPEN && any){
-    // Studio first, then their own. Not labelled as two lists: by the time a
-    // teacher is writing a message, where a template came from is not the
-    // question they are asking.
-    h+='<div class="cmp-saved">'+studio.concat(mine).map(function(t){
-      return '<button type="button" class="cmp-mini" onmousedown="event.preventDefault()" '+
-        'title="'+esc(_ttplPreview(t.body))+'" onclick="tplUse('+jsq(id)+','+jsq(t.templateId)+')">'+
-        esc(t.label)+'</button>';
-    }).join('')+'</div>';
-  }
+  //
+  // [1.794] — the button is in the toolbar row now, always drawn, and its list
+  // ("No templates saved yet." when empty) opens under the row: rTplPanel. Studio
+  // first, then their own, not labelled as two lists — by the time a teacher is
+  // writing a message, where a template came from is not the question they ask.
   // The offer lives in a container that is ALWAYS drawn, empty or not, so that
   // typing can fill it without a re-render — see _tplOfferSync.
   h+=_tplUnfilledNote(id);
@@ -12191,7 +12901,12 @@ function _tplFirstName(n){ return String(n||'').trim().split(/\s+/)[0]||''; }
 function _tplValuesFor(t, stuId){
   var v={ teacher:_tplFirstName(TEACHER_NAME) };
   if(!t) return v;
-  v.parentFirst=_tplFirstName(t.parent1Name);
+  // [1.794] — the parents ticked to receive it, as the assignment's greeting names them ("Hi Amy
+  // and Ben"). It named the first parent on file whoever was ticked. With one ticked, that one;
+  // with none ticked (no email to anyone), the first, as before.
+  var _p1=_tplFirstName(t.parent1Name), _p2=_tplFirstName(t.parent2Name);
+  var _picked=(t.parent1Name&&t.parent2Name)?[t.notifyP1!==false?_p1:'', t.notifyP2!==false?_p2:''].filter(Boolean):[];
+  v.parentFirst=_picked.length?_picked.join(' and '):_p1;
   var st=null;
   (t.students||[]).forEach(function(x){ if(x.studentId===stuId) st=x; });
   // No child chosen and more than one on the family: nothing is filled in
@@ -12210,6 +12925,13 @@ function _tplValuesFor(t, stuId){
   return v;
 }
 function _tplValues(){
+  // [1.794] — in Create Assignment a template fills from the assignment: its student, and the
+  // parents ticked to receive it.
+  if(HOME_TAB==='students' && MS.asg && MS.card && document.getElementById(MST_CID)){
+    var s=_mstStu(MS.cardStu);
+    return { teacher:_tplFirstName(TEACHER_NAME), parentFirst:mstPicked(s,MS.asg.to).map(_tplFirstName).join(' and '),
+      studentFirst:_tplFirstName(s.studentName), instrument:String(s.instrument||''), day:String(s.day||''), time:String(s.time||'') };
+  }
   var t=(_openKind()==='family') ? ACTIVE_THREAD : null;   // [1.782]
   return _tplValuesFor(t, t?_threadStudentId(t):'');
 }
@@ -12428,7 +13150,7 @@ function _linkApi(cb){ api({action:'getTeacherLinks', data:{teacherToken:TOKEN}}
 // written cannot be a third shape.
 function rBackBtn(label, onclick){
   return '<button type="button" class="btn btn-s kl-backbtn" onclick="'+onclick+'">'+
-    '\u2190 '+esc(label)+'</button>';
+    esc(label)+'</button>';
 }
 
 function _cmpLinkState(id){
@@ -12628,7 +13350,10 @@ function _composerStateClear(id){
   var el=document.getElementById(id); if(!el) return;
   _cmpRemember(id);   // blur: the caret as it was when the teacher reached for a picker
   var wrap=el.closest?el.closest('.composer-wrap'):null; if(!wrap) return;
-  var btns=wrap.querySelectorAll('.cmp-tb-btn.on');
+  // [1.794] — found while testing the assignment's composer, and live in Messages: this
+  // cleared EVERY lit button, so Aa and an open Add link went grey with their panel still
+  // open until the next redraw. Only the buttons that follow the cursor follow it away.
+  var btns=wrap.querySelectorAll('.cmp-tb-btn.on:not(.cmp-fmt-toggle):not(.cmp-tb-pick)');
   for(var i=0;i<btns.length;i++) btns[i].classList.remove('on');
 }
 
@@ -13074,7 +13799,7 @@ function _cmpFmtToggle(id){ CMP_FMT_OPEN[id]=!_cmpFmtIsOpen(id); render(); }
 //
 // Found by rendering both toolbars rather than reading them. Both portals carry
 // this function and [1.634] fails if the two ever disagree.
-function _cmpFmtDefault(id){ return /^(ttpl|atpl)-b/.test(String(id||'')); }
+function _cmpFmtDefault(id){ return /^(ttpl|atpl)-b/.test(String(id||'')) || id==='asg-composer'; }   // [1.794] — AC: "i'm not seeing the formatting options"
 function _cmpFmtIsOpen(id){
   return CMP_FMT_OPEN.hasOwnProperty(id) ? !!CMP_FMT_OPEN[id] : _cmpFmtDefault(id);
 }
@@ -13110,7 +13835,7 @@ function _rMore(t, cRow, r){
   }).join('');
   return '<span class="more-wrap">'+
     '<button type="button" class="btn btn-s more-btn" aria-haspopup="true" aria-expanded="'+(MORE_OPEN?'true':'false')+'"'+
-      ' onclick="event.stopPropagation();moreToggle()">'+esc(TCH_COPY.more)+' \u25be</button>'+
+      ' onclick="event.stopPropagation();moreToggle()">'+esc(TCH_COPY.more)+'</button>'+
     (MORE_OPEN?'<span class="more-menu" onclick="event.stopPropagation()">'+list+'</span>':'')+
   '</span>';
 }
@@ -13199,7 +13924,67 @@ function rComposerToolbar(id,opts){
       // accept a file the send cannot carry, and lose it without saying so.
       (opts.noFiles?'':_tbPick(id,'file',TLIB_COPY.pickFile))+
       (opts.noFiles?'':_tbPick(id,'link',TLIB_COPY.pickLink))+
-    '</div>';
+      // [1.794] — Create Assignment's own: Add file puts a file in its Materials,
+      // Add link is the composer's (highlighted words become the link).
+      (opts.asg?_tbAsgFile()+_tbPick(id,'link',TLIB_COPY.pickLink):'')+
+      // [1.794] — AC, 7 October 2026: "Templates section can take up less space also. Titles
+      // should be single line." A third button beside Add file and Add link, equal in width
+      // ([1.535]: "equal weight and width … no 3rd row needed"); its list opens under the row.
+      (opts.noTemplates?'':'<button type="button" class="cmp-tb-btn cmp-tb-pick'+(TPL_OPEN&&TPL_FOR===id?' on':'')+'"'+
+        ' aria-pressed="'+(TPL_OPEN&&TPL_FOR===id?'true':'false')+'" onmousedown="event.preventDefault()"'+
+        ' onclick="tplToggle('+jsq(id)+')">'+esc(TTPL_COPY.composer)+'</button>')+
+    '</div>'+
+    // What the row opened, directly under it with the message just below ([1.794], AC: Add
+    // link goes "above the message and under the add link buttons"). Create Assignment's
+    // pickers are drawn here; Messages' are drawn where they always were ([1.507], [1.520]).
+    (opts.asg?(PICK==='link'&&_libComposerId===id?rPickPanel(id):'')+(MS.pick&&MS.pick.target==='asg'?rPickPanel('',MS.pick):''):'')+
+    (TPL_OPEN&&TPL_FOR===id?rTplPanel(id):'');
+}
+function _tbAsgFile(){
+  var on=!!(MS.pick&&MS.pick.target==='asg'&&MS.pick.kind==='file');
+  return '<button type="button" class="cmp-tb-btn cmp-tb-pick'+(on?' on':'')+'" aria-pressed="'+(on?'true':'false')+'"'+
+    ' onmousedown="event.preventDefault()" onclick="if(PICK){PICK=\'\';}mstSyncHtml();msPickOpen(\'asg\',\'file\')">'+esc(TLIB_COPY.pickFile)+'</button>';
+}
+// The template list: one line each, the studio's first, the full name and its opening words
+// on hover. Not labelled as two lists ([1.127]: where a template came from is not the question).
+function rTplPanel(id){
+  var all=(STUDIO_TPLS||[]).concat(SAVED_TPLS||[]);
+  var list=all.length
+    ?'<div class="cmp-tpls">'+all.map(function(t){
+        return '<button type="button" class="cmp-tpl" onmousedown="event.preventDefault()" title="'+esc(t.label+' \u2014 '+_ttplPreview(t.body))+'"'+
+          ' onclick="tplUse('+jsq(id)+','+jsq(t.templateId)+')">'+esc(t.label)+'</button>';
+      }).join('')+'</div>'
+    :'<div class="cmp-tpl-none">'+esc(TTPL_COPY.empty)+'</div>';
+  return '<div class="lib-panel cmp-panel cmp-tplpanel"><button type="button" class="cmp-px" aria-label="'+esc(TLIB_COPY.close)+'" title="'+esc(TLIB_COPY.close)+'"'+
+    ' onclick="_cmpHoldRow('+jsq(id)+');TPL_OPEN=false;render()">\u2715</button>'+list+'</div>';
+}
+// ── [1.794] — opening a panel under the row never moves the screen ──────
+//
+// AC, 7 October 2026, in a window 830 pixels wide: "screen repositions past the
+// link box so I have to scroll up to access." Below 900 pixels the portal counts
+// as a phone and [1.520] scrolled every picker to the top of the screen, which
+// took the buttons that opened it away. A panel that opens directly under its
+// buttons is already the next thing in view, so the row stays exactly where it
+// was on the screen while the page redraws around it.
+function _cmpScroller(el){
+  for(var p=el&&el.parentElement;p&&p!==document.body;p=p.parentElement){
+    var o=getComputedStyle(p).overflowY;
+    if((o==='auto'||o==='scroll')&&p.scrollHeight>p.clientHeight) return p;
+  }
+  return null;
+}
+function _holdStill(find){
+  var el=find(); if(!el||!el.getBoundingClientRect) return;
+  var y=el.getBoundingClientRect().top;
+  var fix=function(){
+    var n=find(); if(!n) return;
+    var d=n.getBoundingClientRect().top-y; if(Math.abs(d)<1) return;
+    var sc=_cmpScroller(n); if(sc) sc.scrollTop+=d; else window.scrollBy(0,d);
+  };
+  setTimeout(fix,0); setTimeout(fix,80);
+}
+function _cmpHoldRow(id){
+  _holdStill(function(){ var el=document.getElementById(id), w=el&&el.closest?el.closest('.composer-wrap'):null; return w?w.querySelector('.cmp-row2'):null; });
 }
 
 // [1.535] — `_composerInsertTag` REMOVED with the merge-tag pills. AC decided
@@ -13218,15 +14003,18 @@ function rComposerLinkRow(id){
   var st=_cmpLinkState(id);
   // [1.494] — drawn inside the Add link picker and nowhere else, so it is
   // always open there; the picker's own × and Edit Message are the way out.
+  // [1.794] — AC, 7 October 2026: "for ADD LINK have bold black smaller font that says Paste
+  // Link Here above the add link address field and Display Text over the add display text
+  // here. Keep the placeholder text for clarity."
   return '<div class="cmp-linkrow open" id="'+id+'-linkrow">'+
-    '<input id="'+id+'-linkurl" class="'+(st.bad?'bad':'')+'" value="'+esc(st.url)+'"'+
+    '<label class="cmp-ll"><span>'+esc(MST_COPY.pasteLink)+'</span><input id="'+id+'-linkurl" class="'+(st.bad?'bad':'')+'" value="'+esc(st.url)+'"'+
       ' placeholder="'+esc(st.bad?CMP_COPY.linkRejected:CMP_COPY.linkUrlPlaceholder)+'"'+
       ' aria-label="'+esc(CMP_COPY.linkUrlPlaceholder)+'"'+
       ' oninput="_cmpLinkState(\''+id+'\').url=this.value"'+
-      ' onkeydown="_composerLinkKey(event,\''+id+'\')">'+
-    '<input id="'+id+'-linktext" value="'+esc(st.text)+'" placeholder="'+esc(CMP_COPY.linkTextPlaceholder)+'" aria-label="'+esc(CMP_COPY.linkTextPlaceholder)+'"'+
+      ' onkeydown="_composerLinkKey(event,\''+id+'\')"></label>'+
+    '<label class="cmp-ll"><span>'+esc(MST_COPY.displayText)+'</span><input id="'+id+'-linktext" value="'+esc(st.text)+'" placeholder="'+esc(CMP_COPY.linkTextPlaceholder)+'" aria-label="'+esc(CMP_COPY.linkTextPlaceholder)+'"'+
       ' oninput="_cmpLinkState(\''+id+'\').text=this.value"'+
-      ' onkeydown="_composerLinkKey(event,\''+id+'\')">'+
+      ' onkeydown="_composerLinkKey(event,\''+id+'\')"></label>'+
     // [1.510] — AC, 10 September 2026: *"The add link button should be blue."*
     // It is the one thing in this row that ACTS; the two fields and the
     // guidance beneath do not.
@@ -13375,6 +14163,7 @@ function rComposer(id,draft,onInput,sendBtn,opts){
     // [1.417]'s rule: the state goes on the thing it is about.
 
       rAct('send')+
+      (opts.beforeActions||'')+   // [1.794] — Create Assignment's Materials and Schedule Send
       '<div class="composer-actions">'+sendBtn+'</div>'+
       // [1.371] — the picker, under the buttons, only while it is open. Inline
       // rather than a dialog: it belongs to the message in the box above it.
@@ -14031,17 +14820,49 @@ function rPickButtons(composerId){
 }
 // The picker itself. One shape for both kinds: the new thing first, the
 // search, the two shelves holding only that kind, Manage Library last.
-function rPickPanel(composerId){
-  if(!PICK) return '';
-  if(composerId) _libComposerId=composerId;
-  var file=(PICK==='file');
-  var mine=file?_pickFiles(true):_pickLinks(true);
-  var studio=file?_pickFiles(false):_pickLinks(false);
-  var h='<div class="lib-panel pick-in-thread" id="pick-panel">'+
+// [1.790] — `mat` is the second destination: a lesson's or an Assignment's
+// materials (MS.pick). The panel is the same panel; only where a tick lands, and
+// the way to add a new one, differ.
+function rPickPanel(composerId, mat){
+  var kind=mat?mat.kind:PICK;
+  if(!kind) return '';
+  if(composerId && !mat) _libComposerId=composerId;
+  // ── [1.794] — Add link is the link and nothing else ───────────────────
+  //
+  // AC, 7 October 2026: "the add link area is huge, but needs to be more compact. We don't
+  // need all of the library functionality here. Just the ability to add the link. The library
+  // is where you see the full view with all functionality for link library." So: Paste Link
+  // Here and Display Text, Insert link, and one menu of saved links (yours, then the Keylab
+  // Master Library), which adds by the same rule as pasting (pickAdd). No search, shelves or
+  // Manage Library here — those are the Library tab. Then: "everything should be smaller for
+  // this panel."
+  if(!mat && kind==='link'){
+    var cid=_libComposerId, mineL=_pickLinks(true,true), studioL=LIB_STUDIO_LINKS||[];
+    var opt=function(l){ return '<option value="'+esc(l.id||l.attachmentId)+'">'+esc(l.label||l.fileName||l.url)+'</option>'; };
+    var menu=(mineL.length||studioL.length)
+      ? '<label class="cmp-ll cmp-ls"><span>'+esc(MST_COPY.savedLinks)+'</span><select id="'+cid+'-linkpick" onchange="if(this.value){pickAdd(this.value,'+jsq(cid)+');}">'+
+        '<option value="">'+esc(MST_COPY.chooseSaved)+'</option>'+
+        (mineL.length?'<optgroup label="'+esc(TLIB_COPY.mineLinks)+'">'+mineL.map(opt).join('')+'</optgroup>':'')+
+        (studioL.length?'<optgroup label="'+esc(TLIB_COPY.studio)+'">'+studioL.map(opt).join('')+'</optgroup>':'')+'</select></label>'
+      : '';
+    return '<div class="lib-panel cmp-panel cmp-linkpanel" id="pick-panel"><button type="button" class="cmp-px" aria-label="'+esc(TLIB_COPY.close)+'" title="'+esc(TLIB_COPY.close)+'"'+
+      ' onclick="pickClose('+jsq(cid)+')">\u2715</button>'+rComposerLinkRow(cid)+menu+'</div>';
+  }
+  var file=(kind==='file'), q=mat?mat.q:PICK_Q;
+  var mine=mat?_pickFiltered(file?LIB_MINE:_pickLinks(true,true), q):(file?_pickFiles(true):_pickLinks(true));
+  var studio=mat?_pickFiltered(file?LIB_SHELF_STUDIO:LIB_STUDIO_LINKS, q):(file?_pickFiles(false):_pickLinks(false));
+  var close=mat?'msPickClose()':'pickClose('+jsq(composerId)+')';
+  var h='<div class="lib-panel pick-in-thread" id="'+(mat?'pick-panel-mat':'pick-panel')+'">'+
     '<div class="lib-hd"><span class="lib-hd-t">'+esc(file?TLIB_COPY.pickFile:TLIB_COPY.pickLink)+'</span>'+
       '<button type="button" class="modal-x" aria-label="'+esc(TLIB_COPY.close)+'"'+
-        ' onclick="pickClose('+jsq(composerId)+')">&#215;</button></div>';
-  if(file){
+        ' onclick="'+close+'">&#215;</button></div>';
+  if(mat){
+    if(file){
+      h+='<button type="button" class="btn btn-p pick-from" onclick="msPickDevice()">'+esc(TLIB_COPY.fromDevice)+'</button>';
+      if(mat.busy) h+='<div class="att-guide"><span class="spin">&#8635;</span> '+esc(TLIB_COPY.attaching)+'</div>';
+    } else h+=_msPickLinkRow();
+    if(mat.err) h+='<div class="tt-err">'+esc(mat.err)+'</div>';
+  } else if(file){
     h+='<button type="button" class="btn btn-p pick-from" onclick="attachPick()">'+esc(TLIB_COPY.fromDevice)+'</button>';
     // [1.516] — an affordance nobody can see is not built. Drag-and-drop and
     // paste are invisible by nature, so the one place a person is already
@@ -14052,15 +14873,15 @@ function rPickPanel(composerId){
   } else {
     h+=rComposerLinkRow(composerId);
   }
-  h+='<input id="pick-q" class="lib-search" type="text" value="'+esc(PICK_Q)+'"'+
+  h+='<input id="'+(mat?'pick-q-mat':'pick-q')+'" class="lib-search" type="text" value="'+esc(q)+'"'+
        ' placeholder="'+esc(file?TLIB_COPY.searchFiles:TLIB_COPY.searchLinks)+'"'+
        ' aria-label="'+esc(file?TLIB_COPY.searchFiles:TLIB_COPY.searchLinks)+'"'+
-       ' oninput="pickSearch(this.value)">';
-  if(!mine.length && !studio.length && PICK_Q){
+       ' oninput="'+(mat?'msPickSearch':'pickSearch')+'(this.value)">';
+  if(!mine.length && !studio.length && q){
     h+='<div class="lib-empty">'+esc(file?TLIB_COPY.emptyFiltered:TLIB_COPY.emptyPickLinks)+'</div>';
   } else {
-    h+=rPickShelf(file?TLIB_COPY.mineFiles:TLIB_COPY.mineLinks, mine, composerId)+
-       rPickShelf(TLIB_COPY.studio, studio, composerId);
+    h+=rPickShelf(file?TLIB_COPY.mineFiles:TLIB_COPY.mineLinks, mine, composerId, mat)+
+       rPickShelf(TLIB_COPY.studio, studio, composerId, mat);
   }
   // ── [1.508] — Done lives HERE, with the panel it ends ──────────────────
   //
@@ -14074,23 +14895,28 @@ function rPickPanel(composerId){
   // Manage Library stays a quiet link beside it — it goes somewhere else, and
   // two primary buttons in one row would be two answers to one question.
   h+='<div class="lib-foot">'+
-     (_isPhone()?'':'<button type="button" class="lib-done" onclick="pickClose('+jsq(composerId)+')">'+esc(TLIB_COPY.editMessage)+'</button>')+
+     (_isPhone()?'':'<button type="button" class="lib-done" onclick="'+close+'">'+esc(TLIB_COPY.editMessage)+'</button>')+
+     // [1.790] — the materials have no action row for Done to sit in on a phone, so it stays here.
+     ((mat&&_isPhone())?'<button type="button" class="lib-done" onclick="msPickClose()">'+esc(TLIB_COPY.editMessage)+'</button>':'')+
      '<button type="button" class="lnk-btn" onclick="libraryOpen()">'+esc(TLIB_COPY.manageGo)+'</button></div>';
   return h+'</div>';
 }
 // A shelf with nothing on it draws nothing: there is nothing to pick.
-function rPickShelf(label, items, composerId){
+function rPickShelf(label, items, composerId, mat){
   if(!items.length) return '';
   return '<div class="lib-shelf"><div class="lib-group-hd">'+esc(label)+'</div>'+
-    '<div class="lib-list">'+items.map(function(f){ return rPickRow(f, composerId); }).join('')+'</div></div>';
+    '<div class="lib-list">'+items.map(function(f){ return rPickRow(f, composerId, mat); }).join('')+'</div></div>';
 }
 // The row says what happened to it — AC's two words, on the row the thumb
 // pressed, never in a corner ([[lesson-status-banners]]).
-function rPickRow(f, composerId){
+function rPickRow(f, composerId, mat){
   var id=f.id||f.attachmentId;
   var link=f.kind==='link';
   var said='', rec=null;
-  if(link){
+  if(mat){
+    // [1.790] — in the materials, "in" means already on the list.
+    if(_msMatHas(mat.target, f)) said='<span class="lib-said">&#10003; '+esc(link?TLIB_COPY.linkAdded:TLIB_COPY.fileAttached)+'</span>';
+  } else if(link){
     // [1.622] — `LINK_SELECTED` said "this link is sitting in the fields waiting
     // for Add link". Nothing sets it now: a tick inserts. The state is removed
     // rather than left drawn and unreachable.
@@ -14122,14 +14948,15 @@ function rPickRow(f, composerId){
   // Taking a file back out is the composer's own job: the attachment sits under
   // the message with its own remove, and a second control for that would be two
   // answers to one question.
-  var _on=link ? !!LINK_ADDED[id] : !!(rec && !rec.failed);
+  var _on=mat ? _msMatHas(mat.target, f) : link ? !!LINK_ADDED[id] : !!(rec && !rec.failed);
   var _busy=!!(rec && rec.uploading);
   return '<div class="lib-row'+(link?' lib-link':'')+'">'+
     '<div style="display:flex;align-items:flex-start;gap:8px">'+
       '<input type="checkbox" class="lib-tick"'+(_on?' checked':'')+((_on||_busy)?' disabled':'')+
-        ' onclick="event.stopPropagation();pickAdd('+jsq(id)+','+jsq(composerId)+')"'+
-        ' title="'+esc(link?TLIB_COPY.pickTickLink:TLIB_COPY.pickTickFile)+'"'+
-        ' aria-label="'+esc(link?TLIB_COPY.pickTickLink:TLIB_COPY.pickTickFile)+': '+esc(f.fileName)+'">'+
+        ' onclick="event.stopPropagation();'+(mat?'msPickAdd('+jsq(id)+')':'pickAdd('+jsq(id)+','+jsq(composerId)+')')+'"'+
+        // [1.790] — in the materials nothing goes "to this message": the picker's own two words.
+        ' title="'+esc(mat?(link?TLIB_COPY.pickLink:TLIB_COPY.pickFile):(link?TLIB_COPY.pickTickLink:TLIB_COPY.pickTickFile))+'"'+
+        ' aria-label="'+esc(mat?(link?TLIB_COPY.pickLink:TLIB_COPY.pickFile):(link?TLIB_COPY.pickTickLink:TLIB_COPY.pickTickFile))+': '+esc(f.fileName)+'">'+
       '<button type="button" class="lib-pick" title="'+esc(link?f.url:f.fileName)+'"'+
         ' onclick="pickOpenItem('+jsq(id)+')">'+
         '<span class="lib-kind">'+esc(link?TLIB_COPY.linkKind:_attKind(f.fileName))+'</span>'+
@@ -14431,9 +15258,14 @@ function rScheduledBubble(m){
     // the work of a button. These are secondary buttons: white with a real edge,
     // which is his rule ("blue buttons with white text are action buttons"), and
     // neither of these completes anything.
+    // [1.794] — a scheduled ASSIGNMENT is opened in Students, and its Cancel Send returns it
+    // to Drafts there, every word kept, rather than into this box as a plain message.
+    var _asg=_msgAsg(m);
     acts='<div class="msg-tools">'+
-      '<button type="button" class="btn btn-s btn-sm" onclick="startEditMessage(\''+id+'\')">'+esc(TCH_COPY.editMsg)+'</button>'+
-      '<button type="button" class="btn btn-s btn-sm" onclick="cancelSend(\''+id+'\')">'+esc(TCH_COPY.cancelScheduled)+'</button>'+
+      (_asg?'<button type="button" class="btn btn-s btn-sm" onclick="mstOpenAt('+jsq(_asg.studentId)+','+jsq(_asg.lessonDate)+','+jsq(_asg.lessonTime||'')+');switchTab(\'students\')">'+esc(MST_COPY.openInStudents)+'</button>'+
+        '<button type="button" class="btn btn-s btn-sm" onclick="cancelSendAsg(\''+id+'\')">'+esc(TCH_COPY.cancelScheduled)+'</button>'
+      :'<button type="button" class="btn btn-s btn-sm" onclick="startEditMessage(\''+id+'\')">'+esc(TCH_COPY.editMsg)+'</button>'+
+        '<button type="button" class="btn btn-s btn-sm" onclick="cancelSend(\''+id+'\')">'+esc(TCH_COPY.cancelScheduled)+'</button>')+
     '</div>';
   } else { acts=''; }
   var editing = AMEND.kind==='edit' && AMEND.messageId===m.messageId;
@@ -14464,6 +15296,32 @@ function rScheduledBubble(m){
 // one — so nothing they did is lost, it is two presses instead of one on three
 // rare actions. ~~`deleteScheduled` stays: the Scheduled list elsewhere still
 // uses it~~ — nothing did; it went with [1.782].
+// [1.794] — the assignment, parsed from the message, or null.
+function _msgAsg(m){
+  if(!m||!m.assignment) return null;
+  try{ var a=typeof m.assignment==='string'?JSON.parse(m.assignment):m.assignment; return a&&a.studentId&&a.lessonDate?a:null; }catch(e){ return null; }
+}
+// Cancel Send on a scheduled assignment: the server returns it to Drafts; Students opens on it.
+function cancelSendAsg(id){
+  var c=_amendCtx(); if(!c) return;
+  if(!_oncePress('cancel:'+id)) return;
+  var row=null; (c.t.scheduled||[]).forEach(function(m){ if(m.messageId===id) row=m; });
+  var a=_msgAsg(row); if(!a){ _onceDone('cancel:'+id); return; }
+  api({action:'unscheduleMessage', data:Object.assign({}, c.req, {messageId:id})}, function(e,r){
+    _onceDone('cancel:'+id);
+    if(e||!r||!r.ok){ actFail('msg:'+id,(r&&r.error)||TCH_COPY.unsendFailed); render(); return; }
+    SCHED_GONE[id]=true;
+    c.t.scheduled=(c.t.scheduled||[]).filter(function(m){ return m.messageId!==id; });
+    _threadCacheWrite(c);
+    if(r.assignmentDraft&&MS.roster){
+      MS.roster.drafts=MS.roster.drafts.filter(function(x){ return !(x.studentId===a.studentId&&x.lessonDate===a.lessonDate); }).concat([r.assignmentDraft]);
+      MS.roster.scheduled=MS.roster.scheduled.filter(function(x){ return x.messageId!==id; });
+    }
+    loadScheduled(true);
+    switchTab('students');
+    mstOpenDraft(a.studentId,a.lessonDate);
+  });
+}
 function cancelSend(id){
   var c=_amendCtx(); if(!c) return;
   if(!_oncePress('cancel:'+id)) return;   // [1.534]
@@ -14654,7 +15512,7 @@ function rScheduledLine(){
   if(!rows.length) return '';
   return '<button type="button" class="sched-line" onclick="SCHED_LIST.open=!SCHED_LIST.open;render()">'+
     esc(TCH_COPY.scheduledSection)+' ('+rows.length+')'+
-    '<span class="sched-caret">'+(SCHED_LIST.open?'▾':'▸')+'</span></button>'+
+    '</button>'+
     (SCHED_LIST.open?rScheduledList():'');
 }
 // ── [1.782] — the notice at the top of the portal ────────────────────────
@@ -14727,6 +15585,8 @@ function openScheduled(id){
   SCHED_LIST.rows.forEach(function(x){ if(x.messageId===id) row=x; });
   if(!row) return;
   SCHED_LIST.open=false;
+  // [1.794] — a scheduled assignment opens where it is changed: Students, at its lesson.
+  if(row.asg){ switchTab('students'); mstOpenAt(row.asg.studentId,row.asg.lessonDate,row.asg.lessonTime); return; }
   // [1.782] — the missed-message notice is on every tab, so pressing it from My
   // Students has to bring the teacher to Messages, where the conversation opens.
   HOME_TAB='family';
@@ -14822,7 +15682,9 @@ function unsendMessage(id){
       c.t.messages=keep; _threadCacheWrite(c);
       actFail('msg:'+id,(r&&r.error)||TCH_COPY.unsendFailed);   // [1.562] — on the bubble
       render();
+      return;
     }
+    if(r.assignmentDraft) loadMyStudents();   // [1.794] — an unsent assignment is back in Drafts
   });
 }
 // Edit BORROWS THE COMPOSER rather than growing a second editor inside the
@@ -15216,9 +16078,11 @@ function rMsgTools(m, mine){
   // the message being edited went on offering Edit, where pressing it would
   // have silently thrown away what was typed.
   if(mine && !AMEND.messageId && _canAmendMsg(m)){
-    h += '<span class="msg-tools-sep">·</span>'+
+    // [1.794] — no Edit on an assignment: an edit here changed the teacher's copy and not
+    // the family's card. It is changed in Students; Unsend returns it to Drafts.
+    h += (m.assignment?'':'<span class="msg-tools-sep">·</span>'+
       '<button type="button" class="lnk-btn" onclick="event.stopPropagation();startEditMessage('+jsq(m.messageId)+')">'+
-      esc(TCH_COPY.editMsg)+'</button>'+
+      esc(TCH_COPY.editMsg)+'</button>')+
       '<span class="msg-tools-sep">·</span>'+
       '<button type="button" class="lnk-btn" onclick="event.stopPropagation();unsendMessage('+jsq(m.messageId)+')">'+
       esc(TCH_COPY.unsend)+'</button>';
@@ -15558,11 +16422,13 @@ function doSignOut(){
   LIB_MINE=[]; LIB_SHELF_STUDIO=[]; LIB_TAGS=[]; _libLoaded=false; _libInFlight=false;
   if(_pollTimer){ clearTimeout(_pollTimer); _pollTimer=null; }
   TT={asked:false,loading:false,data:null,guideOpen:false,ans:{},timer:{},sending:{},err:{},open:{},miss:{}};   // [1.731]
-  MS={edits:{},asked:false,loading:false,week:null,weekStart:'',card:null,cardStu:'',cardDate:'',cardTime:'',cardLoading:false,
-    open:{},trialOpen:{},q:'',qDate:'',note:null,lesson:{},timer:{},st:'',adding:null,asg:null,lib:null,busy:false,err:''};   // [1.732]
+  MS={edits:{},asked:false,roster:null,rosterAsked:false,rosterLoading:false,card:null,cardStu:'',cardDate:'',cardTime:'',cardLoading:false,
+    open:{},trialOpen:{},note:null,lesson:{},timer:{},st:'',pick:null,asg:null};   // [1.732]
+  MST={view:'',day:'',open:'',arch:false,tick:{},bulk:false,bulkAt:'',sched:false,schedAt:'',preview:false,previewHtml:'',
+    flash:'',top:false,busy:'',err:'',errFor:'',bulkErr:'',bulkBusy:false,listErr:''};   // [1.793]
   TOKEN=''; TEACHER_ID=''; TEACHER_NAME='';
   LF={email:'', password:'', remember:true};
-  HOME_TAB='family';
+  HOME_TAB='students';   // [1.794]
   _openPane('');   // [1.336] — both flags, both threads, one call
   THREADS={loading:false, list:[], _sig:'', locked:false};   // [1.292]
   STAFF_PICKER={loading:false, query:'', all:[]};

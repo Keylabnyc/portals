@@ -1878,6 +1878,7 @@ select.cmp-lsel{font:inherit;font-size:13.5px;font-weight:700;padding:6px 8px;bo
 .mst-lfoot{flex-wrap:wrap}
 .mst-lfoot .ms-lc-b .btn{width:auto}
 .mst-st.dr{color:#C2410C;font-weight:600}.mst-st.sc{color:#1a4fc4;font-weight:600}.mst-st.ok{color:var(--green);font-weight:600}
+.mst-st.bad,.mst-stamp.bad,.mst-xd.bad{color:var(--red);font-weight:600}   /* [1.805] — a draft the server does not have */
 .mst-asec{border-top:3px solid #1a4fc4;background:#EAF0FA;padding:12px}
 .mst-asec>.mst-card:last-child,.mst-asec>.mst-form{margin-bottom:0}
 .mst-asec .mst-form{border:1px solid #9DBBE4}
@@ -3331,8 +3332,8 @@ var GUIDE_COPY={
         'Click {{Add file}} or {{Add link}} to add materials from your device, your saved files and links, or the {{Keylab Master Library}}.'
       ]},
       {n:'Create Assignment', k:'homework practice assignment parents file link library master template draft schedule preview',
-       q:'Click {{Create Assignment for}} the student at the bottom of the {{Lesson Summary}}. The assignment opens already written from your lesson notes, ready to edit.', m:[
-        'Edit it with the formatting buttons, {{Add file}}, {{Add link}} and {{Templates}}, as in a message. Tick which parents to send it to, then click {{Send to}}.',
+       q:'Click {{Create Assignment for}} the student at the bottom of the {{Lesson Summary}}.', m:[   // [1.802] — it opens blank
+        'Write it with the formatting buttons, {{Add file}}, {{Add link}} and {{Templates}}, as in a message. Tick which parents to send it to, then click {{Send to}}.',
         'Click {{Save Draft}} to come back to it, {{Schedule Send}} to choose when it goes, or {{Preview}} to see the family\u2019s email.',
         'Files you add are listed under {{Materials}}, and the family is asked to share them with the student.',
         'To change a scheduled assignment, click {{Cancel Send}}. It returns to {{Drafts}} with nothing lost.'
@@ -4016,6 +4017,9 @@ function _msLoadCard(){
     if(!e&&r&&r.ok){
       MS.card=r;if(MS.note===null)MS.note=r.myNote||'';
       (r.notes||[]).forEach(function(n){if(!MS.lesson[n.lessonDate]||!MS.timer[n.lessonDate])MS.lesson[n.lessonDate]={activities:n.activities,materials:(n.materials||[]).slice(),lessonTime:n.lessonTime};});
+      // [1.805] — a save still on its way is what the teacher wrote, whatever the sheet said a moment ago.
+      Object.keys(_msNotePend).forEach(function(k){var p=_msNotePend[k];if(p.stu===MS.cardStu)_msPutNote(p.d,p.activities,p.materials,true);});
+      Object.keys(_mstOut).forEach(function(k){var o=_mstOut[k];if(!o.at&&o.x.studentId===MS.cardStu)_mstShowSent(o.x);});   // [1.806]
     }else showMsg((r&&r.error)||'The card could not be loaded','e');
     render();
   });
@@ -4056,9 +4060,8 @@ function _msReport(a,qs){
 // teacherBootstrap at sign-in, and fresh on every visit to the tab). One row:
 // Opus Schedule, Drafts, Scheduled. A student opens beside the list on a
 // desktop and on its own on a phone. The lesson's box holds its notes and, at
-// the bottom, Create Assignment — which opens the composer itself, already
-// written: AC's greeting for the ticked parents, an Assignment list from the
-// notes, and his sign-off. Drafts live on the server (ASSIGNMENT_DRAFTS).
+// the bottom, Create Assignment — which opens the composer itself, blank
+// ([1.802]). Drafts live on the server (ASSIGNMENT_DRAFTS).
 var MST_COPY={
   stAvail:'Status: Available',stAway:'Status: Away',                         // AC, 7 October
   stTitle:'Click to change',                                                 // PLACEHOLDER
@@ -4084,11 +4087,6 @@ var MST_COPY={
   schedOn:function(w){return 'Scheduled for '+w;},                           // PLACEHOLDER
   sentOn:function(w){return 'Sent '+w;},                                     // PLACEHOLDER
   to:'To',sendTo:'Send to',assignment:'Assignment',mats:'Materials',         // AC, 6 October
-  // AC, 7 October: "Hi [parent first name] (and the other parent if both selected). Here is
-  // [student first name]'s assignment for their lesson on [date]. Please let me know if you
-  // have any questions." … "Thanks!\n[teacher first name]".
-  greet:function(parents,student,date){return 'Hi '+parents+'. Here is '+student+'’s assignment for their lesson on '+date+'. Please let me know if you have any questions.';},
-  thanks:'Thanks!',
   pasteLink:'Paste Link Here',displayText:'Display Text',                    // AC, 7 October
   savedLinks:'Saved Links',chooseSaved:'Choose a saved link',                // PLACEHOLDER
   open:'Open',saveDraft:'Save Draft',schedule:'Schedule Send',preview:'Preview',hidePreview:'Hide preview',
@@ -4104,20 +4102,26 @@ var MST_COPY={
   saving:'Saving…',sending:'Sending…',scheduling:'Scheduling…',
   failed:'Not done. Check your connection and try again.',                   // PLACEHOLDER
   openInStudents:'Open in Students',                                         // PLACEHOLDER — a scheduled assignment's button in Messages
+  notSaved:'Not saved',                                                      // PLACEHOLDER — [1.805] a draft the server refused or never answered
+  lineNotSaved:'Assignment draft not saved',                                 // PLACEHOLDER — [1.805] the same, under the lesson notes, where "Not saved" would read as the notes
+  notSent:'Not sent',lineNotSent:'Assignment not sent',                      // PLACEHOLDER — [1.806] a send the server refused or never answered, back in Drafts
+  sendNotDone:function(n){return 'The assignment for '+n+' was not sent. It is in Drafts.';},                                 // PLACEHOLDER
+  deleteNotDone:function(n){return 'The draft assignment for '+n+' was not deleted.';},                                       // PLACEHOLDER
+  draftNotSaved:function(n){return 'The draft assignment for '+n+' was not saved. It is in Drafts.';},                        // PLACEHOLDER
+  notesNotSaved:function(n,d){return 'Lesson notes for '+n+', '+d+', were not saved. Open '+n+' to save them again.';},      // PLACEHOLDER
   unfilled:'This assignment still has a template field to fill in, such as [studentFirst].'   // PLACEHOLDER
 };
 var MST_CID='asg-composer';
 var MST={view:'',day:'',open:'',arch:false,tick:{},bulk:false,bulkAt:'',sched:false,schedAt:'',preview:false,previewHtml:'',
   flash:'',top:false,busy:'',err:'',errFor:'',bulkErr:'',bulkBusy:false,listErr:''};
 var MST_DAYS=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
-var _MST_MONTH=['January','February','March','April','May','June','July','August','September','October','November','December'];
 
 // ── The list's data ─────────────────────────────────────────────────────
 function loadMyStudents(){
   MS.rosterAsked=true;MS.rosterLoading=true;
   api({action:'teacherMyStudents',data:{teacherToken:TOKEN}},function(e,r){
     MS.rosterLoading=false;
-    if(!e&&r&&r.ok){MS.roster=r;MST.listErr='';}
+    if(!e&&r&&r.ok){_mstKeepLocal(r);MS.roster=r;MST.listErr='';}
     else if(!MS.roster)MST.listErr=(r&&r.error)||MST_COPY.failed;
     render();
   });
@@ -4131,6 +4135,33 @@ function _mstStu(id){
 function _mstDraft(id,d){return _mstR().drafts.filter(function(x){return x.studentId===id&&x.lessonDate===d;})[0]||null;}
 function _mstSched(id,d){return _mstR().scheduled.filter(function(x){return x.studentId===id&&x.lessonDate===d;})[0]||null;}
 function _mstDraftKey(x){return x.studentId+'|'+x.lessonDate;}
+// [1.805] — Save Draft is instant, by the notes' rules (see _seqRun): a draft is in Drafts and on
+// its lesson the moment it is clicked; one lesson's saves, sends and deletes reach the server one
+// after another; a roster fetched meanwhile keeps it. A refusal or a dropped connection keeps the
+// words as a draft marked Not saved, reopened with the reason beside Save Draft if the teacher is
+// still on that student and waiting in Drafts if not. Nothing says saved until the server has it.
+var _mstLocal={};   // student|date -> a draft the server has not confirmed: pending, or failed:'why'
+// [1.806] — an assignment on its way (Send or Schedule Send, answered by nobody yet), and a draft whose
+// Delete is on its way. Neither is a draft in the list while it goes; a scheduled one is in Scheduled.
+var _mstOut={}, _mstHide={};
+// Whose these are. A teacher whose session ran out keeps them for signing back in; a different teacher
+// signing in on that page starts with none ([1.805]'s rule for signing out, at the other door).
+var _mstOwner='';
+function _mstMine(){
+  if(_mstOwner&&_mstOwner!==TEACHER_ID){_mstLocal={};_mstOut={};_mstHide={};_msNotePend={};_msNoteOk={};_msNoteSeq={};}
+  _mstOwner=TEACHER_ID;
+}
+function _mstKeepLocal(R){
+  _mstMine();
+  R.drafts=(R.drafts||[]).filter(function(y){var k=_mstDraftKey(y);return !_mstOut[k]&&!_mstHide[k];});
+  Object.keys(_mstLocal).forEach(function(k){R.drafts=R.drafts.filter(function(y){return _mstDraftKey(y)!==k;}).concat([_mstLocal[k]]);});
+  R.scheduled=R.scheduled||[];
+  Object.keys(_mstOut).forEach(function(k){var x=_mstOut[k].x;if(_mstOut[k].at&&R.scheduled.indexOf(x)<0)R.scheduled=R.scheduled.concat([x]);});
+}
+// Is this student's page what the teacher is looking at? If not, a failure is also said in a message.
+function _mstOnStudent(id){return HOME_TAB==='students'&&MST.view==='student'&&MS.cardStu===id;}
+// Words a teacher could see in the box, or a list; nothing to show at once when there are none.
+function _mstHasWords(html){return /<li\b/i.test(String(html||''))||!!String(html||'').replace(/<[^>]*>/g,'').replace(/&nbsp;|\u00a0/g,' ').trim();}
 
 // ── Dates the way AC wrote them: "Tuesday, Oct 6th • 4pm", "Oct 6, 5:40 pm" ──
 function mstOrd(n){var s=['th','st','nd','rd'],v=n%100;return n+(s[(v-20)%10]||s[v]||s[0]);}
@@ -4140,7 +4171,6 @@ function mstTime(t){
 }
 function mstMins(t){var m=String(t||'').match(/^(\d{1,2})(?::(\d{2}))?\s*([AP])M$/i);if(!m)return 9999;return (+m[1]%12+(/p/i.test(m[3])?12:0))*60+(+m[2]||0);}
 function mstDate(ymd){var p=String(ymd||'').split('-');if(p.length!==3)return String(ymd||'');return _MS_DAY[_msDow(ymd)]+', '+_MS_MO[+p[1]-1]+' '+mstOrd(+p[2]);}
-function mstLongDate(ymd){var p=String(ymd||'').split('-');if(p.length!==3)return String(ymd||'');return _MS_DAY[_msDow(ymd)]+', '+_MST_MONTH[+p[1]-1]+' '+mstOrd(+p[2]);}
 function mstLessonLine(ymd,t){return mstDate(ymd)+(t?' • '+mstTime(t):'');}
 // In the device's time, as every other time in this portal is ([1.371]).
 function mstStamp(ms){
@@ -4157,7 +4187,6 @@ function mstNotify(s,to){if(!(s.parent1Name&&s.parent2Name))return undefined;var
 function mstTo(np){return {p1:!np||np.indexOf('parent1')>-1,p2:!np||np.indexOf('parent2')>-1};}
 function mstPicked(s,to){var a=[];if(s.parent1Name&&(!to||to.p1))a.push(s.parent1Name);if(s.parent2Name&&(!to||to.p2))a.push(s.parent2Name);return a;}
 function mstWho(s,to){return _msNames(mstPicked(s,to));}
-function mstFirst(n){return String(n||'').trim().split(/\s+/)[0];}
 
 // ── The status switch: a small box beside Sign Out ──────────────────────
 // AC, 7 October 2026: "slim down the whole available/away area. It just needs a
@@ -4242,7 +4271,7 @@ function mstTimeOf(s){return s.day?s.time:s.trialTime;}
 function mstLessonOf(s){return s.day?_msLastLesson(s,_mstToday()):(s.trialDate||'');}
 function mstState(id,d){
   if(_mstDraft(id,d))return 'dr';
-  if(_mstSched(id,d))return 'sc';
+  var sc=_mstSched(id,d);if(sc&&!sc.pending)return 'sc';   // [1.806] — not while it is on its way
   var s=_mstR().students.filter(function(x){return x.studentId===id;})[0];
   return s&&(s.sentDates||[]).indexOf(d)>-1?'ok':'';
 }
@@ -4281,7 +4310,7 @@ function _mstDraftRows(list){
     h+='<div class="mst-xrow"><input type="checkbox" aria-label="'+esc(x.studentName)+'"'+(MST.tick[k]?' checked':'')+(MST.bulkBusy?' disabled':'')+
       ' onclick="MST.tick['+jsq(k)+']=this.checked;MST.flash=\'\';MST.bulkErr=\'\';render()">'+
       '<button type="button" class="mst-xopen" onclick="mstOpenDraft('+jsq(x.studentId)+','+jsq(x.lessonDate)+')"><span class="mst-xn">'+esc(x.studentName||x.studentId)+'</span>'+
-      '<span class="mst-xd">'+esc(MST_COPY.forLesson(_mstShortDay(x.lessonDate)))+'</span></button></div>';
+      '<span class="mst-xd">'+esc(MST_COPY.forLesson(_mstShortDay(x.lessonDate)))+'</span>'+(x.failed?'<span class="mst-xd bad">'+esc(x.notSent?MST_COPY.notSent:MST_COPY.notSaved)+'</span>':'')+'</button></div>';
   });
   h+='<div class="mst-xacts"><button type="button" class="btn btn-s ms-sm'+(MST.bulk?' mst-on':'')+'"'+(n&&!MST.bulkBusy?'':' disabled')+
       ' onclick="MST.bulk=!MST.bulk;if(MST.bulk&&!MST.bulkAt)MST.bulkAt=_schedDefault();render()">'+esc(n?MST_COPY.schedN(n):MST_COPY.schedule)+'</button>'+
@@ -4408,16 +4437,19 @@ function mstLessonBody(d,current){
     h+=((l.materials||[]).length?'<div class="ms-lf"><div class="ms-lab">'+esc(MS_COPY.materials)+'</div>'+l.materials.map(function(m){return _msMatRow(m,'');}).join('')+'</div>':'');
   }
   var dr=_mstDraft(MS.cardStu,d),sc=_mstSched(MS.cardStu,d),formHere=!!(MS.asg&&MS.asg.date===d&&current);
-  var line=dr?'<span class="mst-st dr">'+esc(MST_COPY.lineDraft)+'</span>'
-    :sc?'<span class="mst-st sc">'+esc(MST_COPY.lineSched(mstStamp(sc.sendAt)))+'</span>'
-    :sent.length?'<span class="mst-st ok">'+esc(sent.map(function(x){return MS_COPY.sentOn(_msShort(_msYmdOf(x.sentAt||x.sendAt)));}).join(' · '))+'</span>'
+  var done=sent.filter(function(x){return !x.pending;});   // [1.806] — a send on its way is not "Sent" yet
+  var line=dr?(dr.failed?'<span class="mst-st bad">'+esc(dr.notSent?MST_COPY.lineNotSent:MST_COPY.lineNotSaved)+'</span>':dr.pending?'<span></span>':'<span class="mst-st dr">'+esc(MST_COPY.lineDraft)+'</span>')
+    :sc?(sc.pending?'<span></span>':'<span class="mst-st sc">'+esc(MST_COPY.lineSched(mstStamp(sc.sendAt)))+'</span>')
+    :sent.length&&!done.length?'<span></span>'   // [1.806] — its first send on its way: nothing said yet
+    :done.length?'<span class="mst-st ok">'+esc(done.map(function(x){return MS_COPY.sentOn(_msShort(_msYmdOf(x.sentAt||x.sendAt)));}).join(' · '))+'</span>'
     :'<span>'+esc(MS_COPY.notSent)+'</span>';
   var btns=ed?(ed.blank?'':'<button type="button" class="btn btn-s ms-sm" onclick="msEditCancel(\''+d+'\')"'+(ed.busy?' disabled':'')+'>'+esc(MS_COPY.cancel)+'</button>')+
       '<button type="button" class="btn btn-p ms-sm" onclick="msEditSave(\''+d+'\')"'+(ed.busy?' disabled':'')+'>'+esc(ed.busy?MS_COPY.saving:MS_COPY.save)+'</button>'
     :'<button type="button" class="btn btn-s ms-sm" onclick="msEdit(\''+d+'\')">'+esc(MS_COPY.edit)+'</button>';
   // One assignment waiting per lesson: a draft opens, a scheduled one is cancelled back to a draft first.
-  if(current&&!formHere&&!dr&&!sc)btns+='<button type="button" class="btn btn-p ms-sm" onclick="mstAsgNew()">'+esc(MS_COPY.createFor(s.first))+'</button>';
-  h+='<div class="ms-lc-f mst-lfoot">'+(ed&&ed.err?'<span class="ms-lc-err">'+esc(ed.err)+'</span>':line)+'<span class="ms-lc-b">'+btns+'</span></div>';
+  if(current&&!formHere&&!dr&&!sc&&!_mstOut[MS.cardStu+'|'+d])btns+='<button type="button" class="btn btn-p ms-sm" onclick="mstAsgNew()">'+esc(MS_COPY.createFor(s.first))+'</button>';
+  var said=ACT['les:'+_msEditKey(d)];   // [1.805] — "Saved", once the server has answered
+  h+='<div class="ms-lc-f mst-lfoot">'+(ed&&ed.err?'<span class="ms-lc-err">'+esc(ed.err)+'</span>':said?'<span class="mst-st ok">\u2713 '+esc(said.text)+'</span>':line)+'<span class="ms-lc-b">'+btns+'</span></div>';
   var sec=sent.map(function(x){return mstCard(d,x,'ok');}).join('')+(formHere?mstForm():dr?mstCard(d,dr,'dr'):sc?mstCard(d,sc,'sc'):'');
   if(sec)h+='<div class="mst-asec"'+(current?' id="ms-asg-area"':'')+'>'+sec+'</div>';
   return h;
@@ -4428,7 +4460,7 @@ function mstLessonBody(d,current){
 function mstCard(d,m,st){
   var s=_mstStu(MS.cardStu);
   var title=st==='dr'?MST_COPY.draftFor(s.studentName):st==='sc'?MST_COPY.schedFor(s.studentName):MST_COPY.sentFor(s.studentName);
-  var stamp=st==='dr'?MST_COPY.savedOn(mstStamp(m.savedAt)):st==='sc'?MST_COPY.schedOn(mstStamp(m.sendAt)):MST_COPY.sentOn(mstStamp(m.sentAt||m.sendAt));
+  var stamp=m.pending?'':st==='dr'?(m.failed?(m.notSent?MST_COPY.notSent:MST_COPY.notSaved):MST_COPY.savedOn(mstStamp(m.savedAt))):st==='sc'?MST_COPY.schedOn(mstStamp(m.sendAt)):MST_COPY.sentOn(mstStamp(m.sentAt||m.sendAt));
   var time=m.lessonTime||(_msNoteOf(d)||{}).lessonTime||s.time;
   var go=st==='dr'?'mstEditDraft('+jsq(MS.cardStu)+','+jsq(d)+')':'';
   var cl=function(cls,inner){return '<div class="'+cls+(go?' mst-go" role="button" tabindex="0" onclick="'+go+'"':'"')+'>'+inner+'</div>';};
@@ -4440,10 +4472,10 @@ function mstCard(d,m,st){
     (lines.length?'<span class="mst-q">'+esc(MST_COPY.assignment)+'</span><ol class="mst-ol">'+lines.map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ol>':'')+
     (mats.length?'<span class="mst-q">'+esc(MST_COPY.mats)+'</span>'+mats.map(function(x){return _msMatRow(x,'');}).join('').replace(/<a /g,'<a onclick="event.stopPropagation()" '):'');
   var foot=st==='dr'?'<button type="button" class="btn btn-s ms-sm" onclick="'+go+'">'+esc(MST_COPY.open)+'</button>'
-    :st==='sc'?'<button type="button" class="btn btn-s ms-sm"'+(MST.busy?' disabled':'')+' onclick="mstCancelSend('+jsq(m.messageId)+')">'+esc(MST_COPY.cancelSend)+'</button>':'';
+    :st==='sc'&&!m.pending?'<button type="button" class="btn btn-s ms-sm"'+(MST.busy?' disabled':'')+' onclick="mstCancelSend('+jsq(m.messageId)+')">'+esc(MST_COPY.cancelSend)+'</button>':'';   // [1.806] — no Cancel Send until it has an id
   return '<div class="mst-card '+st+'"><div class="mst-ctop">'+
     cl('mst-ctitle','<b>'+esc(title)+'</b><span>'+esc(MST_COPY.lessonDate(mstLessonLine(d,time)))+'</span>')+
-    cl('mst-stamp '+st,esc(stamp))+'</div>'+cl('mst-cbody',body)+
+    cl('mst-stamp '+(st==='dr'&&m.failed?'bad':st),esc(stamp))+'</div>'+cl('mst-cbody',body)+
     (foot?'<div class="mst-cfoot">'+foot+'</div>':'')+(st==='sc'&&MST.err&&MST.errFor===m.messageId?'<div class="tt-err">'+esc(MST.err)+'</div>':'')+'</div>';
 }
 // Cancel Send: the server takes it back and returns it to Drafts, every word kept ([1.794]).
@@ -4463,42 +4495,40 @@ function mstCancelSend(id){
 }
 function _mstRosterPatch(fn){if(MS.roster)fn(MS.roster);render();}
 
-// ── Create Assignment: the message composer itself, already written ─────
-// The assignment as the composer holds it: AC's greeting for the ticked parents, an
-// Assignment list made from the Lesson Notes, and his sign-off — the teacher's to edit
-// with the full toolbar. It follows the ticks until the teacher changes the words.
-function mstPrefill(parents,student,longDate,lines,teacher){
-  return esc(MST_COPY.greet(parents,student,longDate))+'<br><br>'+
-    (lines.length?'<b>'+esc(MST_COPY.assignment)+'</b><ol>'+lines.map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ol>':'')+
-    esc(MST_COPY.thanks)+'<br>'+esc(teacher);
-}
-function mstLines(src){return String((src&&src.activities)||'').split('\n').map(function(x){return x.replace(/^\s*[-*•]\s*/,'').trim();}).filter(Boolean);}
-function mstBody(s,to,d,lines){return mstPrefill(mstPicked(s,to).map(mstFirst).join(' and '),s.first,mstLongDate(d),lines,mstFirst(TEACHER_NAME));}
+// ── Create Assignment: the message composer itself, blank ───────────────
+// [1.802] — AC, 7 October 2026: "it doesn't seem that it's actually helpful to pull everything
+// from the lesson notes. Let's just leave it blank and let the teacher add what they need to add
+// in the create assignment function." It opened written ([1.794]): AC's greeting for the ticked
+// parents, an Assignment list from the lesson notes, the lesson's materials and his sign-off.
+// Now the words and Materials start empty; Templates is how a teacher starts from words.
 function mstSyncHtml(){var el=document.getElementById(MST_CID);if(el&&MS.asg)MS.asg.html=el.innerHTML;}
 function mstAsgNew(){
-  var d=MS.cardDate,l=_msLes(d),ed=MS.edits[_msEditKey(d)],s=_mstStu(MS.cardStu),to={p1:true,p2:true};
-  var src=ed&&(String(ed.activities||'').trim()||(ed.materials||[]).length)?ed:l,lines=mstLines(src);
+  var d=MS.cardDate,l=_msLes(d),ed=MS.edits[_msEditKey(d)];
   // One click: Create Assignment saves the notes too, so there is no separate Save first.
-  if(src===ed&&!ed.busy)msEditSave(d);
-  MS.asg={date:d,time:l.lessonTime||MS.cardTime||'',html:mstBody(s,to,d,lines),lines:lines,dirty:false,to:to,
-    mats:(src.materials||[]).map(function(m){return Object.assign({},m);})};
+  if(ed&&(String(ed.activities||'').trim()||(ed.materials||[]).length)&&!ed.busy)msEditSave(d);
+  MS.asg={date:d,time:l.lessonTime||MS.cardTime||'',html:'',to:{p1:true,p2:true},mats:[]};
   _mstFormOpened();
 }
 function mstEditDraft(id,d){
   var x=_mstDraft(id,d);if(!x)return;
   if(MS.cardDate!==d){MS.cardDate=d;MS.cardTime=x.lessonTime||'';}
-  MS.asg={date:d,time:x.lessonTime||'',html:x.html,lines:[],dirty:true,to:mstTo(x.notifyParents),mats:(x.materials||[]).map(function(m){return Object.assign({},m);}),fromDraft:true};
+  // [1.806] — a file still uploading stays the same object, so what waits for it sees it arrive.
+  MS.asg={date:d,time:x.lessonTime||'',html:x.html,to:mstTo(x.notifyParents),mats:(x.materials||[]).map(function(m){return m.uploading?m:Object.assign({},m);}),fromDraft:true};
   _mstFormOpened();
+  if(x.failed){MST.err=x.failed;render();}   // [1.805] — why it is not saved (or [1.806] sent), beside Save Draft
+}
+// [1.805] — "Draft saved …" only once the server has it; nothing while it is on its way; red when it was not.
+function _mstDraftStamp(x){
+  return x.failed?'<span class="mst-stamp bad">'+esc(x.notSent?MST_COPY.notSent:MST_COPY.notSaved)+'</span>':x.pending?'':'<span class="mst-stamp dr">'+esc(MST_COPY.savedOn(mstStamp(x.savedAt)))+'</span>';
 }
 function _mstFormOpened(){_mstFormReset();MS.asg.sendKey='';loadLibrary();loadSavedTpls();render();setTimeout(mstToAsg,30);}
-// The greeting follows the ticks until the teacher changes the words.
-function mstSetTo(slot,on){mstSyncHtml();var a=MS.asg;a.to[slot]=on;if(!a.dirty)a.html=mstBody(_mstStu(MS.cardStu),a.to,a.date,a.lines);render();}
+function mstSetTo(slot,on){mstSyncHtml();MS.asg.to[slot]=on;render();}
 function mstMatRemove(i){mstSyncHtml();MS.asg.mats.splice(i,1);render();}
 function mstForm(){
   var a=MS.asg,s=_mstStu(MS.cardStu),two=!!(s.parent1Name&&s.parent2Name),who=mstWho(s,a.to);
   var dr=_mstDraft(MS.cardStu,a.date);
   var libTag=function(m){
-    if(m.kind==='book')return '';
+    if(m.kind==='book'||m.uploading)return '';   // [1.806] — on a shelf once it has arrived
     var sh=_msLibShelf(m);
     return '<span class="ms-lib'+(sh?'':' new')+'">'+esc(sh==='studio'?TLIB_COPY.studio:sh?MS_COPY.inLib:MS_COPY.willAdd)+'</span>';
   };
@@ -4515,10 +4545,10 @@ function mstForm(){
       (dr?'<button type="button" class="btn btn-danger ms-sm mst-del"'+(busy?' disabled':'')+' onclick="mstDeleteDraft()">'+esc(MST_COPY.delDraft)+'</button>':'')+
       '<button type="button" class="btn btn-p ms-sm mst-send"'+(who&&!busy?'':' disabled')+' onclick="mstSend(0)">'+esc(MST.busy==='send'?MST_COPY.sending:MS_COPY.send(who||'…'))+'</button></div>'+
       (MST.err&&!MST.errFor?'<div class="tt-err">'+esc(MST.err)+'</div>':'');
-  var comp=rComposer(MST_CID,a.html,'MS.asg.html=this.innerHTML;MS.asg.dirty=true',btns,{noFiles:true,asg:true,beforeActions:mats+(MST.sched?mstSchedPanel('one'):'')});
+  var comp=rComposer(MST_CID,a.html,'MS.asg.html=this.innerHTML',btns,{noFiles:true,asg:true,beforeActions:mats+(MST.sched?mstSchedPanel('one'):'')});
   var h='<div class="mst-form"><div class="mst-ctop"><div class="mst-ctitle"><b>'+esc((dr?MST_COPY.draftFor:MST_COPY.newFor)(s.studentName))+'</b>'+
       '<span>'+esc(MST_COPY.lessonDate(mstLessonLine(a.date,a.time)))+'</span></div>'+
-      (dr?'<span class="mst-stamp dr">'+esc(MST_COPY.savedOn(mstStamp(dr.savedAt)))+'</span>':'')+'</div>'+
+      (dr?_mstDraftStamp(dr):'')+'</div>'+
     '<label class="tt-q">'+esc(MST_COPY.sendTo)+'</label><div class="mst-tos">'+
       (two?tick('p1',s.parent1Name)+tick('p2',s.parent2Name):'<span>'+esc(s.parent1Name||s.parent2Name||'')+'</span>')+'</div>'+
     comp;
@@ -4565,25 +4595,61 @@ function _mstDraftMats(list){
 function mstSaveDraft(){
   var a=MS.asg;if(!a||MST.busy)return;
   mstSyncHtml();
-  var s=_mstStu(MS.cardStu),html=_mstCleanHtml();
-  MST.busy='draft';MST.err='';MST.errFor='';render();
-  api({action:'teacherSaveAsgDraft',data:{teacherToken:TOKEN,studentId:MS.cardStu,lessonDate:a.date,lessonTime:a.time,html:html,
-    notifyParents:mstNotify(s,a.to),materials:_mstDraftMats(a.mats)}},function(e,r){
-    MST.busy='';
-    if(e||!r||!r.ok){MST.err=(r&&r.error)||MST_COPY.failed;render();return;}
-    _mstRosterPatch(function(R){R.drafts=R.drafts.filter(function(x){return _mstDraftKey(x)!==_mstDraftKey(r.draft);}).concat([r.draft]);});
-    _mstFormReset();LINK_OFFER=null;MS.asg=null;render();
+  var stu=MS.cardStu,s=_mstStu(stu),html=_mstCleanHtml(),key=stu+'|'+a.date;
+  var data={teacherToken:TOKEN,studentId:stu,lessonDate:a.date,lessonTime:a.time,html:html,notifyParents:mstNotify(s,a.to),materials:_mstDraftMats(a.mats)};
+  var done=function(d){_mstRosterPatch(function(R){R.drafts=R.drafts.filter(function(x){return _mstDraftKey(x)!==key;}).concat([d]);});};
+  // [1.805] — nothing in it: the server says so, in the form, as before; there is nothing to show at once.
+  if(!_mstHasWords(html)&&!a.mats.length){
+    MST.busy='draft';MST.err='';MST.errFor='';render();
+    _seqRun('asg:'+key,function(next){
+      api({action:'teacherSaveAsgDraft',data:data},function(e,r){
+        next();MST.busy='';
+        if(e||!r||!r.ok){MST.err=(r&&r.error)||MST_COPY.failed;render();return;}
+        delete _mstLocal[key];done(r.draft);_mstFormReset();LINK_OFFER=null;MS.asg=null;render();
+      });
+    });
+    return;
+  }
+  // [1.806] — a file still uploading is shown as it is and saved once it has arrived (_upWhenReady).
+  var mats=a.mats;
+  var mine={draftKey:'',studentId:stu,studentName:s.studentName||'',familyId:s.familyId||'',lessonDate:a.date,lessonTime:a.time,
+    notifyParents:data.notifyParents||null,html:html,materials:mats.slice(),savedAt:0,pending:true};
+  _mstMine();_mstLocal[key]=mine;done(mine);
+  _mstFormReset();LINK_OFFER=null;MS.asg=null;render();
+  _seqRun('asg:'+key,function(next){
+    _upWhenReady(mats,function(){
+    data.materials=_mstDraftMats(_upArrived(mats));mine.materials=data.materials;
+    api({action:'teacherSaveAsgDraft',data:data},function(e,r){
+      next();
+      if(_mstLocal[key]!==mine)return;   // saved again, sent or deleted since: that is what counts now
+      if(!e&&r&&r.ok&&r.draft){delete _mstLocal[key];done(r.draft);return;}
+      mine.pending=false;mine.failed=(r&&r.error)||MST_COPY.failed;done(mine);
+      var back=!MS.asg&&MS.cardStu===stu;
+      if(back)mstEditDraft(stu,mine.lessonDate);
+      if(!back||!_mstOnStudent(stu))showMsg(MST_COPY.draftNotSaved(s.studentName||''),'e');
+    });
+    });
   });
 }
+// [1.806] — gone from the lesson and Drafts at once; a list fetched meanwhile keeps it gone (_mstHide);
+// refused or lost, it comes back, reopened with the reason beside Delete Draft if the teacher is still there.
 function mstDeleteDraft(){
   var a=MS.asg;if(!a||MST.busy)return;
-  MST.busy='del';MST.err='';render();
-  api({action:'teacherDeleteAsgDraft',data:{teacherToken:TOKEN,studentId:MS.cardStu,lessonDate:a.date}},function(e,r){
-    MST.busy='';
-    if(e||!r||!r.ok){MST.err=(r&&r.error)||MST_COPY.failed;render();return;}
-    var key=MS.cardStu+'|'+a.date;
-    _mstRosterPatch(function(R){R.drafts=R.drafts.filter(function(x){return _mstDraftKey(x)!==key;});});
-    _mstFormReset();MS.asg=null;render();
+  var stu=MS.cardStu,d=a.date,key=stu+'|'+d,was=_mstDraft(stu,d),local=_mstLocal[key],name=_mstStu(stu).studentName||'';
+  _mstMine();delete _mstLocal[key];_mstHide[key]=true;
+  _mstRosterPatch(function(R){R.drafts=R.drafts.filter(function(x){return _mstDraftKey(x)!==key;});});
+  _mstFormReset();LINK_OFFER=null;MS.asg=null;render();
+  _seqRun('asg:'+key,function(next){
+    api({action:'teacherDeleteAsgDraft',data:{teacherToken:TOKEN,studentId:stu,lessonDate:d}},function(e,r){
+      next();delete _mstHide[key];
+      if(!e&&r&&r.ok){_mstRosterPatch(function(R){_mstKeepLocal(R);});return;}
+      if(_mstDraft(stu,d)||_mstOut[key])return;   // a newer draft or a send of that lesson since: that is what counts now
+      if(local)_mstLocal[key]=local;
+      _mstRosterPatch(function(R){if(was&&!local)R.drafts=R.drafts.concat([was]);_mstKeepLocal(R);});
+      var why=(r&&r.error)||MST_COPY.failed,back=!MS.asg&&MS.cardStu===stu&&!!_mstDraft(stu,d);
+      if(back){mstEditDraft(stu,d);MST.err=why;render();}
+      if(!back||!_mstOnStudent(stu))showMsg(MST_COPY.deleteNotDone(name),'e');
+    });
   });
 }
 function mstPreview(){
@@ -4606,7 +4672,13 @@ function mstScheduleOne(){var at=_mstPickTime(MST.schedAt);if(at)mstSend(at);}
 // attached from its shelf (a fresh copy per message), then the message, with
 // the parent ticks, a time when it is scheduled, and the same send id for the
 // same words so a send whose answer was lost is not sent twice ([1.753]).
-function _mstSendOne(o,done){
+function _mstSendOne(o,fin){
+  // [1.805] — after any save of this lesson still on its way, so the save cannot bring back a draft
+  // the send has just removed; and the unsaved copy goes once it is sent.
+  var dk=o.s.studentId+'|'+o.date;
+  _seqRun('asg:'+dk,function(next){_mstSendNow(o,function(err,r){next();if(!err)delete _mstLocal[dk];fin(err,r);});});
+}
+function _mstSendNow(o,done){
   var s=o.s,files=o.mats.filter(function(m){return m.kind==='file';}),newLinks=o.mats.filter(function(m){return m.kind==='link'&&!_msLibShelf(m);});
   var html=o.html;
   if(_tplUnfilledTags(html).length)return done({error:MST_COPY.unfilled});
@@ -4640,21 +4712,87 @@ function _mstSendOne(o,done){
   };
   step();
 }
+// [1.806] — AC, 7 October 2026: "Build all of those and then deploy together" (Send, Schedule Send and
+// Delete Draft made instant, and a file uploading shown in Materials at once). What the server would refuse
+// for certain is refused here, in the form, before anything moves; an assignment with nothing in it waits for
+// the server's own words, as Save Draft's does. Everything else goes at once (_mstGo).
 function mstSend(at){
   var a=MS.asg;if(!a||MST.busy)return;
   mstSyncHtml();
-  var s=_mstStu(MS.cardStu);if(!mstWho(s,a.to))return;
-  var html=_mstCleanHtml();
-  MST.busy=at?'sched':'send';MST.err='';MST.errFor='';render();
-  _mstSendOne({s:s,date:a.date,time:a.time,html:html,mats:a.mats.map(function(m){return Object.assign({},m);}),notify:mstNotify(s,a.to),at:at},function(err,r){
-    MST.busy='';
-    if(err){MST.err=err.error||MST_COPY.failed;render();return;}
-    var key=MS.cardStu+'|'+a.date;
-    _mstRosterPatch(function(R){R.drafts=R.drafts.filter(function(x){return _mstDraftKey(x)!==key;});});
-    _mstFormReset();LINK_OFFER=null;MS.asg=null;render();
-    _mstAfterSend([s.studentId],!!at);
+  var stu=MS.cardStu,s=_mstStu(stu);if(!mstWho(s,a.to))return;
+  var html=_mstCleanHtml(),key=stu+'|'+a.date;
+  var why=_tplUnfilledTags(html).length?MST_COPY.unfilled:a.mats.filter(function(m){return m.kind==='file';}).length>ATT_MAX_FILES?TCH_COPY.attachTooMany:'';
+  if(why){MST.err=why;MST.errFor='';render();return;}
+  var o={s:s,date:a.date,time:a.time,html:html,mats:a.mats,notify:mstNotify(s,a.to),at:at};
+  if(!_mstHasWords(html)&&!a.mats.length){
+    MST.busy=at?'sched':'send';MST.err='';MST.errFor='';render();
+    _mstSendOne(Object.assign({},o,{mats:[]}),function(err,r){
+      MST.busy='';
+      if(err){MST.err=err.error||MST_COPY.failed;render();return;}
+      _mstRosterPatch(function(R){R.drafts=R.drafts.filter(function(x){return _mstDraftKey(x)!==key;});});
+      _mstFormReset();LINK_OFFER=null;MS.asg=null;render();
+      _mstAfterSend([stu],!!at);
+    });
+    return;
+  }
+  _mstFormReset();LINK_OFFER=null;MS.asg=null;
+  _mstFire(o,_mstMark(o),false,function(err){if(!err)_mstAfterSend([stu],!!at);});
+}
+// On its way: off Drafts, and on its lesson as it will be — sent (green) or in Scheduled (blue) — with no stamp
+// and no Cancel Send until the server has answered. A list or card fetched meanwhile keeps it (_mstKeepLocal,
+// _msLoadCard).
+function _mstMark(o){
+  var stu=o.s.studentId,key=stu+'|'+o.date;
+  _mstMine();
+  var x={studentId:stu,studentName:o.s.studentName||'',familyId:o.s.familyId||'',lessonDate:o.date,lessonTime:o.time,html:o.html,
+    materials:o.mats.slice(),notifyParents:o.notify||null,pending:true,messageId:''};
+  if(o.at)x.sendAt=o.at;
+  _mstOut[key]={x:x,at:o.at||0};
+  delete _mstLocal[key];delete MST.tick[key];
+  _mstRosterPatch(function(R){_mstKeepLocal(R);});
+  if(!o.at)_mstShowSent(x);
+  render();
+  return x;
+}
+// The send itself, once any file still uploading has arrived; after it, the answer. Refused or lost, the
+// assignment is back in Drafts marked Not sent, every word kept — reopened with the reason beside its buttons
+// if the teacher is still on that student, and said in a message if not (not in a run of several, whose
+// own line names the student).
+function _mstFire(o,x,many,then){
+  var stu=o.s.studentId,key=stu+'|'+o.date;
+  _upWhenReady(o.mats,function(){
+    var mats=_upArrived(o.mats);
+    x.materials=mats.slice();
+    _mstSendOne(Object.assign({},o,{mats:mats.map(function(m){return Object.assign({},m);})}),function(err,r){
+      if(_mstOut[key]&&_mstOut[key].x===x)delete _mstOut[key];
+      if(err){
+        _mstUnshow(x);
+        _mstLocal[key]={draftKey:'',studentId:stu,studentName:x.studentName,familyId:x.familyId,lessonDate:o.date,lessonTime:o.time,
+          notifyParents:x.notifyParents,html:o.html,materials:_mstDraftMats(mats),savedAt:0,failed:err.error||MST_COPY.failed,notSent:true};
+        _mstRosterPatch(function(R){R.scheduled=R.scheduled.filter(function(y){return y!==x;});_mstKeepLocal(R);});
+        if(!many){
+          var back=!MS.asg&&MS.cardStu===stu;
+          if(back)mstEditDraft(stu,o.date);
+          if(!back||!_mstOnStudent(stu))showMsg(MST_COPY.sendNotDone(x.studentName),'e');
+        }
+        return then(err);
+      }
+      x.pending=false;x.messageId=(r&&r.messageId)||'';
+      if(o.at)x.sendAt=Number(r&&r.message&&r.message.sendAt)||o.at;else x.sentAt=Date.now();
+      _mstRosterPatch(function(R){R.drafts=R.drafts.filter(function(y){return _mstDraftKey(y)!==key;});});
+      then(null,r);
+    });
   });
 }
+// A send on its way, in the open card's list of what went for that lesson — and out of it again if refused.
+function _mstShowSent(x){
+  if(!MS.card||MS.cardStu!==x.studentId)return;
+  var n=_msNoteOf(x.lessonDate);
+  if(!n){n={lessonDate:x.lessonDate,lessonTime:x.lessonTime||'',activities:'',materials:[],sent:[]};MS.card.notes=(MS.card.notes||[]).concat([n]);
+    MS.card.notes.sort(function(a,b){return a.lessonDate<b.lessonDate?1:-1;});}
+  n.sent=n.sent||[];if(n.sent.indexOf(x)<0)n.sent.push(x);
+}
+function _mstUnshow(x){var n=MS.card&&MS.cardStu===x.studentId?_msNoteOf(x.lessonDate):null;if(n&&n.sent)n.sent=n.sent.filter(function(y){return y!==x;});}
 // The list, the card and the conversation, fresh behind it.
 function _mstAfterSend(ids,scheduled){
   loadMyStudents();
@@ -4667,30 +4805,37 @@ function _mstAfterSend(ids,scheduled){
 // Send or Schedule Send the ticked drafts, one after another, each its own assignment
 // email. A refusal stops the run and names the student; the ones already sent are gone
 // from Drafts (the server removes each as it sends).
+// [1.806] — all of them leave Drafts at once and go one after another; "N sent" once the server has them.
+// A refusal stops the run and names the student: that one is back in Drafts marked Not sent, and the ones
+// not yet tried are back as they were.
 function mstBulk(scheduled){
-  if(MST.bulkBusy)return;
   var at=0;
   if(scheduled){at=_schedLocalInputToMs(MST.bulkAt);if(!at||at<Date.now()+60*1000){MST.bulkErr=TCH_COPY.schedulePast;render();return;}
     if(at>Date.now()+14*24*60*60*1000&&!confirm(TCH_COPY.scheduleFar))return;}
   var list=_mstR().drafts.filter(function(x){return MST.tick[_mstDraftKey(x)];});if(!list.length)return;
-  MST.bulkBusy=scheduled?'sched':'send';MST.bulkErr='';MST.flash='';render();
+  MST.tick={};MST.bulk=false;MST.bulkErr='';MST.flash='';
+  var run=list.map(function(x){
+    var s=_mstStu(x.studentId);if(!s.familyId)s=Object.assign({},s,{familyId:x.familyId});
+    var o={s:s,date:x.lessonDate,time:x.lessonTime,html:x.html,mats:(x.materials||[]).slice(),notify:x.notifyParents||undefined,at:at};
+    return {o:o,draft:x,x:_mstMark(o)};
+  });
   var n=0,ids=[];
   var next=function(k){
-    if(k>=list.length){
-      MST.bulkBusy='';MST.tick={};MST.bulk=false;MST.flash=scheduled?MST_COPY.schedNDone(n,mstStamp(at)):MST_COPY.sentN(n);
-      _mstAfterSend(ids,!!scheduled);render();return;
-    }
-    var x=list[k],s=_mstStu(x.studentId);
-    if(!s.familyId)s=Object.assign({},s,{familyId:x.familyId});
-    _mstSendOne({s:s,date:x.lessonDate,time:x.lessonTime,html:x.html,mats:(x.materials||[]).map(function(m){return Object.assign({},m);}),notify:x.notifyParents||undefined,at:at},function(err){
+    if(k>=run.length){MST.flash=scheduled?MST_COPY.schedNDone(n,mstStamp(at)):MST_COPY.sentN(n);_mstAfterSend(ids,!!scheduled);render();return;}
+    var it=run[k];
+    _mstFire(it.o,it.x,true,function(err){
       if(err){
-        MST.bulkBusy='';MST.bulkErr=MST_COPY.bulkStopped(x.studentName||x.studentId,err.error||MST_COPY.failed);
+        MST.bulkErr=MST_COPY.bulkStopped(it.x.studentName||it.x.studentId,err.error||MST_COPY.failed);
+        run.slice(k+1).forEach(function(u){
+          var uk=_mstDraftKey(u.draft);if(_mstOut[uk]&&_mstOut[uk].x===u.x)delete _mstOut[uk];
+          _mstUnshow(u.x);
+          _mstRosterPatch(function(R){R.scheduled=R.scheduled.filter(function(y){return y!==u.x;});
+            if(!R.drafts.some(function(y){return _mstDraftKey(y)===uk;}))R.drafts=R.drafts.concat([u.draft]);});
+        });
         if(n)MST.flash=scheduled?MST_COPY.schedNDone(n,mstStamp(at)):MST_COPY.sentN(n);
         _mstAfterSend(ids,!!scheduled);render();return;
       }
-      n++;ids.push(x.studentId);delete MST.tick[_mstDraftKey(x)];
-      _mstRosterPatch(function(R){R.drafts=R.drafts.filter(function(y){return _mstDraftKey(y)!==_mstDraftKey(x);});});
-      next(k+1);
+      n++;ids.push(it.o.s.studentId);next(k+1);
     });
   };
   next(0);
@@ -4731,26 +4876,73 @@ function msEditCancel(d){
   if(MS.pick&&MS.pick.target==='les:'+d)MS.pick=null;
   render();
 }
+// ── [1.805] Save is instant ──────────────────────────────────────────────
+// AC, 7 October 2026: "Saving an assignment draft or saving lesson notes takes a little bit
+// longer than I would prefer. Can we make these optimistic as well while the server is
+// working?" The notes are saved on the screen the moment Save is clicked, and the server
+// catches up behind. What every instant save in this file owes ([1.98], [1.231]):
+//   • one lesson's saves reach the server one after another (_seqRun), so an older save can
+//     never land after a newer one;
+//   • a card fetched while a save is on its way shows the save, not the sheet (_msNotePend);
+//   • a refusal OR a dropped connection puts the notes back as the server has them, and the
+//     teacher's words come back in the box with the reason beside Save — on the lesson if they
+//     are still there, kept for when they return if not (and they are told which student);
+//   • "Saved" is said beside the lesson only once the server has answered ok.
+var _seqQ={};
+function _seqRun(key,fn){
+  var q=_seqQ[key]||(_seqQ[key]=[]);
+  var run=function(){var once=false;q[0](function(){if(once)return;once=true;q.shift();if(q.length)run();else if(_seqQ[key]===q)delete _seqQ[key];});};
+  q.push(fn);if(q.length===1)run();
+}
+var _msNotePend={},_msNoteOk={},_msNoteSeq={};
+// A lesson's notes, put into the open card: the lesson's box and the card's list of lessons.
+function _msPutNote(d,act,mats,keep){
+  var l=_msLes(d);l.activities=act;l.materials=mats.slice();
+  var n=_msNoteOf(d);
+  if(n&&!keep&&!(n.sent||[]).length){MS.card.notes=MS.card.notes.filter(function(x){return x!==n;});return;}
+  if(n){n.activities=act;n.materials=mats.slice();}
+  else if(MS.card&&keep){MS.card.notes=MS.card.notes||[];MS.card.notes.push({lessonDate:d,lessonTime:l.lessonTime||'',activities:act,materials:mats.slice(),sent:[]});
+    MS.card.notes.sort(function(x,y){return x.lessonDate<y.lessonDate?1:-1;});}
+}
 function msEditSave(d){
-  var k=_msEditKey(d),ed=MS.edits[k],l=_msLes(d);if(!ed||ed.busy)return;
-  ed.busy=true;ed.err='';render();
-  api({action:'teacherSaveLessonNote',data:{teacherToken:TOKEN,studentId:MS.cardStu,lessonDate:d,lessonTime:l.lessonTime||'',activities:ed.activities||'',materials:ed.materials||[]}},function(e,r){
-    if(e||!r||!r.ok){ed.busy=false;ed.err=(r&&r.error)||MS_COPY.saveFail;render();return;}
-    l.activities=ed.activities;l.materials=ed.materials.slice();
-    var n=_msNoteOf(d);
-    if(n){n.activities=l.activities;n.materials=l.materials.slice();}
-    else if(MS.card){MS.card.notes.push({lessonDate:d,lessonTime:l.lessonTime||'',activities:l.activities,materials:l.materials.slice(),sent:[]});
-      MS.card.notes.sort(function(x,y){return x.lessonDate<y.lessonDate?1:-1;});}
-    delete MS.edits[k];
-    if(MS.pick&&MS.pick.target==='les:'+d)MS.pick=null;
-    showMsg(MS_COPY.saved,'s');render();
+  var stu=MS.cardStu,k=_msEditKey(d),ed=MS.edits[k],l=_msLes(d);if(!ed||ed.busy)return;
+  var act=ed.activities||'',mats=(ed.materials||[]).slice(),time=l.lessonTime||'',blank=!!ed.blank;
+  if(!_msNotePend[k])_msNoteOk[k]={activities:l.activities||'',materials:(l.materials||[]).slice(),had:!!_msNoteOf(d)};
+  _mstMine();var seq=_msNoteSeq[k]=(_msNoteSeq[k]||0)+1;
+  _msNotePend[k]={stu:stu,d:d,activities:act,materials:mats};
+  _msPutNote(d,act,mats,true);
+  delete MS.edits[k];
+  if(MS.pick&&MS.pick.target==='les:'+d)MS.pick=null;
+  actClear('les:'+k);render();
+  _seqRun('les:'+k,function(next){
+    _upWhenReady(mats,function(){   // [1.806] — a file still uploading is saved once it has arrived
+    var sent=_mstDraftMats(_upArrived(mats));
+    api({action:'teacherSaveLessonNote',data:{teacherToken:TOKEN,studentId:stu,lessonDate:d,lessonTime:time,activities:act,materials:sent}},function(e,r){
+      next();
+      var good=!e&&r&&r.ok;
+      if(good)_msNoteOk[k]={activities:act,materials:sent,had:true};   // what the server now has
+      if(seq!==_msNoteSeq[k])return;   // a newer save of this lesson follows, and its answer is the one that counts
+      delete _msNotePend[k];
+      if(good){actDone('les:'+k,MS_COPY.saved);return;}
+      var why=(r&&r.error)||MS_COPY.saveFail,ok=_msNoteOk[k];
+      // The held card has the words the server does not: dropped, so the next open asks afresh.
+      delete API_KEEP['c|'+stu];delete API_KEEP_AT['c|'+stu];
+      if(MS.cardStu===stu&&MS.card)_msPutNote(d,ok.activities,ok.materials,ok.had);
+      if(MS.edits[k])MS.edits[k].err=why;   // opened again since: those words stay, with the reason
+      else MS.edits[k]={activities:act,materials:mats,busy:false,err:why,blank:blank};
+      if(!_mstOnStudent(stu))showMsg(MST_COPY.notesNotSaved(_mstStu(stu).studentName||'',mstDate(d)),'e');
+      render();
+    });
+    });
   });
 }
 function _msYmdOf(ms){return _nyYmdOf(Number(ms)||0);}   // [1.762] — the New York day it was sent
 function _msMatRow(m,tail,head){
+  if(m.upFailed)return '';   // [1.806] — an upload that failed is not in the list
   var k={book:MS_COPY.book,link:MS_COPY.link,file:MS_COPY.file}[m.kind]||'';
   return '<div class="ms-mat">'+(head||'')+'<span class="ms-k">'+esc(k)+'</span><span class="ms-ml">'+
-    (m.kind==='link'?'<a href="'+esc(m.url)+'" target="_blank" rel="noopener noreferrer">'+esc(m.label||m.url)+'</a>':esc(m.label))+'</span>'+(tail||'')+'</div>';
+    (m.kind==='link'?'<a href="'+esc(m.url)+'" target="_blank" rel="noopener noreferrer">'+esc(m.label||m.url)+'</a>':esc(m.label))+'</span>'+
+    (m.uploading?'<span class="lib-said working"><span class="spin">&#8635;</span> '+esc(TLIB_COPY.attaching)+'</span>':'')+(tail||'')+'</div>';
 }
 // ── [1.790] Add file and Add link: the composer's picker, into the materials ──
 // AC, 6 October 2026: "Teachers need to be able to add links or files from their
@@ -4826,21 +5018,38 @@ function msPickDevice(){
   inp.onchange=function(){Array.prototype.slice.call(inp.files||[]).forEach(_msPickUpload);};
   inp.click();
 }
+// [1.806] — the file is in the list the moment it is chosen, marked Attaching…, and the teacher carries on;
+// a save or send of that list waits for it (_upWhenReady). A failed upload leaves the list and says why: in
+// the picker if it is open, beside the form's or the notes' buttons if not, in a message if neither is there.
+var _upWaiters=[];
+function _upWhenReady(list,fn){if(!(list||[]).some(function(m){return m.uploading;}))return fn();_upWaiters.push({list:list,fn:fn});}
+function _upSettled(){var w=_upWaiters;_upWaiters=[];w.forEach(function(x){_upWhenReady(x.list,x.fn);});}
+function _upArrived(list){return (list||[]).filter(function(m){return !m.upFailed&&!m.uploading;});}
 function _msPickUpload(file){
   var p=MS.pick;if(!p)return;
   if(file.size>ATT_MAX_BYTES){p.err=TCH_COPY.attachTooBig;render();return;}
   if(!file.size){p.err=TCH_COPY.attachEmpty;render();return;}
-  p.busy++;p.err='';render();
-  var target=p.target,reader=new FileReader();
-  var fail=function(msg){p.busy--;p.err=msg||TLIB_COPY.attachFailed;render();};
+  var target=p.target,list=_msMatList(target);if(!list)return;
+  var m={kind:'file',label:file.name,uploading:true};if(target==='asg')m.on=true;
+  list.push(m);p.err='';render();
+  var reader=new FileReader();
+  var fail=function(msg){
+    msg=msg||TLIB_COPY.attachFailed;m.uploading=false;m.upFailed=true;
+    var i=list.indexOf(m);if(i>-1)list.splice(i,1);
+    var ed=target==='asg'?null:MS.edits[_msEditKey(String(target).slice(4))];
+    if(MS.pick===p)p.err=msg;
+    else if(MS.asg&&MS.asg.mats===list){MST.err=msg;MST.errFor='';}
+    else if(ed&&ed.materials===list)ed.err=msg;
+    else showMsg(msg,'e');
+    render();_upSettled();
+  };
   reader.onerror=function(){fail();};
   reader.onload=function(){
     var b64=String(reader.result||'');b64=b64.slice(b64.indexOf(',')+1);
     api({action:'uploadAttachment',data:{fileName:file.name,mimeType:file.type,dataBase64:b64,toLibrary:true,teacherId:TEACHER_ID,teacherToken:TOKEN}},function(e,r){
       if(e||!r||!r.ok||!r.attachment){fail(r&&r.error);return;}
-      p.busy--;
-      _msMatPush(target,{kind:'file',label:r.attachment.fileName,attachmentId:r.attachment.attachmentId});
-      loadLibrary(true,true);render();
+      m.attachmentId=r.attachment.attachmentId;m.label=r.attachment.fileName;delete m.uploading;
+      loadLibrary(true,true);render();_upSettled();
     });
   };
   reader.readAsDataURL(file);
@@ -8854,7 +9063,7 @@ function _composerSync(id){
   _tplOfferSync(id);   // [1.127] — the offer to keep this as a template, live
   if(id==='family-composer' && ACTIVE_THREAD){ ACTIVE_THREAD.draft=v; _draftKeep(ACTIVE_THREAD, v); }
   if(id==='staff-composer' && ACTIVE_STAFF_THREAD){ ACTIVE_STAFF_THREAD.draft=v; _draftKeep(ACTIVE_STAFF_THREAD, v); }
-  if(id===MST_CID && MS.asg){ MS.asg.html=el.innerHTML; MS.asg.dirty=true; }   // [1.794] — a link or template put in by the toolbar
+  if(id===MST_CID && MS.asg){ MS.asg.html=el.innerHTML; }   // [1.794] — a link or template put in by the toolbar
 }
 // [1.336] — one place the draft is written from, so the two composers cannot
 // end up keeping it differently.
@@ -16426,6 +16635,7 @@ function doSignOut(){
     open:{},trialOpen:{},note:null,lesson:{},timer:{},st:'',pick:null,asg:null};   // [1.732]
   MST={view:'',day:'',open:'',arch:false,tick:{},bulk:false,bulkAt:'',sched:false,schedAt:'',preview:false,previewHtml:'',
     flash:'',top:false,busy:'',err:'',errFor:'',bulkErr:'',bulkBusy:false,listErr:''};   // [1.793]
+  _mstLocal={}; _msNotePend={}; _msNoteOk={}; _msNoteSeq={}; _mstOut={}; _mstHide={};   // [1.805]/[1.806] — nothing unconfirmed carries over to the next teacher
   TOKEN=''; TEACHER_ID=''; TEACHER_NAME='';
   LF={email:'', password:'', remember:true};
   HOME_TAB='students';   // [1.794]

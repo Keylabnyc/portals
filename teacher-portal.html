@@ -1843,6 +1843,9 @@ mark.guide-hit{background:var(--bbg);color:inherit;border-radius:2px;padding:0 1
 .ask-about select{flex:1 1 220px;min-width:0;font:inherit;font-weight:500;padding:6px 8px;background:#fff;border:1px solid var(--border2);border-radius:var(--r)}
 /* [1.816]'s Studio tags and Custom tags headers are gone: [1.824] made My Tags one A–Z list */
 /* [1.824]'s key to the two looks (two sample chips) is gone: AC, "They take up space and are unnecessary" ([1.826]) */
+/* [1.868] — "Assign tags?" under a Materials row */
+.ms-tagask{margin:2px 0 8px 22px}
+.ms-tagask-open{display:flex;flex-direction:column;gap:4px;padding:6px 8px;background:var(--bg5);border-radius:var(--r)}
 /* [1.808] — the same band inside the Add file and Add link panels, which have no card edge to bleed to */
 .pick-band{margin:8px 0 4px;border-radius:var(--r);font-size:12.5px}
 .pick-shelf+.pick-shelf .pick-band{margin-top:6px}
@@ -4871,7 +4874,7 @@ function mstLessonBody(d,current){
       :String(l.activities||'').trim()?'<div class="ms-ro">'+esc(l.activities)+'</div>':'<div class="ms-ro ms-empty">'+esc(MS_COPY.noNotes)+'</div>')+'</div>';
   if(ed){
     h+='<div class="ms-lf"><div class="ms-lab">'+esc(MS_COPY.materials)+'</div>'+
-      (ed.materials||[]).map(function(m,i){return _msMatRow(m,'<button type="button" class="ms-x" title="'+esc(MS_COPY.remove)+'" onclick="msMatRemove(\''+d+'\','+i+')">✕</button>');}).join('')+
+      (ed.materials||[]).map(function(m,i){return _msMatRow(m,'<button type="button" class="ms-x" title="'+esc(MS_COPY.remove)+'" onclick="msMatRemove(\''+d+'\','+i+')">✕</button>')+rMatTagAsk(m);}).join('')+
       _msAddUI('les:'+d)+'</div>';
   }else{
     h+=((l.materials||[]).length?'<div class="ms-lf"><div class="ms-lab">'+esc(MS_COPY.materials)+'</div>'+l.materials.map(function(m){return _msMatRow(m,'');}).join('')+'</div>':'');
@@ -5005,7 +5008,7 @@ function _cmpShiftOff(off, a, b){
   var j=0; while(j<a.length-i&&j<b.length-i&&a.charAt(a.length-1-j)===b.charAt(b.length-1-j)) j++;
   var oldEnd=a.length-j, newEnd=b.length-j, d=b.length-a.length;
   var move=function(p){ return p>=oldEnd?p+d:(p>i?newEnd:p); };
-  return {start:move(off.start), end:move(off.end)};
+  return {start:move(off.start), end:move(off.end), ss:off.ss, es:off.es};   // [1.866] — the sides go with it
 }
 function mstAsgNew(){
   var d=MS.cardDate,l=_msLes(d),ed=MS.edits[_msEditKey(d)],s=_mstStu(MS.cardStu);
@@ -5065,7 +5068,7 @@ function mstForm(){
   };
   var tick=function(slot,name){return '<label class="mst-to"><input type="checkbox"'+(a.to[slot]?' checked':'')+' onclick="mstSetTo(\''+slot+'\',this.checked)"> '+esc(name)+'</label>';};
   var mats='<div class="mst-mats"><div class="ms-lab">'+esc(MST_COPY.mats)+'</div>'+
-    (a.mats.length?a.mats.map(function(m,i){return _msMatRow(m,libTag(m)+'<button type="button" class="ms-x" title="'+esc(MS_COPY.remove)+'" onclick="mstMatRemove('+i+')">✕</button>');}).join('')
+    (a.mats.length?a.mats.map(function(m,i){return _msMatRow(m,libTag(m)+'<button type="button" class="ms-x" title="'+esc(MS_COPY.remove)+'" onclick="mstMatRemove('+i+')">✕</button>')+rMatTagAsk(m);}).join('')
       :'<div class="ms-hint">'+esc(MST_COPY.noMats)+'</div>')+'</div>';
   var busy=!!MST.busy;
   var btns='<div class="mst-ffoot'+(dr?' has-del':'')+'">'+
@@ -5247,7 +5250,7 @@ function _mstSendNow(o,done){
   var step=function(){
     if(i<newLinks.length){
       var m=newLinks[i++];
-      api({action:'addLibraryLinks',data:{urls:m.url,label:m.label||'',teacherId:TEACHER_ID,teacherToken:TOKEN}},function(e,r){if(e||!r||!r.ok)return done(r||{});step();});
+      api({action:'addLibraryLinks',data:{urls:m.url,label:m.label||'',tags:(m.tags||[]).slice(),privateTags:(m.privateTags||[]).slice(),teacherId:TEACHER_ID,teacherToken:TOKEN}},function(e,r){if(e||!r||!r.ok)return done(r||{});step();});   // [1.868] — with its tags
       return;
     }
     var j=i-newLinks.length;
@@ -5565,8 +5568,72 @@ function msPickLink(){
   var p=MS.pick;if(!p)return;
   var url=_composerNormalizeUrl(p.url);
   if(!url){p.bad=true;p.url='';render();return;}
-  _msMatPush(p.target,{kind:'link',label:String(p.text||'').trim()||url.replace(/^https?:\/\//i,''),url:url});
+  var _nl={kind:'link',label:String(p.text||'').trim()||url.replace(/^https?:\/\//i,''),url:url};
+  _msMatPush(p.target,_nl);
+  if(p.target==='asg'&&!_msLibShelf(_nl))_matTagOpen(_nl);   // [1.868] — it goes into My Library on send: tags first
   p.url='';p.text='';p.bad=false;render();
+}
+// ── [1.868] — "Assign tags?" under a file or link added to Materials ──────
+//
+// AC, 9 October 2026: "teachers need to be able to add a tag to a file or a link as they add them". A file added from
+// the device here is filed into My Library as it goes up, and a new link in Create Assignment is added to My Library
+// when it is sent — both with no tags, and nothing asked. Now each asks under its row, in the Library's own words: No
+// leaves it as it is; Yes shows the tags. A file's are saved as they are pressed (it is in My Library already); a
+// link's ride on it and go into My Library with it on send.
+var MAT_TAGS={}, _MAT_TAG_N=0;   // which rows are asking: 'f:'+attachmentId or 'l:'+address -> {n, open}
+function _matTagKey(m){ return m.kind==='file' ? 'f:'+m.attachmentId : 'l:'+String(m.url||'').trim().toLowerCase(); }
+function _matTagOpen(m){ if(m && (m.kind!=='file' || m.attachmentId)) MAT_TAGS[_matTagKey(m)]={n:++_MAT_TAG_N, open:false}; }
+function _matFind(k){
+  var all=(MS.asg&&MS.asg.mats||[]).slice();
+  Object.keys(MS.edits||{}).forEach(function(x){ all=all.concat((MS.edits[x]&&MS.edits[x].materials)||[]); });
+  return all.filter(function(m){ return (m.kind==='file'||m.kind==='link') && _matTagKey(m)===k; })[0]||null;
+}
+function matTagsAsk(k, yes){
+  var st=MAT_TAGS[k]; if(!st) return;
+  if(yes) st.open=true; else delete MAT_TAGS[k];
+  render();
+}
+// A press on a tag or a word. A file's list is saved at once, one save after another; a link's is kept on it.
+function matTagSet(k, v){
+  var m=_matFind(k); if(!m) return;
+  var word=v.indexOf('p:')===0, list=(word?m.privateTags:m.tags)||[], x=word?v.slice(2):v, i=list.indexOf(x);
+  list=list.slice(); if(i>-1) list.splice(i,1); else list.push(x);
+  if(word) m.privateTags=list; else m.tags=list;
+  render();
+  if(m.kind!=='file') return;
+  _seqRun('mattags:'+m.attachmentId, function(next){
+    api({action:'setAttachmentTags', data:{attachmentId:m.attachmentId, tags:(m.tags||[]).slice(), privateTags:(m.privateTags||[]).slice(),
+         teacherId:TEACHER_ID, teacherToken:TOKEN}}, function(e,r){
+      next();
+      if(e||!r||!r.ok){ actFail('mattags:'+k,(r&&r.error)||TLIB_COPY.tagSaveFailed); render(); return; }
+      var f=_libFind(m.attachmentId); if(f){ f.tags=r.tags||m.tags; f.privateTags=r.privateTags||m.privateTags; }
+    });
+  });
+}
+function matTagWord(k){
+  var st=MAT_TAGS[k], el=st?document.getElementById('mat-pt-'+st.n):null, w=el?String(el.value||'').trim():'';
+  var m=_matFind(k); if(!w || !m) return;
+  if((m.privateTags||[]).indexOf(w)<0) matTagSet(k, 'p:'+w);
+}
+function rMatTagAsk(m){
+  if(!m || m.uploading || m.upFailed || (m.kind!=='file' && m.kind!=='link')) return '';
+  var k=_matTagKey(m), st=MAT_TAGS[k];
+  if(!st || (m.kind==='link' && _msLibShelf(m))) return '';
+  if(!st.open) return '<div class="lib-ask ms-tagask"><span class="lib-ask-q">'+esc(TLIB_COPY.tagsAsk)+'</span>'+
+    '<button type="button" class="lib-done" onclick="matTagsAsk('+jsq(k)+',true)">'+esc(TLIB_COPY.tagsAskYes)+'</button>'+
+    '<button type="button" class="lnk-btn" onclick="matTagsAsk('+jsq(k)+',false)">'+esc(TLIB_COPY.tagsAskNo)+'</button></div>';
+  var ch=_libTagChoices(m.label, m.tags||[], m.privateTags||[]);
+  return '<div class="ms-tagask ms-tagask-open">'+
+    (ch.length?'<div class="lib-lbl">'+esc(TLIB_COPY.lblTags)+'</div><div class="lib-tags" style="padding-top:0">'+_libTagChoiceHtml(ch,
+      function(c){ return c.priv ? (m.privateTags||[]).indexOf(c.name)>-1 : (m.tags||[]).indexOf(c.v)>-1; },
+      function(c){ return 'matTagSet('+jsq(k)+','+jsq(c.priv?'p:'+c.name:c.v)+')'; })+'</div>':'')+
+    '<div class="lib-lbl">'+esc(TLIB_COPY.lblMine)+'</div>'+
+    '<div class="lib-fld-row"><input id="mat-pt-'+st.n+'" placeholder="'+esc(TLIB_COPY.privatePh)+'" aria-label="'+esc(TLIB_COPY.privatePh)+'"'+
+      ' onkeydown="if(event.key===\'Enter\'){event.preventDefault();matTagWord('+jsq(k)+');}">'+
+      '<button type="button" class="lib-act" onclick="matTagWord('+jsq(k)+')">'+esc(TLIB_COPY.privateAdd)+'</button>'+
+      '<button type="button" class="lib-done" style="margin-left:auto" onclick="matTagsAsk('+jsq(k)+',false)">'+esc(TLIB_COPY.doneEditing)+'</button></div>'+
+    rAct('mattags:'+k)+
+  '</div>';
 }
 function _msPickLinkRow(){
   var p=MS.pick;
@@ -5623,6 +5690,7 @@ function _msUploadTo(target,file,p){
     api({action:'uploadAttachment',data:{fileName:file.name,mimeType:file.type,dataBase64:b64,toLibrary:true,teacherId:TEACHER_ID,teacherToken:TOKEN}},function(e,r){
       if(e||!r||!r.ok||!r.attachment){fail(r&&r.error);return;}
       m.attachmentId=r.attachment.attachmentId;m.label=r.attachment.fileName;delete m.uploading;
+      _matTagOpen(m);   // [1.868] — filed into My Library: "Assign tags?"
       loadLibrary(true,true);render();_upSettled();
     });
   };
@@ -9821,14 +9889,34 @@ function _cmpOffsetOf(el,node,off){
   try{ r.setEnd(node,off); }catch(e){ return 0; }
   return r.toString().length;
 }
+// ── [1.866] — and which side of a line break each end was on ────────────
+//
+// AC, 9 October 2026: "When adding links in the assignment composer whichever line of text is next any space gets
+// deleted and that line of text gets butted up directly next to the link text."
+//
+// [1.416] below settled the shared count in one direction: the end of one line and the start of the next are the
+// same number, and it gave that number to the start of the next line. So words selected at the end of a line came
+// back as a selection running on to the start of the next one, line break and all, and the link took the line break
+// with it: the next line joined the link with no space. A cursor at the end of a line came back at the start of the
+// next one after the five-second redraw too, and at a <br> it was the other way round, since the count did not see
+// a <br> at all: words selected at the start of a line took the break before them.
+//
+// So each saved position also says which side of a break it was on: which of the lines that meet at its count it is
+// on (0 the first, the end of the line before; 1 the next; more past an empty line between). A selection's start is
+// always on the last of them and its end on the first: selected words never take a line break with them, and a whole
+// line selected comes back as its words. And an EMPTY line counts as one ("1." in a new assignment, a blank line
+// between two <br>s): a cursor on one came back at the end of the line above, so a link added there went up a line.
 function _cmpOffsets(el){
   if(!el) return null;
   var s=window.getSelection();
   if(!s||!s.rangeCount) return null;
   var r=s.getRangeAt(0);
   if(!el.contains(r.startContainer)||!el.contains(r.endContainer)) return null;
-  return {start:_cmpOffsetOf(el,r.startContainer,r.startOffset),
-          end:_cmpOffsetOf(el,r.endContainer,r.endOffset)};
+  var o={start:_cmpOffsetOf(el,r.startContainer,r.startOffset),
+         end:_cmpOffsetOf(el,r.endContainer,r.endOffset)};
+  if(o.start<o.end){ o.ss='last'; o.es=0; }
+  else { var t=_cmpLines(el,{node:r.startContainer, off:r.startOffset}); o.ss=o.es=_cmpLineAt(t.items,o.start,t.at); }
+  return o;
 }
 // ── [1.416] — a caret at the start of a bullet, not the end of the one above ──
 //
@@ -9850,47 +9938,106 @@ function _cmpOffsets(el){
 // two text nodes at one position, and the end of the first is where typing
 // inherits the bold; moving it to the start of the second would silently
 // change what the next character looks like.
+var _CMP_BLOCKS={LI:1,P:1,DIV:1,BLOCKQUOTE:1,UL:1,OL:1,TD:1,TH:1,H1:1,H2:1,H3:1,H4:1,H5:1,H6:1};
 function _cmpBlockOf(node){
-  var BLOCKS={LI:1,P:1,DIV:1,BLOCKQUOTE:1,UL:1,OL:1,TD:1,TH:1,H1:1,H2:1,H3:1,H4:1,H5:1,H6:1};
   var n=node&&node.parentNode;
   while(n){
-    if(n.nodeType===1&&BLOCKS[n.tagName]) return n;
+    if(n.nodeType===1&&_CMP_BLOCKS[n.tagName]) return n;
     n=n.parentNode;
   }
   return null;
 }
+// [1.866] — the block a position is in: an element that is a block is its own.
+function _cmpBlockAt(node){
+  return (node&&node.nodeType===1&&_CMP_BLOCKS[node.tagName]) ? node : _cmpBlockOf(node);
+}
 // The choice itself, kept pure so it can be run by a check rather than read.
 // `items` is one entry per text node, in document order: {len, block}, where
 // block is any value that is equal for two nodes in the same block and
-// different otherwise.
-function _cmpPickIndex(items,pos){
+// different otherwise ([1.866]: on the same LINE — a <br> starts one too).
+function _cmpPickIndex(items,pos,side){
   if(!items||!items.length) return null;
-  var seen=0;
-  for(var i=0;i<items.length;i++){
+  // Every node the count reaches, and the lines they are on, in order.
+  var seen=0,at=[],lines=[];
+  for(var i=0;i<items.length && seen<=pos;i++){
     var len=items[i].len;
-    if(seen+len>pos) return {index:i, off:pos-seen};
-    if(seen+len===pos){
-      // Exactly on the boundary. Stay here unless the very next node starts a
-      // DIFFERENT block, in which case the caret belongs to that block.
-      var nx=items[i+1];
-      if(nx && nx.block!==items[i].block) return {index:i+1, off:0};
-      return {index:i, off:pos-seen};
-    }
+    if(pos<=seen+len){ at.push({index:i, off:pos-seen, block:items[i].block}); if(lines.indexOf(items[i].block)<0) lines.push(items[i].block); }
     seen+=len;
   }
-  var last=items.length-1;
-  return {index:last, off:items[last].len};
+  if(!at.length){ var last=items.length-1; return {index:last, off:items[last].len}; }
+  // Which line: [1.866] the one it was saved on (0 the first, 'last' the last). Unsaid, [1.416]'s rule: on a
+  // boundary between lines, the second, the line the caret is at the start of.
+  var k=side==='last' ? lines.length-1 : (typeof side==='number' ? Math.min(side, lines.length-1) : (lines.length>1 ? 1 : 0));
+  // On that line, the first node the count reaches: inside one line ("<b>bo</b>ld") that is the end of the bold,
+  // where typing inherits it.
+  for(var j=0;j<at.length;j++) if(at[j].block===lines[k]) return {index:at[j].index, off:at[j].off};
+  return {index:at[0].index, off:at[0].off};
 }
-function _cmpNodeAt(el,pos){
-  var w=document.createTreeWalker(el,NodeFilter.SHOW_TEXT,null,false),n;
-  var nodes=[],items=[];
-  while((n=w.nextNode())){
-    nodes.push(n);
-    items.push({len:(n.nodeValue||'').length, block:_cmpBlockOf(n)});
+// [1.866] — which of the lines that meet at a count a position is on: 0 the first, 1 the next, and so on, an empty
+// line between being one of them; '' when it is on none. Pure, as _cmpPickIndex is: `at` is the position's own line.
+function _cmpLineAt(items,pos,at){
+  var seen=0,lines=[];
+  for(var i=0;i<items.length && seen<=pos;i++){
+    if(pos<=seen+items[i].len && lines.indexOf(items[i].block)<0) lines.push(items[i].block);
+    seen+=items[i].len;
   }
-  var pick=_cmpPickIndex(items,pos);
+  var k=lines.indexOf(at);
+  return k<0 ? '' : k;
+}
+// [1.866] — a block with no text in it and no block inside it is an empty line: "<li><br></li>" is the commonest.
+function _cmpEmptyBlock(n){
+  if(!_CMP_BLOCKS[n.tagName]) return false;
+  return (function none(e){
+    for(var i=0;i<e.childNodes.length;i++){
+      var c=e.childNodes[i];
+      if(c.nodeType===3 || (c.nodeType===1 && (_CMP_BLOCKS[c.tagName] || !none(c)))) return false;
+    }
+    return true;
+  })(n);
+}
+// The box's text, one entry per text node in order, each with the LINE it is on: a new line starts with a new block
+// and, [1.866], after a <br>. `block` holds that line's number, so two nodes compare equal only on one line —
+// "<b>bo</b>ld" is one line ([1.416]'s inline case), "video<br>Bring" two. An empty line is an entry too, of no
+// length, held by the place a cursor on it sits: the empty block, or the point between two <br>s. Given a position
+// (`at`, a node and an offset as a Range has them), it also says which line that position is on.
+function _cmpLines(el,at){
+  var nodes=[],items=[],line=0,last=null,br=false,here=null;
+  var put=function(node,base,len,blk){
+    if(items.length && (blk!==last || br)) line++;
+    last=blk; br=false;
+    nodes.push({node:node, base:base}); items.push({len:len, block:line});
+  };
+  (function walk(p){
+    for(var i=0;i<=p.childNodes.length;i++){
+      if(at && here===null && at.node===p && at.off===i){
+        var b=_cmpBlockAt(p);
+        here=(items.length && (b!==last || br)) ? line+1 : line;
+      }
+      var n=p.childNodes[i]; if(!n) break;
+      if(n.nodeType===3){
+        put(n,0,(n.nodeValue||'').length,_cmpBlockOf(n));
+        if(at && at.node===n) here=line;
+      } else if(n.nodeType===1){
+        if(n.tagName==='BR'){
+          // A <br> straight after another, or before any text in its block, closes an empty line.
+          var bb=_cmpBlockAt(p);
+          if(br || !items.length || bb!==last) put(p,i,0,bb);
+          br=true;
+        } else if(_cmpEmptyBlock(n)){
+          put(n,0,0,n);
+          if(at && here===null && n.contains(at.node)) here=line;
+        } else walk(n);
+      }
+    }
+  })(el);
+  return {nodes:nodes, items:items, at:here};
+}
+function _cmpNodeAt(el,pos,side){
+  var t=_cmpLines(el);
+  var pick=_cmpPickIndex(t.items,pos,side);
   if(!pick) return null;
-  return {node:nodes[pick.index], off:pick.off};
+  var n=t.nodes[pick.index];
+  return {node:n.node, off:n.base+pick.off};
 }
 // Falls back to the end of the box rather than to nothing: a caret that lands
 // one character out is a nuisance, a caret that lands nowhere loses the next
@@ -9899,8 +10046,8 @@ function _cmpRestore(el,off){
   if(!el) return false;
   var r=document.createRange();
   try{
-    var a=off?_cmpNodeAt(el,off.start):null;
-    var b=off?_cmpNodeAt(el,off.end):null;
+    var a=off?_cmpNodeAt(el,off.start,off.ss):null;
+    var b=off?_cmpNodeAt(el,off.end,off.es):null;
     if(a) r.setStart(a.node,a.off); else { r.selectNodeContents(el); r.collapse(false); }
     if(b) r.setEnd(b.node,b.off); else r.collapse(true);
     var s=window.getSelection(); s.removeAllRanges(); s.addRange(r);
@@ -10429,6 +10576,8 @@ var LIB_MY_LINKS=[], LIB_STUDIO_LINKS=[];
 // shelf and picker shows the Master Library through _libMasterShown.
 var LIB_PICKS={};
 function _libPicked(f){ return !!LIB_PICKS[String((f&&(f.id||f.attachmentId))||'')]; }
+// [1.868] — the Master Library items this teacher keeps, which carry their own tags too.
+function _libKeptStudio(){ return (LIB_SHELF_STUDIO||[]).concat(LIB_STUDIO_LINKS||[]).filter(_libPicked); }
 // Add a Master Library item to this teacher's library, or take it off. Instant; put back if refused.
 function libMasterPick(id, on, after){
   var f=_libFind(id); if(!f){ if(after) after(false, TLIB_COPY.pickFailed); return; }
@@ -10444,6 +10593,95 @@ function libMasterPick(id, on, after){
     }
     if(after) after(true);
   });
+}
+// ── [1.868] — a teacher's own tags on a Keylab Master Library item ────────
+//
+// AC, 9 October 2026, of a file he sent a teacher who kept it: "today when the teacher added a file I sent them they
+// could not edit the tags or anything with the file", then "teachers can add tags to anything". A Master Library item
+// kept is the Master Library's ([1.818], [1.823]), which teachers change nothing on — his ruling — and there was
+// nowhere for a teacher's own filing to go. It goes on their pick now: studio tags they choose (`myTags`) and their
+// own words (`privateTags`), for them alone; the item's name and its own tags stay the studio's.
+function _libPickFiling(id, f, tags, words){
+  var was={t:f.myTags||[], w:f.privateTags||[]};
+  f.myTags=tags; f.privateTags=words; _libRedraw();
+  _seqRun('pick:'+id, function(next){
+    api({action:'teacherMasterPick', data:{teacherToken:TOKEN, kind:f.kind==='link'?'link':'file', itemId:id, on:true,
+         tags:(f.myTags||[]).slice(), privateTags:(f.privateTags||[]).slice()}}, function(e,r){
+      next();
+      if(e||!r||!r.ok){ f.myTags=was.t; f.privateTags=was.w; actFail('lib:'+id,(r&&r.error)||TLIB_COPY.tagSaveFailed); _libRedraw(); return; }
+      LIB_PICKS[id]=true;
+    });
+  });
+}
+function libPickTag(id, tagId){
+  var f=_libFind(id); if(!f) return;
+  var t=(f.myTags||[]).slice(), i=t.indexOf(tagId);
+  if(i>-1) t.splice(i,1); else t.push(tagId);
+  _libPickFiling(id, f, t, (f.privateTags||[]).slice());
+}
+function libPickWord(id, word){
+  var f=_libFind(id); if(!f) return;
+  var w=(f.privateTags||[]).slice(), i=w.indexOf(word);
+  if(i>-1) w.splice(i,1); else w.push(word);
+  _libPickFiling(id, f, (f.myTags||[]).slice(), w);
+}
+function libPickWordAdd(id){
+  var el=document.getElementById('lib-ppt-'+id), word=el?String(el.value||'').trim():'';
+  var f=_libFind(id); if(!word || !f) return;
+  el.value='';
+  if((f.privateTags||[]).indexOf(word)<0) _libPickFiling(id, f, (f.myTags||[]).slice(), (f.privateTags||[]).concat([word]));
+}
+// Keeping one from the Master Library band asks "Assign tags?" first, as every other way into a library does.
+function libPickAsk(id){
+  var f=_libFind(id); if(!f) return;
+  libAddOpen({kind:'pick', at:'pick:'+id, itemId:id, name:f.fileName||''});
+}
+function _libAddPickGo(){
+  var key=LIBADD.key, id=LIBADD.itemId, att=LIBADD.attachmentId, f=_libFind(id);
+  if(!f || actBusy(key)) return;
+  var tags=LIBADD.tags.slice(), words=LIBADD.priv.slice(), name=f.fileName||LIBADD.name;
+  actStart(key, TLIB_COPY.saving);
+  api({action:'teacherMasterPick', data:{teacherToken:TOKEN, kind:f.kind==='link'?'link':'file', itemId:id, on:true, tags:tags, privateTags:words}}, function(e,r){
+    if(e||!r||!r.ok){ actFail(key,(r&&r.error)||TLIB_COPY.pickFailed); return; }
+    LIB_PICKS[id]=true; f.myTags=r.tags||tags; f.privateTags=r.privateTags||words;
+    if(att) LIB_NO[att]=true;   // the composer's offer is answered
+    LIBADD=null;
+    render();
+    actDone(key, TLIB_COPY.pickedNamed(name));
+  });
+}
+// The Edit box for one: its name and the studio's own tags as they are, the teacher's to press on and off.
+function rLibPickEdit(f){
+  var id=f.id||f.attachmentId, own=(f.tags||[]).filter(function(t){ return !!_libTagName(t); });
+  var ch=_libTagChoices('', (f.myTags||[]), f.privateTags||[]).filter(function(c){ return c.priv || own.indexOf(c.v)<0; });
+  return '<div class="lib-edit">'+
+    '<div class="lib-fld">'+
+      '<div class="lib-lbl">'+esc(TLIB_COPY.lblName)+'</div>'+
+      '<div class="lib-fld-row"><span class="lib-kind lib-keylab">'+esc(TLIB_COPY.keylabBadge)+'</span> '+esc(f.fileName)+'</div>'+
+    '</div>'+
+    (own.length?'<div class="lib-row-tags ro">'+own.map(function(t){ return '<span class="lib-tag sm">'+esc(_libTagName(t))+'</span>'; }).join('')+'</div>':'')+
+    (ch.length
+      ? '<div class="lib-fld">'+
+          '<div class="lib-lbl">'+esc(TLIB_COPY.lblTags)+'</div>'+
+          '<div class="lib-tags" style="padding-top:0">'+_libTagChoiceHtml(ch,
+            function(c){ return c.priv ? (f.privateTags||[]).indexOf(c.name)>-1 : (f.myTags||[]).indexOf(c.v)>-1; },
+            function(c){ return c.priv ? 'libPickWord('+jsq(id)+','+jsq(c.name)+')' : 'libPickTag('+jsq(id)+','+jsq(c.v)+')'; })+'</div>'+
+        '</div>'
+      : '')+
+    '<div class="lib-fld">'+
+      '<div class="lib-lbl">'+esc(TLIB_COPY.lblMine)+'</div>'+
+      '<div class="lib-fld-row">'+
+        '<input id="lib-ppt-'+esc(id)+'" placeholder="'+esc(TLIB_COPY.privatePh)+'"'+
+          ' aria-label="'+esc(TLIB_COPY.privatePh)+'"'+
+          ' onkeydown="if(event.key===\'Enter\'){event.preventDefault();libPickWordAdd('+jsq(id)+');}">'+
+        '<button type="button" class="lib-act" onclick="libPickWordAdd('+jsq(id)+')">'+esc(TLIB_COPY.privateAdd)+'</button>'+
+      '</div>'+
+    '</div>'+
+    '<div class="lib-foot">'+
+      (_libPicked(f)?'<button type="button" class="lib-act" onclick="libEditClose();libMasterPick('+jsq(id)+',false)">'+esc(TLIB_COPY.unshelve)+'</button>':'')+
+      '<button type="button" class="lib-act" style="margin-left:auto" onclick="libEdit('+jsq(id)+')">'+esc(TLIB_COPY.doneEditing)+'</button>'+
+    '</div>'+
+  '</div>';
 }
 var _libLoaded=false, _libInFlight=false;
 
@@ -10496,6 +10734,10 @@ function loadLibrary(force, shelvesOnly){
       LIB_MY_LINKS=(r.myLinks||[]).map(_libNormLink).filter(_notGoing);
       LIB_STUDIO_LINKS=(r.studioLinks||[]).map(_libNormLink).map(_libStudioMark);
       LIB_PICKS={}; (r.picks||[]).forEach(function(id){ LIB_PICKS[String(id)]=true; });   // [1.818]
+      // [1.868] — the teacher's own tags on what they keep from the Master Library: `myTags` (studio tags they
+      // chose) and `privateTags` (their words). The item's own `tags` stay the studio's.
+      var _pt=r.pickTags||{};
+      LIB_SHELF_STUDIO.concat(LIB_STUDIO_LINKS).forEach(function(f){ var t=_pt[f.id]||{}; f.myTags=t.tags||[]; f.privateTags=t.privateTags||[]; });
     }
     _libFilterPrune();
     // [1.485] — the panel, not the page. The shelves are the only thing this
@@ -10561,14 +10803,14 @@ function _libMatch(f, filter, q){
     var v=filter[i];
     if(v.indexOf('p:')===0){
       if((f.privateTags||[]).indexOf(v.slice(2))<0) return false;
-    } else if((f.tags||[]).indexOf(v)<0) return false;
+    } else if((f.tags||[]).indexOf(v)<0 && (f.myTags||[]).indexOf(v)<0) return false;   // [1.868] — or the teacher's own
   }
   if(q){
     // The tag NAMES are in the haystack too, so typing "scales" finds the file
     // whether that word is on the tag or in the filename — a teacher should not
     // have to know which.
     var hay=String(f.fileName||'');
-    (f.tags||[]).forEach(function(t){ hay+=' '+_libTagName(t); });
+    (f.tags||[]).concat(f.myTags||[]).forEach(function(t){ hay+=' '+_libTagName(t); });   // [1.868]
     (f.privateTags||[]).forEach(function(w){ hay+=' '+w; });
     // [1.822] — and a link's address and a template's words, which is what a teacher remembers of them.
     if(f.kind==='link') hay+=' '+String(f.url||'');
@@ -11024,17 +11266,11 @@ var _libComposerId='';
 // against it ([1.464]) and was right: they can already download it, so refusing
 // only pushed the file out of the tool.
 var LIB_KEPT={};   // attachmentIds this page has shelved, so the offer is not made twice
-function libSave(attachmentId){
-  if(actBusy('lib:'+attachmentId)) return;
-  actStart('lib:'+attachmentId, TLIB_COPY.saving);
-  api({action:'setLibrary', data:{attachmentId:attachmentId, teacherId:TEACHER_ID, teacherToken:TOKEN}},
-  function(e,r){
-    if(e||!r||!r.ok){ actFail('lib:'+attachmentId,(r&&r.error)||TLIB_COPY.saveFailed); return; }
-    LIB_KEPT[attachmentId]=true;
-    // [1.522] — named, so three saves in a row are three distinct answers.
-    actDone('lib:'+attachmentId, _libKeptSaid(r, _attName(attachmentId)));
-    _libRefresh();
-  });
+// [1.868] — Save opens the add step beside the file: its name, then "Assign tags?" (AC: "Teachers can't add tags to
+// files saved that are sent to them when the system says then if they want to save the file to their library"). It
+// saved at once, with no name or tags, and a file kept from the Keylab Master Library could never be filed at all.
+function libSaveAsk(attachmentId){
+  libAddOpen({kind:'file', at:'keep:'+attachmentId, attachmentId:attachmentId, name:_attName(attachmentId)});
 }
 // [1.823] — what keeping a file did. A file a library already holds is not shelved twice: the server says it is
 // already in the teacher's library, or, for a Keylab Master Library file, keeps it the Master Library's way.
@@ -11050,8 +11286,9 @@ function _attName(attachmentId){
   for(i=0;i<ATT_PENDING.length;i++) if(ATT_PENDING[i].attachmentId===attachmentId) return ATT_PENDING[i].fileName||'';
   for(i=0;i<LIB_MINE.length;i++) if(LIB_MINE[i].attachmentId===attachmentId) return LIB_MINE[i].fileName||LIB_MINE[i].label||'';
   for(i=0;i<LIB_SHELF_STUDIO.length;i++) if(LIB_SHELF_STUDIO[i].attachmentId===attachmentId) return LIB_SHELF_STUDIO[i].fileName||LIB_SHELF_STUDIO[i].label||'';
-  return '';
+  return ATT_SEEN[attachmentId]||'';   // [1.868] — a file in a thread, by the name it was drawn with
 }
+var ATT_SEEN={};   // attachmentId -> the name a thread's tile was drawn with
 function _libAlready(attachmentId){
   if(LIB_KEPT[attachmentId]) return true;
   for(var i=0;i<LIB_MINE.length;i++) if(LIB_MINE[i].attachmentId===attachmentId) return true;
@@ -11062,7 +11299,8 @@ function _libAlready(attachmentId){
 function rLibSave(attachmentId){
   if(!attachmentId) return '';
   if(_libAlready(attachmentId)) return '';
-  return '<button type="button" class="lib-mini" onclick="event.stopPropagation();libSave('+
+  if(LIBADD && LIBADD.at==='keep:'+attachmentId) return '';   // [1.868] — its step is open, under the files
+  return '<button type="button" class="lib-mini" onclick="event.stopPropagation();libSaveAsk('+
     jsq(attachmentId)+')">'+esc(TLIB_COPY.save)+'</button>';
 }
 
@@ -11724,7 +11962,8 @@ function libAddOpen(o){
   // card, and the slot goes on drawing it after the card has gone. `libadd` is
   // the panel's existing key, which its uploads and deletions already use.
   LIBADD.key = LIBADD.at==='lib' ? 'libadd'
-             : (LIBADD.kind==='file' ? 'libadd:'+LIBADD.attachmentId : 'libadd:link');
+             : (LIBADD.kind==='file' || LIBADD.attachmentId) ? 'libadd:'+LIBADD.attachmentId
+             : (LIBADD.kind==='pick' ? 'libadd:'+LIBADD.at : 'libadd:link');   // [1.868] — a kept Master Library item's own slot
   actClear(LIBADD.key);
   _libAddRedraw();
   // The box is open because somebody means to type in it — the address for a
@@ -11808,6 +12047,7 @@ function libAddGo(){
   // [1.539]'s lesson — *a state that disables a control must be cleared on
   // every path out* — met by not disabling the control at all.
   if(LIBADD.kind==='file') return _libAddFileGo();
+  if(LIBADD.kind==='pick') return _libAddPickGo();   // [1.868]
   if(actBusy(LIBADD.key)) return;
   var key=LIBADD.key;
   var lines=_libAddLines(LIBADD.url);
@@ -11887,11 +12127,11 @@ function _libAddFileGo(){
 // call it unconditionally and only one of them can ever be showing it.
 function rLibAddCard(at){
   if(!LIBADD || LIBADD.at!==at) return '';
-  var link=(LIBADD.kind==='link');
+  var link=(LIBADD.kind==='link'), pick=(LIBADD.kind==='pick');
   // [1.557] — a file's button stays PRESSABLE while its bytes go up, because
   // pressing it queues the press. It goes quiet only once that press is
   // waiting, which is the one moment there is nothing more to say.
-  var busy=link ? actBusy(LIBADD.key) : !!LIBADD.waiting;
+  var busy=(link||pick) ? actBusy(LIBADD.key) : !!LIBADD.waiting;
   return '<div class="lib-new lib-add-card">'+
     '<div class="lib-new-body">'+
       (link
@@ -11909,6 +12149,12 @@ function rLibAddCard(at){
               ' placeholder="'+esc(CMP_COPY.linkTextPlaceholder)+'"'+
               ' aria-label="'+esc(CMP_COPY.linkTextPlaceholder)+'"'+
               ' oninput="libAddTextIn(this)">'+
+          '</div>'
+        : pick
+        // [1.868] — a Keylab Master Library item keeps the studio's name: shown, not asked for.
+        ? '<div class="lib-fld">'+
+            '<div class="lib-lbl">'+esc(TLIB_COPY.lblName)+'</div>'+
+            '<div class="lib-fld-row"><span class="lib-kind lib-keylab">'+esc(TLIB_COPY.keylabBadge)+'</span> '+esc(LIBADD.name)+'</div>'+
           '</div>'
         : '<div class="lib-fld">'+
             '<div class="lib-lbl">'+esc(TLIB_COPY.lblName)+'</div>'+
@@ -13196,7 +13442,7 @@ function _libMyWords(){
   // carry each.
   var n={}, has=function(w){ return Object.prototype.hasOwnProperty.call(n, w); };
   (LIB_CUSTOM||[]).forEach(function(w){ if(!has(w)) n[w]=0; });
-  (LIB_MINE||[]).concat(LIB_MY_LINKS||[], TSET.tpls||[]).forEach(function(f){
+  (LIB_MINE||[]).concat(LIB_MY_LINKS||[], TSET.tpls||[], _libKeptStudio()).forEach(function(f){   // [1.868]
     (f.privateTags||[]).forEach(function(w){ n[w]=(has(w)?n[w]:0)+1; });
   });
   return Object.keys(n).sort(function(a,b){ return a.localeCompare(b, undefined, {sensitivity:'base'}); })
@@ -13475,11 +13721,14 @@ function rLibMasterBody(){
 // [1.822] — the tags a row carries. A teacher's own row has an × on each; a Keylab row shows them to read.
 function rLibRowTags(f, editable){
   var tags=(f.tags||[]).filter(function(t){ return !!_libTagName(t); }), words=f.privateTags||[];
-  if(!tags.length && !words.length) return '';
+  // [1.868] — on a kept Keylab Master Library item, the studio's own tags are fixed and the teacher's own come off.
+  var pick=!editable && _libIsStudio(f) && _libPicked(f);
+  var mineT=pick ? (f.myTags||[]).filter(function(t){ return !!_libTagName(t) && tags.indexOf(t)<0; }) : [];
+  if(!tags.length && !mineT.length && !words.length) return '';
   var tpl=(f.kind==='template'), id=f.id||f.attachmentId;
-  var chip=function(name, priv, off){
+  var chip=function(name, priv, off, x){
     return '<span class="lib-tag sm'+(priv?' priv':'')+'">'+esc(name)+
-      (editable
+      ((editable||x)
         ? '<button type="button" class="lib-tag-x" aria-label="'+esc(TLIB_COPY.tagOffThis.replace('{name}', name))+'"'+
           ' title="'+esc(TLIB_COPY.tagOffThis.replace('{name}', name))+'" onclick="event.stopPropagation();'+off+'">&#215;</button>'
         : '')+'</span>';
@@ -13487,11 +13736,13 @@ function rLibRowTags(f, editable){
   // [1.824] — the studio's and the teacher's own together, A–Z, told apart by their look.
   var all=tags.map(function(tid){
       return {name:_libTagName(tid), priv:false, off:tpl ? 'libTplTagOff('+jsq(id)+','+jsq(tid)+')' : 'libFileTag('+jsq(id)+','+jsq(tid)+')'};
-    }).concat(words.map(function(w){
-      return {name:w, priv:true, off:tpl ? 'libTplTagOff('+jsq(id)+','+jsq('p:'+w)+')' : 'libPrivateRemove('+jsq(id)+','+jsq(w)+')'};
+    }).concat(mineT.map(function(tid){
+      return {name:_libTagName(tid), priv:false, off:'libPickTag('+jsq(id)+','+jsq(tid)+')', x:true};
+    })).concat(words.map(function(w){
+      return {name:w, priv:true, off:pick ? 'libPickWord('+jsq(id)+','+jsq(w)+')' : (tpl ? 'libTplTagOff('+jsq(id)+','+jsq('p:'+w)+')' : 'libPrivateRemove('+jsq(id)+','+jsq(w)+')'), x:pick};
     }));
-  return '<div class="lib-row-tags'+(editable?'':' ro')+'">'+
-    _libTagAZ(all).map(function(c){ return chip(c.name, c.priv, c.off); }).join('')+
+  return '<div class="lib-row-tags'+((editable||pick)?'':' ro')+'">'+
+    _libTagAZ(all).map(function(c){ return chip(c.name, c.priv, c.off, c.x); }).join('')+
   '</div>';
 }
 function rLibRow(f, mine, where){
@@ -13618,9 +13869,14 @@ function rLibRow(f, mine, where){
        // [1.822] — in the Master Library band an added one says so beside its Remove
        :_libPicked(f)
          ?((where==='master'?'<span class="lib-said">&#10003; '+esc(TLIB_COPY.inMine)+'</span>':'')+
+           // [1.868] — and Edit, for the teacher's own tags on it (AC: "teachers can add tags to anything")
+           '<button type="button" class="lib-act" onclick="libEdit('+jsq(id)+')">'+esc(TLIB_COPY.manage)+'</button>'+
            '<button type="button" class="lib-act" onclick="libMasterPick('+jsq(id)+',false)">'+esc(TLIB_COPY.unshelve)+'</button>')
-         :'<button type="button" class="lib-act lib-pick-add" onclick="libMasterPick('+jsq(id)+',true)">'+esc(TLIB_COPY.pickAdd)+'</button>')+
+         // [1.868] — Add asks "Assign tags?" first, as everything going into a library does
+         :(LIBADD&&LIBADD.at==='pick:'+id?'':'<button type="button" class="lib-act lib-pick-add" onclick="libPickAsk('+jsq(id)+')">'+esc(TLIB_COPY.pickAdd)+'</button>'))+
     '</div>'+
+    // [1.868] — the step while it is open (it says its own progress), the line it leaves once it has closed
+    (LIB_STANDALONE&&!mine?(LIBADD&&LIBADD.at==='pick:'+id?rLibAddCard('pick:'+id):rAct('libadd:pick:'+id)):'')+
     // [1.824] — the delete question on the row where Delete was clicked, asked once.
     (_asking?rLibConfirmDelete(f):'')+
     (!mine&&LIB_STANDALONE?rAct('lib:'+id):'')+
@@ -13658,6 +13914,7 @@ function rLibPanel(f){
   return rLibEdit(f);
 }
 function rLibEdit(f){
+  if(_libIsStudio(f)) return rLibPickEdit(f);   // [1.868]
   var id=f.id||f.attachmentId;
   var link=f.kind==='link';
   // ── [1.484] — THE EDIT PANEL, REDESIGNED ─────────────────────────────
@@ -14552,6 +14809,13 @@ function libOfferNo(){ LINK_OFFER=null; render(); }
   function _cmpNeedsSharing(url){
     return /(^|\/\/|\.)(drive|docs)\.google\.com/i.test(String(url||''));
   }
+// [1.866] — is the cursor straight after a letter or other mark on its own line? Asked only inside one piece of
+// text, so a cursor at the start of a line is never told the last word of the line above is next to it.
+function _cmpWordBefore(){
+  var s=window.getSelection(), r=(s && s.rangeCount) ? s.getRangeAt(0) : null;
+  if(!r || !r.collapsed || r.startContainer.nodeType!==3 || r.startOffset<1) return false;
+  return /\S/.test(r.startContainer.data.charAt(r.startOffset-1));
+}
 function _composerInsertLink(id, url, label){
   var el=document.getElementById(id); if(!el) return;
   el.focus();
@@ -14562,7 +14826,10 @@ function _composerInsertLink(id, url, label){
   // trailing space is for a link typed in at the cursor, so the next word does not join the link. Over a selection
   // it made two ("practice video  for this week").
   var _over=!!(saved && saved.start!==saved.end);
-  document.execCommand('insertHTML',false,'<a href="'+esc(url)+'">'+esc(label)+'</a>'+(_over?'':'&nbsp;'));
+  // [1.866] — and one before it, typed in straight after a word: with the cursor now kept at the end of a line
+  // (it used to land at the start of the next), "Scales in G major" and its link would otherwise read "majorscale sheet".
+  var _lead=!_over && _cmpWordBefore();
+  document.execCommand('insertHTML',false,(_lead?'&nbsp;':'')+'<a href="'+esc(url)+'">'+esc(label)+'</a>'+(_over?'':'&nbsp;'));
   _composerSync(id);
   _cmpRemember(id);   // the next link goes after this one, like typing
 }
@@ -15676,14 +15943,17 @@ function rAttachments(m){
     // keep what a family sent them**: AC overturned my rule against it and was
     // right — they can already download it, so refusing only pushed the file
     // out of the tool where the studio cannot see it at all.
-    var _keep=rLibSave(a.attachmentId)+rAct('lib:'+a.attachmentId);
+    ATT_SEEN[a.attachmentId]=a.fileName||'';   // [1.868]
+    var _keep=rLibSave(a.attachmentId)+rAct('lib:'+a.attachmentId)+(LIBADD&&LIBADD.at==='keep:'+a.attachmentId?'':rAct('libadd:'+a.attachmentId));
     if(!_canView) return '<span class="att-wrap">'+_tile+_keep+'</span>';
     return '<span class="att-wrap">'+_tile+
       '<button type="button" class="att-dl" title="'+esc(TCH_COPY.attachDownload)+'"'+
         (_st&&_st.state==='working'?' disabled':'')+
         ' onclick="event.stopPropagation();openAttachment('+jsq(a.attachmentId)+',\'download\')">'+
         esc(TCH_COPY.attachDownload)+'</button>'+_keep+'</span>';
-  }).join('')+'</div>';
+  }).join('')+'</div>'+
+  // [1.868] — Save's step, under the files it is about.
+  list.map(function(a){ return rLibAddCard('keep:'+a.attachmentId); }).join('');
 }
 // The slow path, and a deliberate act: the whole file, base64, through the
 // same authenticated request everything else uses. A blob URL rather than a
@@ -16215,6 +16485,7 @@ function _rAttKeep(a){
   // removed it for the whole studio. Only a Master Library file not yet in My Library is offered, and its Add keeps
   // it the Master Library's way ([1.818]).
   if(a.fromLibrary){
+    var _pc=rLibAddCard('att:'+a.attachmentId); if(_pc) return _pc;   // [1.868] — its Add asks for tags first
     var src=_libFind(a.fromLibrary);
     if(!src || !_libIsStudio(src) || _libPicked(src) || LIB_NO[a.attachmentId]) return rAct('libadd:'+a.attachmentId);
     return rLibAddAsk(a.fileName, 'libKeepPick('+jsq(a.attachmentId)+')', 'libKeepNo('+jsq(a.attachmentId)+')')+
@@ -16243,13 +16514,9 @@ function libKeepNo(attachmentId){ LIB_NO[attachmentId]=true; render(); }
 function libKeepPick(attachmentId){
   var rec=ATT_PENDING.filter(function(x){ return x.attachmentId===attachmentId; })[0];
   if(!rec||!rec.fromLibrary) return;
-  var key='libadd:'+attachmentId;
-  LIB_NO[attachmentId]=true;   // answered
-  actStart(key, TLIB_COPY.saving); render();
-  libMasterPick(rec.fromLibrary, true, function(ok, err){
-    if(ok) actDone(key, TLIB_COPY.pickedNamed(rec.fileName)); else { delete LIB_NO[attachmentId]; actFail(key, err||TLIB_COPY.pickFailed); }
-    render();
-  });
+  // [1.868] — Add asks "Assign tags?", then keeps it the Master Library's way with the teacher's tags on it.
+  var src=_libFind(rec.fromLibrary);
+  libAddOpen({kind:'pick', at:'att:'+attachmentId, attachmentId:attachmentId, itemId:rec.fromLibrary, name:(src&&src.fileName)||rec.fileName||''});
 }
 // [1.494] — Add file · Add link · (Edit Message, while a picker is open),
 // beside Send, in "the row where the things you do with a message already

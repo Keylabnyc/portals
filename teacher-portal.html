@@ -435,6 +435,17 @@ button:active:not(:disabled),
 .cmp-linkrow.open{display:flex}
 .cmp-linkrow input{flex:1;min-width:130px;margin-top:0;padding:7px 9px;font-size:13px}
 .cmp-linkrow input.bad{border-color:var(--red)}
+/* [1.844] — a link in the words, as Gmail shows one: click it and this sits under it. Outside #app, so a redraw
+   cannot take it; placed in page coordinates by _cmpLinkBubDraw. */
+.cmp-linkbub{position:absolute;z-index:1200;display:flex;align-items:center;gap:8px;max-width:min(440px,calc(100vw - 16px));
+  background:#fff;border:1px solid var(--border2);border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.18);
+  padding:6px 10px;font-size:12.5px;color:var(--text);line-height:1.3}
+.cmp-linkbub .cmp-lb-l{color:var(--text4);white-space:nowrap}
+.cmp-linkbub .cmp-lb-u{color:#1a4fc4;text-decoration:underline;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cmp-linkbub .cmp-lb-sep{width:1px;align-self:stretch;background:var(--border);margin:0 2px;flex:0 0 auto}
+.cmp-linkbub .cmp-lb-b{background:none;border:0;padding:2px 2px;font:inherit;font-weight:600;color:#1a4fc4;cursor:pointer;white-space:nowrap}
+.cmp-linkbub .cmp-lb-b:hover{text-decoration:underline}
+.cmp-linkhint{flex:0 0 100%;font-size:11.5px;color:var(--text3);line-height:1.45}
 /* [1.338] — the link library's list. AC, 6 September: "use a professional
    design with logical button placement", then "there is no need for update
    link library. Simply save the link to save it. Click delete on the link to
@@ -2795,6 +2806,7 @@ function render(){
   if(_rendering) return;
   _rendering=true;
   try{ _renderBody(); } finally { _rendering=false; }
+  if(CMP_LINKBUB) _cmpLinkBubDraw();   // [1.844] — the link it sits under was just drawn again
 }
 // ── [1.822] — what a teacher is typing survives every redraw ─────────────
 // AC, 8 October 2026: "Make sure all text fields accept input properly and don't time out." Found in the
@@ -3654,10 +3666,12 @@ var GUIDE_COPY={
        q:'Click {{Add file}} to attach up to 10 files, 10 MB each. You can also drag and drop or paste files into a message.', m:[
         'Attach files from your device, your saved files, or the {{Keylab Master Library}}. Click {{Accepted file types}} to see supported formats.'
       ]},
-      {n:'Add link', k:'url website web address',
+      {n:'Add link', k:'url website web address edit change remove hyperlink',
        q:'Highlight words in your message and click {{Add link}}, then paste the address under {{Paste Link Here}} and click {{Insert link}}.', m:[
         'The words in {{Display Text}} become the link. Left empty, the address itself is shown.',
-        'Choose from {{Saved Links}} to add a link you have saved, or one from the {{Keylab Master Library}}.'
+        'Choose from {{Saved Links}} to add a link you have saved, or one from the {{Keylab Master Library}}.',
+        // [1.844] — PLACEHOLDER, AC to word: the link bubble.
+        'Click a link in your message to see its address. Click the address to open it, {{Change}} to edit the words or the address, or {{Remove}} to keep the words without the link.'
       ]},
       {n:'Aa', k:'format formatting bold italic underline list bullet',
        q:'Click {{Aa}} to format text with bold, italics, underlining and lists.'},
@@ -3703,7 +3717,9 @@ var GUIDE_COPY={
         'A family message sent between 9am and 7pm is emailed to you right away, with the subject \u201cNew family message from\u201d and the parent\u2019s name.',
         'Messages that arrive between 7pm and 9am appear in the portal right away, but no email is sent. At 9am, Monday to Saturday, if any family messages are still unanswered, you receive one email titled \u201cMessages waiting for your reply\u201d that lists them all. There is no Sunday email, so messages that arrive after 7pm on Saturday are included on Monday.',
         'If your reply is nearly due and you have not answered, you receive a reminder. If it becomes overdue, you receive a final notice, and admin is notified. No emails are sent between 7pm and 9am, and no reminders are sent on Sundays.',
-        'Messages from admin and other teachers are not emailed, so check {{Admin & staff}} on the {{Messages}} tab. Admin may also email you when something is urgent.',
+        // [1.843] — PLACEHOLDER, AC to word: admin's messages are emailed now (AC, 9 October 2026).
+        'Messages from admin are emailed to you between 9am and 7pm, with the subject \u201cNew admin message\u201d. A message admin sends overnight is emailed at 9am, unless you have already opened it in the portal. Admin can mark a message urgent to email it to you right away, at any hour.',
+        'Messages from other teachers are not emailed, so check {{Admin & staff}} on the {{Messages}} tab.',
         'The button in each email signs you in on the first phone or computer you use it on. On any other device, you will be asked to sign in.'
       ]}
     ]},
@@ -5672,7 +5688,8 @@ function rTtplForm(i,t){
   h+='<div class="lnk-lb">'+esc(TTPL_COPY.bodyLbl)+'</div>'+
      '<div class="composer-wrap">'+
      rComposerToolbar('ttpl-b'+i)+
-     rComposerLinkRow('ttpl-b'+i)+
+     // [1.844] — opened by Add link and closed once the link is in, as in a message; it was always open here.
+     (PICK==='link'&&_libComposerId==='ttpl-b'+i?rComposerLinkRow('ttpl-b'+i):'')+
      '<div id="ttpl-b'+i+'" class="cmp-rich" contenteditable="true" role="textbox" aria-multiline="true"'+
      ' aria-label="'+esc(TTPL_COPY.bodyLbl)+'" data-ph="'+esc(TTPL_COPY.bodyPh)+'"'+
      ' oninput="TSET.tpls['+i+'].body=_composerInput(this);TSET.tpls['+i+']._txt=false;_composerState(\'ttpl-b'+i+'\')"'+
@@ -5680,6 +5697,7 @@ function rTtplForm(i,t){
      ' onkeyup="_composerState(\'ttpl-b'+i+'\')" onmouseup="_composerState(\'ttpl-b'+i+'\')"'+
      ' onblur="_composerStateClear(\'ttpl-b'+i+'\')"'+
      ' onpaste="_composerPaste(event)">'+(t._txt?esc(_ttplToText(t.body)).replace(/\n/g,'<br>'):(t.body||''))+'</div>'+
+     rLinkOffer('ttpl-b'+i)+   // [1.844]
      '</div>';
   // The tags, listed where a template is written rather than in a help page
   // nobody opens. Tapping one puts it in the box at the cursor — typing
@@ -9204,7 +9222,8 @@ function rStaffThread(){
   // admin-only override"*. The code and its comment disagreed; they agree now.
   //
   // **Admin's override is untouched** — it rides `ADM_MSG.forceEmail` and is a
-  // different control on a different screen.
+  // different control on a different screen. [1.843] — and is gone too: every message admin sends a
+  // teacher is emailed now, and admin's control is "urgent" (`ADM_MSG.emailNow`), email it at any hour.
   h+=rAskAbout();   // [1.813] — which message Ask Admin is about
   h+=rComposer('staff-composer',t.draft,'_composerSync(\'staff-composer\')',sendBtn);
   // [1.233] — the same dialog as the family thread. A staff conversation can
@@ -10365,6 +10384,7 @@ function pickClose(composerId){
   _cmpHoldRow(composerId||_libComposerId);   // [1.794]
   PICK=''; PICK_Q='';
   var id=composerId||_libComposerId;
+  delete CMP_LINKEDIT[id];   // [1.844] — closing without Update leaves the link as it was
   render();
   // ── [1.525] — on a PHONE, do not raise the keyboard ────────────────────
   //
@@ -10423,7 +10443,7 @@ function pickAdd(id, composerId){
     _composerInsertLink(cid, it.url, _w||it.label||it.fileName||it.url);
     if(_t){ _t.value=''; _cmpLinkState(cid).text=''; }
     LINK_ADDED[id]=true;
-    _pickRedraw();
+    _cmpLinkDone(cid);   // [1.844] — a saved link closes the box too; it was _pickRedraw()
     return;
   }
   libAttach(id, composerId);
@@ -14115,7 +14135,7 @@ function rBackBtn(label, onclick){
 }
 
 function _cmpLinkState(id){
-  if(!_cmpLink[id]) _cmpLink[id]={open:false,url:'',text:'',bad:false};
+  if(!_cmpLink[id]) _cmpLink[id]={open:false,url:'',text:'',bad:false,fromSel:false};
   return _cmpLink[id];
 }
 
@@ -14131,16 +14151,35 @@ function _composerLinkOpen(id){
   // instance of [1.32]'s trap, and the last one that stores a live node.
   var _here=el?_cmpOffsets(el):null; if(_here) _cmpLinkSel[id]=_here;   // keep the remembered spot if the box is not focused
   var st=_cmpLinkState(id);
-  st.open=true; st.url=''; st.bad=false;
+  // [1.844] — Change on a link's bubble opens this with that link's words and address in it.
+  var ed=CMP_LINKEDIT[id]||null;
+  // [1.844] — and the words selected before the press, when the press took the selection out of the box: they are
+  // the remembered spot (_cmpRemember, on every blur), put back to be read. On the admin page the Add link button
+  // took focus on mousedown, so selecting words first never filled Display Text there.
+  if(!ed && el && _cmpLinkSel[id] && _cmpLinkSel[id].start!==_cmpLinkSel[id].end && !(sel && sel.rangeCount && el.contains(sel.anchorNode))){
+    _cmpRestore(el, _cmpLinkSel[id]); sel=window.getSelection();
+  }
+  st.open=true; st.url=ed?ed.url:''; st.bad=false;
   // Pre-fill the link text with whatever is selected, so highlighting a phrase
   // and pressing Link does the obvious thing.
-  st.text=(sel && !sel.isCollapsed && el && el.contains(sel.anchorNode)) ? String(sel).trim() : '';
+  st.text=ed?ed.text:((sel && !sel.isCollapsed && el && el.contains(sel.anchorNode)) ? String(sel).trim() : '');
+  // [1.844] — and when nothing was selected, the row says that selecting comes first (AC: "there is no way for a
+  // teacher to know they can select text and then click add link").
+  st.fromSel=!!(ed||st.text);
   var t=document.getElementById(id+'-linktext');
   var u=document.getElementById(id+'-linkurl');
   if(t) t.value=st.text;
-  if(u){ u.value=''; u.classList.remove('bad'); u.placeholder=CMP_COPY.linkUrlPlaceholder; }
+  if(u){ u.value=st.url; u.classList.remove('bad'); u.placeholder=CMP_COPY.linkUrlPlaceholder; }
+  _cmpLinkRowSync(id);
   row.classList.add('open');
   if(u) u.focus();
+}
+// [1.844] — the two things on the row that depend on how it was opened, set where it already is: the row is drawn
+// before _composerLinkOpen knows whether words were selected or a link is being changed.
+function _cmpLinkRowSync(id){
+  var st=_cmpLinkState(id), ed=CMP_LINKEDIT[id];
+  var h=document.getElementById(id+'-linkhint'); if(h) h.hidden=!!st.fromSel;
+  var g=document.getElementById(id+'-linkgo'); if(g) g.textContent=ed?CMP_COPY.linkUpdate:CMP_COPY.linkAdd;
 }
 
 function _composerLinkKey(ev,id){
@@ -14184,7 +14223,12 @@ function _composerLinkInsert(id){
     return;
   }
   var label=(tIn && tIn.value.trim()) || url.replace(/^https?:\/\//i,'');
-  _composerInsertLink(id, url, label);
+  // [1.844] — Change: the link the bubble was on takes the new words and address where it stands. Gone meanwhile
+  // (the words were edited), it goes in where the cursor was, as a new link would.
+  var ed=CMP_LINKEDIT[id]; delete CMP_LINKEDIT[id];
+  var was=ed?_cmpLinkAt(el, ed.idx):null;
+  if(was){ _cmpLinkSet(el, was, url, label); _cmpRemember(id); }
+  else _composerInsertLink(id, url, label);
   // ── [1.553] — and THEN the offer, never before ─────────────────────────
   //
   // **AC:** *"when a teacher is adding a link or file to a message, they should
@@ -14202,10 +14246,20 @@ function _composerLinkInsert(id){
   // [1.622] — `LINK_SELECTED` is gone from the condition: a library link is
   // inserted by `_composerInsertLink` straight from the tick and never reaches
   // this function, so the shelf check is the whole of the question now.
-  if(!_libHasUrl(url)) LINK_OFFER={composerId:id, url:url, text:label};
+  if(!_libHasUrl(url)){ LINK_OFFER={composerId:id, url:url, text:label}; LINK_OFFER_AT=id; }
   // [1.494] — the picker stays open for the next link; the fields clear.
+  // [1.844] — ~~stays open~~: AC, 9 October 2026, "the link box doesn't disappear after adding the link, but it
+  // should go away." It closes, and the cursor goes back to just after the link, to carry on writing.
   var st=_cmpLinkState(id); st.url=''; st.text=''; st.bad=false;
-  render();
+  _cmpLinkDone(id);
+}
+// [1.844] — the link is in: the box closes and the cursor goes back to just after it (not to the end, which is
+// where the picker's close puts it). On a phone it stays out of the box, as [1.525] has it.
+function _cmpLinkDone(id){
+  pickClose(id);
+  if(_isPhone()) return;
+  var el=document.getElementById(id);
+  if(el && _cmpLinkSel[id]){ _focusNoScroll(el); _cmpRestore(el, _cmpLinkSel[id]); }
 }
 // Is this address already on a shelf? Asked before the offer is made, over both
 // shelves, because a studio link a teacher pastes by hand is one they already
@@ -14261,9 +14315,125 @@ function _composerInsertLink(id, url, label){
   var saved=_cmpLinkSel[id];
   _cmpRestore(el,saved);   // no memory at all means the END of the message, never the start
   try{ document.execCommand('styleWithCSS',false,false); }catch(e){}
-  document.execCommand('insertHTML',false,'<a href="'+esc(url)+'">'+esc(label)+'</a>&nbsp;');
+  // [1.844] — selected words become the link where they stand, with the space that already followed them: the
+  // trailing space is for a link typed in at the cursor, so the next word does not join the link. Over a selection
+  // it made two ("practice video  for this week").
+  var _over=!!(saved && saved.start!==saved.end);
+  document.execCommand('insertHTML',false,'<a href="'+esc(url)+'">'+esc(label)+'</a>'+(_over?'':'&nbsp;'));
   _composerSync(id);
   _cmpRemember(id);   // the next link goes after this one, like typing
+}
+
+// ── [1.844] — a link in the words, as Gmail shows one ─────────────────────
+//
+// AC, 9 October 2026: "after embedding the link in the text, there is no way to review afterwards to see what the
+// link is. In gmail, you can click the text to see the link and you have the option to click the link to go to it,
+// to edit the copy display text, or edit the link." So a cursor in a link in any message box shows a bubble under
+// it: the address (it opens in a new tab), Change (the Add link box, filled with the link's words and address, its
+// button "Update link") and Remove (the words stay, the link goes).
+//
+// Driven by the SELECTION, not by clicks on the box, so the arrow keys reach it as a click does, and so one listener
+// serves every box: the messages, Create Assignment and the template editors. The bubble lives outside #app, so the
+// five-second redraw cannot take it, and is found again after each one by the box's id and the link's place among
+// the box's links — never by holding a node the redraw has replaced ([1.332]'s rule).
+var CMP_LINKBUB=null;   // {id, idx} — the box, and which of its links the cursor is in
+var CMP_LINKEDIT={};    // box id -> {idx, url, text}: Change is open on that link
+function _cmpLinkBox(n){
+  for(var e=n; e && e!==document.body && e!==document; e=e.parentNode){
+    if(e.nodeType===1 && e.id && e.isContentEditable && (' '+e.className+' ').indexOf(' cmp-rich ')>-1) return e;
+  }
+  return null;
+}
+function _cmpLinkAt(box, idx){ return (box && idx>=0) ? (box.querySelectorAll('a[href]')[idx]||null) : null; }
+function _cmpLinkOf(n){ var e=n&&(n.nodeType===1?n:n.parentNode); return (e&&e.closest)?e.closest('a[href]'):null; }
+function _cmpLinkBubCheck(){
+  var s=window.getSelection?window.getSelection():null, now=null;
+  if(s && s.rangeCount){
+    var a=_cmpLinkOf(s.anchorNode), box=a?_cmpLinkBox(a):null;
+    if(a && box && (s.isCollapsed || _cmpLinkOf(s.focusNode)===a)){
+      now={id:box.id, idx:Array.prototype.indexOf.call(box.querySelectorAll('a[href]'), a)};
+    }
+  }
+  CMP_LINKBUB=now;
+  _cmpLinkBubDraw();
+}
+function _cmpLinkShort(href){
+  var t=String(href||'').replace(/^https?:\/\//i,'').replace(/^mailto:/i,'');
+  return t.length>48 ? t.slice(0,47)+'…' : t;
+}
+function _cmpLinkBubDraw(){
+  var b=document.getElementById('cmp-linkbub');
+  var box=CMP_LINKBUB?document.getElementById(CMP_LINKBUB.id):null;
+  var a=CMP_LINKBUB?_cmpLinkAt(box, CMP_LINKBUB.idx):null;
+  if(!a){ CMP_LINKBUB=null; if(b && b.parentNode) b.parentNode.removeChild(b); return; }
+  if(!b){ b=document.createElement('div'); b.id='cmp-linkbub'; b.className='cmp-linkbub'; b.setAttribute('role','group'); document.body.appendChild(b); }
+  var href=a.getAttribute('href')||'', safe=/^(https?:|mailto:)/i.test(href);
+  // Every control keeps the cursor where it is (mousedown), so pressing one does not first move it out of the link.
+  b.innerHTML='<span class="cmp-lb-l">'+esc(CMP_COPY.linkGo)+'</span>'+
+    (safe ? '<a class="cmp-lb-u" href="'+esc(href)+'" target="_blank" rel="noopener noreferrer" title="'+esc(href)+'" onmousedown="event.preventDefault()">'+esc(_cmpLinkShort(href))+'</a>'
+          : '<span class="cmp-lb-u">'+esc(_cmpLinkShort(href))+'</span>')+
+    '<span class="cmp-lb-sep"></span>'+
+    '<button type="button" class="cmp-lb-b" onmousedown="event.preventDefault()" onclick="_cmpLinkChange()">'+esc(CMP_COPY.linkChange)+'</button>'+
+    '<button type="button" class="cmp-lb-b" onmousedown="event.preventDefault()" onclick="_cmpLinkRemove()">'+esc(CMP_COPY.linkRemove)+'</button>';
+  var r=a.getBoundingClientRect(), br=box.getBoundingClientRect();
+  // A link scrolled out of its box has nothing to sit under.
+  b.style.display=(r.bottom<br.top || r.top>br.bottom) ? 'none' : '';
+  var sx=window.pageXOffset||0, sy=window.pageYOffset||0, vw=document.documentElement.clientWidth||window.innerWidth||0;
+  b.style.top=(r.bottom+sy+6)+'px';
+  b.style.left=Math.max(sx+8, Math.min(r.left+sx, sx+vw-(b.offsetWidth||0)-8))+'px';
+}
+// What a script changes in a box, the box's own oninput is told — its words are kept by it (a draft, an assignment,
+// a template) — exactly as typing tells it.
+function _cmpLinkInput(box){
+  try{ box.dispatchEvent(new Event('input',{bubbles:true})); }
+  catch(e){ try{ var ev=document.createEvent('Event'); ev.initEvent('input',true,false); box.dispatchEvent(ev); }catch(e2){} }
+}
+function _cmpLinkCaretAfter(node){
+  try{ var r=document.createRange(); r.setStartAfter(node); r.collapse(true); var s=window.getSelection(); s.removeAllRanges(); s.addRange(r); }catch(e){}
+}
+// Change's Update: the address, and the words when they differ, written onto the link where it stands.
+function _cmpLinkSet(box, a, url, label){
+  a.setAttribute('href', url);
+  if(String(a.textContent)!==String(label)) a.textContent=label;
+  _focusNoScroll(box);
+  _cmpLinkCaretAfter(a);
+  _cmpLinkInput(box);
+}
+function _cmpLinkChange(){
+  var id=CMP_LINKBUB?CMP_LINKBUB.id:'', box=id?document.getElementById(id):null, a=CMP_LINKBUB?_cmpLinkAt(box, CMP_LINKBUB.idx):null;
+  if(!a) return;
+  CMP_LINKEDIT[id]={idx:CMP_LINKBUB.idx, url:a.getAttribute('href')||'', text:a.textContent||''};
+  _cmpLinkCaretAfter(a); _cmpRemember(id);   // if the link is gone by Update, the new one goes here
+  CMP_LINKBUB=null; _cmpLinkBubDraw();
+  if(PICK==='link'){ _libComposerId=id; render(); _composerLinkOpen(id); }
+  else pickOpen('link', id);
+}
+function _cmpLinkRemove(){
+  var box=CMP_LINKBUB?document.getElementById(CMP_LINKBUB.id):null, a=CMP_LINKBUB?_cmpLinkAt(box, CMP_LINKBUB.idx):null;
+  if(!a) return;
+  var p=a.parentNode, last=a.lastChild;
+  while(a.firstChild) p.insertBefore(a.firstChild, a);
+  p.removeChild(a);
+  CMP_LINKBUB=null; _cmpLinkBubDraw();
+  _focusNoScroll(box);
+  if(last) _cmpLinkCaretAfter(last);
+  _cmpLinkInput(box);
+}
+try{
+  document.addEventListener('selectionchange', _cmpLinkBubCheck);
+  // The page or a pane scrolling moves the link; the bubble follows it (capture: a pane's scroll does not bubble).
+  window.addEventListener('scroll', function(){ if(CMP_LINKBUB) _cmpLinkBubDraw(); }, true);
+  window.addEventListener('resize', function(){ if(CMP_LINKBUB) _cmpLinkBubDraw(); });
+}catch(e){}
+// [1.844] — the "add it to your library?" question for a link typed in, and the card it opens, under the message
+// box: the Add link box they used to sit in now closes once the link is in.
+var LINK_OFFER_AT='';
+function rLinkOffer(id){
+  return ((LINK_OFFER && LINK_OFFER.composerId===id) ? rLibAddAsk(LINK_OFFER.text, 'libOfferYes()', 'libOfferNo()') : '')+
+    rLibAddCard('link:'+id)+
+    // The confirmation outlives the card, so the slot draws it once the card has closed — otherwise "saved to
+    // library!" lands on a node that has just been removed and nobody ever sees it. Under the one box it was for.
+    ((LINK_OFFER_AT===id && !(LIBADD && LIBADD.at==='link:'+id)) ? rAct('libadd:link') : '');
 }
 
 // ── Toolbar active state ───────────────────────────────────────────────────
@@ -14669,6 +14839,15 @@ var CMP_COPY={
   // label, so the instruction pointed at a control that no longer existed under
   // that name. An instruction that names the wrong button is worse than none.
   linkCancel:'Cancel',
+  // [1.844] — PLACEHOLDERS, AC to word. AC, 9 October 2026: "there is no way for a teacher to know they can select
+  // text and then click add link to automatically embed a link to that specific text", and Gmail's link bubble:
+  // "you can click the text to see the link and you have the option to click the link to go to it, to edit the
+  // copy display text, or edit the link". Go to link, Change and Remove are Gmail's own words.
+  linkSelectHint:'To turn words in your message into a link, select them first, then click Add link.',
+  linkUpdate:'Update link',
+  linkGo:'Go to link:',
+  linkChange:'Change',
+  linkRemove:'Remove',
   linkRejected:'That doesn’t look like a web address. Try something like keylab.nyc/lessons.',
   linkSharing:'Set sharing to “Anyone with the link” before you send, or ask admin for the parent’s email to share it privately.',
   // [1.561] — the toolbar's own object, which is what `rComposerToolbar` reads.
@@ -14995,7 +15174,9 @@ function rComposerLinkRow(id){
     // [1.510] — AC, 10 September 2026: *"The add link button should be blue."*
     // It is the one thing in this row that ACTS; the two fields and the
     // guidance beneath do not.
-    '<button type="button" class="cmp-mini cmp-mini-p" onmousedown="event.preventDefault()" onclick="_composerLinkInsert(\''+id+'\')">'+esc(CMP_COPY.linkAdd)+'</button>'+
+    '<button type="button" class="cmp-mini cmp-mini-p" id="'+id+'-linkgo" onmousedown="event.preventDefault()" onclick="_composerLinkInsert(\''+id+'\')">'+esc(CMP_LINKEDIT[id]?CMP_COPY.linkUpdate:CMP_COPY.linkAdd)+'</button>'+
+    // [1.844] — said only when the box was opened with nothing selected; _cmpLinkRowSync keeps it true.
+    '<div class="cmp-linkhint" id="'+id+'-linkhint"'+(st.fromSel?' hidden':'')+'>'+esc(CMP_COPY.linkSelectHint)+'</div>'+
     // [1.510] — and, once a SAVED link has filled the fields, the sentence
     // saying what to do next. AC: *"there should be a tooltip after clicking a
     // link to add: 'Click "Add link" to add the link to your message'."*
@@ -15016,13 +15197,7 @@ function rComposerLinkRow(id){
     // row it belonged to could return.
     // [1.553] — the offer, and then the card it opens, both in the row the
     // link was typed into. Neither is drawn until the link is in the message.
-    ((LINK_OFFER && LINK_OFFER.composerId===id)
-      ? rLibAddAsk(LINK_OFFER.text, 'libOfferYes()', 'libOfferNo()') : '')+
-    rLibAddCard('link:'+id)+
-    // The confirmation outlives the card, so the slot draws it once the card
-    // has closed — otherwise "saved to library!" lands on a node that has just
-    // been removed and nobody ever sees it.
-    ((LIBADD && LIBADD.at==='link:'+id) ? '' : rAct('libadd:link'))+
+    // [1.844] — moved to rLinkOffer, under the message box: the row closes once the link is in.
     (_cmpNeedsSharing((_cmpLinkState(id)||{}).url)
       ? '<div class="cmp-guide">'+esc(CMP_COPY.linkSharing)+'</div>' : '')+
   '</div>';
@@ -15113,6 +15288,7 @@ function rComposer(id,draft,onInput,sendBtn,opts){
       // [1.127] — the template picker, above the file row. It is the thing a
       // teacher reaches for BEFORE writing, so it sits closest to the box.
       (opts.noTemplates?'':rTemplateRow(id))+
+      rLinkOffer(id)+   // [1.844]
       // [1.277] — the chips sit between what is being written and the button
       // that sends it, which is where a file being added belongs.
       (opts.noFiles?'':rAttachRow())+
@@ -17105,6 +17281,10 @@ function _bubbleMeta(m){
 // record and says nothing rather than claiming a failure it cannot evidence.
 function rNotifyWarn(m){
   if(m.senderType!=='teacher' && m.senderType!=='admin') return '';
+  // [1.843] — the office's message in this teacher's own staff thread: the email it reports on was to the
+  // teacher reading it, who has the message. Every one is emailed now, so a failed one would otherwise say
+  // "Message did not send" under a message that plainly did. Admin still sees it, and can fix the address.
+  if(m.senderType==='admin' && m.conversationType==='teacher_admin') return '';
   var st=m.notifyState||'';
   // [1.753] — 'failed' is an email given up on after its retries (AC, 4
   // October: admin sees it in red). An 'error' still carrying its hold is

@@ -2976,8 +2976,10 @@ function rApp(){
 // is built here, in the portal's ordinary button style, and check.js asserts
 // that no back control anywhere renders as a span or a .lnk-btn.
 function rBackBtn(label, onclick){
+  // [1.847] — no arrow before the words: AC, 7 and 9 October 2026, "No arrows ever!", then "Just the straight arrows
+  // that replace necessary words". Every Back here says where it goes, as the teacher portal's does.
   return '<button type="button" class="btn btn-s kl-backbtn" onclick="'+onclick+'">'+
-    '\u2190 '+esc(label)+'</button>';
+    esc(label)+'</button>';
 }
 
 function rHomeMsgGuide(){

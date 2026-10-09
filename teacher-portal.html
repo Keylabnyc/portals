@@ -1226,6 +1226,9 @@ input[type=checkbox]{width:13px;height:13px;padding:0;margin:0;border:0;border-r
    as the same thing. */
 .lib-tag.near{border-color:var(--acc)}
 .lib-tag.priv{border-style:dashed}
+/* [1.824] — a custom tag that is ON keeps its dashes: on the filled chip they were the fill's own colour, so an on
+   custom tag looked exactly like an on studio tag. White dashes inside a solid ring. */
+.lib-tag.priv.on{border-color:#fff;box-shadow:0 0 0 1px var(--acc)}
 /* [1.488] — the clear, on the box rather than beside it. Room on the right is
    reserved always, not with :has(): an older iPad that does not support it
    would draw the × on top of what the teacher had typed. */
@@ -1785,8 +1788,10 @@ mark.guide-hit{background:var(--bbg);color:inherit;border-radius:2px;padding:0 1
 /* [1.813] — Ask Admin's menu of the conversation's messages, above the admin box */
 .ask-about{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 8px;text-transform:none;letter-spacing:0;font-size:12.5px;font-weight:600;color:var(--text2)}
 .ask-about select{flex:1 1 220px;min-width:0;font:inherit;font-weight:500;padding:6px 8px;background:#fff;border:1px solid var(--border2);border-radius:var(--r)}
-/* [1.816] — Studio tags and Custom tags, as headers */
-.tag-band{margin:10px 0 8px;border-radius:var(--r)}
+/* [1.816]'s Studio tags and Custom tags headers are gone: [1.824] made My Tags one A–Z list */
+/* [1.824] — the key to the two looks, as two sample chips */
+.lib-tagkey{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:2px 0 8px}
+.lib-tagpanel .lib-tagkey{margin:7px 0 0}
 /* [1.808] — the same band inside the Add file and Add link panels, which have no card edge to bleed to */
 .pick-band{margin:8px 0 4px;border-radius:var(--r);font-size:12.5px}
 .pick-shelf+.pick-shelf .pick-band{margin-top:6px}
@@ -2418,6 +2423,36 @@ function api(payload, cb){
     cb(e,r);
   });
 }
+// ── [1.824] — what the first screen loads, in ONE place ─────────────────
+// Every way into the portal — signing in, a remembered session, the retry after being offline, setting a new
+// password — listed this by hand, and they had drifted: the new password's way loaded the message lists its own
+// way. And the student list was in none of them. It came only inside the sign-in bundle below, so the Students tab,
+// the first one drawn, sat empty (without even its wheel) until nine weeks, every card and 25 conversations were
+// built. AC, 8 October 2026: "it takes up to 15 seconds for the students to show up after the tabs appear.
+// Students should load when everything else loads." It is asked for first now, on its own, beside the rest: a
+// read that waits for nobody's save (the server runs it without the lock).
+function _ktFirstLoads(){
+  loadMyStudents();
+  loadFamilyThreads();
+  // Both rosters at sign-in, not just the visible one: a badge that only
+  // becomes true once you visit the tab is not a badge (1.161 #1).
+  loadStaffThreads(true);
+  _startMessagePolling();
+  loadTeacherSettings();
+  loadScheduled();   // [1.373] — the count, before they look for it
+  _bootTeacher();   // [1.736] — everything else, in one call
+}
+// ── [1.824] — a change that is safe twice, sent once more when nothing answers ──
+// A passing failure on Google's side ("Service Spreadsheets failed while accessing document", in the server's log at
+// 2:57 PM on 8 October) reaches the page as NO answer, not as a reason. AC added a custom tag then and was told a
+// file could not be saved. A change that does nothing more the second time — adding, renaming, deleting or hiding a
+// tag — is sent once more by itself before anything is said. Never for one that is not safe twice.
+function _apiRetryOnce(payload, cb){
+  api(payload, function(e,r){
+    if(!e){ cb(e,r); return; }
+    setTimeout(function(){ api(payload, cb); }, 1200);
+  });
+}
 // Sent once at sign-in, beside the roster. What it brings is held for the
 // clicks above; the trial lessons go straight onto their tab.
 function _bootTeacher(){
@@ -2438,8 +2473,6 @@ function _bootTeacher(){
     var tr=(r.parts||{}).teacherTrials;
     if(tr && !TT.data){ TT.asked=true; TT.loading=false; TT.data=tr;
       (tr.taught||[]).forEach(function(t){ if(!TT.timer[t.key]) TT.ans[t.key]=Object.assign({},t.report||{}); }); }
-    var _ms=(r.parts||{}).teacherMyStudents;   // [1.793] — the student list, its drafts and scheduled
-    if(_ms && !MS.roster){ MS.rosterAsked=true; MS.roster=_ms; }
     render();
   });
 }
@@ -2459,6 +2492,7 @@ function _ktToSignIn(){
   _attClear(); ATT_OWNER='';
   TSET.tpls=null; TSET.tplsAt=0; TSET.tplEdit=-1; TSET.tplDel=-1; TSET.tplBackup=null; TSET._delUndo=null;
   SAVED_TPLS=[]; STUDIO_TPLS=[]; _savedTplsLoaded=false; _savedTplsInFlight=false;
+  _libWorkClear();   // [1.824]
   PAGE='login'; render();
 }
 function _apiFetch(payload, cb){
@@ -2678,12 +2712,7 @@ function _ktBootRetry(saved){
         TEACHER_ID=r2.teacherId; TEACHER_NAME=r2.teacherName||'';
         _ktSaveSession(TOKEN, TEACHER_ID, TEACHER_NAME);
         PAGE='home'; render();
-        loadFamilyThreads();
-        // Both rosters, same as sign-in — a badge that is only true once you
-        // visit the tab is not a badge (1.161 #1).
-        loadStaffThreads(true);
-        _startMessagePolling(); loadTeacherSettings(); loadScheduled();   // [1.373]
-        _bootTeacher();   // [1.736] — everything else, in one call
+        _ktFirstLoads();   // [1.824]
       } else {
         _ktClearSession(); TOKEN=''; TEACHER_ID=''; TEACHER_NAME='';
         PAGE='login'; render();
@@ -3242,14 +3271,7 @@ function doLogin(){
     TOKEN=r.token; TEACHER_ID=r.teacherId; TEACHER_NAME=r.teacherName||'';
     if(LF.remember) _ktSaveSession(r.token, r.teacherId, r.teacherName);
     PAGE='home'; render();
-    loadFamilyThreads();
-    // Both rosters at sign-in, not just the visible one: a badge that only
-    // becomes true once you visit the tab is not a badge (1.161 #1).
-    loadStaffThreads(true);
-    _startMessagePolling();
-    loadTeacherSettings();
-    loadScheduled();   // [1.373] — the count, before they look for it
-    _bootTeacher();   // [1.736] — everything else, in one call
+    _ktFirstLoads();   // [1.824]
   });
 }
 
@@ -3366,11 +3388,7 @@ function doCompleteReset(){
       TOKEN=r.token; TEACHER_ID=r.teacherId; TEACHER_NAME=r.teacherName||'';
       _ktSaveSession(r.token, r.teacherId, r.teacherName);
       PAGE='home'; render();
-      loadThreads();
-      _startMessagePolling();
-      loadTeacherSettings();
-      loadScheduled();   // [1.373]
-      _bootTeacher();   // [1.736] — everything else, in one call
+      _ktFirstLoads();   // [1.824] — it loaded the message lists its own way
     } else {
       PAGE='login'; render();
     }
@@ -4345,7 +4363,10 @@ var MST_DAYS=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sun
 // ── The list's data ─────────────────────────────────────────────────────
 function loadMyStudents(){
   MS.rosterAsked=true;MS.rosterLoading=true;
+  if(!MS.roster)render();   // [1.824] — the wheel, at once, on a list that has not come yet (sign-in)
+  var tok=TOKEN;
   api({action:'teacherMyStudents',data:{teacherToken:TOKEN}},function(e,r){
+    if(tok!==TOKEN)return;   // [1.824] — signed out while it came: it is not the next teacher's list
     MS.rosterLoading=false;
     if(!e&&r&&r.ok){_mstKeepLocal(r);MS.roster=r;MST.listErr='';}
     else if(!MS.roster)MST.listErr=(r&&r.error)||MST_COPY.failed;
@@ -5496,6 +5517,7 @@ function rLibTplBody(){
     h+='<div class="lib-row lib-tpl lib-tpl-new" id="ttpl-row'+ed+'">'+rTtplForm(ed, row)+'</div>';
   }
   var items=_libSecItems('templates');
+  h+=_libGoneLines('templates');   // [1.824] — what is being deleted, above the list
   h+=items.length
     ? '<div class="lib-list">'+items.map(rLibTplRow).join('')+'</div>'
     : '<div class="lib-empty">'+esc(_libFiltering()?TLIB_COPY.noMatch:TTPL_COPY.empty)+'</div>';
@@ -5588,6 +5610,7 @@ function rLibTplRow(it){
         '</div>'
       : '')+
     (open ? rTtplForm(i, t) : '')+
+    (!studio && !open ? rAct('lib:t:'+String(it.templateId||'')) : '')+   // [1.824] — a refused delete, said on the row
   '</div>';
   return h;
 }
@@ -5652,20 +5675,11 @@ function rTtplForm(i,t){
   var _tplTags=(_tpl.tags||[]);
   h+= (_tplTags.length || (_tpl.privateTags||[]).length || TSET.tplTagsAsked)
     ? '<div class="lnk-lb">'+esc(TTPL_COPY.tplTags)+'</div>'+
+      // [1.822] — the studio's tags and the teacher's custom tags, with a box for a new one. [1.824] — in one A–Z row.
       '<div class="lib-tags" style="padding-top:0">'+
-        (LIB_TAGS||[]).filter(function(t){ return !t.off; }).map(function(t){
-          var on=_tplTags.indexOf(t.tagId)>-1;
-          return '<button type="button" class="lib-tag'+(on?' on':'')+'"'+
-            ' aria-pressed="'+(on?'true':'false')+'"'+
-            ' onclick="ttplTag('+i+','+jsq(t.tagId)+')">'+esc(t.name)+'</button>';
-        }).join('')+
-        // [1.822] — and the teacher's custom tags, with a box for a new one
-        _libMyWords().map(function(x){
-          var on=(_tpl.privateTags||[]).indexOf(x.word)>-1;
-          return '<button type="button" class="lib-tag priv'+(on?' on':'')+'"'+
-            ' aria-pressed="'+(on?'true':'false')+'"'+
-            ' onclick="ttplWord('+i+','+jsq(x.word)+')">'+esc(x.word)+'</button>';
-        }).join('')+
+        _libTagChoiceHtml(_libTagChoices('', [], _tpl.privateTags||[]),
+          function(c){ return c.priv ? (_tpl.privateTags||[]).indexOf(c.name)>-1 : _tplTags.indexOf(c.v)>-1; },
+          function(c){ return c.priv ? 'ttplWord('+i+','+jsq(c.name)+')' : 'ttplTag('+i+','+jsq(c.v)+')'; })+
       '</div>'+
       '<div class="lib-fld-row lib-newtag">'+
         '<input id="ttpl-pt'+i+'" type="text" maxlength="40" placeholder="'+esc(TLIB_COPY.customAddPh)+'"'+
@@ -5755,6 +5769,7 @@ function ttplEdit(i){ TSET.tplTagsAsked=false;
   var _was=TSET.tplEdit, _row=(TSET.tpls||[])[i];
   if(_was>=0 && TSET.tplBackup && TSET.tpls[_was]) TSET.tpls[_was]=TSET.tplBackup;
   _ttplDropUnsaved(); i=(TSET.tpls||[]).indexOf(_row); if(i<0) return;
+  _ttplClearRowSaid(_row);   // [1.824]
   // A copy first, so Cancel is a real way back — the boxes write straight into
   // the list as they are typed ([1.338]).
   TSET.tplBackup=JSON.parse(JSON.stringify(TSET.tpls[i]||{}));
@@ -5772,9 +5787,49 @@ function _ttplDropUnsaved(){
   var i=TSET.tplEdit, t=(TSET.tpls||[])[i];
   if(i>=0 && t && !t.templateId){ TSET.tpls.splice(i,1); TSET.tplEdit=-1; }
 }
-function ttplDelAsk(i){ var row=(TSET.tpls||[])[i]; _ttplLeaveEditor(); TSET.tplDel=(TSET.tpls||[]).indexOf(row); render(); }   // [1.823]
+function ttplDelAsk(i){ var row=(TSET.tpls||[])[i]; _ttplClearRowSaid(row); _ttplLeaveEditor(); TSET.tplDel=(TSET.tpls||[]).indexOf(row); render(); }   // [1.823]; [1.824] — an old refusal goes
 function ttplDelCancel(){ TSET.tplDel=-1; render(); }
-function ttplDelDo(i){ var row=TSET.tpls[i]; TSET.tpls.splice(i,1); TSET.tplDel=-1; TSET._delUndo={i:i,row:row}; ttplSave(); }
+// [1.824] — deleting a template went through the editor's Save, which says "Template saved." AC: "should say …
+// 'Template deleted'". The row leaves at once, the band says Deleting, in red, then that it is deleted; a refusal
+// puts it back where it was, with the reason on it.
+// ── One template delete at a time ───────────────────────────────────────
+// Each save sends the whole list, so two deletes sent together each carried the other's template: the first answer
+// put the second back on screen under its own "Deleting…", and an open delete question moved to the template at its
+// old position (found by the review of the build). They go in click order now, and an answer never shows a template
+// whose delete is still to go (`_tplsFromServer` leaves out `_tplGoing`).
+var _tplGoing={}, _tplDelQ=[];
+function _tplQueue(run){
+  _tplDelQ.push(run);
+  if(_tplDelQ.length===1) _tplDelNext();
+}
+function _tplDelNext(){
+  var run=_tplDelQ[0]; if(!run) return;
+  var tok=TOKEN;
+  run(function(){ if(tok!==TOKEN) return; _tplDelQ.shift(); _tplDelNext(); });
+}
+function _ttplClearRowSaid(row){ var t=row&&String(row.templateId||''); if(t && ACT['lib:t:'+t]) delete ACT['lib:t:'+t]; }
+function ttplDelDo(i){
+  var row=(TSET.tpls||[])[i]; if(!row) return;
+  var name=String(row.label||'').trim(), tid=String(row.templateId||'');
+  var key=_libGoneKey('templates', tid||('i'+i));
+  _libGoneClearFailed();
+  _ttplClearRowSaid(row);
+  _ttplListChange(function(){ TSET.tpls.splice(TSET.tpls.indexOf(row),1); });
+  TSET.tplDel=-1;
+  if(tid){ delete LIB_SEL['t:'+tid]; _tplGoing[tid]=true; }
+  actStart(key, TCH_COPY.deletingTemplateNamed.replace('{name}', name), 'bad');
+  _tplQueue(function(next){
+    _ttplSaveQuiet(function(err){
+      if(tid) delete _tplGoing[tid];
+      if(err){
+        if(ACT[key]) delete ACT[key];
+        _ttplListChange(function(){ if(!TSET.tpls.some(function(t){ return t===row || (tid && String(t.templateId)===tid); })) TSET.tpls.splice(Math.min(i, TSET.tpls.length), 0, row); });
+        actFail('lib:t:'+tid, err);
+      } else actGone(key, TCH_COPY.deletedTemplateNamed.replace('{name}', name));
+      next();
+    }, TCH_COPY.tplDelFailed.replace('{name}', name));
+  });
+}
 // ── [1.404] + [1.429] — saving a template says so, and names it ──────────
 //
 // AC: "Templates work, but I can rename several the exact same name. Button
@@ -9757,6 +9812,34 @@ var TLIB_COPY={
   alreadyNamed:function(n){ return (n||'That file')+' is already in your library.'; },
   pickedNamed:function(n){ return (n||'That file')+' added to My Library from the Keylab Master Library.'; },
   delKept:'Removed from your library. Only the person who added this file can delete it everywhere.',
+  // [1.824] — PLACEHOLDER wording, AC's to write. Each action says what IT could not do. They all fell back to the
+  // file's "That file could not be saved to your library." — adding a tag said it (AC, 8 October 2026: "When adding a
+  // custom tag I got a weird error message about a file").
+  tagAddFailed:'\u201c{name}\u201d could not be added. Try again.',
+  tagRenameFailed:'\u201c{name}\u201d could not be renamed. Try again.',
+  tagDeleteFailed:'\u201c{name}\u201d could not be deleted. Try again.',
+  tagHideFailed:'\u201c{name}\u201d could not be hidden. Try again.',
+  tagShowFailed:'\u201c{name}\u201d could not be added back to your list. Try again.',
+  tagSaveFailed:'That tag could not be changed. Try again.',
+  linkSaveFailed:'That link could not be saved. Try again.',
+  tplSaveFailed:'That template could not be saved. Try again.',
+  unshelveFailed:'That file could not be removed from your library. Try again.',
+  linkDelFailed:'That link could not be deleted.',
+  // [1.824] — deleting, while it goes and once it has gone. The working words are AC's ("should say 'deleting from
+  // your library'", [1.820]), with the name, because the row has already left the list. The rest PLACEHOLDER.
+  deletingNamed:function(n){ return 'Deleting \u201c'+n+'\u201d from your library\u2026'; },
+  deletedNamed:function(n){ return '\u201c'+n+'\u201d deleted.'; },
+  removingNamed:function(n){ return 'Removing \u201c'+n+'\u201d from your library\u2026'; },
+  removedNamed:function(n){ return '\u201c'+n+'\u201d removed from your library. It stays in the message it came from.'; },
+  keptDelAsk:'Remove this file from your library? It stays in the message it came from.',   // a file someone else added
+  keptDelGo:'Remove it',
+  delSelWorking:'Deleting {n} from your library\u2026',
+  myTagDeletingNamed:'Deleting \u201c{name}\u201d\u2026',
+  myTagDeletedNamed:'\u201c{name}\u201d deleted.',
+  myTagRenamedTo:'Renamed to \u201c{name}\u201d.',
+  // [1.824] — the key under My Tags: which look is which. DERIVED from AC's two labels, Studio tags and Custom tags.
+  tagKeyStudio:'Studio tag', tagKeyCustom:'Custom tag',
+  noTagsAtAll:'No tags yet. Add a custom tag above.',   // PLACEHOLDER — My Tags with nothing in it; the box is above
   masterNote:'Everything Keylab has shared with teachers. Click Add to My Library to keep one in My Files or My Links.',   // PLACEHOLDER — [1.822]
   noMatch:'Nothing here matches.',          // PLACEHOLDER — [1.822]
   emptyFiles:'No files yet. Click Add file, or add files from the Keylab Master Library.',   // PLACEHOLDER — [1.822]
@@ -9764,7 +9847,6 @@ var TLIB_COPY={
   noTagsYet:'No tags yet.',                 // PLACEHOLDER — [1.822]
   customAddPh:'Add a custom tag',           // PLACEHOLDER — [1.822]
   customAdd:'Add',
-  customNone:'No custom tags yet.',         // PLACEHOLDER — [1.822]
   customHave:'You already have \u201c{name}\u201d.',   // PLACEHOLDER — [1.822]
   tagFilter:'Filter by tag',
   // [1.596] — what a press on a bulk chip will do, said on the chip.
@@ -9816,7 +9898,8 @@ var TLIB_COPY={
   // direction, and it is the one AC is about to use most on this screen. Found
   // by pressing it in a browser, which is the only way a wrong sentence on a
   // working control is ever found.
-  tagListSaving:'Updating your list\u2026', tagListSaved:'Saved.',
+  // [1.824] — and now it says nothing at all while it saves: AC, "no wait time or visual indication of background
+  // processing". 'Updating your list…' and 'Saved.' were three redraws for one click. Only a refusal speaks.
   tagHide:'Hide', tagShow:'Show',
   // [1.613] — the two things a selection is for, in AC's own order:
   // *"for reassigning / editing tags, or multi-delete."* The delete label is
@@ -9841,8 +9924,8 @@ var TLIB_COPY={
   myTagSave:'Save',
   myTagCancel:'Cancel',
   myTagSaving:'Renaming\u2026',
-  myTagDeleting:'Deleting\u2026',
-  myTagSaved:'Saved.',
+  // [1.824] — 'Deleting…' then 'Saved.' for a delete is now myTagDeletingNamed / myTagDeletedNamed, and a rename
+  // says what it is called now (myTagRenamedTo).
   myTagDelAsk:'Delete \u201c{name}\u201d from {n} of your files, links and templates?',   // DERIVED — [1.822], templates carry them now
   myTagDelYes:'Delete it',
   myTagDelNo:'Keep it',
@@ -9866,7 +9949,8 @@ var TLIB_COPY={
   // [1.542] — deleting is not saving, and a teacher watching the wrong word is
   // being told the wrong thing about an irreversible action.
   deleting:'Deleting\u2026',
-  deletingLib:'Deleting from your library\u2026',   // AC, 8 October 2026 ([1.820]): "should say 'deleting from your library' and be red, not blue"
+  // AC, 8 October 2026 ([1.820]): "should say 'deleting from your library' and be red, not blue". [1.824] — his
+  // words carry the name now (deletingNamed), because the row has already left the list.
   // [1.522] — AC's words, 10 September 2026: *"there should be a success
   // message when saving a file to library '[filename] saved to library!'"*.
   // The filename is what makes it a confirmation rather than a notice: a
@@ -9892,7 +9976,7 @@ var TLIB_COPY={
   delReachNone:'It has not been sent to anyone.',
   delGo:'Delete it',
   delBack:'Keep it',
-  deleted:'Deleted.',
+  // [1.824] — 'Deleted.' is deletedNamed now: the row it was said on has gone, so the line names what went.
   delFailed:'That file could not be deleted.',
   // ── The last of AC's design: building a library BEFORE term ──────────
   // *"A file can be added to the library without sending anything, which is
@@ -9986,7 +10070,7 @@ var TLIB_COPY={
   addLinksBad:'{n} were not web addresses.',
   addLinksFailed:'Those links could not be added.',
   linkDel:'Delete link',
-  linkDelAsk:'Remove this link from your library?',
+  linkDelAsk:'Delete this link?',   // PLACEHOLDER — [1.824]: it said Remove, under a button that says Delete link
   linkDelSafe:'Messages you have already sent keep working \u2014 a link has no file to take away.',
   linkRenamed:'Renamed.',
   someRefused:'{n} of those are not yours to change.',
@@ -9998,10 +10082,11 @@ var TLIB_COPY={
   // AC's words, 10 September 2026. FINAL.
   newSay:'You can name your link or file and add tags. Tags help organize your library and make it searchable.',
   lblName:'Name',
-  lblTags:'Keylab Tags',
-  lblMine:'Your Tags',
+  // [1.824] — the row holds the studio's tags and the teacher's custom tags together now, and the box under it makes
+  // a custom tag. They read "Keylab Tags" and "Your Tags". PLACEHOLDER.
+  lblTags:'Tags',
+  lblMine:'New custom tag',
   doneEditing:'Done',
-  removeWord:'Remove this word',
   noTagsYet:'Your studio has not added any tags yet. You can still use your own words below.',
   addLinksPh:'https://\u2026 one per line',
   cancel:'Cancel',
@@ -10100,9 +10185,12 @@ function loadLibrary(force, shelvesOnly){
   api({action:'getLibrary', data:{teacherId:TEACHER_ID, teacherToken:TOKEN}}, function(e,r){
     _libInFlight=false; _libLoaded=true;
     if(!e && r && r.ok){
-      LIB_MINE=(r.mine||[]).map(_libNormFile);
+      // [1.824] — a row being deleted stays out: this read does not wait for the delete, so it can land first and
+      // bring the row back for good (found by the review of the build).
+      var _notGoing=function(f){ return !LIB_GOING[f.id]; };
+      LIB_MINE=(r.mine||[]).map(_libNormFile).filter(_notGoing);
       LIB_SHELF_STUDIO=(r.studio||[]).map(_libNormFile).map(_libStudioMark);   // [1.822]
-      LIB_MY_LINKS=(r.myLinks||[]).map(_libNormLink);
+      LIB_MY_LINKS=(r.myLinks||[]).map(_libNormLink).filter(_notGoing);
       LIB_STUDIO_LINKS=(r.studioLinks||[]).map(_libNormLink).map(_libStudioMark);
       LIB_PICKS={}; (r.picks||[]).forEach(function(id){ LIB_PICKS[String(id)]=true; });   // [1.818]
     }
@@ -10116,7 +10204,10 @@ function loadLibrary(force, shelvesOnly){
   // after a rename does not need to ask AC's tag list again.
   if(shelvesOnly && LIB_TAGS.length) return;
   api({action:'getTags', data:{teacherId:TEACHER_ID, teacherToken:TOKEN}}, function(e,r){
-    if(!e && r && r.ok){ LIB_TAGS=r.tags||[]; LIB_TAGS_HIDDEN=r.hiddenTagIds||[]; LIB_CUSTOM=r.customTags||[]; }   // [1.600] [1.822]
+    // [1.824] — while a Hide or a custom tag change is still going, the page's own list is newer than this answer.
+    if(!e && r && r.ok){ LIB_TAGS=r.tags||[];
+      if(!_tagHideQ.length) LIB_TAGS_HIDDEN=r.hiddenTagIds||[];
+      if(!_customQ.length) LIB_CUSTOM=r.customTags||[]; }   // [1.600] [1.822]
     _libFilterPrune();
     _libRedraw();
   });
@@ -10209,7 +10300,7 @@ function _libOffered(){
       if(_libMatch(all[i], next, LIB_Q)){ out.push({v:v, name:x.word, priv:true}); return; }
     }
   });
-  return out;
+  return _libTagAZ(out);   // [1.824] — one A–Z list
 }
 // [1.600] — the studio's live tags this teacher has not hidden.
 function _libStudioTagsShown(){
@@ -10404,7 +10495,8 @@ document.addEventListener('keydown', function(ev){
 // it has to sit above that modal, and the same panel is drawn in the composer's
 // picker where there is no modal to sit inside.
 function rLibEditOverlay(){
-  var id=LIB_DEL||LIB_EDIT;
+  // [1.824] — only Edit opens this box. Delete on a row asks on the row; Delete inside the box asks inside it.
+  var id=LIB_EDIT;
   if(!id) return '';
   var f=_libFind(id);
   if(!f) return '';
@@ -10795,34 +10887,64 @@ function libBulkDelete(){
   var left=rowIds.length+(tplGone?1:0);
   var done=0, failed=0, kept=0;
   if(!left){ _libRedraw(); return; }
-  actStart('libbulk', TLIB_COPY.saving);
+  // [1.824] — it said "Saving to your library…" while it deleted, and the rows stayed until the Library was read
+  // again. They leave at once now, the line says Deleting, in red, and a row the server refuses comes back.
+  // The line goes where the selection's bar was: the bar goes with the rows, so it could not say anything there.
+  var key=_libGoneKey(_libBarHost()||'files', 'sel'), tok=TOKEN;
+  _libGoneClearFailed();
+  var back=[], linkOf={};
+  rowIds.forEach(function(id){
+    var f=_libFind(id); if(!f) return;
+    linkOf[id]=(f.kind==='link');   // asked now: once the row is out of the list, _libIsLink cannot find it
+    var list=linkOf[id]?LIB_MY_LINKS:LIB_MINE, at=list.indexOf(f);
+    if(at>-1){ list.splice(at,1); back.push({id:id, f:f, link:linkOf[id], at:at}); }
+    LIB_GOING[id]=true;
+  });
+  LIB_EDIT=''; LIB_DEL='';
+  actStart(key, TLIB_COPY.delSelWorking.replace('{n}', String(rowIds.length+tplGone)), 'bad');
   _libRedraw();
   var finish=function(){
     if(--left) return;
     // [1.823] — a file someone else added is taken off the library, not deleted, and the line says so
     var _k=kept?' '+TLIB_COPY.delKept:'';
-    if(failed) actFail('libbulk', TLIB_COPY.delSelPartial.replace('{n}', String(done)).replace('{f}', String(failed))+_k);
-    else actDone('libbulk', TLIB_COPY.delSelDone.replace('{n}', String(done))+_k);
+    if(failed) actFail(key, TLIB_COPY.delSelPartial.replace('{n}', String(done)).replace('{f}', String(failed))+_k);
+    else actGone(key, TLIB_COPY.delSelDone.replace('{n}', String(done))+_k);   // [1.544] — red
     _libBulkReset();
-    LIB_EDIT=''; LIB_DEL='';
-    _libRefresh();
+    _libFilterPrune();
+    _libRedraw();
+  };
+  var putBack=function(id){
+    // Each where it was, in the list as it is now.
+    back.filter(function(b){ return b.id===id; }).forEach(function(b){ _libPutBack(b.f, b.link, b.at); });
   };
   if(tplGone){
-    var before=(TSET.tpls||[]).slice();
+    // [1.824] — through the one queue of template deletes, and a refusal puts back only these templates.
+    var gone=[];
+    (TSET.tpls||[]).forEach(function(t,n){ if(t.templateId && drop[String(t.templateId)]) gone.push({row:t, at:n}); });
+    Object.keys(drop).forEach(function(k){ _tplGoing[k]=true; });
     _ttplListChange(function(){ TSET.tpls=keep; });   // [1.823] — the editor stays on its own template
-    _ttplSaveQuiet(function(err){
-      if(err){ _ttplListChange(function(){ TSET.tpls=before; }); failed+=tplGone; }
-      else { done+=tplGone; Object.keys(drop).forEach(function(k){ delete LIB_SEL['t:'+k]; }); }
-      finish();
+    _tplQueue(function(next){
+      _ttplSaveQuiet(function(err){
+        Object.keys(drop).forEach(function(k){ delete _tplGoing[k]; });
+        if(err){
+          _ttplListChange(function(){ gone.forEach(function(g){
+            if(TSET.tpls.indexOf(g.row)<0) TSET.tpls.splice(Math.min(g.at, TSET.tpls.length), 0, g.row); }); });
+          failed+=tplGone;
+        }
+        else { done+=tplGone; Object.keys(drop).forEach(function(k){ delete LIB_SEL['t:'+k]; }); }
+        finish(); next();
+      });
     });
   }
   rowIds.forEach(function(id){
-    var isLink=_libIsLink(id);
+    var isLink=!!linkOf[id];
     var req=isLink
       ? {action:'deleteLibraryLink', data:{linkId:id, teacherId:TEACHER_ID, teacherToken:TOKEN}}
       : {action:'deleteLibraryFile', data:{attachmentId:id, teacherId:TEACHER_ID, teacherToken:TOKEN}};
     api(req, function(e,r){
-      if(!e && r && r.ok){ done++; if(r.keptFile) kept++; delete LIB_SEL[id]; } else { failed++; }
+      if(tok!==TOKEN) return;
+      delete LIB_GOING[id];
+      if(!e && r && r.ok){ done++; if(r.keptFile) kept++; delete LIB_SEL[id]; } else { failed++; putBack(id); }   // [1.824]
       finish();
     });
   });
@@ -10844,7 +10966,7 @@ function libLinkUrl(id){
        teacherId:TEACHER_ID, teacherToken:TOKEN}}, function(e,r){
     if(e||!r||!r.ok){
       it.url=was;
-      actFail('lib:'+id,(r&&r.error)||TLIB_COPY.saveFailed);
+      actFail('lib:'+id,(r&&r.error)||TLIB_COPY.linkSaveFailed);   // [1.824] — a link, not a file
       _libRedraw();
       return;
     }
@@ -10856,7 +10978,7 @@ function libUnshelve(id){
   actStart('lib:'+id, TLIB_COPY.saving);
   api({action:'setLibrary', data:{attachmentId:id, remove:true,
        teacherId:TEACHER_ID, teacherToken:TOKEN}}, function(e,r){
-    if(e||!r||!r.ok){ actFail('lib:'+id,(r&&r.error)||TLIB_COPY.saveFailed); return; }
+    if(e||!r||!r.ok){ actFail('lib:'+id,(r&&r.error)||TLIB_COPY.unshelveFailed); return; }   // [1.824]
     actDone('lib:'+id, TLIB_COPY.unshelved);
     LIB_EDIT=''; LIB_DEL='';
     _libRefresh();
@@ -10866,27 +10988,66 @@ function libUnshelve(id){
 // requirement, and the reason is the trade AC took knowingly: one file, so a
 // delete reaches every conversation it was ever sent to. A native confirm() is
 // not used anywhere in this portal ([1.34]) and would not be able to say this.
-function libAskDelete(id){ LIB_DEL=id; _libRedraw(); }
+function libAskDelete(id){ LIB_DEL=id; if(LIB_EDIT && LIB_EDIT!==id) LIB_EDIT=''; actClear('lib:'+id); _libRedraw(); }
 function libDelCancel(){ LIB_DEL=''; _libRedraw(); }
 // [1.820] — it said "Saving to your library…", in blue, while it deleted. Deleting, in red.
+// ── [1.824] — a delete is instant, asked once, and said right ─────────────
+// AC, 8 October 2026: "deleting a link or file from the library offers a delete button, says deleting from your
+// library, then another confirmation to delete again … The file remains in the list and then after a few seconds it
+// disappears, which is confusing." Seen in the preview with the server slowed: when the server answered, the delete
+// marked itself done and redrew while the box still held the file, so the question came back; nothing redrew again
+// until the whole Library had been read a second time, and only then did the row and the question go.
+// Now, on Delete it: the item leaves the list at once and the question closes. Where its band's list starts, a red
+// line says "Deleting [name] from your library…" until the server has done it, then "[name] deleted." for a few
+// seconds — nothing says deleted before it is ([1.805]'s rule). No re-read of the Library: the list is changed where
+// it stands. A refusal puts the item back where it was, with the reason on it in red.
+function _libGoneKey(band, id){ return 'libgone:'+band+':'+id; }
+// A refusal stays until the teacher does something else; the next delete is something else.
+function _libGoneClearFailed(){
+  Object.keys(ACT).forEach(function(k){ if(k.indexOf('libgone:')===0 && ACT[k].state==='failed') delete ACT[k]; });
+}
+function _libGoneLines(band){
+  var p='libgone:'+band+':';
+  return Object.keys(ACT).filter(function(k){ return k.indexOf(p)===0; }).map(function(k){ return rAct(k); }).join('');
+}
+var LIB_GOING={};   // [1.824] — ids whose delete is on its way: kept out of a reload that lands before it
+// [1.824] — what is still on its way belongs to the teacher who started it: signing out (or a session ending) drops
+// it, and every answer that comes back afterwards checks the session it was sent with.
+function _libWorkClear(){ _tagHideQ=[]; _customQ=[]; _customResync=false; _tplDelQ=[]; _tplGoing={}; LIB_GOING={}; }
+// A refused delete goes back into the list as it is NOW (a reload may have replaced it), where it was.
+function _libPutBack(f, link, at){
+  var cur=link?LIB_MY_LINKS:LIB_MINE;
+  if(!cur.some(function(x){ return x.id===f.id; })) cur.splice(Math.max(0, Math.min(at<0?cur.length:at, cur.length)), 0, f);
+}
 function libDelete(id){
-  if(_libIsLink(id)){
-    actStart('lib:'+id, TLIB_COPY.deletingLib, 'bad');
-    api({action:'deleteLibraryLink', data:{linkId:id,
-         teacherId:TEACHER_ID, teacherToken:TOKEN}}, function(e,r){
-      if(e||!r||!r.ok){ actFail('lib:'+id,(r&&r.error)||TLIB_COPY.delFailed); LIB_DEL=''; render(); return; }
-      actGone('lib:'+id, TLIB_COPY.deleted);   // [1.544]
-      LIB_EDIT=''; LIB_DEL=''; _libRefresh();
-    });
-    return;
-  }
-  actStart('lib:'+id, TLIB_COPY.deletingLib, 'bad');
-  api({action:'deleteLibraryFile', data:{attachmentId:id,
-       teacherId:TEACHER_ID, teacherToken:TOKEN}}, function(e,r){
-    if(e||!r||!r.ok){ actFail('lib:'+id,(r&&r.error)||TLIB_COPY.delFailed); LIB_DEL=''; render(); return; }
-    actGone('lib:'+id, r.keptFile?TLIB_COPY.delKept:TLIB_COPY.deleted);   // [1.544]; [1.823] — a file someone else added stays
-    LIB_EDIT=''; LIB_DEL='';
-    _libRefresh();
+  var f=_libFind(id); if(!f) return;
+  var link=_libIsLink(id), list=link?LIB_MY_LINKS:LIB_MINE, at=list.indexOf(f);
+  var name=String(f.fileName||'').trim(), keeps=(!link && f.deletesFile===false);
+  var key=_libGoneKey(link?'links':'files', id), tok=TOKEN;
+  _libGoneClearFailed();
+  if(at>-1) list.splice(at,1);
+  LIB_GOING[id]=true;
+  delete LIB_SEL[id];
+  if(!_libSelIds().length) _libBulkReset();   // the selection's own Delete question goes with its last row
+  LIB_DEL=''; if(LIB_EDIT===id) LIB_EDIT='';
+  if(ACT['lib:'+id]) delete ACT['lib:'+id];
+  actStart(key, keeps?TLIB_COPY.removingNamed(name):TLIB_COPY.deletingNamed(name), 'bad');
+  var req=link
+    ? {action:'deleteLibraryLink', data:{linkId:id, teacherId:TEACHER_ID, teacherToken:TOKEN}}
+    : {action:'deleteLibraryFile', data:{attachmentId:id, teacherId:TEACHER_ID, teacherToken:TOKEN}};
+  api(req, function(e,r){
+    if(tok!==TOKEN) return;   // signed out meanwhile: none of this is the next teacher's
+    delete LIB_GOING[id];
+    if(e||!r||!r.ok){
+      if(ACT[key]) delete ACT[key];
+      _libPutBack(f, link, at);
+      actFail('lib:'+id, (r&&r.error)||(link?TLIB_COPY.linkDelFailed:TLIB_COPY.delFailed));
+      return;
+    }
+    actGone(key, r.keptFile?TLIB_COPY.removedNamed(name):TLIB_COPY.deletedNamed(name));   // [1.544] — red, and named
+    var _was=LIB_FILTER.length;
+    _libFilterPrune();
+    if(_was!==LIB_FILTER.length) _libRedraw();
   });
 }
 // Tags on one file. A studio tag is a tick; a private tag is a teacher's own
@@ -10911,7 +11072,7 @@ function libFileTag(id, tagId, el){
   if(f.kind==='link'){
     api({action:'saveLibraryLink', data:{linkId:id, tags:tags,
          teacherId:TEACHER_ID, teacherToken:TOKEN}}, function(e,r){
-      if(e||!r||!r.ok){ actFail('lib:'+id,(r&&r.error)||TLIB_COPY.saveFailed); _libRefresh(); return; }
+      if(e||!r||!r.ok){ actFail('lib:'+id,(r&&r.error)||TLIB_COPY.tagSaveFailed); _libRefresh(); return; }   // [1.824]
       // [1.620] — the answer carries nothing the screen does not already show,
       // so it is checked for failure and otherwise not redrawn at all. A second
       // render here is the reflow AC called "reposition in an awkward way".
@@ -10921,7 +11082,7 @@ function libFileTag(id, tagId, el){
   }
   api({action:'setAttachmentTags', data:{attachmentId:id, tags:tags,
        teacherId:TEACHER_ID, teacherToken:TOKEN}}, function(e,r){
-    if(e||!r||!r.ok){ actFail('lib:'+id,(r&&r.error)||TLIB_COPY.saveFailed); _libRefresh(); return; }
+    if(e||!r||!r.ok){ actFail('lib:'+id,(r&&r.error)||TLIB_COPY.tagSaveFailed); _libRefresh(); return; }   // [1.824]
     f.tags=r.tags||tags;   // [1.620] — no second draw; see the link branch above
   });
 }
@@ -10939,6 +11100,12 @@ function libPrivateRemove(id, word){
   var f=_libFind(id); if(!f) return;
   _libSetPrivate(id, f, (f.privateTags||[]).filter(function(w){ return w!==word; }));
 }
+// [1.824] — a custom tag pressed on or off in the one row of tags.
+function libPrivateToggle(id, word){
+  var f=_libFind(id); if(!f) return;
+  if((f.privateTags||[]).indexOf(word)>-1) libPrivateRemove(id, word);
+  else _libSetPrivate(id, f, (f.privateTags||[]).concat([word]));
+}
 function _libSetPrivate(id, f, words){
   f.privateTags=words; _libRedraw();   // [1.620] — the PANEL, not the page
   var req = f.kind==='link'
@@ -10947,7 +11114,7 @@ function _libSetPrivate(id, f, words){
     : {action:'setAttachmentTags', data:{attachmentId:id, privateTags:words,
        teacherId:TEACHER_ID, teacherToken:TOKEN}};
   api(req, function(e,r){
-    if(e||!r||!r.ok){ actFail('lib:'+id,(r&&r.error)||TLIB_COPY.saveFailed); _libRefresh(); return; }
+    if(e||!r||!r.ok){ actFail('lib:'+id,(r&&r.error)||TLIB_COPY.tagSaveFailed); _libRefresh(); return; }   // [1.824]
     f.privateTags=r.privateTags||words;
     // A word that has just been added is a word the filter can now offer, and
     // one that has just gone may be one it is still filtering by. [1.620] — the
@@ -10994,9 +11161,9 @@ function libTagFind(v){
 }
 function _libTagsFiltered(){
   var q=LIB_TAGFIND.trim().toLowerCase();
-  if(!q) return _libTagOrder(LIB_TAGS);
-  return _libTagOrder(LIB_TAGS.filter(function(t){
-    return String(t.name||'').toLowerCase().indexOf(q)>-1; }));
+  if(!q) return _libTagOrder(_libTagAZ(LIB_TAGS));   // [1.824] — A–Z
+  return _libTagOrder(_libTagAZ(LIB_TAGS.filter(function(t){
+    return String(t.name||'').toLowerCase().indexOf(q)>-1; })));
 }
 // ── [1.487] — the likely tag first, the near one outlined ─────────────
 //
@@ -11039,11 +11206,42 @@ function _libTagOrder(tags){
   });
   return first.concat(rest);
 }
-// Ordered, and each chip carrying whether the item's own name nearly says it.
-function _libTagChips(tags, name, applied){
+// ── [1.824] — tags in ONE A–Z list, the studio's and the teacher's own together ──
+// AC, 8 October 2026: "tags should list in alphabetical order, merging studio and custom tags, differentiated by
+// their appearance." Every list of tags a teacher sees is sorted here, so none can sort differently: A–Z by name,
+// ignoring capitals, a studio tag before a custom tag of the same name. Studio tags stay solid and custom tags
+// dashed, as everywhere already. It replaces "the studio's first, then the teacher's own". In a conversation the
+// student's own instrument still leads ([1.487], AC agreed it); the Library page has no student, so it is A–Z there.
+function _libTagAZ(list){
+  return (list||[]).slice().sort(function(a,b){
+    var c=String(a.name||'').localeCompare(String(b.name||''), undefined, {sensitivity:'base'});
+    return c || ((a.priv?1:0)-(b.priv?1:0));
+  });
+}
+// Every tag a teacher may put on something of theirs, as {v, name, priv, near}: the studio's live tags (v is the
+// tag's id) and their custom tags (v is 'p:'+word, the filter's spelling), plus any words the item already carries
+// that the list does not have yet. Each says whether the item's own name nearly says it ([1.487]'s outline).
+function _libTagChoices(name, appliedIds, ownWords){
   var near={};
-  if(name) _libNearSuggest(name, tags, applied||[]).forEach(function(id){ near[id]=true; });
-  return _libTagOrder(tags).map(function(t){ return { t:t, near:!!near[t.tagId] }; });
+  if(name) _libNearSuggest(name, LIB_TAGS, appliedIds||[]).forEach(function(id){ near[id]=true; });
+  var words=_libMyWords().map(function(x){ return x.word; });
+  (ownWords||[]).forEach(function(w){ if(words.indexOf(w)<0) words.push(w); });
+  return _libTagOrder(_libTagAZ((LIB_TAGS||[]).filter(function(t){ return !t.off; }).map(function(t){
+      return {v:t.tagId, name:t.name, priv:false, near:!!near[t.tagId]}; })
+    .concat(words.map(function(w){ return {v:'p:'+w, name:w, priv:true, near:false}; }))));
+}
+// The chips for those choices: isOn(choice) says which are on, clickFor(choice) is the onclick.
+function _libTagChoiceHtml(choices, isOn, clickFor){
+  return (choices||[]).map(function(c){
+    var on=!!isOn(c), act=clickFor(c);   // the caller names the function; every one is a real handler
+    return '<button type="button" class="lib-tag'+(c.priv?' priv':'')+(on?' on':(c.near?' near':''))+'"'+
+      ' aria-pressed="'+(on?'true':'false')+'" onclick="'+act+'">'+esc(c.name)+'</button>';
+  }).join('');
+}
+// [1.824] — the key to the two looks, wherever both are listed. Sample chips, not words about chips.
+function _libTagKey(){
+  return '<div class="lib-tagkey"><span class="lib-tag sm">'+esc(TLIB_COPY.tagKeyStudio)+'</span>'+
+    '<span class="lib-tag sm priv">'+esc(TLIB_COPY.tagKeyCustom)+'</span></div>';
 }
 // Any live tag whose word appears in a filename. **Suggested, never applied
 // silently** — a wrong tag on twenty files is worse than typing twenty times,
@@ -11310,6 +11508,12 @@ function libAddPrivRemove(w){
   LIBADD.priv=LIBADD.priv.filter(function(x){ return x!==w; });
   _libAddRedraw();
 }
+// [1.824] — a custom tag pressed on or off on the card, now that they are chips in the one row.
+function libAddPrivToggle(w){
+  if(!LIBADD) return;
+  if(LIBADD.priv.indexOf(w)>-1) libAddPrivRemove(w);
+  else { LIBADD.priv.push(w); _libAddRedraw(); }
+}
 // The one press. Two shapes behind it — a link is created, a file already
 // exists and is being shelved — and both are ONE round trip, because a press
 // that costs three at [1.263]'s ~2s each is not one step to the person waiting.
@@ -11449,19 +11653,19 @@ function rLibAddCard(at){
       (LIBADD.tagsAsked
         ? '<div class="lib-fld">'+
         '<div class="lib-lbl">'+esc(TLIB_COPY.lblTags)+'</div>'+
-        (LIB_TAGS.length
-          // [1.472]'s near-match, on the card: a tag the name nearly says is
-          // OUTLINED, never pressed for them. Read from the display text (or
-          // the file's name), which is the only thing here a teacher has
-          // written — pressing it is still their press.
-          ? '<div class="lib-tags" style="padding-top:0">'+
-            _libTagChips(LIB_TAGS, link?LIBADD.text:LIBADD.name, LIBADD.tags).map(function(c){
-              var t=c.t, on=LIBADD.tags.indexOf(t.tagId)>-1;
-              return '<button type="button" class="lib-tag'+(on?' on':(c.near?' near':''))+'"'+
-                ' aria-pressed="'+(on?'true':'false')+'"'+
-                ' onclick="libAddTag('+jsq(t.tagId)+')">'+esc(t.name)+'</button>';
-            }).join('')+'</div>'
-          : '<div class="lib-empty">'+esc(TLIB_COPY.noTagsYet)+'</div>')+
+        // [1.472]'s near-match, on the card: a tag the name nearly says is
+        // OUTLINED, never pressed for them. Read from the display text (or
+        // the file's name), which is the only thing here a teacher has
+        // written — pressing it is still their press. [1.824] — the teacher's
+        // custom tags in the same A–Z row, to press on or off.
+        (function(){
+          var ch=_libTagChoices(link?LIBADD.text:LIBADD.name, LIBADD.tags, LIBADD.priv);
+          return ch.length
+            ? '<div class="lib-tags" style="padding-top:0">'+_libTagChoiceHtml(ch,
+                function(c){ return c.priv ? LIBADD.priv.indexOf(c.name)>-1 : LIBADD.tags.indexOf(c.v)>-1; },
+                function(c){ return c.priv ? 'libAddPrivToggle('+jsq(c.name)+')' : 'libAddTag('+jsq(c.v)+')'; })+'</div>'
+            : '<div class="lib-empty">'+esc(TLIB_COPY.noTagsYet)+'</div>';
+        })()+
       '</div>'
         : '<div class="lib-ask">'+
             '<span class="lib-ask-q">'+esc(TLIB_COPY.tagsAsk)+'</span>'+
@@ -11473,12 +11677,6 @@ function rLibAddCard(at){
       (LIBADD.tagsAsked
         ? '<div class="lib-fld">'+
         '<div class="lib-lbl">'+esc(TLIB_COPY.lblMine)+'</div>'+
-        (LIBADD.priv.length
-          ? '<div class="lib-tags" style="padding-top:0;padding-bottom:4px">'+LIBADD.priv.map(function(w){
-              return '<button type="button" class="lib-tag priv on" title="'+esc(TLIB_COPY.removeWord)+'"'+
-                ' onclick="libAddPrivRemove('+jsq(w)+')">'+esc(w)+' &#215;</button>';
-            }).join('')+'</div>'
-          : '')+
         '<div class="lib-fld-row">'+
           '<input id="libadd-priv" placeholder="'+esc(TLIB_COPY.privatePh)+'"'+
             ' aria-label="'+esc(TLIB_COPY.privatePh)+'"'+
@@ -11668,7 +11866,7 @@ function _libBulk(ids, change){
   Object.keys(change).forEach(function(k){ data[k]=change[k]; });
   api({action:'setLibraryTagsBulk', data:data}, function(e,r){
     if(e||!r||!r.ok){
-      actFail('libadd',(r&&r.error)||TLIB_COPY.saveFailed);
+      actFail('libadd',(r&&r.error)||TLIB_COPY.tagSaveFailed);   // [1.824] — tags, not a file
       _libRefresh();
       return;
     }
@@ -11867,22 +12065,16 @@ function rLibraryAdded(){
           '</div>'+
           (_lk?'<div class="lib-row-foot"><span class="lib-meta">'+esc(_libLinkHost(f.url))+'</span></div>':'')+
           // [1.487] — ONE row. The likely tag leads it, a tag the name nearly
-          // says is outlined, and there is nothing to read.
-          (LIB_TAGS.length
-            ? '<div class="lib-tags" style="padding-top:5px">'+
-              _libTagChips(LIB_TAGS, f.fileName, f.tags||[]).map(function(c){
-                var t=c.t, on=(f.tags||[]).indexOf(t.tagId)>-1;
-                return '<button type="button" class="lib-tag'+(on?' on':(c.near?' near':''))+'"'+
-                  ' aria-pressed="'+(on?'true':'false')+'"'+
-                  ' onclick="libFileTag('+jsq(f.id)+','+jsq(t.tagId)+',this)">'+esc(t.name)+'</button>';
-              }).join('')+'</div>'
-            : '')+
-          ((f.privateTags||[]).length
-            ? '<div class="lib-tags" style="padding-top:3px">'+(f.privateTags||[]).map(function(w){
-                return '<button type="button" class="lib-tag priv on" title="'+esc(TLIB_COPY.removeWord)+'"'+
-                  ' onclick="libPrivateRemove('+jsq(f.id)+','+jsq(w)+')">'+esc(w)+' &#215;</button>';
-              }).join('')+'</div>'
-            : '')+
+          // says is outlined, and there is nothing to read. [1.824] — A–Z, with
+          // the teacher's custom tags in it to press on or off.
+          (function(){
+            var ch=_libTagChoices(f.fileName, f.tags||[], f.privateTags||[]);
+            return ch.length
+              ? '<div class="lib-tags" style="padding-top:5px">'+_libTagChoiceHtml(ch,
+                  function(c){ return c.priv ? (f.privateTags||[]).indexOf(c.name)>-1 : (f.tags||[]).indexOf(c.v)>-1; },
+                  function(c){ return c.priv ? 'libPrivateToggle('+jsq(f.id)+','+jsq(c.name)+')' : 'libFileTag('+jsq(f.id)+','+jsq(c.v)+',this)'; })+'</div>'
+              : '';
+          })()+
         '</div>';
       }).join('')+'</div>'+
       // The bulk removals, behind a rule and last, as in the edit card.
@@ -12189,7 +12381,7 @@ function libBulkApply(v, on){
 
   var revert=function(msg){
     undo.forEach(function(u){ _libSetTags(u.f, u.tags); _libSetPriv(u.f, u.priv); });
-    actFail('libbulk', msg||TLIB_COPY.saveFailed);
+    actFail('libbulk', msg||TLIB_COPY.tagSaveFailed);   // [1.824]
     _libRedraw();
   };
   // Files and links in one request, templates in another, sent together rather
@@ -12289,12 +12481,14 @@ function _ttplPayload(list){
             body: t._txt ? esc(_ttplToText(t.body)).replace(/\n/g,'<br>') : t.body};
   });
 }
-function _ttplSaveQuiet(done){
+function _ttplSaveQuiet(done, failWords){
   // [1.823] — the templates as SAVED: an open editor's half-typed words and an unsaved New template are not this
   // save's to send. The editor keeps them, and its own Save sends them.
   var payload=_ttplPayload(_savedTpls());
   api({action:'saveTeacherTemplates', data:{teacherToken:TOKEN, templates:payload}}, function(e,r){
-    if(e||!r||!r.ok){ done((r&&r.error)||TLIB_COPY.saveFailed); return; }
+    // [1.824] — a template's own words when the server gives none (it said a FILE could not be saved), or the
+    // caller's, for a save that is really a delete.
+    if(e||!r||!r.ok){ done((r&&r.error)||failWords||TLIB_COPY.tplSaveFailed); return; }
     if(r.templates) _tplsFromServer(r.templates);
     done('');
     _libRedraw();
@@ -12308,7 +12502,7 @@ function _libBulkChips(){
     if(q && String(w.word).toLowerCase().indexOf(q)<0) return;
     out.push({v:'p:'+w.word, name:w.word, priv:true});
   });
-  return out;
+  return _libTagOrder(_libTagAZ(out));   // [1.824] — one A–Z list
 }
 // ── [1.593] — the bulk row belongs WITH the list it acts on ──────────────
 //
@@ -12505,22 +12699,47 @@ function rLibraryPanel(composerId){
 // brings the whole shelf with it.
 var LIB_TAGS_HIDDEN=[];
 function _libTagHidden(id){ return LIB_TAGS_HIDDEN.indexOf(id)>-1; }
+// ── [1.824] — Hide and Show are instant and silent ──────────────────────
+// AC, 8 October 2026: "When hiding studio tags, the screen processes, re-renders the list, and seems to rerender
+// again. It should just remove them immediately with no wait time or visual indication of background processing."
+// Each press drew "Updating your list…", then "Saved.", then cleared it four seconds later: three redraws for one
+// click. And two presses fought: the first answer put the server's list in place of the page's, so a tag hidden
+// second came back for a second, then went again with its own answer (seen in the preview, the server slowed).
+// Now the tag leaves or returns at the click and nothing else on screen changes. The saves go behind, one at a
+// time in click order, and the server's list is taken only when nothing else is waiting. Only a refusal speaks,
+// in red beside the list, with that tag put back.
+var _tagHideQ=[];
 function libTagHide(id, hide){
-  // Applied here first so the row answers the press, and put back if the server
-  // refuses — the same shape every other library toggle uses.
   var at=LIB_TAGS_HIDDEN.indexOf(id);
   if(hide){ if(at<0) LIB_TAGS_HIDDEN.push(id); } else if(at>-1) LIB_TAGS_HIDDEN.splice(at,1);
   // A hidden tag must not go on filtering the shelf it is no longer offered on.
   var f=LIB_FILTER.indexOf(id);
   if(hide && f>-1){ LIB_FILTER.splice(f,1); _libFilterSave(); }
-  actStart('tagshow', TLIB_COPY.tagListSaving);   // [1.612]
+  if(ACT.tagshow){ delete ACT.tagshow; }   // an old refusal is answered by pressing again
   _libRedraw();
-  api({action:'setTeacherTagHidden', data:{tagId:id, hidden:!!hide,
+  _tagHideQ.push({id:id, hide:!!hide});
+  if(_tagHideQ.length===1) _tagHideNext();
+}
+function _tagHideNext(){
+  var job=_tagHideQ[0]; if(!job) return;
+  var tok=TOKEN;
+  _apiRetryOnce({action:'setTeacherTagHidden', data:{tagId:job.id, hidden:job.hide,
        teacherId:TEACHER_ID, teacherToken:TOKEN}}, function(e,r){
-    if(e||!r||!r.ok){ actFail('tagshow',(r&&r.error)||TLIB_COPY.saveFailed); loadLibrary(true); return; }
-    LIB_TAGS_HIDDEN=r.hiddenTagIds||LIB_TAGS_HIDDEN;
-    actDone('tagshow', TLIB_COPY.tagListSaved);   // [1.612]
-    _libRedraw();
+    if(tok!==TOKEN) return;   // signed out meanwhile
+    _tagHideQ.shift();
+    if(e||!r||!r.ok){
+      // Put back — unless a later press on the same tag is still to go, which says what the teacher wants now.
+      if(!_tagHideQ.some(function(j){ return j.id===job.id; })){
+        var at=LIB_TAGS_HIDDEN.indexOf(job.id);
+        if(job.hide){ if(at>-1) LIB_TAGS_HIDDEN.splice(at,1); } else if(at<0) LIB_TAGS_HIDDEN.push(job.id);
+      }
+      actFail('tagshow', (r&&r.error)||(job.hide?TLIB_COPY.tagHideFailed:TLIB_COPY.tagShowFailed).replace('{name}', _libTagName(job.id)||''));
+      _libRedraw();
+    } else if(!_tagHideQ.length && r.hiddenTagIds){
+      var mine=LIB_TAGS_HIDDEN.slice().sort().join('|'), theirs=r.hiddenTagIds.slice().sort().join('|');
+      if(mine!==theirs){ LIB_TAGS_HIDDEN=r.hiddenTagIds.slice(); _libRedraw(); }
+    }
+    _tagHideNext();
   });
 }
 var LIB_TAGS_OPEN=false;
@@ -12531,22 +12750,20 @@ function libTagsOpen(){
   _libRedraw();
 }
 function rLibraryTags(){
-  // [1.822] — under the bar, in two labelled rows: the studio's tags, then the teacher's own. A tag is offered
-  // when pressing it would leave something on screen ([1.487]), across everything the search reaches.
+  // [1.822] — under the bar. A tag is offered when pressing it would leave something on screen ([1.487]), across
+  // everything the search reaches. [1.824] — in ONE A–Z row, the studio's and the teacher's own told apart by their
+  // look, with the key beside them; it was two labelled rows, the studio's first (AC: "tags should list in
+  // alphabetical order, merging studio and custom tags, differentiated by their appearance").
   if(!LIB_TAGS_OPEN) return '';
   var offered=_libOffered();
-  var chip=function(t){
+  var chips=offered.map(function(t){
     var on=LIB_FILTER.indexOf(t.v)>-1;
     return '<button type="button" class="lib-tag'+(on?' on':'')+(t.priv?' priv':'')+'"'+
       ' aria-pressed="'+(on?'true':'false')+'" onclick="libTag('+jsq(t.v)+')">'+esc(t.name)+'</button>';
-  };
-  var grp=function(label, list){
-    return list.length ? '<div class="lib-tg"><div class="lib-tg-l">'+esc(label)+'</div>'+
-      '<div class="lib-tags">'+list.map(chip).join('')+'</div></div>' : '';
-  };
-  var body=grp(TLIB_COPY.studioTagsHead, offered.filter(function(t){ return !t.priv; }))+
-           grp(TLIB_COPY.myTagsHead, offered.filter(function(t){ return t.priv; }));
-  return '<div class="lib-tagpanel">'+(body||'<div class="lib-empty">'+esc(TLIB_COPY.noTagsYet)+'</div>')+'</div>';
+  }).join('');
+  return '<div class="lib-tagpanel">'+(chips
+    ? '<div class="lib-tags">'+chips+'</div>'+(offered.some(function(t){ return t.priv; })?_libTagKey():'')
+    : '<div class="lib-empty">'+esc(TLIB_COPY.noTagsYet)+'</div>')+'</div>';
 }
 // ── [1.597] — the FILTER goes beside the list, the VOCABULARY stays in its
 //    own band ───────────────────────────────────────────────────────────────
@@ -12632,69 +12849,72 @@ function _libMyWords(){
 // **It is drawn only when there is something in it.** An empty Hidden heading
 // is furniture, and this panel is already four areas deep ([1.604] took the
 // same decision for a section holding nothing).
-// ── [1.816] — Studio tags and Custom tags are headers that open and close ──
-// AC, 8 October 2026: "my library tags doesn't allow teacher to collapse studio tags which they may not want to
-// use. Studio tags and custom tags need header level design: dark blue white font, larger font. Both sections
-// collapsible and expandable." The Library's dark band. Both start open; one a teacher closes stays closed on
-// that device (a convenience only — nothing is lost if the browser forgets it).
-var LIB_TAGSEC_OPEN=(function(){ try{ return JSON.parse(localStorage.getItem('kl_tagsec')||'{}')||{}; }catch(e){ return {}; } })();
-function _libTagSecOpen(k){ return LIB_TAGSEC_OPEN[k]!==false; }
-function libTagSecToggle(k){
-  LIB_TAGSEC_OPEN[k]=!_libTagSecOpen(k);
-  try{ localStorage.setItem('kl_tagsec', JSON.stringify(LIB_TAGSEC_OPEN)); }catch(e){}
-  _libRedraw();
-}
-function rTagBand(k, label, n){
-  var open=_libTagSecOpen(k);
-  return '<div class="lib-band lib-band-wrap tag-band"><button type="button" class="lib-band-btn" aria-expanded="'+(open?'true':'false')+'"'+
-    ' onclick="libTagSecToggle('+jsq(k)+')">'+esc(label)+'<span class="zcount">'+n+'</span></button></div>';
-}
-function rLibStudioTagList(){
-  var tags=(LIB_TAGS||[]).filter(function(t){ return !t.off; });
-  if(!tags.length) return '';
-  var shown=tags.filter(function(t){ return !_libTagHidden(t.tagId); });
-  var hidden=tags.filter(function(t){ return _libTagHidden(t.tagId); });
-  if(!_libTagSecOpen('studio')) return '<div class="lib-mytags">'+rTagBand('studio', TLIB_COPY.studioTagsHead, shown.length)+'</div>';
-  return '<div class="lib-mytags">'+
-    rTagBand('studio', TLIB_COPY.studioTagsHead, shown.length)+
-    '<p class="lib-blurb">'+esc(TLIB_COPY.studioTagsBlurb)+'</p>'+
-    (shown.length
-      ? shown.map(function(t){
-          return '<div class="lib-mytag-row">'+
-            '<span class="lib-tag">'+esc(t.name)+'</span>'+
-            '<span class="lib-meta">'+esc(TLIB_COPY.myTagOn.replace('{n}', String(_libTagUseCount(t.tagId))))+'</span>'+
-            '<button type="button" class="lib-act" onclick="libTagHide('+jsq(t.tagId)+',true)">'+
-              esc(TLIB_COPY.tagHide)+'</button>'+
-            '</div>';
-        }).join('')
-      : '<div class="lib-empty">'+esc(TLIB_COPY.studioTagsAllHidden)+'</div>')+
-    (hidden.length
-      ? '<div class="lib-lbl" style="margin-top:.7rem">'+esc(TLIB_COPY.hiddenTagsHead)+'</div>'+
-        '<p class="lib-blurb">'+esc(TLIB_COPY.hiddenTagsBlurb)+'</p>'+
-        '<div class="lib-tags" style="padding-top:0">'+
-        hidden.map(function(t){
-          return '<button type="button" class="lib-tag back"'+
-            ' title="'+esc(TLIB_COPY.tagBack.replace('{name}', t.name))+'"'+
-            ' aria-label="'+esc(TLIB_COPY.tagBack.replace('{name}', t.name))+'"'+
-            ' onclick="libTagHide('+jsq(t.tagId)+',false)">+ '+esc(t.name)+'</button>';
-        }).join('')+'</div>'
-      : '')+
-    rAct('tagshow')+
-  '</div>';
-}
+// ── [1.816] — Studio tags and Custom tags were headers that opened and closed ──
+// AC, 8 October 2026 (morning): "Studio tags and custom tags need header level design … Both sections collapsible and
+// expandable." [1.824] — the same afternoon: "tags should list in alphabetical order, merging studio and custom tags,
+// differentiated by their appearance." His newer word, so the two headers are gone and so is what they remembered
+// on the device. A studio tag a teacher does not use is cleared away with Hide, which is what closing Studio tags
+// was for.
 function _libTagUseCount(tagId){
   var n=0;
   _libAllItems().forEach(function(f){ if((f.tags||[]).indexOf(tagId)>-1) n++; });
   return n;
 }
+// ── [1.824] — My Tags is ONE list, A–Z ───────────────────────────────────
+// AC's description of the area at the top ([1.617], his words, which describe both kinds), the key to the two
+// looks, the box to make a custom tag ([1.822]: "My tags doesn't have custom tag area"), then every tag: a studio
+// tag's row has Hide, a custom tag's has Rename and Delete. Hidden studio tags keep their own area under the list,
+// a chip to click back ([1.612]). A refusal of either kind is said under the list.
 function rLibMyTagManager(){
-  // [1.822] — Custom tags are always drawn, with a box to make one; AC: "My tags doesn't have custom tag area,
-  // just the studio tags." It used to appear only once a teacher had typed a word onto a file.
+  var studio=(LIB_TAGS||[]).filter(function(t){ return !t.off; });
+  var shown=studio.filter(function(t){ return !_libTagHidden(t.tagId); });
+  var hidden=studio.filter(function(t){ return _libTagHidden(t.tagId); });
   var words=_libMyWords();
-  var studio=rLibStudioTagList();
-  if(!_libTagSecOpen('custom')) return studio+'<div class="lib-mytags">'+rTagBand('custom', TLIB_COPY.myTagsHead, words.length)+'</div>';   // [1.816]
-  return studio+'<div class="lib-mytags">'+
-    rTagBand('custom', TLIB_COPY.myTagsHead, words.length)+
+  var rows=_libTagAZ(shown.map(function(t){ return {name:t.name, priv:false, t:t}; })
+    .concat(words.map(function(w){ return {name:w.word, priv:true, w:w}; })));
+  var studioRow=function(t){
+    return '<div class="lib-mytag-row">'+
+      '<span class="lib-tag">'+esc(t.name)+'</span>'+
+      '<span class="lib-meta">'+esc(TLIB_COPY.myTagOn.replace('{n}', String(_libTagUseCount(t.tagId))))+'</span>'+
+      '<button type="button" class="lib-act" onclick="libTagHide('+jsq(t.tagId)+',true)">'+
+        esc(TLIB_COPY.tagHide)+'</button>'+
+      '</div>';
+  };
+  var customRow=function(w){
+    if(LIB_TAG_DEL===w.word){
+      return '<div class="lnk-confirm">'+
+        '<span class="lnk-ask">'+esc(TLIB_COPY.myTagDelAsk.replace('{name}', w.word)
+          .replace('{n}', String(w.n)))+'</span>'+
+        '<button type="button" class="lnk-btn" onclick="libMyTagCancel()">'+
+          esc(TLIB_COPY.myTagDelNo)+'</button>'+
+        '<button type="button" class="btn btn-danger" style="width:auto;font-size:12px"'+
+          ' onclick="libMyTagDelete('+jsq(w.word)+')">'+esc(TLIB_COPY.myTagDelYes)+'</button>'+
+        '</div>';
+    }
+    if(LIB_TAG_EDIT===w.word){
+      return '<div class="lib-fld-row" style="margin-bottom:6px">'+
+        '<input id="lib-tagrn" value="'+esc(LIB_TAG_NEW)+'"'+
+          ' aria-label="'+esc(TLIB_COPY.myTagRename)+'"'+
+          ' oninput="LIB_TAG_NEW=this.value"'+
+          ' onkeydown="if(event.key===\'Enter\'){event.preventDefault();libMyTagRename('+jsq(w.word)+');}'+
+            'else if(event.key===\'Escape\'){event.preventDefault();libMyTagCancel();}">'+
+        '<button type="button" class="lnk-btn" onclick="libMyTagCancel()">'+esc(TLIB_COPY.myTagCancel)+'</button>'+
+        '<button type="button" class="lib-done" onclick="libMyTagRename('+jsq(w.word)+')">'+
+          esc(TLIB_COPY.myTagSave)+'</button>'+
+        '</div>';
+    }
+    return '<div class="lib-mytag-row">'+
+      '<span class="lib-tag priv">'+esc(w.word)+'</span>'+
+      '<span class="lib-meta">'+esc(TLIB_COPY.myTagOn.replace('{n}', String(w.n)))+'</span>'+
+      '<button type="button" class="lib-act" onclick="libMyTagEdit('+jsq(w.word)+')">'+
+        esc(TLIB_COPY.myTagRename)+'</button>'+
+      '<button type="button" class="lib-act bad" onclick="libMyTagDelAsk('+jsq(w.word)+')">'+
+        esc(TLIB_COPY.myTagDelete)+'</button>'+
+      '</div>';
+  };
+  return '<div class="lib-mytags">'+
+    (studio.length?'<p class="lib-blurb">'+esc(TLIB_COPY.studioTagsBlurb)+'</p>':'')+
+    _libTagKey()+
     '<div class="lib-fld-row lib-newtag">'+
       '<input id="lib-newtag" type="text" value="'+esc(LIB_NEWTAG)+'" maxlength="40"'+
         ' placeholder="'+esc(TLIB_COPY.customAddPh)+'" aria-label="'+esc(TLIB_COPY.customAddPh)+'"'+
@@ -12702,39 +12922,21 @@ function rLibMyTagManager(){
         ' onkeydown="if(event.key===\'Enter\'){event.preventDefault();libCustomAdd();}">'+
       '<button type="button" class="lib-done" onclick="libCustomAdd()">'+esc(TLIB_COPY.customAdd)+'</button>'+
     '</div>'+
-    (words.length ? '' : '<div class="lib-empty">'+esc(TLIB_COPY.customNone)+'</div>')+
-    words.map(function(w){
-      if(LIB_TAG_DEL===w.word){
-        return '<div class="lnk-confirm">'+
-          '<span class="lnk-ask">'+esc(TLIB_COPY.myTagDelAsk.replace('{name}', w.word)
-            .replace('{n}', String(w.n)))+'</span>'+
-          '<button type="button" class="lnk-btn" onclick="libMyTagCancel()">'+
-            esc(TLIB_COPY.myTagDelNo)+'</button>'+
-          '<button type="button" class="btn btn-danger" style="width:auto;font-size:12px"'+
-            ' onclick="libMyTagDelete('+jsq(w.word)+')">'+esc(TLIB_COPY.myTagDelYes)+'</button>'+
-          '</div>';
-      }
-      if(LIB_TAG_EDIT===w.word){
-        return '<div class="lib-fld-row" style="margin-bottom:6px">'+
-          '<input id="lib-tagrn" value="'+esc(LIB_TAG_NEW)+'"'+
-            ' aria-label="'+esc(TLIB_COPY.myTagRename)+'"'+
-            ' oninput="LIB_TAG_NEW=this.value"'+
-            ' onkeydown="if(event.key===\'Enter\'){event.preventDefault();libMyTagRename('+jsq(w.word)+');}'+
-              'else if(event.key===\'Escape\'){event.preventDefault();libMyTagCancel();}">'+
-          '<button type="button" class="lnk-btn" onclick="libMyTagCancel()">'+esc(TLIB_COPY.myTagCancel)+'</button>'+
-          '<button type="button" class="lib-done" onclick="libMyTagRename('+jsq(w.word)+')">'+
-            esc(TLIB_COPY.myTagSave)+'</button>'+
-          '</div>';
-      }
-      return '<div class="lib-mytag-row">'+
-        '<span class="lib-tag priv">'+esc(w.word)+'</span>'+
-        '<span class="lib-meta">'+esc(TLIB_COPY.myTagOn.replace('{n}', String(w.n)))+'</span>'+
-        '<button type="button" class="lib-act" onclick="libMyTagEdit('+jsq(w.word)+')">'+
-          esc(TLIB_COPY.myTagRename)+'</button>'+
-        '<button type="button" class="lib-act bad" onclick="libMyTagDelAsk('+jsq(w.word)+')">'+
-          esc(TLIB_COPY.myTagDelete)+'</button>'+
-        '</div>';
-    }).join('')+
+    (rows.length
+      ? rows.map(function(r){ return r.priv ? customRow(r.w) : studioRow(r.t); }).join('')
+      : '<div class="lib-empty">'+esc(studio.length?TLIB_COPY.studioTagsAllHidden:TLIB_COPY.noTagsAtAll)+'</div>')+
+    (hidden.length
+      ? '<div class="lib-lbl" style="margin-top:.7rem">'+esc(TLIB_COPY.hiddenTagsHead)+'</div>'+
+        '<p class="lib-blurb">'+esc(TLIB_COPY.hiddenTagsBlurb)+'</p>'+
+        '<div class="lib-tags" style="padding-top:0">'+
+        _libTagAZ(hidden).map(function(t){
+          return '<button type="button" class="lib-tag back"'+
+            ' title="'+esc(TLIB_COPY.tagBack.replace('{name}', t.name))+'"'+
+            ' aria-label="'+esc(TLIB_COPY.tagBack.replace('{name}', t.name))+'"'+
+            ' onclick="libTagHide('+jsq(t.tagId)+',false)">+ '+esc(t.name)+'</button>';
+        }).join('')+'</div>'
+      : '')+
+    rAct('tagshow')+
     rAct('mytag')+
   '</div>';
 }
@@ -12745,11 +12947,41 @@ function libMyTagCancel(){ LIB_TAG_EDIT=''; LIB_TAG_DEL=''; LIB_TAG_NEW=''; _lib
 // Both changes go through the BULK door, which applies them across every row
 // the teacher owns in one request — the whole point of the item. Applied
 // locally first so the row redraws at once, and put back if the server refuses.
+// ── [1.824] — custom tag changes go one at a time, in click order ────────────
+// Each answer carries the whole stored list, and a change can be sent twice (_apiRetryOnce), so two sent together
+// could land in either order: an add retried after the teacher had deleted the word put it back; a rename A→B then
+// B→C could end as B (found by the review of the build). In order now, and the server's list is taken only when
+// nothing else is waiting. A refusal while later changes wait cannot be put back by hand without undoing them, so
+// the Library is read again once the queue is empty.
+var _customQ=[], _customResync=false;
+function _customQueue(payload, answered){
+  _customQ.push({p:payload, a:answered});
+  if(_customQ.length===1) _customNext();
+}
+function _customNext(){
+  var job=_customQ[0]; if(!job) return;
+  var tok=TOKEN;
+  _apiRetryOnce(job.p, function(e,r){
+    if(tok!==TOKEN) return;   // signed out meanwhile
+    _customQ.shift();
+    job.a(e, r, !_customQ.length);
+    if(!_customQ.length && _customResync){ _customResync=false; _libRefresh(); _ttplReload(); }
+    _customNext();
+  });
+}
+function _ttplReload(){
+  if(TSET.tplEdit>=0) return;   // an open editor keeps what is typed; the next save sends the right words
+  api({action:'getTeacherTemplates', data:{teacherToken:TOKEN}}, function(e,r){
+    if(!e&&r&&r.ok&&r.templates){ _tplsFromServer(r.templates); _libRedraw(); }
+  });
+}
 function _libMyTagApply(op, before, to, working){
   // [1.822] — one request, and the server changes every file, link and template of this teacher carrying the
   // word, and the stored list. Done here first so the rows answer the press, and put back if refused.
-  var keep=JSON.stringify({c:LIB_CUSTOM, f:(LIB_MINE||[]).map(function(x){ return x.privateTags||[]; }),
-    l:(LIB_MY_LINKS||[]).map(function(x){ return x.privateTags||[]; }), t:(TSET.tpls||[]).map(function(x){ return x.privateTags||[]; })});
+  // [1.824] — put back by ROW, not by position: a delete takes a row out of the list at the click, and put-back by
+  // position then gave every later row the tags of the one before it.
+  var keep={c:(LIB_CUSTOM||[]).slice(), rows:(LIB_MINE||[]).concat(LIB_MY_LINKS||[], TSET.tpls||[], TSET.tplBackup?[TSET.tplBackup]:[])
+    .map(function(x){ return [x, (x.privateTags||[]).slice()]; })};
   var low=function(x){ return String(x==null?'':x).replace(/\s+/g,' ').trim().toLowerCase(); };   // [1.823] — as the server matches
   var swap=function(list){
     var w=(list||[]).slice(), at=-1;
@@ -12764,20 +12996,19 @@ function _libMyTagApply(op, before, to, working){
   if(op==='rename' && LIB_CUSTOM.indexOf(to)<0) LIB_CUSTOM.push(to);
   var fi=LIB_FILTER.indexOf('p:'+before);
   if(fi>-1){ LIB_FILTER.splice(fi,1); if(op==='rename') LIB_FILTER.push('p:'+to); _libFilterSave(); }
-  actStart('mytag', working);
+  // [1.824] — a delete is said as a delete, in red, and named; it said "Deleting…", then "Saved.".
+  actStart('mytag', working, op==='remove'?'bad':'');
   LIB_TAG_EDIT=''; LIB_TAG_DEL=''; LIB_TAG_NEW='';
   _libRedraw();
-  api({action:'teacherCustomTag', data:{teacherToken:TOKEN, op:op, word:before, to:to||''}}, function(e,r){
+  _customQueue({action:'teacherCustomTag', data:{teacherToken:TOKEN, op:op, word:before, to:to||''}}, function(e,r,last){
     if(e||!r||!r.ok){
-      var k=JSON.parse(keep);
-      LIB_CUSTOM=k.c;
-      (LIB_MINE||[]).forEach(function(x,i){ x.privateTags=k.f[i]||[]; });
-      (LIB_MY_LINKS||[]).forEach(function(x,i){ x.privateTags=k.l[i]||[]; });
-      (TSET.tpls||[]).forEach(function(x,i){ x.privateTags=k.t[i]||[]; });
-      actFail('mytag',(r&&r.error)||TLIB_COPY.saveFailed); _libRedraw(); return;
+      if(last){ LIB_CUSTOM=keep.c; keep.rows.forEach(function(p){ p[0].privateTags=p[1]; }); }
+      else _customResync=true;
+      actFail('mytag',(r&&r.error)||(op==='remove'?TLIB_COPY.tagDeleteFailed:TLIB_COPY.tagRenameFailed).replace('{name}', before)); _libRedraw(); return;
     }
-    if(r.customTags) LIB_CUSTOM=r.customTags;
-    actDone('mytag', TLIB_COPY.myTagSaved);
+    if(r.customTags && last) LIB_CUSTOM=r.customTags;
+    if(op==='remove') actGone('mytag', TLIB_COPY.myTagDeletedNamed.replace('{name}', before));
+    else actDone('mytag', TLIB_COPY.myTagRenamedTo.replace('{name}', to));
     _libRedraw();
   });
 }
@@ -12793,13 +13024,14 @@ function libCustomAdd(){
   LIB_CUSTOM=(LIB_CUSTOM||[]).concat([w]);
   actClear('mytag');
   _libRedraw();
-  api({action:'teacherCustomTag', data:{teacherToken:TOKEN, op:'add', word:w}}, function(e,r){
+  _customQueue({action:'teacherCustomTag', data:{teacherToken:TOKEN, op:'add', word:w}}, function(e,r,last){   // [1.824] — in order, resent once
     if(e||!r||!r.ok){
       LIB_CUSTOM=(LIB_CUSTOM||[]).filter(function(x){ return x!==w; });
+      if(!last) _customResync=true;
       LIB_NEWTAG=w;
-      actFail('mytag',(r&&r.error)||TLIB_COPY.saveFailed); _libRedraw(); return;
+      actFail('mytag',(r&&r.error)||TLIB_COPY.tagAddFailed.replace('{name}', w)); _libRedraw(); return;   // [1.824] — it said a FILE
     }
-    if(r.customTags) LIB_CUSTOM=r.customTags;
+    if(r.customTags && last) LIB_CUSTOM=r.customTags;
     _libRedraw();
   });
 }
@@ -12809,7 +13041,7 @@ function libMyTagRename(before){
   _libMyTagApply('rename', before, to, TLIB_COPY.myTagSaving);
 }
 function libMyTagDelete(w){
-  _libMyTagApply('remove', w, '', TLIB_COPY.myTagDeleting);
+  _libMyTagApply('remove', w, '', TLIB_COPY.myTagDeletingNamed.replace('{name}', w));   // [1.824] — named
 }
 
 // One shelf pair per kind. The count on a shelf heading counts only that kind,
@@ -12830,14 +13062,14 @@ function libMyTagDelete(w){
 // [1.822] — one list per band, sorted by the bar. Nothing at all and nothing MATCHING are two different facts,
 // and each band says which.
 function rLibraryBodyFiles(){
-  var items=_libSecItems('files');
-  if(!items.length) return '<div class="lib-empty">'+esc(_libFiltering()?TLIB_COPY.noMatch:TLIB_COPY.emptyFiles)+'</div>';
-  return '<div class="lib-list">'+items.map(function(f){ return rLibRow(f, !_libIsStudio(f), 'mine'); }).join('')+'</div>';
+  var items=_libSecItems('files'), gone=_libGoneLines('files');   // [1.824] — what is being deleted, above the list
+  if(!items.length) return gone+'<div class="lib-empty">'+esc(_libFiltering()?TLIB_COPY.noMatch:TLIB_COPY.emptyFiles)+'</div>';
+  return gone+'<div class="lib-list">'+items.map(function(f){ return rLibRow(f, !_libIsStudio(f), 'mine'); }).join('')+'</div>';
 }
 function rLibraryBodyLinks(){
-  var items=_libSecItems('links');
-  if(!items.length) return '<div class="lib-empty">'+esc(_libFiltering()?TLIB_COPY.noMatch:TLIB_COPY.emptyLinks)+'</div>';
-  return '<div class="lib-list">'+items.map(function(f){ return rLibRow(f, !_libIsStudio(f), 'mine'); }).join('')+'</div>';
+  var items=_libSecItems('links'), gone=_libGoneLines('links');   // [1.824]
+  if(!items.length) return gone+'<div class="lib-empty">'+esc(_libFiltering()?TLIB_COPY.noMatch:TLIB_COPY.emptyLinks)+'</div>';
+  return gone+'<div class="lib-list">'+items.map(function(f){ return rLibRow(f, !_libIsStudio(f), 'mine'); }).join('')+'</div>';
 }
 // [1.822] — the Keylab Master Library, all of it, to browse: files, then links ([1.471]'s separation).
 function rLibMasterBody(){
@@ -12867,13 +13099,14 @@ function rLibRowTags(f, editable){
           ' title="'+esc(TLIB_COPY.tagOffThis.replace('{name}', name))+'" onclick="event.stopPropagation();'+off+'">&#215;</button>'
         : '')+'</span>';
   };
+  // [1.824] — the studio's and the teacher's own together, A–Z, told apart by their look.
+  var all=tags.map(function(tid){
+      return {name:_libTagName(tid), priv:false, off:tpl ? 'libTplTagOff('+jsq(id)+','+jsq(tid)+')' : 'libFileTag('+jsq(id)+','+jsq(tid)+')'};
+    }).concat(words.map(function(w){
+      return {name:w, priv:true, off:tpl ? 'libTplTagOff('+jsq(id)+','+jsq('p:'+w)+')' : 'libPrivateRemove('+jsq(id)+','+jsq(w)+')'};
+    }));
   return '<div class="lib-row-tags'+(editable?'':' ro')+'">'+
-    tags.map(function(tid){
-      return chip(_libTagName(tid), false, tpl ? 'libTplTagOff('+jsq(id)+','+jsq(tid)+')' : 'libFileTag('+jsq(id)+','+jsq(tid)+')');
-    }).join('')+
-    words.map(function(w){
-      return chip(w, true, tpl ? 'libTplTagOff('+jsq(id)+','+jsq('p:'+w)+')' : 'libPrivateRemove('+jsq(id)+','+jsq(w)+')');
-    }).join('')+
+    _libTagAZ(all).map(function(c){ return chip(c.name, c.priv, c.off); }).join('')+
   '</div>';
 }
 function rLibRow(f, mine, where){
@@ -12895,6 +13128,7 @@ function rLibRow(f, mine, where){
   // keeps the column in the Settings table, which is where the studio's
   // bookkeeping lives.
   var meta=link?_libLinkHost(f.url):_attSize(f.sizeBytes);
+  var _asking=!!(mine && LIB_DEL===id && LIB_EDIT!==id);   // [1.824] — Delete clicked on the row itself
   // [1.481] — in a message, pressing a row ATTACHES. On the home page there is
   // nothing to attach to, so it opens the file for editing instead — for a
   // teacher's own row. A studio row has nothing to edit, so it stays inert
@@ -12989,10 +13223,11 @@ function rLibRow(f, mine, where){
       // a master control area for all four."* Delete was reachable only by
       // opening Edit first, so removing a file was two presses and a panel.
       // Admin's rows gained both in [1.579]; this is the same change.
-      (mine?'<button type="button" class="lib-act" onclick="libEdit('+jsq(id)+')">'+
+      // [1.824] — while its delete question is open on the row, the row's own buttons step aside for it.
+      (mine?(_asking?'':'<button type="button" class="lib-act" onclick="libEdit('+jsq(id)+')">'+
          esc(TLIB_COPY.manage)+'</button>'+
         '<button type="button" class="lib-act bad" onclick="libAskDelete('+jsq(id)+')">'+
-         esc(link?TLIB_COPY.linkDel:TLIB_COPY.del)+'</button>'
+         esc(link?TLIB_COPY.linkDel:TLIB_COPY.del)+'</button>')
        // [1.818] — a Master Library item: kept, or found by a search and not yet kept
        :!LIB_STANDALONE?''
        // [1.822] — in the Master Library band an added one says so beside its Remove
@@ -13000,7 +13235,10 @@ function rLibRow(f, mine, where){
          ?((where==='master'?'<span class="lib-said">&#10003; '+esc(TLIB_COPY.inMine)+'</span>':'')+
            '<button type="button" class="lib-act" onclick="libMasterPick('+jsq(id)+',false)">'+esc(TLIB_COPY.unshelve)+'</button>')
          :'<button type="button" class="lib-act lib-pick-add" onclick="libMasterPick('+jsq(id)+',true)">'+esc(TLIB_COPY.pickAdd)+'</button>')+
-    '</div>'+(!mine&&LIB_STANDALONE?rAct('lib:'+id):'')+
+    '</div>'+
+    // [1.824] — the delete question on the row where Delete was clicked, asked once.
+    (_asking?rLibConfirmDelete(f):'')+
+    (!mine&&LIB_STANDALONE?rAct('lib:'+id):'')+
   '</div>';
   // ── [1.467] — ONE box, never three ──────────────────────────────────
   //
@@ -13092,27 +13330,22 @@ function rLibEdit(f){
           '</div>'+
         '</div>'
       : '')+
-    (LIB_TAGS.length
-      ? '<div class="lib-fld">'+
-          '<div class="lib-lbl">'+esc(TLIB_COPY.lblTags)+'</div>'+
-          // [1.487] — same one row here as on a just-added item.
-          '<div class="lib-tags" style="padding-top:0">'+
-          _libTagChips(LIB_TAGS, f.fileName, f.tags||[]).map(function(c){
-            var t=c.t, on=(f.tags||[]).indexOf(t.tagId)>-1;
-            return '<button type="button" class="lib-tag'+(on?' on':(c.near?' near':''))+'"'+
-              ' aria-pressed="'+(on?'true':'false')+'"'+
-              ' onclick="libFileTag('+jsq(id)+','+jsq(t.tagId)+',this)">'+esc(t.name)+'</button>';
-          }).join('')+'</div>'+
-        '</div>'
-      : '')+
+    // [1.487] — same one row here as on a just-added item. [1.824] — the
+    // studio's tags and the teacher's custom tags together, A–Z, each pressed
+    // on or off; the box below makes a new custom tag.
+    (function(){
+      var ch=_libTagChoices(f.fileName, f.tags||[], f.privateTags||[]);
+      return ch.length
+        ? '<div class="lib-fld">'+
+            '<div class="lib-lbl">'+esc(TLIB_COPY.lblTags)+'</div>'+
+            '<div class="lib-tags" style="padding-top:0">'+_libTagChoiceHtml(ch,
+              function(c){ return c.priv ? (f.privateTags||[]).indexOf(c.name)>-1 : (f.tags||[]).indexOf(c.v)>-1; },
+              function(c){ return c.priv ? 'libPrivateToggle('+jsq(id)+','+jsq(c.name)+')' : 'libFileTag('+jsq(id)+','+jsq(c.v)+',this)'; })+'</div>'+
+          '</div>'
+        : '';
+    })()+
     '<div class="lib-fld">'+
       '<div class="lib-lbl">'+esc(TLIB_COPY.lblMine)+'</div>'+
-      ((f.privateTags||[]).length
-        ? '<div class="lib-tags" style="padding-top:0;padding-bottom:5px">'+(f.privateTags||[]).map(function(w){
-            return '<button type="button" class="lib-tag priv on" title="'+esc(TLIB_COPY.removeWord)+'"'+
-              ' onclick="libPrivateRemove('+jsq(id)+','+jsq(w)+')">'+esc(w)+' &#215;</button>';
-          }).join('')+'</div>'
-        : '')+
       '<div class="lib-fld-row">'+
         '<input id="lib-pt-'+esc(id)+'" placeholder="'+esc(TLIB_COPY.privatePh)+'"'+
           ' aria-label="'+esc(TLIB_COPY.privatePh)+'"'+
@@ -13147,6 +13380,16 @@ function rLibConfirmDelete(f){
       '<div class="lib-meta" style="margin:-4px 0 6px">'+esc(TLIB_COPY.linkDelSafe)+'</div>'+
       '<div class="lib-edit-acts">'+
         '<button type="button" class="lib-mini bad" onclick="libDelete('+jsq(id)+')">'+esc(TLIB_COPY.delGo)+'</button>'+
+        '<button type="button" class="lib-mini" onclick="libDelCancel()">'+esc(TLIB_COPY.delBack)+'</button>'+
+      '</div></div>';
+  }
+  // [1.824] — a file someone else added (a family's, kept from their message): Delete takes it off this library
+  // and the file stays in that message, so the question says that, not "for good".
+  if(f.deletesFile===false){
+    return '<div class="lib-edit">'+
+      '<div class="lib-warn">'+esc(TLIB_COPY.keptDelAsk)+'</div>'+
+      '<div class="lib-edit-acts">'+
+        '<button type="button" class="lib-mini bad" onclick="libDelete('+jsq(id)+')">'+esc(TLIB_COPY.keptDelGo)+'</button>'+
         '<button type="button" class="lib-mini" onclick="libDelCancel()">'+esc(TLIB_COPY.delBack)+'</button>'+
       '</div></div>';
   }
@@ -13203,13 +13446,22 @@ function _ttplLeaveEditor(){
 }
 // What the server wrote, into the one list. The row being edited stays as typed, where it is.
 function _tplsFromServer(rows){
+  // [1.824] — a template whose delete is still to go stays off; the delete question stays on its own template.
+  rows=(rows||[]).filter(function(t){ return !_tplGoing[String(t.templateId||'')]; });
+  var asked=(TSET.tpls||[])[TSET.tplDel], askedId=asked?String(asked.templateId||''):'';
   SAVED_TPLS=rows.slice(); _savedTplsLoaded=true; _savedTplsInFlight=false;
   var i=TSET.tplEdit, cur=(TSET.tpls||[])[i];
   TSET.tplsAt=Date.now();
-  if(i<0 || !cur){ TSET.tpls=rows.slice(); return; }
+  var reAsk=function(){
+    if(TSET.tplDel<0) return;
+    var at=-1; (TSET.tpls||[]).forEach(function(t,n){ if(at<0 && askedId && String(t.templateId||'')===askedId) at=n; });
+    TSET.tplDel=at;
+  };
+  if(i<0 || !cur){ TSET.tpls=rows.slice(); reAsk(); return; }
   var next=rows.filter(function(t){ return !cur.templateId || t.templateId!==cur.templateId; });
   next.splice(Math.min(i,next.length),0,cur);
   TSET.tpls=next; TSET.tplEdit=next.indexOf(cur);
+  reAsk();
 }
 var TPL_OPEN=false;
 // What was last inserted, and from where. TPL_USED.html is the yardstick: the
@@ -14102,6 +14354,11 @@ var TCH_COPY={
   savingTemplate:'Saving your template\u2026',
   savedTemplate:'Template saved.',
   savedTemplateNamed:'Saved \u201c{name}\u201d.',
+  // [1.824] — a template's delete went through the editor's save and said "Template saved." AC: "should say …
+  // 'Template deleted'". Named, as a save is ([1.429]). PLACEHOLDER apart from his two words.
+  deletingTemplateNamed:'Deleting \u201c{name}\u201d\u2026',
+  deletedTemplateNamed:'Template \u201c{name}\u201d deleted.',
+  tplDelFailed:'\u201c{name}\u201d could not be deleted. Try again.',
   tplDuplicate:'You already have a template called \u201c{name}\u201d. Give this one a different name.',
   schedulingMsg:'Scheduling message\u2026',
   sendingMsg:'Sending\u2026',
@@ -17200,6 +17457,7 @@ function doSignOut(){
   // [1.823] — and the templates: the one list, and the studio's, are this teacher's until they sign out.
   TSET.tpls=null; TSET.tplsAt=0; TSET.tplEdit=-1; TSET.tplDel=-1; TSET.tplBackup=null; TSET._delUndo=null;
   SAVED_TPLS=[]; STUDIO_TPLS=[]; _savedTplsLoaded=false; _savedTplsInFlight=false;
+  _libWorkClear();   // [1.824]
   _attClear(); ATT_OWNER='';
   if(_pollTimer){ clearTimeout(_pollTimer); _pollTimer=null; }
   TT={asked:false,loading:false,data:null,guideOpen:false,ans:{},timer:{},sending:{},err:{},open:{},miss:{}};   // [1.731]
@@ -17360,15 +17618,7 @@ function boot(){
         _ktSaveSession(TOKEN, TEACHER_ID, TEACHER_NAME);
         PAGE = 'home';
         render();
-        loadFamilyThreads();
-        // Both rosters, not just the visible one — otherwise the staff badge
-        // reads zero on every return visit until the tab is opened, which is
-        // 1.161 #1 all over again. Missed on this path when that was fixed.
-        loadStaffThreads(true);
-        _startMessagePolling();
-        loadTeacherSettings();
-        loadScheduled();   // [1.373]
-        _bootTeacher();   // [1.736] — everything else, in one call
+        _ktFirstLoads();   // [1.824]
       } else {
         _ktClearSession();
         TOKEN=''; TEACHER_ID=''; TEACHER_NAME='';

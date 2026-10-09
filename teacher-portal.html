@@ -4513,6 +4513,7 @@ var MST_COPY={
   savedLinks:'Saved Links',chooseSaved:'Choose a saved link',                // PLACEHOLDER
   open:'Open',saveDraft:'Save Draft',schedule:'Schedule Send',preview:'Preview',hidePreview:'Hide preview',
   cancel:'Cancel',delDraft:'Delete Draft',cancelSend:'Cancel Send',
+  resend:'Resend',   // [1.865] — AC's word, 9 October 2026
   goneStudent:'No longer your student',   // [1.854] — PLACEHOLDER, AC to word
   stoppedSched:'Not sent: no longer your student',   // [1.855] — PLACEHOLDER, AC to word
   previewH:'What the family receives',                                       // PLACEHOLDER
@@ -4912,7 +4913,10 @@ function mstCard(d,m,st){
     (lines.length?'<span class="mst-q">'+esc(MST_COPY.assignment)+'</span><ol class="mst-ol">'+lines.map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ol>':'')+
     (mats.length?'<span class="mst-q">'+esc(MST_COPY.mats)+'</span>'+mats.map(function(x){return _msMatRow(x,'');}).join('').replace(/<a /g,'<a onclick="event.stopPropagation()" '):'');
   var foot=st==='dr'?'<button type="button" class="btn btn-s ms-sm" onclick="'+go+'">'+esc(MST_COPY.open)+'</button>'
-    :st==='sc'&&!m.pending?'<button type="button" class="btn btn-s ms-sm"'+(MST.busy?' disabled':'')+' onclick="mstCancelSend('+jsq(m.messageId)+')">'+esc(MST_COPY.cancelSend)+'</button>':'';   // [1.806] — no Cancel Send until it has an id
+    :st==='sc'&&!m.pending?'<button type="button" class="btn btn-s ms-sm"'+(MST.busy?' disabled':'')+' onclick="mstCancelSend('+jsq(m.messageId)+')">'+esc(MST_COPY.cancelSend)+'</button>'   // [1.806] — no Cancel Send until it has an id
+    // [1.865] — Resend, on a sent one once the server has it (AC, 9 October 2026: "Teacher clicks "resend" button on a sent
+    // assignment. Editor opens up. Teacher can edit if they want, or just click resend to send it").
+    :st==='ok'&&!m.pending&&m.messageId?'<button type="button" class="btn btn-s ms-sm"'+(MST.busy?' disabled':'')+' onclick="mstResend('+jsq(d)+','+jsq(m.messageId)+')">'+esc(MST_COPY.resend)+'</button>':'';
   return '<div class="mst-card '+st+'"><div class="mst-ctop">'+
     cl('mst-ctitle','<b>'+esc(title)+'</b><span>'+esc(MST_COPY.lessonDate(mstLessonLine(d,time)))+'</span>')+
     cl('mst-stamp '+(st==='dr'&&m.failed?'bad':st),esc(stamp))+'</div>'+cl('mst-cbody',body)+
@@ -5023,12 +5027,37 @@ function mstEditDraft(id,d){
 function _mstDraftStamp(x){
   return x.failed?'<span class="mst-stamp bad">'+esc(x.notSent?MST_COPY.notSent:MST_COPY.notSaved)+'</span>':x.pending?'':'<span class="mst-stamp dr">'+esc(MST_COPY.savedOn(mstStamp(x.savedAt)))+'</span>';
 }
+// [1.865] — a sent assignment, back in the Create Assignment editor as it went: its words, the parents it went to, and
+// its materials — a file as the library file it was attached from ([1.794] keeps that id), so it is attached afresh on
+// Resend, exactly as a draft's is. The editor sends a NEW assignment; the one already sent stays as it was. Save Draft
+// and Schedule Send are not offered, and the lesson's own draft, if it has one, is left alone (see mstSend).
+function mstResend(d,id){
+  var x=((_msNoteOf(d)||{}).sent||[]).filter(function(y){return y.messageId===id;})[0];if(!x||MST.busy)return;
+  var s=_mstStu(MS.cardStu),names=x.toNames||[];
+  var to=names.length?{p1:!!s.parent1Name&&names.indexOf(s.parent1Name)>-1,p2:!!s.parent2Name&&names.indexOf(s.parent2Name)>-1}:{p1:true,p2:true};
+  if(!to.p1&&!to.p2)to={p1:true,p2:true};   // names changed since: both, as a new assignment starts
+  var mats=(x.materials||[]).map(function(m){
+    if(m.kind!=='file')return Object.assign({},m);
+    return m.libId?{kind:'file',label:m.label,attachmentId:m.libId}:null;   // a copy with no library id cannot be attached again
+  }).filter(Boolean);
+  if(MS.cardDate!==d){MS.cardDate=d;MS.cardTime=x.lessonTime||'';}
+  // An assignment from before the editor ([1.794]) has a message and a practice list instead: its words as the editor
+  // would hold them, as Cancel Send makes them (_asgDraftFromHeld_).
+  var html=x.html||(function(){
+    var h=x.intro?esc(x.intro).replace(/\n/g,'<br>')+'<br><br>':'',p=(x.practice||[]).map(function(t){return String(t).trim();}).filter(Boolean);
+    if(p.length)h+='<b>'+esc(MST_COPY.assignment)+'</b><ol>'+p.map(function(t){return '<li>'+esc(t)+'</li>';}).join('')+'</ol>';
+    return h;
+  })();
+  MS.asg={date:d,time:x.lessonTime||'',html:html,to:to,mats:mats,resendOf:id};
+  _mstFormOpened();
+}
 function _mstFormOpened(){delete _cmpLinkSel[MST_CID];_mstFormReset();MS.asg.sendKey='';loadLibrary();loadSavedTpls();render();setTimeout(mstToAsg,30);}
 function mstSetTo(slot,on){mstSyncHtml();MS.asg.to[slot]=on;MS.asg.html=_mstStarterApply(MS.asg.html,_mstStu(MS.cardStu),MS.asg);render();}   // [1.807] — the greeting follows the ticks
 function mstMatRemove(i){mstSyncHtml();MS.asg.mats.splice(i,1);render();}
 function mstForm(){
   var a=MS.asg,s=_mstStu(MS.cardStu),two=!!(s.parent1Name&&s.parent2Name),who=mstWho(s,a.to);
-  var dr=_mstDraft(MS.cardStu,a.date);
+  var re=!!a.resendOf;   // [1.865] — Resend: no draft of its own, so none of the draft's buttons
+  var dr=re?null:_mstDraft(MS.cardStu,a.date);
   var libTag=function(m){
     if(m.kind==='book'||m.uploading)return '';   // [1.806] — on a shelf once it has arrived
     var sh=_msLibShelf(m);
@@ -5041,15 +5070,15 @@ function mstForm(){
   var busy=!!MST.busy;
   var btns='<div class="mst-ffoot'+(dr?' has-del':'')+'">'+
       '<button type="button" class="btn btn-s ms-sm"'+(busy?' disabled':'')+' onclick="mstPreview()">'+esc(MST.preview?MST_COPY.hidePreview:MST_COPY.preview)+'</button>'+
-      '<button type="button" class="btn btn-s ms-sm mst-o2"'+(busy?' disabled':'')+' onclick="mstSaveDraft()">'+esc(MST.busy==='draft'?MST_COPY.saving:MST_COPY.saveDraft)+'</button>'+
-      '<button type="button" class="btn btn-s ms-sm mst-o2'+(MST.sched?' mst-on':'')+'"'+(who&&!busy?'':' disabled')+' onclick="mstSchedToggle()">'+esc(MST.busy==='sched'?MST_COPY.scheduling:MST_COPY.schedule)+'</button>'+
+      (re?'':'<button type="button" class="btn btn-s ms-sm mst-o2"'+(busy?' disabled':'')+' onclick="mstSaveDraft()">'+esc(MST.busy==='draft'?MST_COPY.saving:MST_COPY.saveDraft)+'</button>'+
+      '<button type="button" class="btn btn-s ms-sm mst-o2'+(MST.sched?' mst-on':'')+'"'+(who&&!busy?'':' disabled')+' onclick="mstSchedToggle()">'+esc(MST.busy==='sched'?MST_COPY.scheduling:MST_COPY.schedule)+'</button>')+
       '<button type="button" class="btn btn-s ms-sm"'+(busy?' disabled':'')+' onclick="mstAsgClose()">'+esc(MST_COPY.cancel)+'</button>'+
       (dr?'<button type="button" class="btn btn-danger ms-sm mst-del"'+(busy?' disabled':'')+' onclick="mstDeleteDraft()">'+esc(MST_COPY.delDraft)+'</button>':'')+
-      '<button type="button" class="btn btn-p ms-sm mst-send"'+(who&&!busy?'':' disabled')+' onclick="mstSend(0)">'+esc(MST.busy==='send'?MST_COPY.sending:MS_COPY.send(who||'…'))+'</button></div>'+
+      '<button type="button" class="btn btn-p ms-sm mst-send"'+(who&&!busy?'':' disabled')+' onclick="mstSend(0)">'+esc(MST.busy==='send'?MST_COPY.sending:re?MST_COPY.resend:MS_COPY.send(who||'…'))+'</button></div>'+
       (MST.err&&!MST.errFor?'<div class="tt-err">'+esc(MST.err)+'</div>':'');
   a.html=_mstStarterApply(a.html,s,a);   // [1.807] — the greeting and the files sentence, as the ticks and Materials are now
   var comp=rComposer(MST_CID,a.html,'MS.asg.html=this.innerHTML',btns,{noFiles:true,asg:true,beforeActions:mats+(MST.sched?mstSchedPanel('one'):'')});
-  var h='<div class="mst-form"><div class="mst-ctop"><div class="mst-ctitle"><b>'+esc((dr?MST_COPY.draftFor:MST_COPY.newFor)(s.studentName))+'</b>'+
+  var h='<div class="mst-form"><div class="mst-ctop"><div class="mst-ctitle"><b>'+esc((re?MST_COPY.sentFor:dr?MST_COPY.draftFor:MST_COPY.newFor)(s.studentName))+'</b>'+
       '<span>'+esc(MST_COPY.lessonDate(mstLessonLine(a.date,a.time)))+'</span></div>'+
       (dr?_mstDraftStamp(dr):'')+'</div>'+
     '<label class="tt-q">'+esc(MST_COPY.sendTo)+'</label><div class="mst-tos">'+
@@ -5203,7 +5232,7 @@ function _mstSendOne(o,fin){
   // [1.805] — after any save of this lesson still on its way, so the save cannot bring back a draft
   // the send has just removed; and the unsaved copy goes once it is sent.
   var dk=o.s.studentId+'|'+o.date;
-  _seqRun('asg:'+dk,function(next){_mstSendNow(o,function(err,r){next();if(!err)delete _mstLocal[dk];fin(err,r);});});
+  _seqRun('asg:'+dk,function(next){_mstSendNow(o,function(err,r){next();if(!err&&!o.resendOf)delete _mstLocal[dk];fin(err,r);});});
 }
 function _mstSendNow(o,done){
   var s=o.s,files=o.mats.filter(function(m){return m.kind==='file';}),newLinks=o.mats.filter(function(m){return m.kind==='link'&&!_msLibShelf(m);});
@@ -5212,7 +5241,8 @@ function _mstSendNow(o,done){
   // The server binds ten files to a message; an eleventh would be a card row that opens nothing.
   if(files.length>ATT_MAX_FILES)return done({error:TCH_COPY.attachTooMany});
   // The same id for the same words until it goes, so a send whose answer was lost is not sent twice.
-  var key='asg:'+s.studentId+'|'+o.date+'|'+(o.at||0),cid=_sendIdFor(key,html);
+  // [1.865] — a resend has its own: the same words as the assignment it repeats must not be answered as that one.
+  var key='asg:'+s.studentId+'|'+o.date+'|'+(o.at||0)+(o.resendOf?'|re:'+o.resendOf:''),cid=_sendIdFor(key,html);
   var out=[],att=[],i=0;
   var step=function(){
     if(i<newLinks.length){
@@ -5232,7 +5262,7 @@ function _mstSendNow(o,done){
     }
     o.mats.forEach(function(m){out.push(m.kind==='file'?{kind:'file',label:m.label,attachmentId:m._sendId,libId:m.attachmentId}:{kind:m.kind,label:m.label,url:m.url});});
     api({action:'sendMessage',data:{conversationType:'family_teacher',familyId:s.familyId,teacherId:TEACHER_ID,teacherToken:TOKEN,studentId:s.studentId,
-      attachmentIds:att,notifyParents:o.notify,clientMsgId:cid,sendAt:o.at||'',
+      attachmentIds:att,notifyParents:o.notify,clientMsgId:cid,sendAt:o.at||'',resend:!!o.resendOf,   // [1.865]
       assignment:{studentId:s.studentId,lessonDate:o.date,lessonTime:o.time,html:html,materials:out}}},function(e,r){
       if(e||!r||!r.ok){_sendFailed(key,cid,html,[],'');return done(r||{});}
       _sendSucceeded(key);done(null,r);
@@ -5251,13 +5281,13 @@ function mstSend(at){
   var html=_mstCleanHtml(),key=stu+'|'+a.date;
   var why=_tplUnfilledTags(html).length?MST_COPY.unfilled:a.mats.filter(function(m){return m.kind==='file';}).length>ATT_MAX_FILES?TCH_COPY.attachTooMany:'';
   if(why){MST.err=why;MST.errFor='';render();return;}
-  var o={s:s,date:a.date,time:a.time,html:html,mats:a.mats,notify:mstNotify(s,a.to),at:at};
+  var o={s:s,date:a.date,time:a.time,html:html,mats:a.mats,notify:mstNotify(s,a.to),at:at,resendOf:a.resendOf||''};
   if(!_mstHasWords(html)&&!a.mats.length){
     MST.busy=at?'sched':'send';MST.err='';MST.errFor='';render();
     _mstSendOne(Object.assign({},o,{mats:[]}),function(err,r){
       MST.busy='';
       if(err){MST.err=err.error||MST_COPY.failed;render();return;}
-      _mstRosterPatch(function(R){R.drafts=R.drafts.filter(function(x){return _mstDraftKey(x)!==key;});});
+      if(!o.resendOf)_mstRosterPatch(function(R){R.drafts=R.drafts.filter(function(x){return _mstDraftKey(x)!==key;});});
       _mstFormReset();LINK_OFFER=null;MS.asg=null;render();
       _mstAfterSend([stu],!!at);
     });
@@ -5276,7 +5306,7 @@ function _mstMark(o){
     materials:o.mats.slice(),notifyParents:o.notify||null,pending:true,messageId:''};
   if(o.at)x.sendAt=o.at;
   _mstOut[key]={x:x,at:o.at||0};
-  delete _mstLocal[key];delete MST.tick[key];
+  if(!o.resendOf){delete _mstLocal[key];delete MST.tick[key];}   // [1.865] — a resend leaves the lesson's draft alone
   _mstRosterPatch(function(R){_mstKeepLocal(R);});
   if(!o.at)_mstShowSent(x);
   render();
@@ -5293,6 +5323,16 @@ function _mstFire(o,x,many,then){
     x.materials=mats.slice();
     _mstSendOne(Object.assign({},o,{mats:mats.map(function(m){return Object.assign({},m);})}),function(err,r){
       if(_mstOut[key]&&_mstOut[key].x===x)delete _mstOut[key];
+      if(err&&o.resendOf){
+        // [1.865] — a resend refused or lost is not a draft: the editor comes back with the reason, if the teacher is
+        // still on that student with nothing else open; otherwise it is said, and Resend is still on the card.
+        _mstUnshow(x);
+        if(!many&&!MS.asg&&MS.cardStu===stu&&_mstOnStudent(stu)){
+          MS.asg={date:o.date,time:o.time,html:o.html,to:mstTo(o.notify),mats:o.mats.map(function(m){return Object.assign({},m);}),resendOf:o.resendOf};
+          _mstFormOpened();MST.err=err.error||MST_COPY.failed;MST.errFor='';render();
+        }else showMsg((err.error||MST_COPY.failed),'e');
+        return then(err);
+      }
       if(err){
         _mstUnshow(x);
         _mstLocal[key]={draftKey:'',studentId:stu,studentName:x.studentName,familyId:x.familyId,lessonDate:o.date,lessonTime:o.time,
@@ -5307,7 +5347,7 @@ function _mstFire(o,x,many,then){
       }
       x.pending=false;x.messageId=(r&&r.messageId)||'';
       if(o.at)x.sendAt=Number(r&&r.message&&r.message.sendAt)||o.at;else x.sentAt=Date.now();
-      _mstRosterPatch(function(R){R.drafts=R.drafts.filter(function(y){return _mstDraftKey(y)!==key;});});
+      if(!o.resendOf)_mstRosterPatch(function(R){R.drafts=R.drafts.filter(function(y){return _mstDraftKey(y)!==key;});});
       then(null,r);
     });
   });

@@ -198,7 +198,41 @@ button:active:not(:disabled),
 .lib-sortl{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:var(--text3);
   text-transform:none;letter-spacing:0;font-family:"Inter",sans-serif;margin:0}
 .lib-sortl .lib-band-sel{padding:6px 8px;font-size:12.5px;max-width:none}
-.lib-tagpanel{margin:-2px 0 10px;padding:8px 10px;background:var(--bg5);border:1px solid var(--border2);border-radius:var(--r)}
+/* [1.826] — the Tags list drops down under the bar, over the page, the way Google Drive's filters and Gmail's labels
+   do; a click anywhere else, Done or Escape closes it. */
+#lib-tagpanel{position:relative}
+.lib-tagdd-scrim{position:fixed;inset:0;z-index:20;background:transparent}
+.lib-tagdd{position:absolute;top:-4px;right:0;z-index:21;width:min(320px,calc(100vw - 32px));background:#fff;
+  border:1px solid var(--border3);border-radius:var(--r);box-shadow:0 8px 24px rgba(0,0,0,.18);padding:8px}
+.lib-tagdd-q{width:100%;margin:0 0 6px;padding:7px 9px;font-size:13px}
+.lib-tagdd-list{max-height:min(320px,55vh);overflow-y:auto;display:flex;flex-direction:column}
+.lib-tagopt{display:flex;align-items:center;gap:8px;padding:5px 4px;border-radius:4px;cursor:pointer;margin:0;
+  text-transform:none;letter-spacing:0;font-weight:400;font-size:13px;color:var(--text)}
+.lib-tagopt:hover{background:var(--bg2)}
+.lib-tagopt input{margin:0;width:auto;flex:none}
+.lib-tagopt .lib-tag{cursor:pointer}
+.lib-tagopt-n{margin-left:auto;font-size:11.5px;color:var(--text4);font-variant-numeric:tabular-nums}
+.lib-tagopt.off{cursor:default;opacity:.45}
+.lib-tagopt.off .lib-tag{cursor:default}
+.lib-tagdd-ft{display:flex;align-items:center;gap:6px;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)}
+.lib-tagdd-ft .lib-act + .lib-act{margin-right:auto}
+/* [1.826] — what is filtering the list, said under the bar, each tag with its × and Clear all at the end (Baymard's
+   applied filters; Google Drive's Clear filters). */
+.lib-applied{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin:-2px 0 10px;font-size:12.5px;color:var(--text2)}
+.lib-applied-n{font-weight:600;color:var(--text)}
+.lib-applied-l{color:var(--text3)}
+.lib-applied .lib-tag{display:inline-flex;align-items:center;gap:2px;padding:2px 4px 2px 9px;cursor:default}
+.lib-applied .lib-tag-x{font-size:14px;color:#1A1A1A}
+.lib-applied .lib-tag-x:hover{color:var(--red)}
+.lib-and{color:var(--text3)}
+.lib-clear-all{margin-left:4px;font-size:12.5px}
+/* [1.826] — one list per band: rows with a thin line between them in one white list, not a box inside a card inside
+   a band. The kind badge (PDF, LINK, TEMPLATE) still says what each row is. */
+.lib-area .lib-list{gap:0;background:#fff;border:1px solid var(--border2);border-radius:var(--r)}
+.lib-area .lib-list > .lib-row{border:0;border-bottom:1px solid var(--border);border-radius:0;background:transparent;padding:8px 10px}
+.lib-area .lib-list > .lib-row:last-child{border-bottom:0}
+.lib-area .lib-list > .lib-row.sel{background:#EEF3FB;box-shadow:inset 3px 0 0 var(--acc)}
+.lib-area .lib-list > .act-note{margin:0 10px 8px}
 .lib-tg + .lib-tg{margin-top:7px;padding-top:7px;border-top:1px solid var(--border)}
 .lib-tg-l{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text3)}
 .lib-tg .lib-tags{padding-top:4px}
@@ -243,6 +277,7 @@ button:active:not(:disabled),
   .lib-findbar-r .lib-fb-tags{flex:1 1 0;justify-content:center}
   .lib-sortl{flex:1 1 0}
   .lib-sortl .lib-band-sel{flex:1 1 auto;width:100%}
+  .lib-tagdd{left:0;right:0;width:auto}   /* [1.826] — on a phone the Tags list spans the Library's own edges */
   .lib-area > .lib-band.lib-band-wrap{position:relative;font-size:13px;letter-spacing:.05em}
   .lib-area.has-sel > .lib-band.lib-band-wrap{position:sticky}
   /* The title gives way before the Add button does, so the button stays on the band's first line. */
@@ -1215,20 +1250,22 @@ input[type=checkbox]{width:13px;height:13px;padding:0;margin:0;border:0;border-r
 .tch-msg-acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-start}
 .tch-msg-acts .btn{width:auto;flex:0 0 auto}
 .tch-new-msg{font-size:12px;margin-bottom:.5rem}
-.lib-tag{padding:4px 10px;border:1px solid var(--border2);border-radius:999px;background:#fff;
-  font-family:inherit;font-size:11.5px;cursor:pointer;color:var(--text2)}
-.lib-tag:hover{border-color:var(--acc);color:var(--acc)}
-.lib-tag.on{border-color:var(--acc);background:var(--acc);color:#fff;font-weight:600}
-.lib-tag.on:hover{color:#fff}
-.lib-tag.some{border-color:var(--acc);color:var(--acc);font-weight:600}
+.lib-tag{padding:4px 10px;border:1px solid #000;border-radius:999px;background:#ECEEF1;
+  font-family:inherit;font-size:11.5px;cursor:pointer;color:#1A1A1A}
+/* [1.826] — AC, 9 October 2026: "studio tags should have light grey pill background with thin black border. Custom
+   tags should be light blue background with thin black border." The kind is the colour now, so the dashes went. A tag
+   that is ON keeps its colour, a shade deeper, with a ✓ before its name (Material's filter chip): on and off never
+   rest on colour alone, and an on tag never stops saying which kind it is. */
+.lib-tag.priv{background:#DCEAFB}
+.lib-tag:hover{background:#DFE2E7}
+.lib-tag.priv:hover{background:#C9DEF7}
+.lib-tag.on{background:#CDD3DB;font-weight:600}
+.lib-tag.priv.on{background:#B4D2F6}
+.lib-tag-ck{margin-right:3px;font-weight:700}
+.lib-tag.some{font-weight:600}
 /* [1.487] — a tag the item's own name nearly says. An outline only: it is
-   a place to look, not a state, and .on stays filled so the two never read
-   as the same thing. */
-.lib-tag.near{border-color:var(--acc)}
-.lib-tag.priv{border-style:dashed}
-/* [1.824] — a custom tag that is ON keeps its dashes: on the filled chip they were the fill's own colour, so an on
-   custom tag looked exactly like an on studio tag. White dashes inside a solid ring. */
-.lib-tag.priv.on{border-color:#fff;box-shadow:0 0 0 1px var(--acc)}
+   a place to look, not a state. [1.826] — in the studio's blue, on the black border. */
+.lib-tag.near{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc)}
 /* [1.488] — the clear, on the box rather than beside it. Room on the right is
    reserved always, not with :has(): an older iPad that does not support it
    would draw the × on top of what the teacher had typed. */
@@ -1789,9 +1826,7 @@ mark.guide-hit{background:var(--bbg);color:inherit;border-radius:2px;padding:0 1
 .ask-about{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 8px;text-transform:none;letter-spacing:0;font-size:12.5px;font-weight:600;color:var(--text2)}
 .ask-about select{flex:1 1 220px;min-width:0;font:inherit;font-weight:500;padding:6px 8px;background:#fff;border:1px solid var(--border2);border-radius:var(--r)}
 /* [1.816]'s Studio tags and Custom tags headers are gone: [1.824] made My Tags one A–Z list */
-/* [1.824] — the key to the two looks, as two sample chips */
-.lib-tagkey{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:2px 0 8px}
-.lib-tagpanel .lib-tagkey{margin:7px 0 0}
+/* [1.824]'s key to the two looks (two sample chips) is gone: AC, "They take up space and are unnecessary" ([1.826]) */
 /* [1.808] — the same band inside the Add file and Add link panels, which have no card edge to bleed to */
 .pick-band{margin:8px 0 4px;border-radius:var(--r);font-size:12.5px}
 .pick-shelf+.pick-shelf .pick-band{margin-top:6px}
@@ -1877,11 +1912,11 @@ mark.guide-hit{background:var(--bbg);color:inherit;border-radius:2px;padding:0 1
    not on the list, but never struck through: a strike says gone, and AC's whole
    finding was that a struck-out tag reads the same as a shown one. The + says
    what the press does. */
-.lib-tag.back{opacity:1;border-style:dashed;color:var(--text3);cursor:pointer}
+.lib-tag.back{opacity:1;border-style:dashed;color:var(--text3);background:#F5F6F8;cursor:pointer}
 .lib-tag.back:hover{border-color:var(--acc);color:var(--acc)}
 /* [1.596] — SOME of the selected carry it. Its own state, not a dimmer ON: a
    chip that looks half-on and acts like a toggle has to say which half. */
-.lib-tag.part{border-style:dashed;border-color:var(--acc);color:var(--acc)}
+.lib-tag.part{border-style:dashed;font-weight:600}
 .lib-part-n{font-size:9.5px;opacity:.8;margin-left:3px}
 /* [1.596] — the tags a row carries, small, with a x on each. */
 .lib-row-tags{display:flex;flex-wrap:wrap;gap:4px;padding:2px 0 0 22px}
@@ -9837,8 +9872,14 @@ var TLIB_COPY={
   myTagDeletingNamed:'Deleting \u201c{name}\u201d\u2026',
   myTagDeletedNamed:'\u201c{name}\u201d deleted.',
   myTagRenamedTo:'Renamed to \u201c{name}\u201d.',
-  // [1.824] — the key under My Tags: which look is which. DERIVED from AC's two labels, Studio tags and Custom tags.
-  tagKeyStudio:'Studio tag', tagKeyCustom:'Custom tag',
+  // [1.824]'s key (Studio tag, Custom tag) is gone: AC, "remove the 'studio tags' and 'custom tags' pills… They take up
+  // space and are unnecessary" ([1.826]).
+  // [1.826] — the Tags list and the line saying what is filtering. PLACEHOLDER wording, AC's to write.
+  tagMenuFind:'Find a tag', tagMenuClear:'Clear', tagMenuDone:'Done', tagMenuManage:'Manage tags',
+  tagMenuNone:'No tags match.',
+  appliedResults:function(n, q){ var h=n ? (n===1 ? '1 result' : n+' results') : 'No results'; return q ? h+' for \u201c'+q+'\u201d' : h; },
+  appliedTagged:'Tagged:', appliedAnd:'and', appliedClear:'Clear all',
+  appliedRemove:'Stop filtering by {name}',
   noTagsAtAll:'No tags yet. Add a custom tag above.',   // PLACEHOLDER — My Tags with nothing in it; the box is above
   masterNote:'Everything Keylab has shared with teachers. Click Add to My Library to keep one in My Files or My Links.',   // PLACEHOLDER — [1.822]
   noMatch:'Nothing here matches.',          // PLACEHOLDER — [1.822]
@@ -10277,31 +10318,8 @@ function _libMatch(f, filter, q){
 function _libFiltered(list){
   return (list||[]).filter(function(f){ return _libMatch(f, LIB_FILTER, LIB_Q); });
 }
-// TAGS NARROW THEMSELVES — saving #2. A tag is offered only if pressing it
-// would leave something on screen, so no sequence of presses can reach an empty
-// list. A tag already ON is always offered, or there would be no way to press
-// it off again.
-function _libOffered(){
-  // [1.822] — across everything the search reaches, templates and the whole Master Library included.
-  var all=_libAllItems().concat(_libTplAll());
-  var out=[];
-  _libStudioTagsShown().forEach(function(t){
-    if(LIB_FILTER.indexOf(t.tagId)>-1){ out.push({v:t.tagId, name:t.name, priv:false}); return; }
-    var next=LIB_FILTER.concat([t.tagId]);
-    for(var i=0;i<all.length;i++){
-      if(_libMatch(all[i], next, LIB_Q)){ out.push({v:t.tagId, name:t.name, priv:false}); return; }
-    }
-  });
-  _libMyWords().forEach(function(x){
-    var v='p:'+x.word;
-    if(LIB_FILTER.indexOf(v)>-1){ out.push({v:v, name:x.word, priv:true}); return; }
-    var next=LIB_FILTER.concat([v]);
-    for(var i=0;i<all.length;i++){
-      if(_libMatch(all[i], next, LIB_Q)){ out.push({v:v, name:x.word, priv:true}); return; }
-    }
-  });
-  return _libTagAZ(out);   // [1.824] — one A–Z list
-}
+// TAGS NARROW THEMSELVES — saving #2 ([1.487]). [1.826] — they no longer vanish to do it: the Tags list shows every
+// tag, and greys one that would leave nothing on screen (`_libTagCounts`), which was `_libOffered`'s job.
 // [1.600] — the studio's live tags this teacher has not hidden.
 function _libStudioTagsShown(){
   return (LIB_TAGS||[]).filter(function(t){ return !t.off && !_libTagHidden(t.tagId); });
@@ -10485,6 +10503,7 @@ function libraryClose(){ LIBRARY_OPEN=false; LIB_EDIT=''; LIB_DEL=''; LIBADD=nul
 // the whole screen with one key.
 document.addEventListener('keydown', function(ev){
   if(ev.key!=='Escape') return;
+  if(LIB_TAGS_OPEN){ libTagsOpen(); return; }   // [1.826] — the Tags list first: it is on top
   if(LIB_EDIT||LIB_DEL) { libEditClose(); return; }
   if(LIBRARY_OPEN) libraryClose();
 });
@@ -10607,7 +10626,11 @@ function _libAreasRedraw(){
   LIB_STANDALONE=false;
   _typingPutBack(a, n);
   var x=document.getElementById('lib-q-x');
-  if(x) x.hidden=!_libFiltering();
+  if(x) x.hidden=!String(LIB_Q||'');   // [1.826] — the words only
+}
+function libSearchClear(){
+  var q=document.getElementById('lib-q'); if(q){ q.value=''; try{ q.focus(); }catch(e){} }
+  libSearch('');
 }
 
 function _libFind(id){
@@ -11235,14 +11258,11 @@ function _libTagChoiceHtml(choices, isOn, clickFor){
   return (choices||[]).map(function(c){
     var on=!!isOn(c), act=clickFor(c);   // the caller names the function; every one is a real handler
     return '<button type="button" class="lib-tag'+(c.priv?' priv':'')+(on?' on':(c.near?' near':''))+'"'+
-      ' aria-pressed="'+(on?'true':'false')+'" onclick="'+act+'">'+esc(c.name)+'</button>';
+      ' aria-pressed="'+(on?'true':'false')+'" onclick="'+act+'">'+_libTagCk(on)+esc(c.name)+'</button>';
   }).join('');
 }
-// [1.824] — the key to the two looks, wherever both are listed. Sample chips, not words about chips.
-function _libTagKey(){
-  return '<div class="lib-tagkey"><span class="lib-tag sm">'+esc(TLIB_COPY.tagKeyStudio)+'</span>'+
-    '<span class="lib-tag sm priv">'+esc(TLIB_COPY.tagKeyCustom)+'</span></div>';
-}
+// [1.826] — an ON tag says so with a ✓ before its name, not only with its shade (Material's filter chip).
+function _libTagCk(on){ return on ? '<span class="lib-tag-ck" aria-hidden="true">\u2713</span>' : ''; }
 // Any live tag whose word appears in a filename. **Suggested, never applied
 // silently** — a wrong tag on twenty files is worse than typing twenty times,
 // and unticking is one press. Punctuation is ignored on both sides, so
@@ -12140,6 +12160,13 @@ function rLibraryAdded(){
 // header (AC's layout of 12 September), which made a teacher pick a section before looking, and [1.818]'s Master
 // Library that could only be searched, never browsed. The placement of every control is written out in [1.822].
 var LIB_SEE={tags:false, files:false, links:false, templates:false, master:false};
+// [1.826] — the bands a teacher opens stay open next time on this device, as Sort does; the first time, My Files is
+// open. Every visit used to start with five shut bars and nothing on screen. A convenience only: nothing is lost if
+// the browser forgets it.
+(function(){ try{ var v=JSON.parse(localStorage.getItem('kl_libsee')||'null');
+  if(v && typeof v==='object') Object.keys(LIB_SEE).forEach(function(k){ LIB_SEE[k]=!!v[k]; }); else LIB_SEE.files=true;
+}catch(e){ LIB_SEE.files=true; } })();
+function _libSeeSave(){ try{ localStorage.setItem('kl_libsee', JSON.stringify(LIB_SEE)); }catch(e){} }
 var LIB_SHUT={};     // a band the teacher closed during this search stays closed until the search ends
 var LIB_SEL={};
 var LIB_SEL_AT='';   // the section of the latest tick: the selection's controls sit on ITS band
@@ -12151,6 +12178,7 @@ function _libFiltering(){ return !!String(LIB_Q||'').trim() || LIB_FILTER.length
 function libSee(which){
   if(_libSeen(which)){ LIB_SEE[which]=false; if(_libFiltering()) LIB_SHUT[which]=true; }
   else { LIB_SEE[which]=true; delete LIB_SHUT[which]; }
+  _libSeeSave();   // [1.826]
   _libRedraw();
 }
 function _libSeen(which){
@@ -12234,6 +12262,7 @@ function _libSection(which, inner){
 // directly under that band, and the band stays pinned to the top of the screen while its list scrolls ([1.618]:
 // "Selection bar needs to be seen when using").
 function rLibArea(which){
+  if(!_libBandShown(which)) return '';   // [1.826]
   var open=_libSeen(which), host=(_libBarHost()===which), add=LIB_ADDS[which];
   return '<div class="lib-area'+(host?' has-sel':'')+'" id="lib-area-'+which+'">'+
     '<div class="lib-band lib-band-wrap">'+
@@ -12255,7 +12284,21 @@ function rLibAreaBody(which){
   return rLibMasterBody();
 }
 function rLibAreas(){
-  return ['tags','files','links','templates','master'].map(rLibArea).join('');
+  // [1.826] — My Tags last: it is for managing, and the lists above it are what a teacher came to search. It is
+  // also opened from the Tags list's Manage tags.
+  return ['files','links','templates','master','tags'].map(rLibArea).join('');
+}
+// [1.826] — while a search or a tag is on, only the bands with something to show are drawn; the line under the bar
+// says how many results there are in all. A band stays while it holds something the teacher is in the middle of: a
+// selection, a file or link being added, a template being written, a delete being said.
+function _libBandShown(which){
+  if(!_libFiltering()) return true;
+  if(which==='tags') return !!LIB_SEE.tags;
+  if(_libBarHost()===which) return true;
+  if(which==='templates' && TSET.tplEdit>=0) return true;
+  if(_libGoneLines(which)) return true;
+  if(which!=='master' && String(_libAddSlot(which)||'').replace(/<[^>]*>/g,'').trim()) return true;
+  return _libSecItems(which).length>0;
 }
 // ── The bar: Search, Tags, Sort ──────────────────────────────────────────
 // One box, so one place to type and one × to clear, which takes the tags off with the words ([1.488]).
@@ -12266,13 +12309,14 @@ function rLibFindBar(){
       '<input class="lib-search" type="text" id="lib-q" value="'+esc(LIB_Q)+'" autocomplete="off"'+
         ' placeholder="'+esc(TLIB_COPY.search)+'" aria-label="'+esc(TLIB_COPY.search)+'"'+
         ' oninput="libSearch(this.value)">'+
-      '<button type="button" class="lib-clear-x" id="lib-q-x"'+(_libFiltering()?'':' hidden')+
-        ' onclick="libClearFilter()" aria-label="'+esc(TLIB_COPY.clear)+'" title="'+esc(TLIB_COPY.clear)+'">&#215;</button>'+
+      // [1.826] — the × in the box clears the words only; Clear all, on the line below, clears the tags too.
+      '<button type="button" class="lib-clear-x" id="lib-q-x"'+(String(LIB_Q||'')?'':' hidden')+
+        ' onclick="libSearchClear()" aria-label="'+esc(TLIB_COPY.clear)+'" title="'+esc(TLIB_COPY.clear)+'">&#215;</button>'+
     '</span>'+
     '<div class="lib-findbar-r">'+
       '<button type="button" class="lib-act lib-fb-tags'+(LIB_TAGS_OPEN||on?' on':'')+'" id="lib-tags-btn"'+
-        ' aria-expanded="'+(LIB_TAGS_OPEN?'true':'false')+'" onclick="libTagsOpen()">'+
-        esc(TLIB_COPY.tagsHead)+(LIB_FILTER.length?'<span class="zcount">'+LIB_FILTER.length+'</span>':'')+'</button>'+
+        ' aria-expanded="'+(LIB_TAGS_OPEN?'true':'false')+'" aria-haspopup="dialog" onclick="libTagsOpen()">'+
+        esc(TLIB_COPY.tagsHead)+(LIB_FILTER.length?'<span class="zcount">'+LIB_FILTER.length+'</span>':'')+'</button>'+   // [1.826] — no arrow: AC, "No arrows ever!" ([1.794])
       '<label class="lib-sortl"><span>'+esc(TLIB_COPY.sortLbl)+'</span>'+
         '<select id="lib-sort" class="lib-band-sel" aria-label="'+esc(TLIB_COPY.sortBy)+'" onchange="libSortBy(this.value)">'+
         LIB_SORTS.map(function(k){
@@ -12657,7 +12701,7 @@ function rLibBulkPanels(){
               ' aria-pressed="'+(all?'true':'false')+'"'+
               ' title="'+esc((all?TLIB_COPY.bulkOff:TLIB_COPY.bulkOn).replace('{n}', String(sel.length)))+'"'+
               ' onclick="libBulkApply('+jsq(t.v)+','+(all?'true':'false')+')">'+
-              esc(t.name)+(some?' <span class="lib-part-n">'+have+'/'+sel.length+'</span>':'')+'</button>';
+              _libTagCk(all)+esc(t.name)+(some?' <span class="lib-part-n">'+have+'/'+sel.length+'</span>':'')+'</button>';
           }).join('')+'</div></div>'
         : '')+
       rAct('libbulk')+
@@ -12747,23 +12791,102 @@ var LIB_TAGS_OPEN=false;
 // a filter you can press over a list you cannot see answers nothing.
 function libTagsOpen(){
   LIB_TAGS_OPEN=!LIB_TAGS_OPEN;
+  if(!LIB_TAGS_OPEN) LIB_TAGQ='';   // [1.826]
   _libRedraw();
 }
 function rLibraryTags(){
-  // [1.822] — under the bar. A tag is offered when pressing it would leave something on screen ([1.487]), across
-  // everything the search reaches. [1.824] — in ONE A–Z row, the studio's and the teacher's own told apart by their
-  // look, with the key beside them; it was two labelled rows, the studio's first (AC: "tags should list in
-  // alphabetical order, merging studio and custom tags, differentiated by their appearance").
+  // [1.826] — under the bar: the Tags list when it is open, and the line saying what is filtering. AC: "Using tags to
+  // search is pretty rudimentary and a bit opaque … They won't know they can just click on a tag to remove it once it
+  // has been selected. A user wants a clear, predictable, familiar way". The chips that narrowed as they were pressed
+  // ([1.487]; [1.822]; [1.824]) are replaced by what Google Drive, Gmail and most shops do: a list with tick boxes
+  // that drops down from the button, and the chosen tags said above the results, each with its ×, and Clear all.
+  return rLibTagMenu()+rLibApplied();
+}
+// Every tag a teacher can filter by — the studio's they have not hidden, and their own — A–Z.
+function _libFilterTags(){
+  return _libTagAZ(_libStudioTagsShown().map(function(t){ return {v:t.tagId, name:t.name, priv:false}; })
+    .concat(_libMyWords().map(function(x){ return {v:'p:'+x.word, name:x.word, priv:true}; })));
+}
+function _libFilterName(v){ return String(v).indexOf('p:')===0 ? String(v).slice(2) : (_libTagName(v)||''); }
+// How many of what the search reaches each tag would leave on screen: for a chosen tag, what is shown now. A tag that
+// would leave nothing is greyed in the list and stays where it is ([1.547]: chips that vanished read as chaos).
+function _libTagCounts(){
+  var base=_libAllItems().concat(_libTplAll()).filter(function(f){ return _libMatch(f, LIB_FILTER, LIB_Q); });
+  var out={};
+  _libFilterTags().forEach(function(t){
+    if(LIB_FILTER.indexOf(t.v)>-1){ out[t.v]=base.length; return; }
+    var one=[t.v];
+    out[t.v]=base.filter(function(f){ return _libMatch(f, one, ''); }).length;
+  });
+  return out;
+}
+var LIB_TAGQ='';   // what is typed in the list's Find a tag
+function rLibTagMenu(){
   if(!LIB_TAGS_OPEN) return '';
-  var offered=_libOffered();
-  var chips=offered.map(function(t){
-    var on=LIB_FILTER.indexOf(t.v)>-1;
-    return '<button type="button" class="lib-tag'+(on?' on':'')+(t.priv?' priv':'')+'"'+
-      ' aria-pressed="'+(on?'true':'false')+'" onclick="libTag('+jsq(t.v)+')">'+esc(t.name)+'</button>';
+  var tags=_libFilterTags();
+  return '<div class="lib-tagdd-scrim" onclick="libTagsOpen()"></div>'+
+    '<div class="lib-tagdd" role="dialog" aria-label="'+esc(TLIB_COPY.tagFilter)+'">'+
+      (tags.length>8
+        ? '<input id="lib-tagdd-q" class="lib-tagdd-q" type="text" autocomplete="off" value="'+esc(LIB_TAGQ)+'"'+
+          ' placeholder="'+esc(TLIB_COPY.tagMenuFind)+'" aria-label="'+esc(TLIB_COPY.tagMenuFind)+'" oninput="libTagMenuFind(this.value)">'
+        : '')+
+      '<div class="lib-tagdd-list" id="lib-tagdd-list">'+rLibTagMenuList()+'</div>'+
+      '<div class="lib-tagdd-ft">'+
+        '<button type="button" class="lib-act" onclick="libTagsClear()"'+(LIB_FILTER.length?'':' disabled')+'>'+esc(TLIB_COPY.tagMenuClear)+'</button>'+
+        '<button type="button" class="lib-act" onclick="libManageTags()">'+esc(TLIB_COPY.tagMenuManage)+'</button>'+
+        '<button type="button" class="lib-done" onclick="libTagsOpen()">'+esc(TLIB_COPY.tagMenuDone)+'</button>'+
+      '</div>'+
+    '</div>';
+}
+function rLibTagMenuList(){
+  var tags=_libFilterTags(), counts=_libTagCounts(), q=String(LIB_TAGQ||'').trim().toLowerCase();
+  if(!tags.length) return '<div class="lib-empty">'+esc(TLIB_COPY.noTagsYet)+'</div>';
+  var shown=q ? tags.filter(function(t){ return t.name.toLowerCase().indexOf(q)>-1; }) : tags;
+  if(!shown.length) return '<div class="lib-empty">'+esc(TLIB_COPY.tagMenuNone)+'</div>';
+  return shown.map(function(t){
+    var on=LIB_FILTER.indexOf(t.v)>-1, n=counts[t.v]||0, off=(!on && !n);
+    return '<label class="lib-tagopt'+(off?' off':'')+'">'+
+      '<input type="checkbox"'+(on?' checked':'')+(off?' disabled':'')+' onchange="libTag('+jsq(t.v)+')">'+
+      '<span class="lib-tag'+(t.priv?' priv':'')+'">'+esc(t.name)+'</span>'+
+      '<span class="lib-tagopt-n">'+n+'</span></label>';
   }).join('');
-  return '<div class="lib-tagpanel">'+(chips
-    ? '<div class="lib-tags">'+chips+'</div>'+(offered.some(function(t){ return t.priv; })?_libTagKey():'')
-    : '<div class="lib-empty">'+esc(TLIB_COPY.noTagsYet)+'</div>')+'</div>';
+}
+function libTagMenuFind(v){
+  LIB_TAGQ=String(v||'');
+  var l=document.getElementById('lib-tagdd-list');   // the list only: the box being typed in is never rebuilt
+  if(l) l.innerHTML=rLibTagMenuList(); else _libRedraw();
+}
+function libTagsClear(){
+  var was=_libFiltering();
+  LIB_FILTER=[]; _libFilterSave();
+  if(_libFiltering()!==was) LIB_SHUT={};
+  _libRedraw();
+}
+// Gmail's "Manage labels": the place to rename, delete and hide, from the list that uses them.
+function _libAreaEl(which){ return document.getElementById('lib-area-'+which); }   // rLibArea draws id="lib-area-<which>"
+function libManageTags(){
+  LIB_TAGS_OPEN=false; LIB_TAGQ='';
+  LIB_SEE.tags=true; _libSeeSave();
+  _libRedraw();
+  setTimeout(function(){ var a=_libAreaEl('tags'); if(a && a.scrollIntoView) a.scrollIntoView({block:'start', behavior:'smooth'}); }, 0);
+}
+// What is filtering the list, in words, each tag removable, and Clear all.
+function rLibApplied(){
+  if(!_libFiltering()) return '';
+  var n=0; ['files','links','templates','master'].forEach(function(w){ n+=_libSecItems(w).length; });
+  var tags=LIB_FILTER.map(function(v){ return {v:v, name:_libFilterName(v), priv:String(v).indexOf('p:')===0}; });
+  return '<div class="lib-applied" role="status">'+
+    '<span class="lib-applied-n">'+esc(TLIB_COPY.appliedResults(n, String(LIB_Q||'').trim()))+'</span>'+
+    (tags.length
+      ? '<span class="lib-applied-l">'+esc(TLIB_COPY.appliedTagged)+'</span>'+
+        tags.map(function(t){
+          var lbl=TLIB_COPY.appliedRemove.replace('{name}', t.name);
+          return '<span class="lib-tag'+(t.priv?' priv':'')+'">'+esc(t.name)+
+            '<button type="button" class="lib-tag-x" aria-label="'+esc(lbl)+'" title="'+esc(lbl)+'" onclick="libTag('+jsq(t.v)+')">&#215;</button></span>';
+        }).join('<span class="lib-and">'+esc(TLIB_COPY.appliedAnd)+'</span>')
+      : '')+
+    '<button type="button" class="lnk-btn lib-clear-all" onclick="libClearFilter()">'+esc(TLIB_COPY.appliedClear)+'</button>'+
+  '</div>';
 }
 // ── [1.597] — the FILTER goes beside the list, the VOCABULARY stays in its
 //    own band ───────────────────────────────────────────────────────────────
@@ -12914,7 +13037,6 @@ function rLibMyTagManager(){
   };
   return '<div class="lib-mytags">'+
     (studio.length?'<p class="lib-blurb">'+esc(TLIB_COPY.studioTagsBlurb)+'</p>':'')+
-    _libTagKey()+
     '<div class="lib-fld-row lib-newtag">'+
       '<input id="lib-newtag" type="text" value="'+esc(LIB_NEWTAG)+'" maxlength="40"'+
         ' placeholder="'+esc(TLIB_COPY.customAddPh)+'" aria-label="'+esc(TLIB_COPY.customAddPh)+'"'+

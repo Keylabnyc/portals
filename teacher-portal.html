@@ -537,7 +537,7 @@ button:active:not(:disabled),
    [1.190]'s standing rule is against hyperlinks that PERFORM an action; a link
    to a web page is not that, and AC said so when raising this. */
 .bubble-text a{color:var(--link);text-decoration:underline;word-break:break-word}
-.bubble.mine .bubble-text a{color:#fff}
+.bubble.mine .bubble-text a{color:#9CC8FF}   /* [1.858] — light blue on the navy bubble, underlined (AC: "highlighted in light blue font underlined so it's clear they are links"); it was white, like the words around it */
 .thread-list{display:flex;flex-direction:column;gap:6px}
 /* [1.249] — the row, settled with AC on screen, 3 September 2026.
    TWO RULES UNDERNEATH ALL OF IT, and everything else follows from them:
@@ -1418,6 +1418,11 @@ input[type=checkbox]{width:13px;height:13px;padding:0;margin:0;border:0;border-r
    own light-red surface rather than inheriting — the same fault [1.230] was
    raised about, and not one to rebuild here. */
 .bubble.mine .msg-notify-warn{background:var(--rbg);color:var(--rt);border-left-color:var(--red)}
+/* [1.861] — the light-blue line under a message a test family was not emailed, its emails being off. Its own
+   surface on your own bubble, as the red one keeps (the bubble is solid accent blue). */
+.msg-notify-info{display:block;margin-top:8px;padding:6px 10px;border-radius:5px;background:var(--bbg);
+  border-left:3px solid var(--blue);color:var(--bt);font-size:12px;font-weight:600;line-height:1.35}
+.bubble.mine .msg-notify-info{background:var(--bbg);color:var(--bt);border-left-color:var(--blue)}
 /* The guide. Closed by default and quiet when closed — it sits under the
    colour key all day and should not compete with the messages. */
 .guide{margin:-.35rem 0 1rem}
@@ -2039,6 +2044,13 @@ mark.guide-hit{background:var(--bbg);color:inherit;border-radius:2px;padding:0 1
 .mst-xlist>.mst-xrow:first-child,.mst-xlist>.mst-flash+.mst-xrow{border-top:0}
 .mst-xrow input[type=checkbox]{width:16px;height:16px}
 .mst-xopen{flex:1;min-width:0;display:flex;justify-content:space-between;gap:8px;align-items:center;background:none;border:0;padding:8px 0;font:inherit;font-size:13px;color:var(--text);cursor:pointer;text-align:left}
+.mst-xopen.mst-gone{cursor:default}   /* [1.854] — a row with nothing to open */
+/* [1.857] — the files an assignment brings, apart from the teacher's words; the family card's light blue. */
+.mst-files{background:#E8F1FD;border:1px solid #BBD3F5;border-radius:8px;padding:8px 10px;margin:6px 0 8px;color:#1E3A6E;font-size:13px}
+.mst-files-t{font-weight:700;margin-bottom:2px}
+/* [1.858] — a link in an assignment reads as a link, as it does for the family: the page's own a{} takes the
+   underline off until hover, so a teacher could not tell a link had gone. */
+.mst-html a{color:var(--link);text-decoration:underline}
 .mst-xopen:hover .mst-xn{text-decoration:underline}
 .mst-xn{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mst-xd{font-size:12px;color:var(--text4);white-space:nowrap}.mst-xd.sc{color:#1a4fc4;font-weight:600}
@@ -2429,15 +2441,28 @@ function _apiKeepKey(p){
   return '';
 }
 function _apiCopy(r){ return JSON.parse(JSON.stringify(r)); }
+// [1.849] — a save to a card moves the card's number on, and a card asked for before that save was answered is
+// asked for again: the server may have read it before the save landed, and holding that copy would put the old
+// words back on the next open.
+var API_KEEP_GEN={};
 function _apiRefreshKept(payload,k,force){
   if(!force && Date.now()-(API_KEEP_AT[k]||0)<API_KEEP_REFRESH_MS) return;
   API_KEEP_AT[k]=Date.now();
-  _apiFetch(payload,function(e,r){ if(!e&&r&&r.ok) API_KEEP[k]=r; });
+  var g=API_KEEP_GEN[k]||0;
+  _apiFetch(payload,function(e,r){
+    if(e||!r||!r.ok) return;
+    if((API_KEEP_GEN[k]||0)!==g){ _apiRefreshKept(payload,k,true); return; }
+    API_KEEP[k]=r;
+  });
 }
-// What this teacher just wrote is put into the held card at once, so opening
-// the card again never shows the words from before the save.
+// What this teacher just wrote is put into the held card, so opening the card
+// again never shows the words from before the save. [1.849] — once the server
+// has said saved, not before: a save that failed left its words here, and the
+// next open showed them as if saved. While one is on its way, the open card
+// shows it from the page's own record (_msNotePend, _msStuNote).
 function _apiPatchKept(payload){
-  var d=(payload&&payload.data)||{}, c=API_KEEP['c|'+(d.studentId||'')];
+  var d=(payload&&payload.data)||{}, ck='c|'+(d.studentId||''), c=API_KEEP[ck];
+  if(payload.action==='teacherSaveStudentNote'||payload.action==='teacherSaveLessonNote') API_KEEP_GEN[ck]=(API_KEEP_GEN[ck]||0)+1;
   if(payload.action==='teacherSaveStudentNote' && c){ c.myNote=String(d.note||''); }
   if(payload.action==='teacherSaveLessonNote' && c){
     c.notes=c.notes||[];
@@ -2455,8 +2480,10 @@ function api(payload, cb){
     _apiRefreshKept(payload,k);
     return;
   }
-  _apiPatchKept(payload);
+  var g=k?(API_KEEP_GEN[k]||0):0;
   _apiFetch(payload, function(e,r){
+    if(!e && r && r.ok) _apiPatchKept(payload);   // [1.849] — after the server's answer, see above
+    if(k && !e && r && r.ok && (API_KEEP_GEN[k]||0)!==g){ api(payload,cb); return; }   // [1.849] — read before a save landed
     if(k && !e && r && r.ok){
       if(payload.action==='teacherWeek' && r.weekStart){ if(!(payload.data||{}).weekStart) API_THISWEEK=r.weekStart; k='w|'+r.weekStart; }
       API_KEEP[k]=r; API_KEEP_AT[k]=Date.now();
@@ -3583,6 +3610,14 @@ var GUIDE_COPY={
   // professional.' So every row is named for the function as its tab shows it,
   // in the tab's order, and every line is a plain instruction that starts with
   // what the teacher does.
+  // ── [1.848] — reviewed against the tool, 9 October 2026 ───────────────────
+  // AC: "I think it may be time for a review and update of the teacher guide instructions to include helpful
+  // information like this so they understand how to use the tool" — "this" being how Away works. Every row was
+  // checked against the code; rows that had stopped being true are corrected, and what a teacher needs and was never
+  // told is added. AC's own sentences stay word for word (the reply times, the colour key, the studio promise,
+  // "Asking admin does not stop the reminders", the after-hours line). EVERY OTHER NEW OR CHANGED SENTENCE IS A
+  // PLACEHOLDER for AC's pass. Not added: a "getting started" section — AC, 5 October: "Find your Way around doesn't
+  // help here. Keep it simple. They know how to use apps." Its useful parts went into the rows they belong to.
   sections:[
     // [1.793]/[1.794] — the tab as AC approved it on 7 October 2026: a student list, the one
     // row of Opus Schedule, Drafts and Scheduled, and Create Assignment as the composer. Rows
@@ -3590,49 +3625,78 @@ var GUIDE_COPY={
     {id:'students', h:'Students', topics:[
       // [1.771] — the Opus button drawn in its row as the real button (AC: "Use buttons not text links").
       {n:'Opus Schedule', btn:'view', k:'opus schedule calendar lessons source truth latest current',
-       q:'Click {{Opus Schedule}} to see your current lessons in Opus, the source of truth for all lessons.'},
+       q:'Click {{Opus Schedule}} to see your current lessons in Opus, the source of truth for all lessons.', m:[
+        'The student list on this tab is your regular weekly schedule from the studio\u2019s records. Check Opus for cancellations, make-ups and other changes.'
+      ]},
       // AC, 5 October 2026 — cancelling happens in Opus, not in this portal; since 7 October
       // {{Opus Schedule}} is the one way into Opus from this tab.
       {n:'Cancel a Lesson in Opus', btn:'cancel', k:'cancel cancellation cancelling sick makeup make up opus lesson',
        q:'Cancel lessons in Opus: click {{Opus Schedule}}. During cancellation, Opus prompts you to leave a message for the family.'},
-      {n:'All days', k:'student list day week schedule find today lesson students',
-       q:'Your students are listed by the day of their lesson. Choose a day from {{All days}} to see only that day\u2019s students, and click a student to open their page.', m:[
-        'A student\u2019s latest lesson is marked {{Draft}}, {{Scheduled}} or {{Sent}} when it has an assignment. Trial students are labeled {{Trial}}.'
+      // [1.848] — the menu is "Select Day View" (AC, 8 October); "All days" is its first choice.
+      {n:'Select Day View', k:'student list day week schedule find today lesson students all days',
+       q:'Your students are listed by the day of their lesson. Choose a day from {{Select Day View}} to see only that day\u2019s students, or {{All days}} to see everyone. Click a student to open their page.', m:[
+        'A student\u2019s latest lesson is marked {{Draft}}, {{Scheduled}} or {{Sent}} when it has an assignment. Trial students are labeled {{Trial}}.',
+        'A student who moves to another teacher or stops lessons leaves your list. Your notes about them do not pass to their new teacher.',
+        'On a phone, a student\u2019s page opens on its own. Click {{All Students}} to return to the list.'
       ]},
       {n:'Drafts', k:'draft drafts saved later unsent send several many bulk together',
-       q:'Click {{Drafts}} to see the assignments you have saved. Click a student to open the draft, or tick several and click {{Send}} or {{Schedule Send}} to send them together.'},
+       q:'Click {{Drafts}} to see the assignments you have saved. Click a student to open the draft, or tick several and click {{Send}} or {{Schedule Send}} to send them together.', m:[
+        'Each draft goes to the parents ticked in it. If one cannot be sent, sending stops and names the student.',
+        'To schedule several, tick them, click {{Schedule Send}}, choose a date and time, and click {{Schedule Message}}.',
+        'A draft marked {{Not saved}} or {{Not sent}} did not reach the studio. Click it to open it and try again.',
+        'A draft for a student who is no longer yours is marked {{No longer your student}}. It cannot be sent. Click {{Delete Draft}} to remove it.'
+      ]},
       {n:'Scheduled', k:'scheduled later time waiting queue cancel send',
-       q:'Click {{Scheduled}} to see the assignments waiting to send and when each will go. Click a student to open it.'},
+       q:'Click {{Scheduled}} to see the assignments waiting to send and when each will go. Click a student to open it.', m:[
+        'Scheduled assignments are also listed under {{Scheduled messages}} on the {{Messages}} tab.',
+        'An assignment is not sent if the student is no longer yours when its time comes, and is marked {{Not sent: no longer your student}}.'
+      ]},
+      {n:'Message Family', k:'message family parents contact conversation write',
+       q:'Click {{Message Family}} on a student\u2019s page to open that family\u2019s conversation on {{Messages}}.'},
       {n:'Notes about [student]', k:'private notes student',
        q:'Keep private notes on each student. Only you can see them, and they save automatically.'},
       // [1.774] — read-only until Edit; "Lesson Activities" is "Lesson Notes" (AC).
       // [1.790] — AC: open blank, Save, and Edit only for saved notes.
       {n:'Lesson Summary', k:'lesson notes activities materials books resources edit save file link date',
-       q:'Choose the lesson date, type your lesson notes and add {{Materials & Resources}}, then click {{Save}}. To change saved notes, click {{Edit}}. Nothing changes until you save.', m:[
-        'Click {{Add file}} or {{Add link}} to add materials from your device, your saved files and links, or the {{Keylab Master Library}}.'
+       q:'Choose the lesson date, type your lesson notes and add {{Materials & Resources}}, then click {{Save}}. To change saved notes, click {{Edit}}.', m:[
+        'Lesson notes and materials are for you. They are not sent to the family. To send the family work, create an assignment.',
+        'Click {{Add file}} or {{Add link}} to add materials from your device, your saved files and links, or the {{Keylab Master Library}}.',
+        'While editing, click {{Cancel}} to discard your changes. Clicking {{Create Assignment for}} the student also saves the notes you are writing.',
+        'The date list shows your weekly lesson day for the past six weeks, and any earlier date with notes or an assignment.'
       ]},
       {n:'Create Assignment', k:'homework practice assignment parents file link library master template draft schedule preview',
-       q:'Click {{Create Assignment for}} the student at the bottom of the {{Lesson Summary}}.', m:[   // [1.802] — it opens blank
-        'Write it with the formatting buttons, {{Add file}}, {{Add link}} and {{Templates}}, as in a message. Tick which parents to send it to, then click {{Send to}}.',
-        'Click {{Save Draft}} to come back to it, {{Schedule Send}} to choose when it goes, or {{Preview}} to see the family\u2019s email.',
-        'Files you add are listed under {{Materials}}, and the family is asked to share them with the student.',
-        'To change a scheduled assignment, click {{Cancel Send}}. It returns to {{Drafts}} with nothing lost.'
+       q:'Click {{Create Assignment for}} the student at the bottom of the {{Lesson Summary}}. Write the assignment, tick which parents receive it, and click {{Send to}}.', m:[   // [1.802] \u2014 it opens blank
+        'It starts with a greeting to the parents you tick and a numbered list to fill in. Edit or delete any of it. Your lesson notes and materials are not copied in.',
+        'Use the formatting buttons, {{Templates}} and {{Add link}} as in a message. Fill in any template field in brackets, such as [studentFirst], before sending.',
+        'Click {{Add file}} to add up to 10 files, 10 MB each. Files are listed under {{Materials}}, and the family is asked to share them with the student.',
+        'Each parent you tick receives an email with the assignment and its materials. Files open in the family portal, not as email attachments. The assignment also appears in the family\u2019s conversation on {{Messages}}.',
+        'Click {{Preview}} to see the family\u2019s email, {{Save Draft}} to come back to it, or {{Schedule Send}} to choose when it goes. {{Cancel}} closes it without saving.',
+        'Each lesson has one draft or scheduled assignment at a time. Click {{Delete Draft}} to remove a draft.',
+        'To change a scheduled assignment, click {{Cancel Send}}. It returns to {{Drafts}} with nothing lost.',
+        'A sent assignment cannot be edited. Within 10 seconds of sending, click {{Unsend}} on it in {{Messages}} to return it to {{Drafts}}.'
       ]},
       {n:'Archived Lessons', k:'history old previous earlier past lessons open trial',
-       q:'Click {{Archived Lessons}} to see earlier lessons and trial lessons. Click {{Open}} to read one, with any assignment sent for it.'}
+       q:'Click {{Archived Lessons}} to see earlier lessons and trial lessons. Click {{Open}} to read one, with any assignment sent for it.', m:[
+        'Only earlier lessons with notes or an assignment are listed. Click {{Edit}} on an open lesson to change its notes.'
+      ]}
     ]},
     {id:'messages', h:'Messages', topics:[
       {n:'New Message', k:'new compose write start contact find family search parent student',
-       q:'Search for a student or parent by name to start a new message.'},
+       q:'Click {{New Message}} and type a student\u2019s or parent\u2019s name, then click the result.', m:[
+        'The search box above your conversations also finds words in past messages, including in {{Archived Conversations}}.',
+        'On the {{Students}} tab, click {{Message Family}} on a student\u2019s page to open the same conversation.'
+      ]},
       {n:'Send', k:'reply answer respond write back read receipt parents child sibling about',
        q:'Type your reply in the message box, then click {{Send}}.', m:[
         'Opening a conversation marks it read. There is nothing to click. The reply clock starts when a message arrives, not when you open it. Reading a message or clicking {{Mark seen}} does not stop its timer. Only your reply does.',
-        'If the family has two parents, select who should receive your reply. If you teach more than one child in the family, use the {{About}} buttons to choose which child the message is about.',
-        'Once the family reads your message, \u201cRead by\u201d appears with their name and the time.'
+        'Both parents are ticked. Untick a parent to stop their email; the message still appears in the family\u2019s conversation. If you teach more than one child in the family, use the {{About}} buttons to choose which child the message is about.',
+        'Once the family reads your message, \u201cRead by\u201d appears with the parents\u2019 names and the time.',
+        'Anything you type stays in that conversation on this device until you send it.'
       ]},
       {n:'Edit / Unsend', k:'undo mistake typo delete recall take back change fix',
-       q:'Click {{Edit}} or {{Unsend}} within 10 seconds of sending to change or retract a message.', m:[
-        'This is available until the family reads the message. The family\u2019s email is not sent until those 10 seconds pass, so an unsent message never reaches their inbox.'
+       q:'Click {{Edit}} or {{Unsend}} within 10 seconds of sending to change or take back a message.', m:[
+        'Both work only until the family reads the message. Clicking {{Edit}} gives you two minutes to finish. The family\u2019s email waits until then, so an unsent message never reaches their inbox.',
+        'Assignments can be unsent but not edited. A scheduled message cannot be unsent once it has gone.'
       ]},
       {n:'Reply by', k:'deadline due response time how fast quickly late weekend friday monday policy rules reply times',
        q:'Shows when your reply is due, at the top of each conversation. Reply within a few hours, and within 24 hours at most.', m:[
@@ -3652,19 +3716,22 @@ var GUIDE_COPY={
         // reminder)" after "orange at 12 hours": there is no reminder at 12 hours
         // since [1.755].
         'The left side of a conversation has a vertical colored strip that shows how long the message has been waiting without a response. Blue - waiting for a reply, amber at the 4 hour mark, orange at 12 hours, Red when past the response deadline. Grey means nothing is waiting on you. The key is shown above the list.',
-        'A solid blue number shows how many messages are waiting for your reply. One reply answers all of them, so read every message before you write back. An outline number shows how many messages you have saved for review.'
+        'A solid blue number shows how many messages are waiting for your reply. One reply answers all of them, so read every message before you write back. An outline number shows how many messages you have saved for review.',
+        'The hours count Monday to Friday only, so a message sent over the weekend stays blue until Monday.',
+        'Conversations in {{Admin & staff}} use the same colors, but have no reply deadline and send no reminders.'
       ]},
       {n:'Mark seen', k:'acknowledge seen busy later read',
-       q:'Click {{Mark seen}} to let the family know you have read their message and will reply soon. It does not count as a reply.', m:[
-        'The reply clock keeps running. Follow up as soon as you can, especially if the message is time sensitive.'
+       q:'Click {{Mark seen}} to post a note telling the family you have seen their message and will reply soon. It does not count as a reply.', m:[
+        'The note appears in the conversation; it is not emailed. The reply clock keeps running. Follow up as soon as you can, especially if the message is time sensitive.'
       ]},
       {n:'Save for review', k:'flag bookmark star remember follow up later',
-       q:'Select {{Save for review}} to flag a message to return to. Only you can see the flag.', m:[
+       q:'Click {{Save for review}} under a message to flag it to return to. Only you can see the flag.', m:[
         'Clear the flag when you are done. When you reply to a message, your message queue is cleared, but messages saved for review are not.'
       ]},
-      {n:'Add file', k:'attachment attach upload photo picture image pdf document video size limit',
+      {n:'Add file', k:'attachment attach upload photo picture image pdf document video size limit save keep library',
        q:'Click {{Add file}} to attach up to 10 files, 10 MB each. You can also drag and drop or paste files into a message.', m:[
-        'Attach files from your device, your saved files, or the {{Keylab Master Library}}. Click {{Accepted file types}} to see supported formats.'
+        'Attach files from your device, your saved files, or the {{Keylab Master Library}}. Click {{Accepted file types}} to see supported formats.',
+        'Click {{Save to Library}} beside a file in any conversation to keep it in your library, including a file a family sends you.'
       ]},
       {n:'Add link', k:'url website web address edit change remove hyperlink',
        q:'Highlight words in your message and click {{Add link}}, then paste the address under {{Paste Link Here}} and click {{Insert link}}.', m:[
@@ -3674,34 +3741,57 @@ var GUIDE_COPY={
         'Click a link in your message to see its address. Click the address to open it, {{Change}} to edit the words or the address, or {{Remove}} to keep the words without the link.'
       ]},
       {n:'Aa', k:'format formatting bold italic underline list bullet',
-       q:'Click {{Aa}} to format text with bold, italics, underlining and lists.'},
+       q:'The formatting buttons show above the message box. Click {{Aa}} to hide them, or to show them again.'},
       {n:'Templates', k:'saved message reuse quick reply canned',
        q:'Click {{Templates}} and choose one to insert it where your cursor is. To keep the message you are writing, click {{Save as a new template}}.', m:[
-        'You can also create templates on the {{Library}} tab with {{Create a new template}}.'
+        'If you teach more than one child in the family, choose the child beside {{About}} first, so the template fills in the right name.',
+        'You can also create templates on the {{Library}} tab with {{New template}}.'
       ]},
       {n:'Schedule Send', k:'later delay timer future time date schedule scheduled messages',
-       q:'Click {{More}}, then {{Schedule Send}}, and choose a date and time.', m:[
-        'Scheduled messages appear under {{Scheduled messages}}, where you can {{Edit}} them or click {{Cancel Send}}.'
+       q:'Click {{More}}, then {{Schedule Send}}, choose a date and time, and click {{Schedule Message}}. In {{Admin & staff}}, {{Schedule Send}} is beside {{Send}}.', m:[
+        'Click {{Scheduled messages}} above your conversations, then click one to open its conversation. On the message, click {{Edit}} to change it, or {{Cancel Send}} to return it to the message box.',
+        'A scheduled reply counts as your reply only when it sends. Until then the reply clock keeps running, so schedule it before your reply is due.'
       ]},
       {n:'Ask Admin', k:'help question office adrian',
        q:'Click {{More}}, then {{Ask Admin}}, to message admin about a family. The family cannot see these messages.', m:[
+        'Your conversation with Admin opens with the family\u2019s latest message quoted. To ask about a different message, choose it from {{About this message}}.',
         'Asking admin does not stop the reminders \u2014 the family is still waiting for an answer.'
       ]},
       {n:'End Conversation', k:'archive archived close resolve resolved done finish no reply needed',
        q:'Click {{More}}, then {{End Conversation}}, to close a resolved conversation. It moves to {{Archived Conversations}}.', m:[
-        'Use it when a conversation is resolved or a message needs no reply. If a reply is still owed, you will be asked to confirm. If you have messages saved for review, you will be asked to clear them first. If the family writes again, the conversation returns to {{Messages}}.'
+        'Use it when a conversation is resolved or a message needs no reply. Ending it stops the reply clock and the reminders. If a reply is still owed, you are asked to confirm, and admin can see it ended without a reply.',
+        'If you have messages saved for review, you will be asked to clear them first. Click {{Proceed}} to clear them and end it.',
+        'If anyone writes again, the conversation returns to {{Messages}}. In {{Admin & staff}}, {{End Conversation}} is beside {{Send}}.'
+      ]},
+      {n:'Archived Conversations', k:'archived ended closed old past conversations history',
+       q:'Click {{Archived Conversations}} to see the conversations you have ended, and click one to read it.', m:[
+        'A new message in it, from you or from them, moves it back to {{Messages}}.'
       ]},
       {n:'Admin & staff', k:'office staff colleague teacher adrian help problem broken bug support contact private',
-       q:'Message admin or other teachers, including for help with the portal. Families cannot see these messages.'},
+       q:'Click {{Admin & staff}} to message admin or another teacher, including for help with the portal. Families cannot see these messages.', m:[
+        'Your messages here are not emailed; admin and teachers read them in the portal. Admin\u2019s messages to you are emailed, as described under Email notifications.',
+        'Each reminder or final notice you receive is recorded in your conversation with Admin.',
+        // [1.856]
+        'If the teacher you are writing to is away, their away message shows under the message box.'
+      ]},
       // [1.792] — from the Settings section, which went with the Settings tab.
-      {n:'Away / Busy Message', k:'away vacation holiday out of office sick busy unavailable auto reply automatic day off days off absence time off return back turn on off status available',
-       q:'Click {{Status: Available}} beside {{Sign Out}} when you are unavailable, and it reads {{Status: Away}}. Click it again when you return.', studio:'away', m:[
-        // AC's sentence from the Settings box itself.
-        'When enabled, families, other staff, and admin see this before they compose their message to you. If they send you a message, it also appears in the thread as an auto-generated message.',
-        'Days off on your record with the studio are handled automatically. Families see that you are away and when you will return. You receive no morning emails or reminders while away, and reply times resume on the day you return.'
+      {n:'Away / Busy Message', k:'away vacation holiday out of office sick busy unavailable auto reply automatic day off days off absence time off return back turn on off status available teaching lesson',
+       q:'Click {{Status: Available}} beside {{Sign Out}} when you cannot reply, and it reads {{Status: Away}}. Click it again as soon as you are available.', studio:'away', m:[
+        // AC's sentence from the Settings box itself. [1.856] — made true: admin and other teachers now see it too
+        // (AC, 9 October 2026). Its second sentence said "they" and now says "a family": only a family's message is
+        // answered automatically, since the reply tells the writer to contact admin.
+        'When enabled, families, other staff, and admin see this before they compose their message to you. If a family sends you a message, it also appears in the thread as an auto-generated message.',
+        'Away does not switch on by itself during lessons. Switch it on for a block of lessons, and off when you finish.',
+        'Each time you switch Away on, a family who writes receives the automatic reply again, in the conversation and by email. Switching it on for every lesson can send a family several in one day.',
+        'Away changes only what others see. Reply times, reminders and morning emails continue.',
+        'Days off on your record with the studio are handled automatically. Families see the day-off message with the date you return, and your status reads {{Status: Away}} and cannot be changed. You receive no morning emails or reminders, and reply times resume on the day you return.',
+        'If you switched Away on before a day off, it is still on when you return. Click it to show {{Status: Available}} again.'
       ]},
       {n:'After hours', k:'evening night working hours weekend',
-       q:'Families who message you outside your working hours see the studio\u2019s after-hours note before they write.', studio:'after', m:[
+       q:'Families who message you outside your scheduled teaching hours see the studio\u2019s after-hours note before they write.', studio:'after', m:[
+        'Your hours come from your schedule with the studio. On days you teach, they are never shorter than 9am to 5pm. On days you do not teach, families see the note all day. With no schedule on file, they see it outside 9am to 5pm, Monday to Friday.',
+        'From 5pm Friday and over the weekend, the note tells families to expect a reply by 12pm Monday.',
+        'While your away or day-off message shows, families see that instead.',
         // [1.792] — AC's line from the Settings box, moved with it ([1.238]).
         "You'll receive email notifications between 9 am and 7 pm for all family messages. Email notifications for messages sent after 7pm will be sent at 9am the next morning. You do not have to respond to messages sent after 5 pm on Friday or over the weekend until Monday 12 pm, but if the message is time sensitive please try to respond or forward to admin."
       ]},
@@ -3716,39 +3806,72 @@ var GUIDE_COPY={
        q:'Family messages are emailed to you between 9am and 7pm, and messages sent overnight arrive in one email at 9am. Click the button in any email to open the conversation and reply.', m:[
         'A family message sent between 9am and 7pm is emailed to you right away, with the subject \u201cNew family message from\u201d and the parent\u2019s name.',
         'Messages that arrive between 7pm and 9am appear in the portal right away, but no email is sent. At 9am, Monday to Saturday, if any family messages are still unanswered, you receive one email titled \u201cMessages waiting for your reply\u201d that lists them all. There is no Sunday email, so messages that arrive after 7pm on Saturday are included on Monday.',
-        'If your reply is nearly due and you have not answered, you receive a reminder. If it becomes overdue, you receive a final notice, and admin is notified. No emails are sent between 7pm and 9am, and no reminders are sent on Sundays.',
+        'If you have not answered and your reply is nearly due, you receive one reminder two hours before. If it becomes overdue, you receive a final notice, and admin is notified. Reminders and notices go out only between 9am and 7pm, and no reminders are sent on Sundays.',
         // [1.843] — PLACEHOLDER, AC to word: admin's messages are emailed now (AC, 9 October 2026).
         'Messages from admin are emailed to you between 9am and 7pm, with the subject \u201cNew admin message\u201d. A message admin sends overnight is emailed at 9am, unless you have already opened it in the portal. Admin can mark a message urgent to email it to you right away, at any hour.',
         'Messages from other teachers are not emailed, so check {{Admin & staff}} on the {{Messages}} tab.',
         'The button in each email signs you in on the first phone or computer you use it on. On any other device, you will be asked to sign in.'
       ]}
     ]},
-    // [1.794] — the Library tab, after Messages (AC, 7 October 2026).
+    // [1.794] — the Library tab, after Messages (AC, 7 October 2026). [1.848] — one row per function, as the other
+    // tabs have, rewritten to the screen as it is since [1.824]–[1.826].
     {id:'library', h:'Library', topics:[
-      // [1.822] — rewritten to the Library's new screen (one search, five sections), in AC's voice, for his review.
-      {n:'My Library', k:'saved files links templates tags organize sort search delete remove master library keylab',
-       q:'Store the files, links and templates you use most, ready to add to any message.', m:[
-        {ul:[
-          'Type in the search box to find anything in your files, links and templates, and in the {{Keylab Master Library}}. Click {{Tags}} to filter by tag, and use {{Sort}} to change the order.',
-          'Click {{Add file}}, {{Add link}} or {{New template}} to add your own.',
-          'Open {{Keylab Master Library}} to see everything the studio has shared. Click {{Add to My Library}} to keep an item in {{My files}} or {{My links}}.',
-          '{{Studio tags}} are shared across the studio, and {{Custom tags}} are your own. Add a custom tag in {{My tags}}, or while tagging a file, link or template.',
-          'Tick items to tag or delete several at once. The buttons appear on that section\u2019s header.',
-          '{{Remove from my library}} removes a file from your list but keeps it in messages already sent. {{Delete file}} removes it everywhere, including past conversations.'
-        ]}
-      ]}
+      {n:'Library', k:'my library saved files links templates organize search find keep',
+       q:'Click {{Library}} to keep the files, links and templates you use most, ready to add to any message or assignment.', m:[
+        '{{My files}}, {{My links}} and {{My templates}} list your own items and anything you add from the {{Keylab Master Library}}. Click a heading to open or close it.',
+        'Type in the search box to find anything in your files, links and templates, and in the {{Keylab Master Library}}. Only the sections with matches are shown.',
+        'Tick items to tag or delete several at once. The buttons appear on that section\u2019s heading.',
+        'Other teachers cannot see your library, and no one else sees your custom tags.',
+        'In a message, click {{Manage Library}} at the bottom of the {{Add file}} panel to open your library without leaving the message.'
+      ]},
+      {n:'Tags', k:'tag tags filter label studio custom grey blue',
+       q:'Click {{Tags}}, tick one or more tags, then click {{Done}}. Only items with every ticked tag are shown.', m:[
+        'Studio tags have a grey background and are added by admin. Your custom tags have a light blue background.',
+        'The number beside a tag is how many items it would show. With many tags, type in {{Find a tag}}.',
+        'The tags in use are listed under the search box after {{Tagged:}}. Click \u00d7 on one to remove it, or {{Clear all}} to clear the tags and the search. Ticked tags stay ticked on this device next time.'
+      ]},
+      {n:'Sort', k:'sort order newest oldest alphabetical',
+       q:'Choose an order from {{Sort}}. Your choice stays on this device.'},
+      {n:'Keylab Master Library', k:'studio master shared keylab add keep',
+       q:'Open {{Keylab Master Library}} to see the files and links the studio shares. Click {{Add to My Library}} to keep one in {{My files}} or {{My links}}.', m:[
+        'Studio items are marked {{KEYLAB}}. You can send them but not change them.'
+      ]},
+      {n:'New template', k:'template templates create new write save',
+       q:'Click {{New template}}, enter a {{Template name}}, write the message and click {{Save}}.', m:[
+        'Click the [studentFirst] or [parentFirst] button to add a name that fills in when you use the template.',
+        'Studio templates are marked {{KEYLAB}}. To change one, insert it in a message, edit it, and click {{Save as a new template}}.'
+      ]},
+      {n:'My tags', k:'tags custom add rename delete hide studio',
+       q:'Open {{My tags}} to add, rename or delete your custom tags, and to hide studio tags you do not use.', m:[
+        'Deleting a custom tag takes it off every file, link and template. A hidden studio tag stays on its items.'
+      ]},
+      {n:'Delete file', k:'delete remove file everywhere past messages',
+       q:'Click {{Delete file}} to delete a file you added. It also disappears from every message it was sent in.', m:[
+        'You are told how many conversations it is in before you confirm.',
+        'To keep it in past messages, click {{Remove from my library}} instead.',
+        'A file you kept from someone else\u2019s message is only removed from your library. Deleting a link does not change sent messages.'
+      ]},
+      {n:'Save to Library', k:'save keep file family sent conversation',
+       q:'Click {{Save to Library}} beside a file in a conversation to keep it in {{My files}}, including a file a family sends you.'}
     ]},
     {id:'trials', h:'Trials', topics:[
       {n:'Trial lesson guidelines', k:'rules policy how to run',
-       q:'Review the studio\u2019s guidelines for running trial lessons.'},
+       q:'Click {{Trial lesson guidelines}} to read the studio\u2019s guidelines for running trial lessons.'},
       {n:'Report due', k:'trial report form questions deadline submit',
-       q:'Answer every question and click {{Send report to Adrian}} by 11 AM the day after the lesson.', m:[
-        'Your answers save automatically, so you can return and finish later.'
+       q:'Click the student, answer every question, and click {{Send report to Adrian}} by 11 AM the day after the lesson.', m:[
+        'Weekends count: a report for a Saturday trial lesson is due by 11 AM Sunday.',
+        'Your answers save automatically, so you can return and finish later. Questions left blank are outlined in red when you try to send.',
+        'The report goes to admin and cannot be changed once sent. It is for the studio only; never send it to a family.',
+        'If a report is not sent by 11 AM, you receive one email saying it is overdue.'
       ]},
       {n:'Upcoming', k:'trial new student summary next',
-       q:'See upcoming trial lessons and the summary admin sent for each.'},
+       q:'See your trial lessons for the next 30 days and the summary admin sent for each.', m:[
+        'A trial lesson is listed here once admin has sent its summary. Until then, the student is on the {{Students}} tab, labeled {{Trial}}.'
+      ]},
       {n:'Reports sent', k:'trial report past answers archive hide',
-       q:'Click a report to review your answers. Click {{Archive}} to move it to {{Archived}}.'},
+       q:'Click a report to review your answers. Click {{Archive}} to move it to {{Archived}}.', m:[
+        'Sent and archived reports stay on this tab for 14 days after the trial lesson.'
+      ]},
       // [1.773]
       {n:'Archived', k:'trial report archive restore hide',
        q:'Click {{Archived}} to see your archived reports. Click {{Restore}} to move one back to {{Reports sent}}.'}
@@ -4295,6 +4418,7 @@ function _msLastLesson(s,today){
 }
 function _msNames(a){a=(a||[]).filter(Boolean);return a.length<3?a.join(' and '):a.slice(0,-1).join(', ')+' and '+a[a.length-1];}
 function msOpen(stuId,date,time){
+  _msNoteFlush();   // [1.849] — the note being typed goes now, to the student it was typed for
   MS.cardStu=stuId;MS.cardDate=date;MS.cardTime=time||'';MS.card=null;MS.note=null;MS.lesson={};MS.open={};MS.asg=null;MS.pick=null;MS.st='';
   render();window.scrollTo(0,0);_msLoadCard();
 }
@@ -4303,7 +4427,10 @@ function _msLoadCard(){
   api({action:'teacherStudentCard',data:{teacherToken:TOKEN,studentId:MS.cardStu}},function(e,r){
     MS.cardLoading=false;
     if(!e&&r&&r.ok){
-      MS.card=r;if(MS.note===null)MS.note=r.myNote||'';
+      MS.card=r;
+      // [1.849] — words this page has not had confirmed are what the teacher wrote; one that failed is sent again.
+      if(MS.note===null){var _np=_msStuNote[MS.cardStu];MS.note=_np?_np.v:(r.myNote||'');
+        if(_np&&_np.bad&&!_msNoteWait){MS.st=MS_COPY.saveFail;_msNoteWait={stu:MS.cardStu,tok:TOKEN,v:_np.v};_msNoteFlush();}}
       (r.notes||[]).forEach(function(n){if(!MS.lesson[n.lessonDate]||!MS.timer[n.lessonDate])MS.lesson[n.lessonDate]={activities:n.activities,materials:(n.materials||[]).slice(),lessonTime:n.lessonTime};});
       // [1.805] — a save still on its way is what the teacher wrote, whatever the sheet said a moment ago.
       Object.keys(_msNotePend).forEach(function(k){var p=_msNotePend[k];if(p.stu===MS.cardStu)_msPutNote(p.d,p.activities,p.materials,true);});
@@ -4386,6 +4513,8 @@ var MST_COPY={
   savedLinks:'Saved Links',chooseSaved:'Choose a saved link',                // PLACEHOLDER
   open:'Open',saveDraft:'Save Draft',schedule:'Schedule Send',preview:'Preview',hidePreview:'Hide preview',
   cancel:'Cancel',delDraft:'Delete Draft',cancelSend:'Cancel Send',
+  goneStudent:'No longer your student',   // [1.854] — PLACEHOLDER, AC to word
+  stoppedSched:'Not sent: no longer your student',   // [1.855] — PLACEHOLDER, AC to word
   previewH:'What the family receives',                                       // PLACEHOLDER
   pillDraft:'Draft',pillSched:'Scheduled',pillSent:'Sent',                   // PLACEHOLDER
   lineDraft:'Assignment draft saved',lineSched:function(w){return 'Assignment scheduled for '+w;},   // PLACEHOLDER
@@ -4523,7 +4652,7 @@ function rMyStudents(){
 }
 // AC, 7 October: "the 'my students' button should say 'All Students' and should not be gray and hidden."
 function mstPhoneBack(){return '<div class="mst-sm mst-back"><button type="button" class="btn btn-p ms-sm" onclick="mstBack()">'+esc(MST_COPY.back)+'</button></div>';}
-function mstBack(){MST.view='';_mstFormReset();MS.asg=null;render();window.scrollTo(0,0);}
+function mstBack(){_msNoteFlush();MST.view='';_mstFormReset();MS.asg=null;render();window.scrollTo(0,0);}
 function _mstFormReset(){MS.pick=null;if(PICK&&_libComposerId===MST_CID)PICK='';if(TPL_FOR===MST_CID)TPL_OPEN=false;MST.sched=false;MST.preview=false;MST.previewHtml='';MST.err='';MST.errFor='';MST.busy='';}
 function mstOpen(id,date,time){
   var s=_mstStu(id);
@@ -4603,9 +4732,17 @@ function mstDraftList(list){
 }
 function _mstDraftRows(list){
   var h='';
-  var n=list.filter(function(x){return MST.tick[_mstDraftKey(x)];}).length;
+  var n=list.filter(function(x){return !x.gone&&MST.tick[_mstDraftKey(x)];}).length;
   list.forEach(function(x){
     var k=_mstDraftKey(x);
+    // [1.854] — a draft for a student who is no longer this teacher's: said so, no tick, and its own Delete Draft. It
+    // could not be opened (their page is refused) or sent, and sat in Drafts with no way out.
+    if(x.gone){
+      h+='<div class="mst-xrow"><span class="mst-xopen mst-gone"><span class="mst-xn">'+esc(x.studentName||x.studentId)+'</span>'+
+        '<span class="mst-xd">'+esc(MST_COPY.forLesson(_mstShortDay(x.lessonDate)))+'</span><span class="mst-xd bad">'+esc(MST_COPY.goneStudent)+'</span></span>'+
+        '<button type="button" class="btn btn-danger ms-sm"'+(MST.bulkBusy?' disabled':'')+' onclick="mstDeleteGoneDraft('+jsq(x.studentId)+','+jsq(x.lessonDate)+')">'+esc(MST_COPY.delDraft)+'</button></div>';
+      return;
+    }
     h+='<div class="mst-xrow"><input type="checkbox" aria-label="'+esc(x.studentName)+'"'+(MST.tick[k]?' checked':'')+(MST.bulkBusy?' disabled':'')+
       ' onclick="MST.tick['+jsq(k)+']=this.checked;MST.flash=\'\';MST.bulkErr=\'\';render()">'+
       '<button type="button" class="mst-xopen" onclick="mstOpenDraft('+jsq(x.studentId)+','+jsq(x.lessonDate)+')"><span class="mst-xn">'+esc(x.studentName||x.studentId)+'</span>'+
@@ -4623,7 +4760,8 @@ function mstSchedList(list){
   if(!list.length)h='<div class="mst-xnone">'+esc(MST_COPY.noSched)+'</div>';
   list.forEach(function(x){
     h+='<div class="mst-xrow"><button type="button" class="mst-xopen" onclick="mstOpenAt('+jsq(x.studentId)+','+jsq(x.lessonDate)+','+jsq(x.lessonTime)+')"><span class="mst-xn">'+esc(x.studentName||x.studentId)+'</span>'+
-      '<span class="mst-xd sc">'+esc(MST_COPY.sendsOn(mstStamp(x.sendAt)))+'</span></button></div>';
+      // [1.855] — one held back at its send time (the family is no longer this teacher's) says so; it read "sends on".
+      (x.stopped?'<span class="mst-xd bad">'+esc(MST_COPY.stoppedSched)+'</span>':'<span class="mst-xd sc">'+esc(MST_COPY.sendsOn(mstStamp(x.sendAt)))+'</span>')+'</button></div>';
   });
   return '<div class="mst-xlist">'+h+'</div>';
 }
@@ -4768,6 +4906,7 @@ function mstCard(d,m,st){
   var to=(m.toNames&&m.toNames.length)?_msNames(m.toNames):mstWho(s,mstTo(m.notifyParents));
   var lines=m.html?[]:(m.practice||[]).map(function(x){return String(x).trim();}).filter(Boolean),mats=m.materials||[];
   var body='<span class="mst-cto">'+esc(MST_COPY.to+': '+to)+'</span>'+
+    _mstFilesBox(mats)+   // [1.857] — the files, in their own box above the teacher's words, as the family sees them
     (m.html?'<div class="mst-html">'+m.html+'</div>':'')+   // sanitized on the server ([1.794])
     (!m.html&&m.intro?'<span class="mst-q">'+esc(MS_COPY.message)+'</span><span class="mst-ro">'+esc(m.intro)+'</span>':'')+
     (lines.length?'<span class="mst-q">'+esc(MST_COPY.assignment)+'</span><ol class="mst-ol">'+lines.map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ol>':'')+
@@ -4807,20 +4946,21 @@ function _mstRosterPatch(fn){if(MS.roster)fn(MS.roster);render();}
 function mstSyncHtml(){var el=document.getElementById(MST_CID);if(el&&MS.asg)MS.asg.html=el.innerHTML;}
 function mstStarter(s){
   var g=esc(MST_COPY.greet('\u0001',s.first||_tplFirstName(s.studentName))).replace('\u0001','<span data-k="par"></span>');
-  return g+'<span data-k="f"></span><br><br><b>'+esc(MST_COPY.assignment)+'</b><ol><li><br></li></ol>';
+  // [1.857] — no files sentence in the teacher's words any more: the assignment says it in a box of its own.
+  return g+'<br><br><b>'+esc(MST_COPY.assignment)+'</b><ol><li><br></li></ol>';
 }
 // The two marked spans, filled from the ticks and Materials as they are now. Untouched if the teacher deleted them.
 function _mstStarterApply(html,s,a){
   var names=mstPicked(s,a.to).map(_tplFirstName).join(' and ')||mstParents(s).map(_tplFirstName).join(' and ');
-  var files=(a.mats||[]).filter(function(m){return m.kind==='file'&&!m.upFailed;});
-  var f=files.length?' '+esc(MST_COPY.included(_tplFirstName(TEACHER_NAME),files.length))+files.map(function(m){return '<br>'+esc(m.label||'');}).join(''):'';
+  // [1.857] — the files sentence ('f') is no longer written into the message; a draft that still has the marked
+  // span from before keeps whatever it says, as the teacher's own words.
   // [1.823] — each part is rewritten only while it still says what the tool last wrote there. It was rewritten on
   // every redraw, so a teacher's words typed into the greeting or the files sentence were replaced, and a link put
   // there vanished. Once they change it, it is theirs. With no record (a draft reopened), it is the tool's if it
   // says what the tool would write now.
-  var want={par:esc(names), f:f}, before=String(html||''), out=before;
+  var want={par:esc(names)}, before=String(html||''), out=before;
   a.auto=a.auto||{};
-  ['par','f'].forEach(function(k){
+  ['par'].forEach(function(k){
     var re=new RegExp('(<span data-k="'+k+'"[^>]*>)([\\s\\S]*?)(<\\/span>)');
     out=out.replace(re,function(w,o,cur,c){
       var last=Object.prototype.hasOwnProperty.call(a.auto,k)?a.auto[k]:want[k];
@@ -4831,6 +4971,14 @@ function _mstStarterApply(html,s,a){
   });
   if(out!==before) _cmpShiftCaret(MST_CID, before, out);
   return out;
+}
+// [1.857] — the files an assignment brings, in AC's words (MST_COPY.included), as the family's card and email show
+// them: a light-blue box above the teacher's words. Built from the materials, never written into the message.
+function _mstFilesBox(mats){
+  var files=(mats||[]).filter(function(m){return m&&m.kind==='file'&&!m.upFailed;});
+  if(!files.length) return '';
+  return '<div class="mst-files"><div class="mst-files-t">'+esc(MST_COPY.included(_tplFirstName(TEACHER_NAME),files.length))+'</div>'+
+    files.map(function(m){return '<div>'+esc(m.label||'')+'</div>';}).join('')+'</div>';
 }
 function _mstSameHtml(x,y){
   if(x===null||y===null) return false;
@@ -5015,6 +5163,22 @@ function mstDeleteDraft(){
     });
   });
 }
+// [1.854] — Delete Draft on a draft whose student is no longer this teacher's: there is no form to open it in, so it is
+// deleted from the list. Gone at once; refused or lost, it comes back with the reason, as mstDeleteDraft does.
+function mstDeleteGoneDraft(stu,d){
+  var key=stu+'|'+d,was=_mstDraft(stu,d);if(!was)return;
+  _mstHide[key]=true;
+  _mstRosterPatch(function(R){R.drafts=R.drafts.filter(function(x){return _mstDraftKey(x)!==key;});});
+  render();
+  _seqRun('asg:'+key,function(next){
+    api({action:'teacherDeleteAsgDraft',data:{teacherToken:TOKEN,studentId:stu,lessonDate:d}},function(e,r){
+      next();delete _mstHide[key];
+      if(!e&&r&&r.ok){_mstRosterPatch(function(R){_mstKeepLocal(R);});return;}
+      _mstRosterPatch(function(R){R.drafts=R.drafts.concat([was]);_mstKeepLocal(R);});
+      showMsg(MST_COPY.deleteNotDone(was.studentName||''),'e');
+    });
+  });
+}
 function mstPreview(){
   if(MST.preview){MST.preview=false;MST.previewHtml='';render();return;}
   mstSyncHtml();
@@ -5176,7 +5340,7 @@ function mstBulk(scheduled){
   var at=0;
   if(scheduled){at=_schedLocalInputToMs(MST.bulkAt);if(!at||at<Date.now()+60*1000){MST.bulkErr=TCH_COPY.schedulePast;render();return;}
     if(at>Date.now()+14*24*60*60*1000&&!confirm(TCH_COPY.scheduleFar))return;}
-  var list=_mstR().drafts.filter(function(x){return MST.tick[_mstDraftKey(x)];});if(!list.length)return;
+  var list=_mstR().drafts.filter(function(x){return !x.gone&&MST.tick[_mstDraftKey(x)];});if(!list.length)return;   // [1.854]
   MST.tick={};MST.bulk=false;MST.bulkErr='';MST.flash='';
   var run=list.map(function(x){
     var s=_mstStu(x.studentId);if(!s.familyId)s=Object.assign({},s,{familyId:x.familyId});
@@ -5437,13 +5601,38 @@ function _msLibShelf(m){
 }
 function msMatRemove(d,i){var ed=MS.edits[_msEditKey(d)];if(!ed)return;ed.materials.splice(i,1);render();}   // [1.774] — the copy, until Save
 // Typing never redraws; the words go to the server a moment after typing stops.
+// ── [1.849] — to the student it was typed for, in order ──────────────────
+// The pre-launch review ([1.796] 4), rechecked 9 October 2026: the save read whichever card was open when it
+// fired, so typing in one student's note and clicking another student within the moment saved the words as the
+// second student's note, replacing theirs. Two saves could also land out of order, and a failed one left its
+// words in the held card, shown as saved on the next open. Now the student and the sign-in are taken as the words
+// are typed; opening another student, going back to the list, another tab or signing out sends them at once; one
+// student's saves go one after another (_seqRun, as the lesson notes'); the held card takes the words only when
+// the server says saved (api()); and words not yet confirmed are kept here and put back in the box when that
+// student is opened again — a failed save is sent once more then, with "Not saved" beside it until it is answered.
+var _msStuNote={},_msStuNoteSeq={},_msNoteWait=null;
 function msNoteInput(v){
   MS.note=v;clearTimeout(MS.timer._note);
-  MS.timer._note=setTimeout(function(){
-    api({action:'teacherSaveStudentNote',data:{teacherToken:TOKEN,studentId:MS.cardStu,note:v}},function(e,r){
-      var st=(e||!r||!r.ok)?MS_COPY.saveFail:MS_COPY.saved;if(st!==MS.st){MS.st=st;render();}
+  _msNoteWait={stu:MS.cardStu,tok:TOKEN,v:v};
+  _msStuNote[MS.cardStu]={v:v,bad:false};
+  MS.timer._note=setTimeout(_msNoteFlush,900);
+}
+function _msNoteFlush(){
+  clearTimeout(MS.timer._note);
+  var w=_msNoteWait;_msNoteWait=null;
+  if(!w||!w.stu||!w.tok)return;
+  var stu=w.stu,v=w.v,seq=_msStuNoteSeq[stu]=(_msStuNoteSeq[stu]||0)+1;
+  _seqRun('note:'+stu,function(next){
+    api({action:'teacherSaveStudentNote',data:{teacherToken:w.tok,studentId:stu,note:v}},function(e,r){
+      next();
+      if(seq!==_msStuNoteSeq[stu])return;   // a newer save of this note follows, and its answer is the one that counts
+      var good=!e&&r&&r.ok,p=_msStuNote[stu];
+      if(good){ if(p&&p.v===v)delete _msStuNote[stu]; }
+      else if(p)p.bad=true;
+      else _msStuNote[stu]={v:v,bad:true};
+      if(MS.cardStu===stu){var st=good?MS_COPY.saved:MS_COPY.saveFail;if(st!==MS.st){MS.st=st;render();}}
     });
-  },900);
+  });
 }
 function msToggle(d){MS.open[d]=!MS.open[d];render();}
 // ── [1.338] — the teacher's own link library ────────────────────────────
@@ -6060,6 +6249,7 @@ function rTabBadge(n){
 }
 
 function switchTab(tab){
+  _msNoteFlush();   // [1.849]
   HOME_TAB=tab;
   // [1.794] — the Library tab is the panel the overlay draws, on its own page.
   if(tab==='library'){ LIBRARY_OPEN=false; LIB_EDIT=''; LIB_DEL=''; loadLibrary(); ttplLoad(); loadSavedTpls(); window.scrollTo(0,0); }   // [1.822] — the studio's templates are in the Library
@@ -7360,7 +7550,8 @@ function loadStaffThreads(silent){ loadThreads(silent); }
 function _famSig(list){
   return (list||[]).map(function(t){
     return [t.familyId,t.lastMessageAt,t.lastMessageText,t.unread,t.awaitingReply,
-            t.reviewCount,t.waitingSince,t.closed,t.hasMessages].join('~');
+            t.reviewCount,t.waitingSince,t.closed,t.hasMessages,
+            t.teacherAway,t.teacherAwayMessage].join('~');   // [1.856] — a colleague going away redraws
   }).join('|');
 }
 
@@ -8131,7 +8322,14 @@ function clearAndClose(){
   var t=ACTIVE_THREAD||ACTIVE_STAFF_THREAD;
   if(!t||t.closing) return;
   t.closing=true; render();
-  clearAllReviews(t, function(){ _doCloseConversation(t); });
+  // [1.853] — the flags cleared, a reply still owed is asked about exactly as End Conversation asks it. Proceed went
+  // straight to closing, so a conversation with saved messages ended without "End conversation without a reply?" —
+  // found by the Guide's review ([1.848]), 9 October 2026.
+  clearAllReviews(t, function(){
+    t.closing=false; t.closeReviewOpen=false;
+    if(t===ACTIVE_THREAD && _owesFamilyReply(t) && !t.closeUnansweredOk){ t.closeUnansweredAsk=true; render(); return; }
+    _doCloseConversation(t);
+  });
 }
 function cancelCloseReview(){
   var t=ACTIVE_THREAD||ACTIVE_STAFF_THREAD;
@@ -9226,6 +9424,11 @@ function rStaffThread(){
   // teacher is emailed now, and admin's control is "urgent" (`ADM_MSG.emailNow`), email it at any hour.
   h+=rAskAbout();   // [1.813] — which message Ask Admin is about
   h+=rComposer('staff-composer',t.draft,'_composerSync(\'staff-composer\')',sendBtn);
+  // [1.856] — AC, 9 October 2026: other teachers see an away colleague's message before they write, as families do
+  // (his sentence: "families, other staff, and admin see this before they compose their message to you"). Under the
+  // box, where the family portal draws it, in the same red.
+  var _sRow=(THREADS.list||[]).filter(function(x){ return x.kind==='staff' && x.id===t.otherId; })[0];
+  if(t.contactType!=='admin' && _sRow && _sRow.teacherAway && _sRow.teacherAwayMessage) h+='<div class="away-note">'+esc(_sRow.teacherAwayMessage)+'</div>';
   // [1.233] — the same dialog as the family thread. A staff conversation can
   // hold review marks too, and closing one with marks outstanding is the same
   // mistake wherever it happens.
@@ -14680,6 +14883,7 @@ var TCH_COPY={
   attachRemove:'Remove',
   attachWait:'One moment - the file is still uploading.',
   attachOpening:'Getting your file...',
+  attachOpeningSub:'This can take up to 15 seconds. Keep this tab open and your file will appear here.',   // [1.859] — PLACEHOLDER, AC to word
   // [1.417] — PLACEHOLDER, flagged. Shown on the tile when a file will not
   // open, and it does not clear itself.
   attachOpenFailed:'Cannot open file',   // AC's wording, 9 September 2026
@@ -14762,6 +14966,8 @@ var TCH_COPY={
   // notification never left the building. The server's own reason for it is
   // rendered under this and is not copy.
   notSent:'Message did not send',
+  // [1.861] — PLACEHOLDER, AC to word: under a message to a test family whose "Send emails for this test student" is off.
+  notEmailedTest:'Not emailed: emails are off for this test student.',
   markSeen:'Mark seen',
   // [1.326] — AC, 5 September: the ✕ and this button were both called
   // "close". "Hovering over the x in teacher portal says 'close this
@@ -15554,11 +15760,23 @@ function _attSaveHeld(id){
 // the answer is a refusal. It is cut loose from this page first (opener=null),
 // so the file's page can never reach back into the portal.
 var ATT_PREOPEN={};
+// [1.859] — the tab a file opens in, while the file is fetched: a turning ring and a line saying it takes a moment.
+// AC, 9 October 2026: "it goes to a screen that say 'getting your file....' but there is no indication anything is
+// happening and a parent could easily click away thinking it's not working, as it takes around 10 seconds to
+// download. It needs an indication it's working." The same page in all three portals (check.js holds them alike).
+function _attWaitHtml(t, sub){
+  return '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(t)+'</title>'+
+    '<style>body{margin:0;font:16px -apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;color:#1f2937;background:#F5F7FA;'+
+    'display:flex;align-items:center;justify-content:center;min-height:100vh}.w{text-align:center;padding:24px;max-width:340px}'+
+    '.r{width:44px;height:44px;margin:0 auto 18px;border:4px solid #C9D6EA;border-top-color:#1E3A6E;border-radius:50%;animation:s .9s linear infinite}'+
+    '@keyframes s{to{transform:rotate(360deg)}}.t{font-size:18px;font-weight:600;margin:0 0 6px}.s{font-size:14px;color:#5B6270;margin:0}</style></head>'+
+    '<body><div class="w"><div class="r" role="status" aria-label="'+esc(t)+'"></div><p class="t">'+esc(t)+'</p><p class="s">'+esc(sub)+'</p></div></body></html>';
+}
 function _attPreopen(id){
   try{
     var w=window.open('','_blank');
     if(!w) return;
-    try{ w.document.body.innerHTML='<p style="font:16px sans-serif;padding:24px;color:#333">'+esc(TCH_COPY.attachOpening)+'</p>'; }catch(e){}
+    try{ w.document.open(); w.document.write(_attWaitHtml(TCH_COPY.attachOpening, TCH_COPY.attachOpeningSub)); w.document.close(); }catch(e){}   // [1.859]
     ATT_PREOPEN[id]=w;
   }catch(e){}
 }
@@ -16790,12 +17008,32 @@ function _schedAnyDue(){
 // every tick: the trigger runs once a minute, so a message can legitimately be
 // up to a minute past its time and still be waiting. Asking every five seconds
 // would be five requests to learn something that cannot have changed.
+// [1.864] — and the Students tab, by the same evidence. AC, 9 October 2026: an assignment scheduled for 2:40 still
+// said "Scheduled for Oct 9, 2:40 pm", with Cancel Send, at 2:59; it had gone at 2:40, and a reload showed it sent —
+// "This should update without having to reload?" [1.793]'s Students tab keeps its own copy of what is scheduled
+// (MS.roster, and the open card's sent assignments), and the cure above only ever covered the Messages list. So a
+// scheduled assignment past its time asks again for the list and, when it is the open student's, the card.
+function _mstDueIds(){
+  var now=Date.now(), out=[];
+  (_mstR().scheduled||[]).forEach(function(x){
+    if(!x || x.stopped || x.missed) return;   // past its time for good, not waiting to go
+    var at=Number(x.sendAt)||0;
+    if(at && at<=now && out.indexOf(x.studentId)<0) out.push(x.studentId);
+  });
+  return out;
+}
+function _mstAfterRelease(ids){
+  loadMyStudents();
+  ids.forEach(function(id){ delete API_KEEP['c|'+id]; delete API_KEEP_AT['c|'+id]; if(id===MS.cardStu&&MS.card)_msLoadCard(); });
+}
 function _schedSweepDue(){
-  if(!_schedAnyDue()) return;
+  var listDue=_schedAnyDue(), stuDue=_mstDueIds();
+  if(!listDue && !stuDue.length) return;
   var now=Date.now();
   if(now-_schedDueCheckedAt < SCHED_DUE_RECHECK_MS) return;
   _schedDueCheckedAt=now;
-  _schedInvalidate();
+  if(listDue) _schedInvalidate();
+  if(stuDue.length) _mstAfterRelease(stuDue);   // [1.864]
 }
 function loadScheduled(){
   if(SCHED_LIST.loading) return;
@@ -17286,6 +17524,9 @@ function rNotifyWarn(m){
   // "Message did not send" under a message that plainly did. Admin still sees it, and can fix the address.
   if(m.senderType==='admin' && m.conversationType==='teacher_admin') return '';
   var st=m.notifyState||'';
+  // [1.861] — a test family with its emails off: a setting, not a failure, so light blue (AC's rule: conflicts red,
+  // information light blue) and one line. AC, 9 October 2026, waited on a scheduled message's email that the setting held.
+  if(st==='muted') return '<div class="msg-notify-info">'+esc(TCH_COPY.notEmailedTest)+'</div>';
   // [1.753] — 'failed' is an email given up on after its retries (AC, 4
   // October: admin sees it in red). An 'error' still carrying its hold is
   // being retried, and says nothing until the retries are over.
@@ -17746,6 +17987,7 @@ function _pollTick(){
 
 function doSignOut(){
   _amendAbandon();   // [1.782] — while the session can still tell the server the edit ended
+  _msNoteFlush();   // [1.849] — and the note being typed, while the sign-in still works
   API_KEEP={}; API_KEEP_AT={}; API_THISWEEK='';   // [1.736] — nothing held survives signing out
   _ktClearSession();
   // [1.336] — drafts are this teacher's unsent words on a shared machine.
@@ -17768,6 +18010,7 @@ function doSignOut(){
   MST={view:'',day:'',open:'',arch:false,tick:{},bulk:false,bulkAt:'',sched:false,schedAt:'',preview:false,previewHtml:'',
     flash:'',top:false,busy:'',err:'',errFor:'',bulkErr:'',bulkBusy:false,listErr:''};   // [1.793]
   _mstLocal={}; _msNotePend={}; _msNoteOk={}; _msNoteSeq={}; _mstOut={}; _mstHide={};   // [1.805]/[1.806] — nothing unconfirmed carries over to the next teacher
+  _msStuNote={}; _msNoteWait=null;   // [1.849]
   TOKEN=''; TEACHER_ID=''; TEACHER_NAME='';
   LF={email:'', password:'', remember:true};
   HOME_TAB='students';   // [1.794]

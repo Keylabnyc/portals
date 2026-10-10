@@ -5519,7 +5519,7 @@ function _klScheduleEvents(){
   var today=_klNyToday();   // [1.762]
   var out=(publicCfg.upcomingDates||[]).map(function(d){
     return {event:d.event||'', startDate:d.startDate, endDate:d.endDate||d.startDate,
-            closed:!!d.closed, studioOpen:!!d.studioOpen, kind:'calendar'};   // [1.582]
+            closed:!!d.closed, studioOpen:!!d.studioOpen, schoolsClosed:!!d.schoolsClosed, kind:'calendar'};   // [1.582] [1.875]
   });
 
   // One entry per ENROLLMENT, not one per date (AC, 19 Aug). A family with two
@@ -5601,6 +5601,9 @@ function _klScheduleEvents(){
   });
 }
 
+// [1.875] — AC's words, 9 October 2026, final after two earlier wordings:
+// *"nyc public schools closed, keylab open"* (capitals as everywhere else here).
+var KL_SCHOOLS_CLOSED_OPEN='NYC public schools closed, Keylab open';
 function _klDateRow(e, whenText, whoText){
   // ── [1.345] — an absence needs its OWN badge ───────────────────────────
   //
@@ -5634,12 +5637,17 @@ function _klDateRow(e, whenText, whoText){
   // family reading it the outcome is identical: their child's lesson is not
   // happening. What is DIFFERENT about the day is in the entry's own sentence,
   // which is his to write and is drawn directly above this badge.
+  // ── [1.875] — AC, 9 October 2026: a day the schools are shut and Keylab is
+  // not says so. Only on a date whose reminder is "Schools closed, Keylab
+  // open"; any other open day (Performance Party Week) keeps "Keylab is open".
   var tag = e.kind==='start'
     ? '<span class="kl-tag op">First lesson</span>'
     : e.kind==='absence'
     ? '<span class="kl-tag cl">No lesson</span>'
     : (e.closed && e.studioOpen)
     ? '<span class="kl-tag cl">No lesson</span>'
+    : (!e.closed && e.schoolsClosed)
+    ? '<span class="kl-tag op">'+esc(KL_SCHOOLS_CLOSED_OPEN)+'</span>'
     : '<span class="kl-tag '+(e.closed?'cl':'op')+'">'+(e.closed?'Closed':'Keylab is open')+'</span>';
   return '<div class="kl-date"><div>'+
     '<div class="kl-who">'+esc(e.event)+'</div>'+

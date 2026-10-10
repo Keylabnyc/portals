@@ -1781,6 +1781,9 @@ mark.guide-hit{background:var(--bbg);color:inherit;border-radius:2px;padding:0 1
   border:1px solid var(--green);border-radius:var(--r);padding:2px 8px;white-space:nowrap;display:inline-flex;align-items:center;gap:4px }
 .lib-said.working { color:var(--bt);background:var(--bbg);border-color:var(--blue) }
 .lib-said.bad { color:var(--rt);background:var(--rbg);border-color:var(--red);white-space:normal }
+/* [1.869] — a file chosen from the device, on its own line in the Add file box: the name, then how it stands. */
+.pick-dev { display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:6px 0 2px;font-size:12.5px;color:var(--text) }
+.pick-dev-n { font-weight:600;overflow-wrap:anywhere;min-width:0 }
 .lib-foot { margin-top:9px;display:flex;justify-content:flex-end }
 .lib-scrim { position:fixed;inset:0;background:rgba(0,0,0,.42);z-index:60 }
 .lib-modal { position:fixed;top:3vh;left:50%;transform:translateX(-50%);width:min(960px,96vw);max-height:94vh;
@@ -2056,7 +2059,7 @@ mark.guide-hit{background:var(--bbg);color:inherit;border-radius:2px;padding:0 1
 .mst-html a{color:var(--link);text-decoration:underline}
 .mst-xopen:hover .mst-xn{text-decoration:underline}
 .mst-xn{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.mst-xd{font-size:12px;color:var(--text4);white-space:nowrap}.mst-xd.sc{color:#1a4fc4;font-weight:600}
+.mst-xd{font-size:12px;color:var(--text4);white-space:nowrap}.mst-xd.sc{color:#1a4fc4;font-weight:600}.mst-xd.rn{color:#6D28D9;font-weight:600}
 .mst-xnone{padding:9px 10px;font-size:12.5px;color:var(--text4)}
 .mst-xacts{display:flex;gap:6px;justify-content:flex-end;padding:8px 10px;border-top:1px solid var(--bg4);background:var(--bg5)}
 .mst-xacts .btn{width:auto}
@@ -2100,10 +2103,15 @@ select.cmp-lsel{font:inherit;font-size:13.5px;font-weight:700;padding:6px 8px;bo
 .mst-qb{background:#fff;border:1.5px solid;font-weight:700}
 .mst-qb.dr{color:#9A3412;border-color:#FB923C}.mst-qb.dr:hover,.mst-qb.dr.on{background:#FFEDD5}
 .mst-qb.sc{color:var(--bt);border-color:#5B8ED6}.mst-qb.sc:hover,.mst-qb.sc.on{background:var(--bbg)}
+/* [1.870] — Reply needed: purple, apart from Drafts' orange and Scheduled's blue */
+.mst-qb.rn{color:#6D28D9;border-color:#A78BFA}.mst-qb.rn:hover,.mst-qb.rn.on{background:#EDE9FE}
+.mst-count.rn{background:#EDE9FE;border-color:#A78BFA;color:#6D28D9}
+.mst-rn{margin-top:8px}
 .mst-qb.on{box-shadow:inset 0 0 0 1px currentColor}
 .mst-sep{height:0;border-top:2px solid var(--border2);margin:12px 0 4px}
 .mst-xd{font-size:12px}
 .mst-btns{grid-template-columns:repeat(3,minmax(0,1fr))}
+.mst-btns .mst-qb.rn{grid-column:1/-1}   /* [1.870] — its own row under AC's three, not a lone cell */
 .mst-btns .btn{white-space:nowrap}
 .mst-qo{font-weight:700}
 .mst-form .composer-wrap{margin-top:10px}
@@ -4517,6 +4525,8 @@ var MST_COPY={
   open:'Open',saveDraft:'Save Draft',schedule:'Schedule Send',preview:'Preview',hidePreview:'Hide preview',
   cancel:'Cancel',delDraft:'Delete Draft',cancelSend:'Cancel Send',
   resend:'Resend',   // [1.865] — AC's word, 9 October 2026
+  replyNeeded:'Reply needed',   // [1.870] — AC's words, 9 October 2026
+  noReply:'No assignments waiting for a reply.',clear:'Clear',   // [1.870] — PLACEHOLDER, AC to word
   goneStudent:'No longer your student',   // [1.854] — PLACEHOLDER, AC to word
   stoppedSched:'Not sent: no longer your student',   // [1.855] — PLACEHOLDER, AC to word
   previewH:'What the family receives',                                       // PLACEHOLDER
@@ -4557,7 +4567,7 @@ function loadMyStudents(){
     render();
   });
 }
-function _mstR(){return MS.roster||{students:[],drafts:[],scheduled:[],today:_nyYmdOf()};}
+function _mstR(){return MS.roster||{students:[],drafts:[],scheduled:[],replyNeeded:[],today:_nyYmdOf()};}
 function _mstToday(){return _mstR().today||_nyYmdOf();}
 function _mstStu(id){
   if(MS.card&&MS.cardStu===id&&MS.card.student&&String(MS.card.student.studentId)===String(id))return Object.assign({},_mstR().students.filter(function(s){return s.studentId===id;})[0]||{},MS.card.student);
@@ -4575,11 +4585,12 @@ var _mstLocal={};   // student|date -> a draft the server has not confirmed: pen
 // [1.806] — an assignment on its way (Send or Schedule Send, answered by nobody yet), and a draft whose
 // Delete is on its way. Neither is a draft in the list while it goes; a scheduled one is in Scheduled.
 var _mstOut={}, _mstHide={};
+var _mstCleared={};   // [1.870] — messageId -> true: a Reply needed the teacher cleared, kept off a list fetched before the server has it
 // Whose these are. A teacher whose session ran out keeps them for signing back in; a different teacher
 // signing in on that page starts with none ([1.805]'s rule for signing out, at the other door).
 var _mstOwner='';
 function _mstMine(){
-  if(_mstOwner&&_mstOwner!==TEACHER_ID){_mstLocal={};_mstOut={};_mstHide={};_msNotePend={};_msNoteOk={};_msNoteSeq={};}
+  if(_mstOwner&&_mstOwner!==TEACHER_ID){_mstLocal={};_mstOut={};_mstHide={};_mstCleared={};_msNotePend={};_msNoteOk={};_msNoteSeq={};}
   _mstOwner=TEACHER_ID;
 }
 function _mstKeepLocal(R){
@@ -4588,6 +4599,7 @@ function _mstKeepLocal(R){
   Object.keys(_mstLocal).forEach(function(k){R.drafts=R.drafts.filter(function(y){return _mstDraftKey(y)!==k;}).concat([_mstLocal[k]]);});
   R.scheduled=R.scheduled||[];
   Object.keys(_mstOut).forEach(function(k){var x=_mstOut[k].x;if(_mstOut[k].at&&R.scheduled.indexOf(x)<0)R.scheduled=R.scheduled.concat([x]);});
+  R.replyNeeded=(R.replyNeeded||[]).filter(function(y){return !_mstCleared[y.messageId];});   // [1.870]
 }
 // Is this student's page what the teacher is looking at? If not, a failure is also said in a message.
 function _mstOnStudent(id){return HOME_TAB==='students'&&MST.view==='student'&&MS.cardStu===id;}
@@ -4671,7 +4683,7 @@ function mstToggleList(which){MST.open=MST.open===which?'':which;MST.bulk=false;
 // Scheduled", a separator, then "all students listed by day of the week", with a
 // menu to "isolate a certain day's students".
 function mstListPane(){
-  var R=_mstR(),drafts=R.drafts,sched=R.scheduled;
+  var R=_mstR(),drafts=R.drafts,sched=R.scheduled,reply=R.replyNeeded||[];
   var b=function(label,n,cls,on,click){
     // AC: "these buttons should not be gray" — drafts orange, scheduled blue.
     return '<button type="button" class="btn ms-sm mst-qb '+cls+(on?' on':'')+'" aria-expanded="'+(on?'true':'false')+'" onclick="'+click+'">'+
@@ -4680,9 +4692,11 @@ function mstListPane(){
   // [1.771]/[1.779] — Opus in a new tab; both of its old buttons opened the same page.
   var h='<div class="mst-btns"><a class="btn btn-p ms-sm mst-qo" href="'+esc(_opusHref())+'" target="_blank" rel="noopener">'+esc(OPUS_COPY.view)+'</a>'+
     b(MST_COPY.drafts,drafts.length,'dr',MST.open==='drafts','mstToggleList(\'drafts\')')+
-    b(MST_COPY.sched,sched.length,'sc',MST.open==='sched','mstToggleList(\'sched\')')+'</div>';
+    b(MST_COPY.sched,sched.length,'sc',MST.open==='sched','mstToggleList(\'sched\')')+
+    b(MST_COPY.replyNeeded,reply.length,'rn',MST.open==='reply','mstToggleList(\'reply\')')+'</div>';   // [1.870]
   if(MST.open==='drafts')h+=mstDraftList(drafts);
   if(MST.open==='sched')h+=mstSchedList(sched);
+  if(MST.open==='reply')h+=mstReplyList(reply);
   var by={};
   R.students.forEach(function(s){var d=mstDayOf(s);if(d)(by[d]=by[d]||[]).push(s);});
   var days=MST_DAYS.filter(function(d){return by[d];});
@@ -4768,6 +4782,35 @@ function mstSchedList(list){
       (x.stopped?'<span class="mst-xd bad">'+esc(MST_COPY.stoppedSched)+'</span>':'<span class="mst-xd sc">'+esc(MST_COPY.sendsOn(mstStamp(x.sendAt)))+'</span>')+'</button></div>';
   });
   return '<div class="mst-xlist">'+h+'</div>';
+}
+// [1.870] — Reply needed: AC, 9 October 2026, "for their own personal tracking so they can see on dashboard the messages
+// that they are waiting for replies from". One line per assignment, oldest first; it leaves when the family writes back
+// (the server decides) or on Clear. Opens the lesson, as Scheduled does.
+function mstReplyList(list){
+  var h='';
+  if(!list.length)h='<div class="mst-xnone">'+esc(MST_COPY.noReply)+'</div>';
+  list.forEach(function(x){
+    var inner='<span class="mst-xn">'+esc(x.studentName||x.studentId)+'</span><span class="mst-xd rn">'+esc(MST_COPY.sentOn(mstStamp(x.sentAt)))+'</span>'+
+      (x.gone?'<span class="mst-xd bad">'+esc(MST_COPY.goneStudent)+'</span>':'');
+    h+='<div class="mst-xrow">'+(x.gone?'<span class="mst-xopen mst-gone">'+inner+'</span>'
+      :'<button type="button" class="mst-xopen" onclick="mstOpenAt('+jsq(x.studentId)+','+jsq(x.lessonDate)+','+jsq(x.lessonTime)+')">'+inner+'</button>')+
+      '<button type="button" class="btn btn-s ms-sm" onclick="mstReplyClear('+jsq(x.messageId)+')">'+esc(MST_COPY.clear)+'</button></div>';
+  });
+  return '<div class="mst-xlist">'+h+'</div>';
+}
+// Gone at once; refused or lost, it comes back and the reason is said.
+function mstReplyClear(id){
+  var was=(_mstR().replyNeeded||[]).filter(function(x){return x.messageId===id;})[0];if(!was)return;
+  _mstMine();_mstCleared[id]=true;
+  _mstRosterPatch(function(R){_mstKeepLocal(R);});
+  api({action:'teacherClearReplyNeeded',data:{teacherToken:TOKEN,messageId:id}},function(e,r){
+    if(!e&&r&&r.ok)return;
+    delete _mstCleared[id];
+    _mstRosterPatch(function(R){
+      if(!(R.replyNeeded||[]).some(function(x){return x.messageId===id;}))R.replyNeeded=(R.replyNeeded||[]).concat([was]).sort(function(a,b){return a.sentAt-b.sentAt;});
+    });
+    showMsg((r&&r.error)||MST_COPY.failed,'e');
+  });
 }
 // Open a student at a lesson; once their card has arrived, bring its assignment into view.
 function mstOpenAt(id,d,t,then){
@@ -4874,7 +4917,7 @@ function mstLessonBody(d,current){
       :String(l.activities||'').trim()?'<div class="ms-ro">'+esc(l.activities)+'</div>':'<div class="ms-ro ms-empty">'+esc(MS_COPY.noNotes)+'</div>')+'</div>';
   if(ed){
     h+='<div class="ms-lf"><div class="ms-lab">'+esc(MS_COPY.materials)+'</div>'+
-      (ed.materials||[]).map(function(m,i){return _msMatRow(m,'<button type="button" class="ms-x" title="'+esc(MS_COPY.remove)+'" onclick="msMatRemove(\''+d+'\','+i+')">✕</button>')+rMatTagAsk(m);}).join('')+
+      (ed.materials||[]).map(function(m,i){return _msMatRow(m,'<button type="button" class="ms-x" title="'+esc(MS_COPY.remove)+'" onclick="msMatRemove(\''+d+'\','+i+')">✕</button>')+(_msPickAsks(m)?'':rMatTagAsk(m));}).join('')+
       _msAddUI('les:'+d)+'</div>';
   }else{
     h+=((l.materials||[]).length?'<div class="ms-lf"><div class="ms-lab">'+esc(MS_COPY.materials)+'</div>'+l.materials.map(function(m){return _msMatRow(m,'');}).join('')+'</div>':'');
@@ -5022,7 +5065,7 @@ function mstEditDraft(id,d){
   var x=_mstDraft(id,d);if(!x)return;
   if(MS.cardDate!==d){MS.cardDate=d;MS.cardTime=x.lessonTime||'';}
   // [1.806] — a file still uploading stays the same object, so what waits for it sees it arrive.
-  MS.asg={date:d,time:x.lessonTime||'',html:x.html,to:mstTo(x.notifyParents),mats:(x.materials||[]).map(function(m){return m.uploading?m:Object.assign({},m);}),fromDraft:true};
+  MS.asg={date:d,time:x.lessonTime||'',html:x.html,to:mstTo(x.notifyParents),mats:(x.materials||[]).map(function(m){return m.uploading?m:Object.assign({},m);}),fromDraft:true,reply:!!x.replyNeeded};
   _mstFormOpened();
   if(x.failed){MST.err=x.failed;render();}   // [1.805] — why it is not saved (or [1.806] sent), beside Save Draft
 }
@@ -5051,12 +5094,13 @@ function mstResend(d,id){
     if(p.length)h+='<b>'+esc(MST_COPY.assignment)+'</b><ol>'+p.map(function(t){return '<li>'+esc(t)+'</li>';}).join('')+'</ol>';
     return h;
   })();
-  MS.asg={date:d,time:x.lessonTime||'',html:html,to:to,mats:mats,resendOf:id};
+  MS.asg={date:d,time:x.lessonTime||'',html:html,to:to,mats:mats,resendOf:id,reply:!!x.replyNeeded};   // [1.870] — as it went
   _mstFormOpened();
 }
 function _mstFormOpened(){delete _cmpLinkSel[MST_CID];_mstFormReset();MS.asg.sendKey='';loadLibrary();loadSavedTpls();render();setTimeout(mstToAsg,30);}
 function mstSetTo(slot,on){mstSyncHtml();MS.asg.to[slot]=on;MS.asg.html=_mstStarterApply(MS.asg.html,_mstStu(MS.cardStu),MS.asg);render();}   // [1.807] — the greeting follows the ticks
 function mstMatRemove(i){mstSyncHtml();MS.asg.mats.splice(i,1);render();}
+function mstSetReply(on){mstSyncHtml();MS.asg.reply=!!on;render();}   // [1.870]
 function mstForm(){
   var a=MS.asg,s=_mstStu(MS.cardStu),two=!!(s.parent1Name&&s.parent2Name),who=mstWho(s,a.to);
   var re=!!a.resendOf;   // [1.865] — Resend: no draft of its own, so none of the draft's buttons
@@ -5068,7 +5112,7 @@ function mstForm(){
   };
   var tick=function(slot,name){return '<label class="mst-to"><input type="checkbox"'+(a.to[slot]?' checked':'')+' onclick="mstSetTo(\''+slot+'\',this.checked)"> '+esc(name)+'</label>';};
   var mats='<div class="mst-mats"><div class="ms-lab">'+esc(MST_COPY.mats)+'</div>'+
-    (a.mats.length?a.mats.map(function(m,i){return _msMatRow(m,libTag(m)+'<button type="button" class="ms-x" title="'+esc(MS_COPY.remove)+'" onclick="mstMatRemove('+i+')">✕</button>')+rMatTagAsk(m);}).join('')
+    (a.mats.length?a.mats.map(function(m,i){return _msMatRow(m,libTag(m)+'<button type="button" class="ms-x" title="'+esc(MS_COPY.remove)+'" onclick="mstMatRemove('+i+')">✕</button>')+(_msPickAsks(m)?'':rMatTagAsk(m));}).join('')
       :'<div class="ms-hint">'+esc(MST_COPY.noMats)+'</div>')+'</div>';
   var busy=!!MST.busy;
   var btns='<div class="mst-ffoot'+(dr?' has-del':'')+'">'+
@@ -5086,6 +5130,9 @@ function mstForm(){
       (dr?_mstDraftStamp(dr):'')+'</div>'+
     '<label class="tt-q">'+esc(MST_COPY.sendTo)+'</label><div class="mst-tos">'+
       (two?tick('p1',s.parent1Name)+tick('p2',s.parent2Name):'<span>'+esc(s.parent1Name||s.parent2Name||'')+'</span>')+'</div>'+
+    // [1.870] — AC, 9 October 2026: no reply is expected of an assignment "unless the teacher requests it". The teacher's own
+    // tracking: a ticked one goes on their Reply needed list. Nothing the family sees.
+    '<div class="mst-tos mst-rn"><label class="mst-to"><input type="checkbox"'+(a.reply?' checked':'')+' onclick="mstSetReply(this.checked)"> '+esc(MST_COPY.replyNeeded)+'</label></div>'+
     comp;
   if(MST.preview)h+='<div class="mst-q" style="margin-top:14px">'+esc(MST_COPY.previewH)+'</div>'+
     (MST.previewHtml?'<iframe class="mst-prev" title="'+esc(MST_COPY.previewH)+'" sandbox="" srcdoc="'+esc(MST.previewHtml)+'"></iframe>':'<div class="empty-state"><span class="spin">↻</span></div>');
@@ -5139,7 +5186,7 @@ function mstSaveDraft(){
   var a=MS.asg;if(!a||MST.busy)return;
   mstSyncHtml();
   var stu=MS.cardStu,s=_mstStu(stu),html=_mstCleanHtml(),key=stu+'|'+a.date;
-  var data={teacherToken:TOKEN,studentId:stu,lessonDate:a.date,lessonTime:a.time,html:html,notifyParents:mstNotify(s,a.to),materials:_mstDraftMats(a.mats)};
+  var data={teacherToken:TOKEN,studentId:stu,lessonDate:a.date,lessonTime:a.time,html:html,notifyParents:mstNotify(s,a.to),materials:_mstDraftMats(a.mats),replyNeeded:!!a.reply};
   var done=function(d){_mstRosterPatch(function(R){R.drafts=R.drafts.filter(function(x){return _mstDraftKey(x)!==key;}).concat([d]);});};
   // [1.805] — nothing in it: the server says so, in the form, as before; there is nothing to show at once.
   if(!_mstHasWords(html)&&!a.mats.length){
@@ -5156,7 +5203,7 @@ function mstSaveDraft(){
   // [1.806] — a file still uploading is shown as it is and saved once it has arrived (_upWhenReady).
   var mats=a.mats;
   var mine={draftKey:'',studentId:stu,studentName:s.studentName||'',familyId:s.familyId||'',lessonDate:a.date,lessonTime:a.time,
-    notifyParents:data.notifyParents||null,html:html,materials:mats.slice(),savedAt:0,pending:true};
+    notifyParents:data.notifyParents||null,html:html,materials:mats.slice(),savedAt:0,pending:true,replyNeeded:!!a.reply};
   _mstMine();_mstLocal[key]=mine;done(mine);
   _mstFormReset();LINK_OFFER=null;MS.asg=null;render();
   _seqRun('asg:'+key,function(next){
@@ -5266,7 +5313,7 @@ function _mstSendNow(o,done){
     o.mats.forEach(function(m){out.push(m.kind==='file'?{kind:'file',label:m.label,attachmentId:m._sendId,libId:m.attachmentId}:{kind:m.kind,label:m.label,url:m.url});});
     api({action:'sendMessage',data:{conversationType:'family_teacher',familyId:s.familyId,teacherId:TEACHER_ID,teacherToken:TOKEN,studentId:s.studentId,
       attachmentIds:att,notifyParents:o.notify,clientMsgId:cid,sendAt:o.at||'',resend:!!o.resendOf,   // [1.865]
-      assignment:{studentId:s.studentId,lessonDate:o.date,lessonTime:o.time,html:html,materials:out}}},function(e,r){
+      assignment:{studentId:s.studentId,lessonDate:o.date,lessonTime:o.time,html:html,materials:out,replyNeeded:!!o.reply}}},function(e,r){   // [1.870]
       if(e||!r||!r.ok){_sendFailed(key,cid,html,[],'');return done(r||{});}
       _sendSucceeded(key);done(null,r);
     });
@@ -5284,7 +5331,7 @@ function mstSend(at){
   var html=_mstCleanHtml(),key=stu+'|'+a.date;
   var why=_tplUnfilledTags(html).length?MST_COPY.unfilled:a.mats.filter(function(m){return m.kind==='file';}).length>ATT_MAX_FILES?TCH_COPY.attachTooMany:'';
   if(why){MST.err=why;MST.errFor='';render();return;}
-  var o={s:s,date:a.date,time:a.time,html:html,mats:a.mats,notify:mstNotify(s,a.to),at:at,resendOf:a.resendOf||''};
+  var o={s:s,date:a.date,time:a.time,html:html,mats:a.mats,notify:mstNotify(s,a.to),at:at,resendOf:a.resendOf||'',reply:!!a.reply};
   if(!_mstHasWords(html)&&!a.mats.length){
     MST.busy=at?'sched':'send';MST.err='';MST.errFor='';render();
     _mstSendOne(Object.assign({},o,{mats:[]}),function(err,r){
@@ -5306,7 +5353,7 @@ function _mstMark(o){
   var stu=o.s.studentId,key=stu+'|'+o.date;
   _mstMine();
   var x={studentId:stu,studentName:o.s.studentName||'',familyId:o.s.familyId||'',lessonDate:o.date,lessonTime:o.time,html:o.html,
-    materials:o.mats.slice(),notifyParents:o.notify||null,pending:true,messageId:''};
+    materials:o.mats.slice(),notifyParents:o.notify||null,pending:true,messageId:'',replyNeeded:!!o.reply};
   if(o.at)x.sendAt=o.at;
   _mstOut[key]={x:x,at:o.at||0};
   if(!o.resendOf){delete _mstLocal[key];delete MST.tick[key];}   // [1.865] — a resend leaves the lesson's draft alone
@@ -5331,7 +5378,7 @@ function _mstFire(o,x,many,then){
         // still on that student with nothing else open; otherwise it is said, and Resend is still on the card.
         _mstUnshow(x);
         if(!many&&!MS.asg&&MS.cardStu===stu&&_mstOnStudent(stu)){
-          MS.asg={date:o.date,time:o.time,html:o.html,to:mstTo(o.notify),mats:o.mats.map(function(m){return Object.assign({},m);}),resendOf:o.resendOf};
+          MS.asg={date:o.date,time:o.time,html:o.html,to:mstTo(o.notify),mats:o.mats.map(function(m){return Object.assign({},m);}),resendOf:o.resendOf,reply:!!o.reply};
           _mstFormOpened();MST.err=err.error||MST_COPY.failed;MST.errFor='';render();
         }else showMsg((err.error||MST_COPY.failed),'e');
         return then(err);
@@ -5339,7 +5386,7 @@ function _mstFire(o,x,many,then){
       if(err){
         _mstUnshow(x);
         _mstLocal[key]={draftKey:'',studentId:stu,studentName:x.studentName,familyId:x.familyId,lessonDate:o.date,lessonTime:o.time,
-          notifyParents:x.notifyParents,html:o.html,materials:_mstDraftMats(mats),savedAt:0,failed:err.error||MST_COPY.failed,notSent:true};
+          notifyParents:x.notifyParents,html:o.html,materials:_mstDraftMats(mats),savedAt:0,failed:err.error||MST_COPY.failed,notSent:true,replyNeeded:!!o.reply};
         _mstRosterPatch(function(R){R.scheduled=R.scheduled.filter(function(y){return y!==x;});_mstKeepLocal(R);});
         if(!many){
           var back=!MS.asg&&MS.cardStu===stu;
@@ -5387,7 +5434,7 @@ function mstBulk(scheduled){
   MST.tick={};MST.bulk=false;MST.bulkErr='';MST.flash='';
   var run=list.map(function(x){
     var s=_mstStu(x.studentId);if(!s.familyId)s=Object.assign({},s,{familyId:x.familyId});
-    var o={s:s,date:x.lessonDate,time:x.lessonTime,html:x.html,mats:(x.materials||[]).slice(),notify:x.notifyParents||undefined,at:at};
+    var o={s:s,date:x.lessonDate,time:x.lessonTime,html:x.html,mats:(x.materials||[]).slice(),notify:x.notifyParents||undefined,at:at,reply:!!x.replyNeeded};
     return {o:o,draft:x,x:_mstMark(o)};
   });
   var n=0,ids=[];
@@ -5536,7 +5583,7 @@ function msPickOpen(target,kind){
   // [1.794] — the row that opened it stays where it is on the screen (see _cmpHoldRow).
   if(target==='asg')_cmpHoldRow(MST_CID);else _holdStill(function(){return document.querySelector('.ms-matbtns');});
   if(MS.pick&&MS.pick.target===target&&MS.pick.kind===kind){msPickClose();return;}   // the pressed button, pressed again
-  MS.pick={target:target,kind:kind,q:'',busy:0,err:'',url:'',text:'',bad:false};
+  MS.pick={target:target,kind:kind,q:'',busy:0,err:'',url:'',text:'',bad:false,dev:[]};   // [1.869] dev — the files chosen from the device here
   if(target==='asg')TPL_OPEN=false;
   loadLibrary();render();
 }
@@ -5666,19 +5713,24 @@ function _msPickUpload(file){
 }
 // [1.823] — the same upload for a file pasted or dropped on Create Assignment, where no picker is open (p is null)
 // and what goes wrong is said beside Save Draft.
+// [1.869] — with the box open, each file chosen from the device is a line in it (p.dev): its name, Attaching… while it
+// goes up, ✓ File attached once it is in, or why not; and its "Assign tags?" on that line rather than below the message.
+// AC, 9 October 2026: the box showed nothing of which file was chosen or whether it was added; it was only in Materials.
 function _msUploadTo(target,file,p){
-  var said=function(msg){if(p)p.err=msg;else if(target==='asg'){MST.err=msg;MST.errFor='';}else showMsg(msg,'e');render();};
+  var dv=null;if(p){dv={name:file.name,m:null,err:''};(p.dev=p.dev||[]).push(dv);}
+  var said=function(msg){if(dv)dv.err=msg;else if(target==='asg'){MST.err=msg;MST.errFor='';}else showMsg(msg,'e');render();};
   if(file.size>ATT_MAX_BYTES){said(TCH_COPY.attachTooBig);return;}
   if(!file.size){said(TCH_COPY.attachEmpty);return;}
   var list=_msMatList(target);if(!list)return;
   var m={kind:'file',label:file.name,uploading:true};if(target==='asg')m.on=true;
+  if(dv)dv.m=m;
   list.push(m);if(p)p.err='';render();
   var reader=new FileReader();
   var fail=function(msg){
     msg=msg||TLIB_COPY.attachFailed;m.uploading=false;m.upFailed=true;
     var i=list.indexOf(m);if(i>-1)list.splice(i,1);
     var ed=target==='asg'?null:MS.edits[_msEditKey(String(target).slice(4))];
-    if(p&&MS.pick===p)p.err=msg;
+    if(p&&MS.pick===p)dv.err=msg;   // [1.869] — on the file's own line
     else if(MS.asg&&MS.asg.mats===list){MST.err=msg;MST.errFor='';}
     else if(ed&&ed.materials===list)ed.err=msg;
     else showMsg(msg,'e');
@@ -16595,6 +16647,7 @@ function rPickPanel(composerId, mat){
     if(file){
       h+='<button type="button" class="btn btn-p pick-from" onclick="msPickDevice()">'+esc(TLIB_COPY.fromDevice)+'</button>';
       if(mat.busy) h+='<div class="att-guide"><span class="spin">&#8635;</span> '+esc(TLIB_COPY.attaching)+'</div>';
+      h+=_msPickDevHtml(mat);   // [1.869]
     } else h+=_msPickLinkRow();
     if(mat.err) h+='<div class="tt-err">'+esc(mat.err)+'</div>';
   } else if(file){
@@ -16637,6 +16690,19 @@ function rPickPanel(composerId, mat){
      '<button type="button" class="lnk-btn" onclick="libraryOpen()">'+esc(TLIB_COPY.manageGo)+'</button></div>';
   return h+'</div>';
 }
+// [1.869] — the files chosen from the device while this box has been open, one line each, in the box's own words.
+function _msPickDevHtml(p){
+  return (p.dev||[]).map(function(dv){
+    var m=dv.m,ok=m&&!m.uploading&&!m.upFailed&&!dv.err;
+    var st=dv.err?'<span class="lib-said bad">'+esc(dv.err)+'</span>'
+      :m&&m.uploading?'<span class="lib-said working"><span class="spin">&#8635;</span> '+esc(TLIB_COPY.attaching)+'</span>'
+      :ok?'<span class="lib-said">&#10003; '+esc(TLIB_COPY.fileAttached)+'</span>':'';
+    return '<div class="pick-dev"><span class="pick-dev-n">'+esc((m&&m.label)||dv.name)+'</span>'+st+'</div>'+(ok?rMatTagAsk(m):'');
+  }).join('');
+}
+// Whether the open box is asking a file's "Assign tags?" itself, so Materials does not ask it twice; once the box
+// closes, an unanswered one is asked under the file in Materials again.
+function _msPickAsks(m){return !!(MS.pick&&(MS.pick.dev||[]).some(function(dv){return dv.m===m&&!dv.err;}));}
 // A shelf with nothing on it draws nothing: there is nothing to pick.
 // ── [1.808] — the two shelves are dark blue headers that open and close ──
 // AC, 8 October 2026: "The screenshot of the assignment creator shows expanded your saved files and keylab

@@ -4154,7 +4154,9 @@ var TT_COPY={
   missing:function(n){return 'Answer every question before sending ('+n+' left).';},   // PLACEHOLDER — AC's wording
   // [1.773] — AC, 5 October 2026: "Allow teachers to archive trial messages
   // that have reports that have been sent to admin". PLACEHOLDER wording.
-  archive:'Archive',restore:'Restore',archivedH:'Archived'
+  archive:'Archive',restore:'Restore',archivedH:'Archived',
+  // [1.885] — admin's marks, in AC's words: a report that reached admin another way, or is not needed.
+  markedOn:function(m,w){return ({email:'Received by email',verbal:'Received verbally',notNeeded:'Not needed'})[m]+(w?' '+w:'');}
 };
 var TT={showArch:false,asked:false,loading:false,data:null,guideOpen:false,ans:{},timer:{},sending:{},err:{},open:{},miss:{}};
 function loadTrials(quiet){
@@ -4172,8 +4174,12 @@ function loadTrials(quiet){
     render();
   });
 }
+// [1.885] — the server says whether a report is owed (not when admin has marked it
+// received another way, or not needed); a reply from before it said so falls back
+// to "not sent".
+function _ttOwed(t){return t.owed===undefined?!t.submittedAt:!!t.owed;}
 function _ttDueCount(){
-  return ((TT.data&&TT.data.taught)||[]).filter(function(t){return !t.submittedAt;}).length;
+  return ((TT.data&&TT.data.taught)||[]).filter(_ttOwed).length;
 }
 function _ttWhen(v){
   // [1.739] — a trial's sentAt shares its name with the message tables' epoch
@@ -4201,9 +4207,10 @@ function rTrialsTab(){
   h+='<div class="tt-guide"><button type="button" class="btn btn-s tt-guide-btn" onclick="TT.guideOpen=!TT.guideOpen;render()">'+
     esc(TT.guideOpen?TT_COPY.guideClose:TT_COPY.guide)+'</button>'+
     (TT.guideOpen?'<div class="tt-guide-body">'+_ttGuideHTML(d.guidelines)+'</div>':'')+'</div>';
-  var due=(d.taught||[]).filter(function(t){return !t.submittedAt;});
-  var done=(d.taught||[]).filter(function(t){return t.submittedAt&&!t.teacherArchivedAt;});
-  var arch=(d.taught||[]).filter(function(t){return t.submittedAt&&t.teacherArchivedAt;});   // [1.773]
+  // [1.885] — a report admin marked sits with the ones sent, under its mark (AC: "Under Reports sent").
+  var due=(d.taught||[]).filter(_ttOwed);
+  var done=(d.taught||[]).filter(function(t){return !_ttOwed(t)&&!t.teacherArchivedAt;});
+  var arch=(d.taught||[]).filter(function(t){return !_ttOwed(t)&&t.teacherArchivedAt;});   // [1.773]
   if(!(d.upcoming||[]).length&&!due.length&&!done.length)h+='<div class="empty-state">'+esc(TT_COPY.none)+'</div>';
   if(due.length){
     h+='<h2>'+esc(TT_COPY.due)+'</h2>';
@@ -4232,6 +4239,13 @@ function rTrialsTab(){
 }
 function _ttSentCard(t,archived){
   var on=!!TT.open[t.key];
+  // [1.885] — marked by admin and never sent here: the mark, and nothing to open.
+  if(!t.submittedAt&&t.mark){
+    return '<div class="card tt-card"><div class="tt-sent-row"><div class="tt-row" style="flex:1 1 auto;min-width:0">'+
+      '<span><b>'+esc(_nameAge(t.studentName,t.age))+'</b><span class="tt-sub">'+esc(t.details||'')+'</span></span>'+
+      '<span class="tt-pill ok">'+esc(TT_COPY.markedOn(t.mark,_ttWhen(t.markedAt)))+'</span></div>'+
+      '<button type="button" class="btn btn-s ms-sm" onclick="ttArchive('+jsq(t.key)+','+(archived?'false':'true')+')">'+esc(archived?TT_COPY.restore:TT_COPY.archive)+'</button></div></div>';
+  }
   return '<div class="card tt-card"><div class="tt-sent-row"><button type="button" class="tt-row tt-btn" onclick="ttToggle('+jsq(t.key)+')">'+
     '<span><b>'+esc(_nameAge(t.studentName,t.age))+'</b></span>'+
     '<span class="tt-pill ok">'+esc(TT_COPY.sentOn(_ttWhen(t.submittedAt)))+'</span></button>'+

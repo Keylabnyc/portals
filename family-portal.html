@@ -8303,7 +8303,7 @@ function rEnrollment(scopeStudentId){
       // ── Enrollment Change: two-section layout ──
       var _ce=s.currentEnrollment||{};
       var _cePrice=parseFloat(_ce.monthlyPrice)||0;
-      var _cePriceStr=_cePrice>0?('$'+Math.round(_cePrice)+'/mo'):'';
+      var _cePriceStr=_cePrice>0?((function(x){x=Math.round(x*100)/100;return '$'+(x%1?x.toFixed(2):String(x));})(_cePrice)+'/mo'):'';   // [1.891] D6 — its cents when it has them
       var _ceLocMap={studio:'at Keylab','in-home':'In-home',virtual:'Virtual'};
       h+='<div class="card">';
       h+='<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem">Current Enrollment \u2014 Active</div>';

@@ -2106,15 +2106,18 @@ select.cmp-lsel{font:inherit;font-size:13.5px;font-weight:700;padding:6px 8px;bo
 .mst-eht{display:inline-block;min-width:42px;margin-right:6px}.mst-ehr{display:flex;align-items:center;gap:8px;flex-shrink:0}
 .mst-pv{display:flex;align-items:center;gap:10px;padding:9px 12px;font-size:12.5px;color:var(--text3);cursor:pointer;background:#fff}
 .mst-pvt{flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mst-pv .mst-pill{flex-shrink:0}
+.mst-pvd{color:var(--text);font-weight:700}   /* [1.894] the lesson's date, before its first line */
 .mst-ego{display:flex;justify-content:flex-end;padding:8px 12px 10px}
 /* [1.886] the day's view */
-.mst-daysub{font-size:12.5px;color:var(--text3);margin:0 0 4px 4px}
 .mst-daylist{padding-bottom:4px}
 .mst-dayview .ms-arch .ms-entry{margin:6px 0 0}
 @media(max-width:899px){.mst-wide{display:none!important}}
 /* [1.892] the day's materials, a card of its own */
 .ms-day.mst-mats{margin:0 0 12px}.mst-mats>.ms-day-h{background:#311657}.mst-mats>.ms-day-h .mst-hstate{color:#311657}
 .mst-who{margin-left:auto;padding-left:10px;font-size:12px;color:var(--text3);white-space:nowrap}
+.mst-aierr{font-size:12.5px;color:var(--red);font-weight:600}   /* [1.896] */
+.mst-mg{padding:4px 0}.mst-mg+.mst-mg{border-top:1px solid var(--bg4)}
+.mst-ml{display:flex;align-items:center;gap:8px;font-size:12.5px;padding:2px 0 2px 50px;color:var(--text2)}   /* a page or part under its book or piece */
 /* [1.888] the assignment, its own panel inside the Lesson Summary */
 .mst-asec .mst-form.mst-asgp{border:2px solid #2F67D0;background:#F6F9FF;padding:0 14px 14px}
 .mst-form.mst-asgp>.mst-ctop{margin:0 -14px 12px;background:#2F67D0;padding:10px 14px;border-radius:7px 7px 0 0}
@@ -3681,10 +3684,12 @@ var GUIDE_COPY={
        q:'Cancel lessons in Opus: click {{Opus Schedule}}. During cancellation, Opus prompts you to leave a message for the family.'},
       // [1.848] — the menu is "Select Day View" (AC, 8 October); "All days" is its first choice.
       // [1.886] [1.892] — the day's materials and last week's lesson summaries. PLACEHOLDER sentences for AC to read.
-      {n:'Select Day View', k:'student list day week schedule find today lesson students all days last week summaries prepare materials books instruments',
-       q:'Your students are listed by the day of their lesson. Choose a day from {{Select Day View}} to see that day\u2019s materials and last week\u2019s lesson summaries, in the order of the day\u2019s schedule. Choose {{All days}} to see everyone. Click a student in the list to open their page.', m:[
-        'Each student in {{Last week\u2019s lesson summaries}} shows the first line of last week\u2019s lesson notes. Click the student to read the notes, materials and assignment, and click {{Close}} to fold them. Click {{Go to}} the student to open their page.',
-        '{{Materials for}} the day lists each book, file and link in last week\u2019s lesson notes and assignments, with the students they are for, and the instruments the day\u2019s students play. A piece written only in the lesson notes is not listed. Add it under {{Materials & Resources}} to see it here.',
+      {n:'Select Day View', k:'student list day week schedule find today lesson students all days last week latest summaries prepare materials books sheets',
+       q:'Your students are listed by the day of their lesson. Choose a day from {{Select Day View}} to see that day\u2019s materials and each student\u2019s latest lesson summary, in the order of the day\u2019s schedule. Choose {{All days}} to see everyone. Click a student in the list to open their page.', m:[
+        // [1.894] — the latest lesson with notes or an assignment, not strictly last week's. PLACEHOLDER sentences for AC to read.
+        'Under the materials, each student shows the date of their most recent lesson with notes or an assignment, and the first line of its notes. If that lesson was more than a week before their last lesson day, it also says how long ago. Click the student to read the notes, materials and assignment, and click {{Close}} to fold them. Click {{Go to}} the student to open their page.',
+        // [1.896] — read from the notes and assignments, each thing once. PLACEHOLDER sentence for AC to read.
+        '{{Materials for}} the day\u2019s next lessons lists each book, piece of sheet music, session, file and link named in those lessons\u2019 notes and assignments. Each is listed once, with its pages or parts underneath and the students who need them.',
         'A student\u2019s latest lesson is marked {{Draft}}, {{Scheduled}} or {{Assignment sent}} when it has an assignment. Trial students are labeled {{Trial}}.',
         'A student who moves to another teacher or stops lessons leaves your list. Your notes about them do not pass to their new teacher.',
         'On a phone, a student\u2019s page opens on its own. Click {{All Students}} to return to the list.'
@@ -4613,12 +4618,16 @@ var MST_COPY={
   sentNow:function(who,w){return '\u2713 Sent to '+who+' \u00b7 '+w;},                                                // PLACEHOLDER
   pillSending:'Sending',                                                                                              // PLACEHOLDER
   // [1.886] [1.892] — the day's lessons and materials
-  daySub:'Last week\u2019s lesson summaries',                                                                        // AC, 21 October 2026
+  // [1.894] — the line under the day ("Last week's lesson summaries", then "Latest lesson summaries") is gone. AC, 21 October
+  // 2026: "latest lesson summaries can be removed".
+  weeksAgo:function(n){return n+(n===1?' week ago':' weeks ago');},                                                    // PLACEHOLDER
   goTo:function(f){return 'Go to '+f;},                                                                               // PLACEHOLDER
-  matsFor:function(day){return 'Materials for '+day;},                                                                // PLACEHOLDER
-  instruments:'Instruments',                                                                                          // PLACEHOLDER
+  matsFor:function(when){return 'Materials for '+when;},                                                              // AC, 21 October 2026: "materials for tuesday october 27th"
   dayNoMats:'No books, files or links in last week\u2019s lesson summaries.',                                           // PLACEHOLDER
   dayLoading:'Getting this lesson\u2026',                                                                            // PLACEHOLDER
+  // [1.896] — what Claude read from the notes and assignments. PLACEHOLDER, all of it.
+  aiLoading:'Reading the lesson notes\u2026',aiFailed:'The lesson notes could not be read just now.',aiRetry:'Try again',
+  aiKinds:{book:'Book',sheet:'Sheet',session:'Session',file:'File',link:'Link',other:'Item'},
   // [1.887] — Archived Lessons' controls
   showAll:'All',showNotes:'Lesson notes',showAsg:'Assignments',                                                      // PLACEHOLDER
   find:function(f){return 'Search '+f+'\u2019s lesson summaries';},                                                 // AC, 21 October 2026
@@ -4808,10 +4817,22 @@ function _mstDayStudents(day){
     .sort(function(a,b){return mstMins(a.time)-mstMins(b.time)||(a.studentName<b.studentName?-1:1);});
 }
 function _mstDayHas(day){return _mstDayStudents(day).length>0;}
+// [1.894] — AC, 21 October 2026: *"i was just away for a week, so my last lessons were two weeks ago … It needs to look for
+// the last data entered and show the lesson date"*. So not last week's lesson day: the student's most recent lesson before
+// today with lesson notes, materials or an assignment that went. `ago` is said only when that is not their most recent
+// lesson day, so a missed week is seen on the row.
+function _mstWritten(n){return !!(n&&(String(n.activities||'').trim()||(n.materials||[]).length||(n.sent||[]).some(function(y){return !y.pending;})));}
 function _mstDayLesson(s){
-  var d=_msLastLesson(s,_msAdd(_mstToday(),-1)),c=API_KEEP['c|'+s.studentId];
-  if(!c){_mstDayAsk(s.studentId);return {d:d,n:null,loading:true};}
-  return {d:d,n:(c.notes||[]).filter(function(x){return x.lessonDate===d;})[0]||null,loading:false};
+  var today=_mstToday(),c=API_KEEP['c|'+s.studentId];
+  if(!c){_mstDayAsk(s.studentId);return {d:'',n:null,loading:true,ago:''};}
+  var n=(c.notes||[]).filter(function(x){return x.lessonDate<today&&_mstWritten(x);})
+    .sort(function(a,b){return a.lessonDate<b.lessonDate?1:a.lessonDate>b.lessonDate?-1:0;})[0]||null;
+  var last=_msLastLesson(s,_msAdd(today,-1)),ago='';
+  if(n&&n.lessonDate<last){
+    var days=Math.round((Date.parse(today+'T12:00:00Z')-Date.parse(n.lessonDate+'T12:00:00Z'))/864e5);
+    ago=MST_COPY.weeksAgo(Math.max(1,Math.round(days/7)));
+  }
+  return {d:n?n.lessonDate:'',n:n,loading:false,ago:ago};
 }
 var _mstDayAsked={};
 function _mstDayAsk(id){
@@ -4825,48 +4846,153 @@ function _mstAsStudent(id,fn){
   MS.cardStu=id;MS.card=API_KEEP['c|'+id]||null;MS.lesson={};
   try{return fn();}finally{MS.cardStu=keep.stu;MS.card=keep.card;MS.lesson=keep.lesson;}
 }
+// ── [1.896] — what the notes and assignments themselves say to have ready ──────────────────────────────
+// AC, 21 October 2026: *"it needs to read the assignment and summary notes to infer what the teacher will need to teach
+// the lessons … do list the books, sheets, music production song sessions, etc."* The server reads the words and asks
+// Claude, once per lesson whose words it has not read before; here the day's set of lessons is asked for once, and again
+// only when one of those lessons changes. Shown under the attached materials, which stay as they are, and never a
+// second copy of something already attached.
+var _mstAi={};   // the day's lessons, as a signature -> {state:'going'|'done'|'failed', items, keySet, error}
+// What the lesson says, boiled down — the words themselves, not their length: "Faber p.24" corrected to "Faber p.26" is
+// the commonest edit there is, and has the same length.
+function _mstLessonSig(n){
+  var sent=(n.sent||[]).filter(function(y){return !y.pending;}),t=JSON.stringify([n.activities||'',(n.materials||[]).map(function(m){return [m.label,m.url||m.fileId||''];}),
+    sent.map(function(y){return [y.html||'',(y.materials||[]).map(function(m){return m.label;})];})]),h=5381;
+  for(var i=0;i<t.length;i++)h=((h*33)^t.charCodeAt(i))>>>0;
+  return h.toString(36)+':'+t.length;
+}
+function _mstDayAi(asked){
+  if(!asked.length)return {state:'done',items:[]};
+  var sig=asked.map(function(a){return a.studentId+'|'+a.lessonDate+'|'+a.sig;}).sort().join(',');
+  var e=_mstAi[sig];
+  if(e)return e;
+  e=_mstAi[sig]={state:'going',items:[],sig:sig,asked:asked};
+  _mstDayAiAsk(e);
+  return e;
+}
+function _mstDayAiAsk(e){
+  e.state='going';e.error='';
+  api({action:'teacherDayMaterials',data:{teacherToken:TOKEN,lessons:e.asked.map(function(a){return {studentId:a.studentId,lessonDate:a.lessonDate};})}},function(err,r){
+    // Some lessons read and one not: what was read is shown, and the failure is said beside Try again — a list that is
+    // quietly missing a student's lesson reads as complete.
+    if(err||!r||!r.ok){e.state='failed';e.error=(r&&r.error)||MST_COPY.aiFailed;}
+    else{e.items=r.items||[];e.keySet=r.keySet!==false;e.state=r.error?'failed':'done';e.error=r.error||'';}
+    render();
+  });
+}
+function mstDayAiRetry(sig){var e=_mstAi[sig];if(e){_mstDayAiAsk(e);render();}}
+// [1.894] — AC, 21 October 2026: *"materials for tuesday should say for the date of the next scheduled lessons, like
+// materials for tuesday october 27th"*. The next date on that weekday from today on, passing over a studio closure or the
+// teacher's absence when the week loaded at sign-in says so.
+var _MST_MONTH=['January','February','March','April','May','June','July','August','September','October','November','December'];
+function _mstNextLessonDay(day){
+  var i=_MS_DAY.indexOf(day),d=_mstToday();
+  if(i<0)return '';
+  while(_msDow(d)!==i)d=_msAdd(d,1);
+  for(var k=0;k<12;k++,d=_msAdd(d,7)){
+    var wk=API_KEEP['w|'+_msAdd(d,-((_msDow(d)+6)%7))];
+    var dd=wk&&(wk.days||[]).filter(function(x){return x.date===d;})[0];
+    if(!dd||!dd.off)return d;
+  }
+  return d;
+}
+function _mstLongDate(ymd){var p=String(ymd||'').split('-');return p.length===3?_MS_DAY[_msDow(ymd)]+', '+_MST_MONTH[+p[1]-1]+' '+mstOrd(+p[2]):String(ymd||'');}
 function mstDayView(day){
   var list=_mstDayStudents(day),h='<div class="mst-dayh">'+esc(day)+'</div>'+mstDayMats(day,list)+
-    '<div class="mst-daysub">'+esc(MST_COPY.daySub)+'</div><div class="ms-arch mst-daylist">';
+    '<div class="ms-arch mst-daylist">';
   list.forEach(function(s){
     var id=s.studentId,L=_mstDayLesson(s),n=L.n,sent=n?(n.sent||[]).filter(function(y){return !y.pending;}):[];
     var open=!!MST.dayOpen[id],tog='MST.dayOpen['+jsq(id)+']=!MST.dayOpen['+jsq(id)+'];render()';
     // AC: "Maybe we don't need the ages on the single day view summaries" — the time, the name and the instrument.
     var head='<span class="mst-eht">'+esc(mstTime(s.time))+'</span>'+esc(s.studentName+(s.instrument?' \u00b7 '+s.instrument:''));
-    var line=L.loading?MST_COPY.dayLoading:(n&&_mstFirstLine(n.activities))||MS_COPY.noNotes;
-    var body=_mstAsStudent(id,function(){
+    var latest=sent.slice().sort(function(a,b){return (Number(b.sentAt)||0)-(Number(a.sentAt)||0);})[0];
+    var line=L.loading?MST_COPY.dayLoading:!n?MS_COPY.noNotes:(_mstFirstLine(n.activities)||_mstAsgLine(latest));
+    var lead=n?_msShort(L.d)+(L.ago?' \u00b7 '+L.ago:''):'';
+    var body=(n?_mstAsStudent(id,function(){
       return _mstNotesPart(L.d)+(sent.length?'<div class="mst-asec">'+sent.map(function(y){return mstCard(L.d,y,'ok');}).join('')+'</div>':'');
-    })+'<div class="mst-ego"><button type="button" class="btn btn-s ms-sm" onclick="mstOpen('+jsq(id)+')">'+esc(MST_COPY.goTo(String(s.studentName||'').split(' ')[0]))+'</button></div>';
-    h+=_mstEntry(head,open&&!L.loading,tog,line,sent.length>0,body);
+    }):'<div class="ms-lf"><div class="ms-ro ms-empty">'+esc(MS_COPY.noNotes)+'</div></div>')+'<div class="mst-ego"><button type="button" class="btn btn-s ms-sm" onclick="mstOpen('+jsq(id)+')">'+esc(MST_COPY.goTo(String(s.studentName||'').split(' ')[0]))+'</button></div>';
+    h+=_mstEntry(head,open&&!L.loading,tog,line,sent.length>0,body,lead);
   });
   return h+'</div>';
 }
 // Every book, file and link in those lessons' Materials & Resources and in the assignments sent for them, each once, with
-// whose lesson it came from; then the instruments the day's students play. A piece is listed when it was added as a book,
+// whose lesson it came from (no instruments: AC, "that is obvious"). A piece is listed when it was added as a book,
 // file or link; one written only in the notes is not looked for (they are free text).
 function mstDayMats(day,list){
-  var seen={},mats=[],inst={},order=[];
+  // AC, 21 October 2026: "You do not need to list the instruments needed, as that is obvious" — so no Instruments.
+  // [1.896] — *"the purpose of this list is so a teacher can quickly see what they need and what student they need it for.
+  // Sometimes a teacher will be using the same piece for two students, and if so it only needs to be listed once … Group
+  // related items together like edelwiess sheet music and accompaniment track"*, and *"one line per book, with separate
+  // pages listed on their own line underneath"*. So: one line per book, piece, song or session — books, then sheet music,
+  // then sessions, then other files and links — and under it each page or part, with the students who need it. No tick
+  // boxes and no "No file" marks (AC: *"Don't make the teacher do more than they need to"*).
+  var asked=[],att=[];   // the lessons read, and every material attached to them
   list.forEach(function(s){
-    var first=String(s.studentName||'').split(' ')[0],L=_mstDayLesson(s);
-    if(s.instrument){if(!inst[s.instrument]){inst[s.instrument]=[];order.push(s.instrument);}inst[s.instrument].push(first);}
+    var L=_mstDayLesson(s);
     if(!L.n)return;
+    asked.push({studentId:s.studentId,lessonDate:L.d,sig:_mstLessonSig(L.n)});
     var all=(L.n.materials||[]).slice();
     (L.n.sent||[]).forEach(function(y){if(!y.pending)all=all.concat(y.materials||[]);});
-    all.forEach(function(m){
-      var k=m.kind+'|'+String(m.label||'').trim().toLowerCase()+'|'+String(m.url||m.libId||m.attachmentId||'');
-      if(!seen[k]){seen[k]={m:m,who:[]};mats.push(seen[k]);}
-      if(seen[k].who.indexOf(first)<0)seen[k].who.push(first);
-    });
+    all.forEach(function(m){att.push({s:s,m:m});});
   });
   var open=!MST.matsShut;
   var h='<div class="ms-day mst-mats"><button type="button" class="ms-day-h ms-hbtn" aria-expanded="'+(open?'true':'false')+'" onclick="MST.matsShut=!MST.matsShut;render()">'+
-    '<span>'+esc(MST_COPY.matsFor(day))+'</span><span class="mst-hstate">'+esc(open?MS_COPY.close:MS_COPY.open)+'</span></button>';
+    '<span>'+esc(MST_COPY.matsFor(_mstLongDate(_mstNextLessonDay(day))))+'</span><span class="mst-hstate">'+esc(open?MS_COPY.close:MS_COPY.open)+'</span></button>';
   if(open){
-    h+='<div class="ms-lf">'+(mats.length?mats.map(function(x){return _msMatRow(x.m,'<span class="mst-who">'+esc(_msNames(x.who))+'</span>');}).join('')
-      :'<div class="ms-ro ms-empty">'+esc(MST_COPY.dayNoMats)+'</div>')+'</div>';
-    if(order.length)h+='<div class="ms-lf"><div class="ms-lab">'+esc(MST_COPY.instruments)+'</div>'+
-      order.map(function(i){return '<div class="ms-mat"><span class="ms-ml"><b>'+esc(i)+'</b></span><span class="mst-who">'+esc(_msNames(inst[i]))+'</span></div>';}).join('')+'</div>';
+    var ai=_mstDayAi(asked),groups=_mstMatGroups(list,att,ai.items||[]);
+    if(groups.length)h+='<div class="ms-lf">'+groups.map(_mstMatGroupHtml).join('')+'</div>';
+    if(ai.state==='going')h+='<div class="ms-lf"><div class="lib-said working"><span class="spin">&#8635;</span> '+esc(MST_COPY.aiLoading)+'</div></div>';
+    else if(ai.state==='failed')h+='<div class="ms-lf"><span class="mst-aierr">'+esc(MST_COPY.aiFailed)+'</span> <button type="button" class="btn btn-s ms-sm" onclick="mstDayAiRetry('+jsq(ai.sig)+')">'+esc(MST_COPY.aiRetry)+'</button></div>';
+    else if(!groups.length)h+='<div class="ms-lf"><div class="ms-ro ms-empty">'+esc(MST_COPY.dayNoMats)+'</div></div>';   // read, and nothing named
   }
+  return h+'</div>';
+}
+// The day's groups: what Claude read (each item with its book or piece and its pages or part, the attached materials among
+// them), and any attached material it did not account for, by itself. A group's kind is its most important item's; a
+// detail used by two students is one line with both names, in the order of their lessons.
+var MST_MAT_ORDER=['book','sheet','session','file','link','other'];
+function _mstMatGroups(list,att,items){
+  var norm=function(t){return String(t||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();};
+  var order={};list.forEach(function(s,i){order[s.studentId]=i;});
+  var byStu={};list.forEach(function(s){byStu[s.studentId]=s;});
+  var groups=[],gi={},covered={};
+  var add=function(kind,title,detail,s,m){
+    var gk=norm(title);if(!gk)return;
+    var g=gi[gk];
+    if(!g){g=gi[gk]={title:title,kind:kind,lines:[],li:{}};groups.push(g);}
+    if(MST_MAT_ORDER.indexOf(kind)<MST_MAT_ORDER.indexOf(g.kind))g.kind=kind;
+    var lk=norm(detail)||'';
+    var line=g.li[lk];
+    if(!line){line=g.li[lk]={detail:detail,who:[],m:null};g.lines.push(line);}
+    if(m&&!line.m)line.m=m;
+    if(s&&line.who.indexOf(s)<0)line.who.push(s);
+  };
+  items.forEach(function(it){
+    var s=byStu[it.studentId];if(!s)return;
+    var m=null;
+    if(it.attached){
+      var a=att.filter(function(x){return x.s===s&&norm(x.m.label||x.m.url)===norm(it.attached);})[0];
+      if(a){m=a.m;covered[s.studentId+'|'+norm(a.m.label||a.m.url)]=1;}
+    }
+    add(MST_MAT_ORDER.indexOf(it.kind)>-1?it.kind:'other',it.group,it.detail||'',s,m);
+  });
+  att.forEach(function(a){
+    var k=a.s.studentId+'|'+norm(a.m.label||a.m.url);
+    if(covered[k])return;covered[k]=1;
+    add(MST_MAT_ORDER.indexOf(a.m.kind)>-1?a.m.kind:'other',a.m.label||a.m.url,'',a.s,a.m);
+  });
+  groups.forEach(function(g){g.lines.forEach(function(l){l.who.sort(function(a,b){return order[a.studentId]-order[b.studentId];});});});
+  return groups.sort(function(a,b){return MST_MAT_ORDER.indexOf(a.kind)-MST_MAT_ORDER.indexOf(b.kind)||(a.title.toLowerCase()<b.title.toLowerCase()?-1:1);});
+}
+function _mstMatGroupHtml(g){
+  var names=function(w){return _msNames(w.map(function(s){return String(s.studentName||'').split(' ')[0];}));};
+  var open=function(l,txt){return l.m&&l.m.kind==='link'&&l.m.url?'<a href="'+esc(l.m.url)+'" target="_blank" rel="noopener noreferrer">'+esc(txt)+'</a>':esc(txt);};
+  var one=g.lines.length===1&&!g.lines[0].detail;   // nothing more to say than the name: one line
+  var h='<div class="mst-mg"><div class="ms-mat"><span class="ms-k">'+esc(MST_COPY.aiKinds[g.kind]||MST_COPY.aiKinds.other)+'</span><span class="ms-ml"><b>'+
+    (one?open(g.lines[0],g.title):esc(g.title))+'</b></span>'+(one?'<span class="mst-who">'+esc(names(g.lines[0].who))+'</span>':'')+'</div>';
+  if(!one)h+=g.lines.map(function(l){
+    return '<div class="mst-ml"><span class="ms-ml">'+open(l,l.detail||(l.m&&l.m.label)||MST_COPY.aiKinds[g.kind])+'</span><span class="mst-who">'+esc(names(l.who))+'</span></div>';
+  }).join('');
   return h+'</div>';
 }
 // A trial student has no day of their own: the day is their trial lesson's.
@@ -5043,13 +5169,21 @@ function _mstArchRedraw(){var el=document.getElementById('mst-archlist');if(el){
 // The first line of words, from plain text or from an assignment's formatting.
 function _mstFirstLine(t){return String(t||'').replace(/<\/(p|li|div|h\d)>|<br\s*\/?>/gi,'\n').replace(/<[^>]*>/g,'').replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&#39;|&rsquo;/g,'\u2019')
   .split('\n').map(function(l){return l.trim();}).filter(Boolean)[0]||'';}
+// [1.894] — an assignment's line: its first item when it has a list (its opening line is the greeting to the parents,
+// the same for every assignment), else its first line.
+function _mstAsgLine(y){
+  if(!y)return '';
+  var items=String(y.html||'').match(/<li\b[^>]*>[\s\S]*?<\/li>/gi)||[];
+  for(var i=0;i<items.length;i++){var t=_mstFirstLine(items[i]);if(t)return t;}   // the first item with words in it
+  return _mstFirstLine(y.html)||String(y.intro||'').trim()||String((y.practice||[])[0]||'').trim();
+}
 // One lesson or one student, closed or open, the same header either way (AC, 21 October 2026: "it's confusing to have no
 // header color and then a different looking header when clicking on a student"): closed, one line under it — the
 // notes' first line, with Assignment sent where one went; open, the whole of it.
-function _mstEntry(head,open,toggle,line,sent,body){
+function _mstEntry(head,open,toggle,line,sent,body,lead){   // [1.894] — `lead`, in bold before the line: the lesson's date
   var h='<div class="ms-entry"><div class="ms-lc old"><div class="ms-lc-h mst-eh" role="button" tabindex="0" aria-expanded="'+(open?'true':'false')+'" onclick="'+toggle+'">'+
     '<span class="mst-ehl">'+head+'</span><span class="mst-ehr"><span class="ms-oc-b light">'+esc(open?MS_COPY.close:MS_COPY.open)+'</span></span></div>';
-  return h+(open?body:'<div class="mst-pv" onclick="'+toggle+'"><span class="mst-pvt">'+esc(line)+'</span>'+(sent?mstPill('ok'):'')+'</div>')+'</div></div>';
+  return h+(open?body:'<div class="mst-pv" onclick="'+toggle+'"><span class="mst-pvt">'+(lead?'<b class="mst-pvd">'+esc(lead)+'</b>'+(line?' \u00b7 ':''):'')+esc(line)+'</span>'+(sent?mstPill('ok'):'')+'</div>')+'</div></div>';
 }
 function _mstArchList(items){
   var c=MS.card||{},q=String(MST.archQ||'').trim().toLowerCase(),show=MST.archShow||'all',h='',n0=0;
@@ -5075,7 +5209,7 @@ function _mstArchList(items){
       if(hay.indexOf(q)<0)return;
     }
     n0++;open=!!MS.open[d]||MST.archDate===d;tog='msToggle('+jsq(d)+')';
-    var line=show==='asg'?(_mstFirstLine(sent[0].html)||sent[0].intro||(sent[0].practice||[])[0]||''):(_mstFirstLine(l.activities)||MS_COPY.noNotes);
+    var line=show==='asg'?_mstAsgLine(sent[0]):(_mstFirstLine(l.activities)||MS_COPY.noNotes);
     // Open: everything, as the lesson's own box draws it (its notes with Edit, its materials, what was sent), or the part chosen.
     var body=show==='all'?mstLessonBody(d,false)
       :show==='notes'?_mstNotesPart(d)

@@ -1539,6 +1539,54 @@ mark.guide-hit{background:var(--bbg);color:inherit;border-radius:2px;padding:0 1
 .ms-arch .ms-entry{margin:6px 8px 0}.ms-arch .ms-entry .ms-lc{margin-bottom:0}
 .ms-matbtns{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
 #pick-panel-mat{margin-top:8px}
+/* [1.898] — the materials' panel: white, edged in the accent so it belongs to the button that opened it, the pressed
+   button light rather than filled, one list that scrolls inside its box, and one wide Done that stays in sight at the
+   bottom of the panel while the page scrolls. */
+.ms-matbtns .btn.ms-on{background:var(--bbg);border-color:var(--acc);color:var(--acc);box-shadow:inset 0 0 0 1px var(--acc)}
+.lib-panel.ms-pick,.lib-panel.pick-in-thread.ms-pick,.mst-form .lib-panel.ms-pick{background:#fff;border:1.5px solid var(--acc);border-radius:var(--rl);padding:10px 12px 0;margin:6px 0 8px;max-height:none;overflow:visible}
+.ms-pick-hd{font-size:13px;font-weight:700;color:var(--acc);margin-bottom:8px}
+.ms-pick .ms-pick-up{width:100%;margin-bottom:6px}
+.ms-pick-q{display:flex;gap:6px;align-items:stretch;margin-top:10px}
+.ms-pick .ms-pick-q .lib-search{margin:0;flex:1 1 auto;min-width:0}
+.ms-pick-tbtn{flex:0 0 auto;padding:0 10px;border:1px solid var(--border);border-radius:var(--r);background:#fff;font:inherit;font-size:12px;color:var(--text3);cursor:pointer}
+.ms-pick-tbtn.on{background:var(--bbg);border-color:var(--acc);color:var(--acc);font-weight:600}
+.ms-pick-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px;align-items:center}
+.ms-pick-tags .lib-tag{padding:2px 9px;font-size:11.5px;cursor:pointer}
+.ms-pick-tags .lib-tag:disabled{opacity:.35;cursor:default}
+.ms-pick-more{background:none;border:0;padding:0 2px;font-size:11.5px;color:var(--link);text-decoration:underline;cursor:pointer}
+.ms-pick-list{margin-top:6px;max-height:262px;overflow-y:auto;border:1px solid var(--bg4);border-radius:var(--r);padding:2px 4px}
+.ms-pick-row{display:flex;align-items:center;gap:8px;font-size:12.5px;padding:4px 2px;border-radius:4px}
+.ms-pick-row,.ms-pick-row .ms-ml{text-transform:none;letter-spacing:0;font-weight:400;color:var(--text)}
+.ms-pick-row input{margin:0;flex:0 0 auto}
+.ms-pick-list .ms-pick-row+.ms-pick-row{border-top:1px solid var(--bg5)}
+.ms-pick-list .lib-kind{flex:0 0 auto}
+.ms-pick-nm{flex:1 1 auto;min-width:0;display:flex;flex-direction:column}
+.ms-pick-name{flex:1 1 auto;min-width:0;text-align:left;background:none;border:0;padding:0;font:inherit;font-size:12.5px;color:var(--text);
+  cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ms-pick-name:hover{text-decoration:underline}
+.ms-pick-ft{font-size:10.5px;color:var(--text5);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ms-pick-tag{flex:0 0 auto;font-size:10.5px;color:var(--bt);background:var(--bbg);border-radius:4px;padding:1px 6px}
+.ms-pick-foot{position:sticky;bottom:0;background:#fff;margin:10px -12px 0;padding:10px 12px;border-top:1px solid var(--bg4);
+  border-radius:0 0 var(--rl) var(--rl);display:flex;align-items:center;gap:12px}
+.ms-pick-done{flex:1 1 auto;padding:9px 12px;border-radius:var(--r);border:1px solid #1a4fc4;background:#1a4fc4;color:#fff;
+  font-family:"Inter",sans-serif;font-size:13.5px;font-weight:700;cursor:pointer}
+.ms-pick-done:hover{background:#1440a8}
+.ms-pick-lib{background:none;border:0;padding:0;font-size:12px;color:var(--link);text-decoration:underline;cursor:pointer}
+/* [1.897] — the lesson summary's files and links, offered in Create Assignment: light blue (information), unticked. */
+.mst-offer{background:var(--bbg);border:1px solid #9DBBE3;border-radius:var(--rl);padding:8px 10px;margin:4px 0 8px}
+.mst-offer-hd{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:var(--bt);margin-bottom:2px}
+.mst-offer-all{margin-left:auto;background:none;border:0;padding:0;font-size:12px;font-weight:600;color:var(--link);text-decoration:underline;cursor:pointer}
+/* [1.899] — every material opens from its name; Edit beside it; the lesson notes with their links. */
+.ms-mat .ms-ml a,.mst-offer .ms-ml a,.ms-lnotes a,.ms-ro a{color:var(--link);text-decoration:underline}
+.ms-matopen{background:none;border:0;padding:0;font:inherit;font-size:12.5px;color:var(--link);text-decoration:underline;cursor:pointer;text-align:left}
+.ms-matedit{background:none;border:0;padding:0 4px;font-size:12px;color:var(--link);text-decoration:underline;cursor:pointer;flex:0 0 auto}
+.ms-mat .ms-matedit{margin-left:auto}.ms-mat .ms-matedit+.ms-x{margin-left:0}
+.ms-matedrow{display:flex;align-items:center;gap:6px;padding:4px 0}
+.ms-mated-f{flex:1 1 auto;display:flex;flex-direction:column;gap:4px;min-width:0}
+.ms-mated-f input{width:100%;padding:5px 7px;border:1px solid var(--border);border-radius:var(--r);font:inherit;font-size:12.5px}
+.ms-notes-wrap{margin:0}.ms-notes-wrap .cmp-row2{margin-bottom:4px;justify-content:flex-start}
+.ms-notes-wrap .cmp-row2 .cmp-tb-btn{flex:0 0 auto;padding-left:14px;padding-right:14px}
+.ms-lnotes.tt-a{min-height:84px;font-size:13px;line-height:1.45;white-space:pre-wrap;outline:none}
 .ms-oc{display:flex;justify-content:flex-end;gap:6px;margin-bottom:6px}
 .ms-past{display:grid;grid-template-columns:auto 1fr auto auto;gap:8px;align-items:center;width:100%;font:inherit;font-size:12.5px;padding:7px 10px;border:1px solid var(--bg4);border-radius:var(--r);margin-bottom:4px;background:#fff;cursor:pointer;text-align:left;color:var(--text)}
 .ms-past-d{font-weight:700}.ms-past-t{color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -3715,15 +3763,19 @@ var GUIDE_COPY={
       {n:'Lesson Summary', k:'lesson notes activities materials books resources edit save file link date',
        q:'Choose the lesson date, type your lesson notes and add {{Materials & Resources}}, then click {{Save Summary}}. To change saved notes, click {{Edit}}.', m:[
         'Lesson notes and materials are private to you. They are not sent to the family. To send the family work, create an assignment.',
-        'Click {{Add file}} or {{Add link}} to add materials from your device, your saved files and links, or the {{Keylab Master Library}}.',
+        // [1.898] [1.899] — PLACEHOLDER sentences for AC to read.
+        'Click {{Add link}} above the notes to turn words in them into a link, as in a message. Click {{Add file}} under {{Materials & Resources}} to add a file from your device or your library, then click {{Done}}.',
+        'Click a file or link to open it. Click {{Edit}} beside it to change the name it shows for this lesson.',
         'While editing, click {{Cancel}} to discard your changes. Clicking {{Create Assignment for}} the student also saves the notes you are writing.',
         'The date list shows your weekly lesson day for the past six weeks, and any earlier date with notes or an assignment.'
       ]},
       {n:'Create Assignment', k:'homework practice assignment parents file link library master template draft schedule preview',
        q:'Click {{Create Assignment for}} the student at the bottom of the {{Lesson Summary}}. Write the assignment, tick which parents receive it under {{Sending to}}, and click {{Send to}}.', m:[   // [1.802] \u2014 it opens blank
-        'It starts with a greeting to the parents you tick and a numbered list to fill in. Edit or delete any of it. Your lesson notes and materials are not copied in.',
+        'It starts with a greeting to the parents you tick and a numbered list to fill in. Edit or delete any of it. Your lesson notes are not copied in.',
+        // [1.897] — PLACEHOLDER sentence for AC to read.
+        'The files and links in the lesson summary are listed under {{Materials}}, unticked. Tick the ones to send with the assignment, or click {{Select all}}.',
         'Use the formatting buttons, {{Templates}} and {{Add link}} as in a message. Fill in any template field in brackets, such as [studentFirst], before sending.',
-        'Click {{Add file}} to add up to 10 files, 10 MB each. Files are listed under {{Materials}}, and the family is asked to share them with the student.',
+        'Click {{Add file}} under {{Materials}} to add up to 10 files, 10 MB each. The family is asked to share them with the student.',
         'Each parent you tick receives an email with the assignment and its materials. Files open in the family portal, not as email attachments. The assignment also appears in the family\u2019s conversation on {{Messages}}. You do not need to send a separate message.',
         // [1.888] — what Send shows. PLACEHOLDER sentence for AC to read.
         'After you click {{Send to}}, the assignment says it is sending, then that it was sent and to whom. The student is marked {{Assignment sent}} in your list.',
@@ -3790,10 +3842,12 @@ var GUIDE_COPY={
       {n:'Add file', k:'attachment attach upload photo picture image pdf document video size limit save keep library',
        q:'Click {{Add file}} to attach up to 10 files, 10 MB each. You can also drag and drop or paste files into a message.', m:[
         'Attach files from your device, your saved files, or the {{Keylab Master Library}}. Click {{Accepted file types}} to see supported formats.',
+        // [1.898] — PLACEHOLDER sentence for AC to read.
+        'In a lesson summary or an assignment, {{Add file}} lists every file you can use, the ones used with the student first. Type in the search box, or click {{Tags}}, to find one. Click a file\u2019s name to open it, tick it to add it, and click {{Done}} when finished.',
         'Click {{Save to Library}} beside a file in any conversation to keep it in your library, including a file a family sends you.'
       ]},
-      {n:'Add link', k:'url website web address edit change remove hyperlink',
-       q:'Highlight words in your message and click {{Add link}}, then paste the address under {{Paste Link Here}} and click {{Insert link}}.', m:[
+      {n:'Add link', k:'url website web address edit change remove hyperlink lesson notes summary',
+       q:'Highlight words in your message or lesson notes and click {{Add link}}, then paste the address under {{Paste Link Here}} and click {{Insert link}}.', m:[   // [1.899] — the lesson notes too
         'The words in {{Display Text}} become the link. Left empty, the address itself is shown.',
         'Choose from {{Saved Links}} to add a link you have saved, or one from the {{Keylab Master Library}}.',
         // [1.844] — PLACEHOLDER, AC to word: the link bubble.
@@ -4506,9 +4560,9 @@ function _msLoadCard(){
       // [1.849] — words this page has not had confirmed are what the teacher wrote; one that failed is sent again.
       if(MS.note===null){var _np=_msStuNote[MS.cardStu];MS.note=_np?_np.v:(r.myNote||'');
         if(_np&&_np.bad&&!_msNoteWait){MS.st=MS_COPY.saveFail;_msNoteWait={stu:MS.cardStu,tok:TOKEN,v:_np.v};_msNoteFlush();}}
-      (r.notes||[]).forEach(function(n){if(!MS.lesson[n.lessonDate]||!MS.timer[n.lessonDate])MS.lesson[n.lessonDate]={activities:n.activities,materials:(n.materials||[]).slice(),lessonTime:n.lessonTime};});
+      (r.notes||[]).forEach(function(n){if(!MS.lesson[n.lessonDate]||!MS.timer[n.lessonDate])MS.lesson[n.lessonDate]={activities:n.activities,notesHtml:n.notesHtml||'',materials:(n.materials||[]).slice(),lessonTime:n.lessonTime};});
       // [1.805] — a save still on its way is what the teacher wrote, whatever the sheet said a moment ago.
-      Object.keys(_msNotePend).forEach(function(k){var p=_msNotePend[k];if(p.stu===MS.cardStu)_msPutNote(p.d,p.activities,p.materials,true);});
+      Object.keys(_msNotePend).forEach(function(k){var p=_msNotePend[k];if(p.stu===MS.cardStu)_msPutNote(p.d,p.activities,p.materials,true,p.notesHtml);});
       Object.keys(_mstOut).forEach(function(k){var o=_mstOut[k];if(!o.at&&o.x.studentId===MS.cardStu)_mstShowSent(o.x);});   // [1.806]
     }else showMsg((r&&r.error)||'The card could not be loaded','e');
     render();
@@ -4516,7 +4570,7 @@ function _msLoadCard(){
 }
 function _msNoteOf(d){return (MS.card&&MS.card.notes||[]).filter(function(n){return n.lessonDate===d;})[0]||null;}
 function _msLes(d){
-  if(!MS.lesson[d]){var n=_msNoteOf(d);MS.lesson[d]={activities:n?n.activities:'',materials:n?(n.materials||[]).slice():[],lessonTime:n?n.lessonTime:(d===MS.cardDate?MS.cardTime:'')};}
+  if(!MS.lesson[d]){var n=_msNoteOf(d);MS.lesson[d]={activities:n?n.activities:'',notesHtml:n?n.notesHtml||'':'',materials:n?(n.materials||[]).slice():[],lessonTime:n?n.lessonTime:(d===MS.cardDate?MS.cardTime:'')};}
   return MS.lesson[d];
 }
 // [1.790] — AC, 6 October 2026: "improved visual separation between areas.
@@ -4570,7 +4624,12 @@ var MST_COPY={
   // assignments should say 'scheduled to send on Oct 7, 8:00 am'".
   forLesson:function(d){return 'for lesson on '+d;},sendsOn:function(w){return 'scheduled to send on '+w;},
   noDrafts:'No draft assignments.',noSched:'No scheduled assignments.',     // PLACEHOLDER
-  noMats:'Nothing added. Click Add file or Add link above.',                 // PLACEHOLDER
+  // [1.897] [1.898] [1.899] — PLACEHOLDERS, AC's to word. ("Nothing added. Click Add file or Add link above." went: Add file
+  // is right under the list now, and Add link puts a link into the words.)
+  pickFilesTo:function(dest){return 'Add files to '+dest;},
+  pickToLes:'the lesson summary',pickToAsg:function(first){return first+'\u2019s assignment';},
+  usedWith:function(first){return 'Used with '+first;},openFile:'Open',searchAll:'Search by name or tag',tagsBtn:function(n){return n?'Tags ('+n+')':'Tags';},allTags:function(n){return 'All tags ('+n+')';},fewerTags:'Fewer tags',noFilesYet:'No files yet. Click Add from your device.',
+  offerHd:function(first){return 'From '+first+'\u2019s lesson summary';},offerAll:'Select all',
   back:'All Students',                                                       // AC, 7 October ("No arrows ever!")
   parents:'Parents',
   summaryHint:'Add or edit lesson summary notes here',                       // AC, 21 October 2026 ([1.888]); it was "Add lesson notes here"
@@ -4931,7 +4990,7 @@ function mstDayMats(day,list){
     var L=_mstDayLesson(s);
     if(!L.n)return;
     asked.push({studentId:s.studentId,lessonDate:L.d,sig:_mstLessonSig(L.n)});
-    var all=(L.n.materials||[]).slice();
+    var all=(L.n.materials||[]).concat(_msNotesLinks(L.n.notesHtml));   // [1.899] — a link written into the notes too
     (L.n.sent||[]).forEach(function(y){if(!y.pending)all=all.concat(y.materials||[]);});
     all.forEach(function(m){att.push({s:s,m:m});});
   });
@@ -4986,7 +5045,11 @@ function _mstMatGroups(list,att,items){
 }
 function _mstMatGroupHtml(g){
   var names=function(w){return _msNames(w.map(function(s){return String(s.studentName||'').split(' ')[0];}));};
-  var open=function(l,txt){return l.m&&l.m.kind==='link'&&l.m.url?'<a href="'+esc(l.m.url)+'" target="_blank" rel="noopener noreferrer">'+esc(txt)+'</a>':esc(txt);};
+  // [1.899] — a file opens from its name here too (AC: "any files or links should be clickable"): the Library file it
+  // came from when it went with an assignment, otherwise the file itself.
+  var open=function(l,txt){var m=l.m,f=m&&m.kind==='file'&&(m.libId||m.attachmentId);
+    return m&&m.kind==='link'&&m.url?'<a href="'+esc(m.url)+'" target="_blank" rel="noopener noreferrer">'+esc(txt)+'</a>'
+      :f?'<button type="button" class="ms-matopen" onclick="openAttachment('+jsq(f)+',\'view\')">'+esc(txt)+'</button>':esc(txt);};
   var one=g.lines.length===1&&!g.lines[0].detail;   // nothing more to say than the name: one line
   var h='<div class="mst-mg"><div class="ms-mat"><span class="ms-k">'+esc(MST_COPY.aiKinds[g.kind]||MST_COPY.aiKinds.other)+'</span><span class="ms-ml"><b>'+
     (one?open(g.lines[0],g.title):esc(g.title))+'</b></span>'+(one?'<span class="mst-who">'+esc(names(g.lines[0].who))+'</span>':'')+'</div>';
@@ -5251,11 +5314,19 @@ function mstLessonBody(d,current){
   var l=_msLes(d),id=d.replace(/-/g,''),ed=current?_msEditOf(d):MS.edits[_msEditKey(d)],s=_mstStu(MS.cardStu);
   var n=_msNoteOf(d),sent=(n&&n.sent)||[];
   var h='<div class="ms-lf"><div class="ms-lab">'+esc(MST_COPY.notesFor(mstDate(d)))+'</div>'+
-    (ed?'<textarea id="ms-act-'+id+'" class="tt-a" rows="4" oninput="msEditInput(\''+d+'\',this.value)"'+(ed.busy?' disabled':'')+'>'+esc(ed.activities||'')+'</textarea>'
-      :String(l.activities||'').trim()?'<div class="ms-ro">'+esc(l.activities)+'</div>':'<div class="ms-ro ms-empty">'+esc(MS_COPY.noNotes)+'</div>')+'</div>';
+    // [1.899] — AC, 21 October 2026: *"when adding a link to the lesson summary, it should display in the summary notes and
+    // behave just like the link added in an assignment."* So the notes take the assignment's Add link: the same panel (Paste
+    // Link Here, Display Text, Insert link, Saved Links), highlighted words become the link, and it opens from the notes,
+    // read or being written. Nothing else of the message's formatting is offered — only links were asked for.
+    (ed?(function(){var nid='ms-notes-'+id;return '<div class="composer-wrap ms-notes-wrap"><div class="cmp-tb cmp-row2">'+_tbPick(nid,'link',TLIB_COPY.pickLink)+'</div>'+
+        (PICK==='link'&&_libComposerId===nid?rPickPanel(nid):'')+
+        '<div id="'+nid+'" class="cmp-rich tt-a ms-lnotes" contenteditable="'+(ed.busy?'false':'true')+'" role="textbox" aria-multiline="true" aria-label="'+esc(MST_COPY.notesFor(mstDate(d)))+'"'+
+        ' oninput="msEditHtml(\''+d+'\',this)" onkeyup="_composerState(\''+nid+'\')" onmouseup="_composerState(\''+nid+'\')" onblur="_composerStateClear(\''+nid+'\')" onpaste="_composerPaste(event)">'+
+        (ed.notesHtml||_msNotesHtml(ed.activities))+'</div></div>';})()
+      :String(l.activities||'').trim()?'<div class="ms-ro">'+(l.notesHtml||esc(l.activities))+'</div>':'<div class="ms-ro ms-empty">'+esc(MS_COPY.noNotes)+'</div>')+'</div>';
   if(ed){
     h+='<div class="ms-lf"><div class="ms-lab">'+esc(MS_COPY.materials)+'</div>'+
-      (ed.materials||[]).map(function(m,i){return _msMatRow(m,'<button type="button" class="ms-x" title="'+esc(MS_COPY.remove)+'" onclick="msMatRemove(\''+d+'\','+i+')">✕</button>')+(_msPickAsks(m)?'':rMatTagAsk(m));}).join('')+
+      (ed.materials||[]).map(function(m,i){return _msMatEditing('les:'+d,i)?_msMatEditRow('les:'+d,i,m):_msMatRow(m,_msMatEditBtn('les:'+d,i,m)+'<button type="button" class="ms-x" title="'+esc(MS_COPY.remove)+'" onclick="msMatRemove(\''+d+'\','+i+')">✕</button>')+(_msPickAsks(m)?'':rMatTagAsk(m));}).join('')+
       _msAddUI('les:'+d)+'</div>';
   }else{
     h+=((l.materials||[]).length?'<div class="ms-lf"><div class="ms-lab">'+esc(MS_COPY.materials)+'</div>'+l.materials.map(function(m){return _msMatRow(m,'');}).join('')+'</div>':'');
@@ -5443,7 +5514,19 @@ function mstResend(d,id){
 }
 function _mstFormOpened(){delete _cmpLinkSel[MST_CID];_mstFormReset();MS.asg.sendKey='';loadLibrary();loadSavedTpls();render();setTimeout(mstToAsg,30);}
 function mstSetTo(slot,on){mstSyncHtml();MS.asg.to[slot]=on;MS.asg.html=_mstStarterApply(MS.asg.html,_mstStu(MS.cardStu),MS.asg);render();}   // [1.807] — the greeting follows the ticks
-function mstMatRemove(i){mstSyncHtml();MS.asg.mats.splice(i,1);render();}
+function mstMatRemove(i){mstSyncHtml();MS_MATEDIT=null;MS.asg.mats.splice(i,1);render();}
+// [1.897] — the lesson summary's files and links, as they stand (being edited, or saved), and the links written into its notes.
+function _mstOffered(d){
+  var ed=MS.edits[_msEditKey(d)],n=_msNoteOf(d),l=((ed?ed.materials:n&&n.materials)||[]).concat(_msNotesLinks(ed?ed.notesHtml:n&&n.notesHtml));
+  return l.filter(function(m){return !m.uploading&&!m.upFailed&&(m.kind==='link'?!!m.url:m.kind==='file'&&!!m.attachmentId);});
+}
+function _msSameMat(a,b){
+  return a.kind==='link'?b.kind==='link'&&String(a.url||'').trim().toLowerCase()===String(b.url||'').trim().toLowerCase():b.kind==='file'&&a.attachmentId===b.attachmentId;
+}
+// A link not yet in My Library goes in with the assignment, so it asks "Assign tags?" as a new one always has ([1.868]).
+function _mstOfferIn(o){if(o.kind==='link'&&!_msLibShelf(o))_matTagOpen(o);}
+function mstOfferTick(i){var o=_mstOffered(MS.asg.date)[i];if(!o)return;if(!_msMatHas('asg',o))_mstOfferIn(o);_msMatToggle('asg',o);}
+function mstOfferAll(){mstSyncHtml();_mstOffered(MS.asg.date).forEach(function(o){if(!_msMatHas('asg',o)){_mstOfferIn(o);_msMatPush('asg',Object.assign({},o));}});render();}
 function mstSetReply(on){mstSyncHtml();MS.asg.reply=!!on;render();}   // [1.870]
 function mstForm(){
   var a=MS.asg,s=_mstStu(MS.cardStu),two=!!(s.parent1Name&&s.parent2Name),who=mstWho(s,a.to);
@@ -5455,9 +5538,21 @@ function mstForm(){
     return '<span class="ms-lib'+(sh?'':' new')+'">'+esc(sh==='studio'?TLIB_COPY.studio:sh?MS_COPY.inLib:MS_COPY.willAdd)+'</span>';
   };
   var tick=function(slot,name){return '<label class="mst-to"><input type="checkbox"'+(a.to[slot]?' checked':'')+' onclick="mstSetTo(\''+slot+'\',this.checked)"> '+esc(name)+'</label>';};
-  var mats='<div class="mst-mats"><div class="ms-lab">'+esc(MST_COPY.mats)+'</div>'+
-    (a.mats.length?a.mats.map(function(m,i){return _msMatRow(m,libTag(m)+'<button type="button" class="ms-x" title="'+esc(MS_COPY.remove)+'" onclick="mstMatRemove('+i+')">✕</button>')+(_msPickAsks(m)?'':rMatTagAsk(m));}).join('')
-      :'<div class="ms-hint">'+esc(MST_COPY.noMats)+'</div>')+'</div>';
+  // [1.897] — AC, 21 October 2026: *"when the teacher adds a file or link to a lesson summary, when creating the
+  // assignment, it should offer to add those to the assignment automatically, allowing the teacher to select all, one, or
+  // some."* The assignment still opens with nothing in it (AC, 7 October); the lesson summary's files and links are
+  // offered, unticked, with Select all. A ticked one goes with the assignment and stays where it is.
+  var first=String(s.studentName||'').split(' ')[0],offered=re?[]:_mstOffered(a.date),inOffer=function(m){return offered.some(function(o){return _msSameMat(o,m);});};
+  var offer=offered.length?'<div class="mst-offer"><div class="mst-offer-hd"><span>'+esc(MST_COPY.offerHd(first))+'</span>'+
+      (offered.every(function(o){return _msMatHas('asg',o);})?'':'<button type="button" class="mst-offer-all" onclick="mstOfferAll()">'+esc(MST_COPY.offerAll)+'</button>')+'</div>'+
+      offered.map(function(o,i){return '<div class="ms-pick-row"><input type="checkbox"'+(_msMatHas('asg',o)?' checked':'')+' aria-label="'+esc(o.label||o.url)+'" onclick="mstOfferTick('+i+')">'+
+        '<span class="ms-k">'+esc(o.kind==='link'?MS_COPY.link:MS_COPY.file)+'</span><span class="ms-ml">'+   // the name opens it, the tick sends it (AC, 13 September)
+        (o.kind==='link'?'<a href="'+esc(o.url)+'" target="_blank" rel="noopener noreferrer">'+esc(o.label||o.url)+'</a>'
+          :'<button type="button" class="ms-matopen" onclick="openAttachment('+jsq(o.attachmentId)+',\'view\')">'+esc(o.label)+'</button>')+'</span></div>'+
+        (_msMatHas('asg',o)?rMatTagAsk(o):'');}).join('')+'</div>':'';   // a ticked link new to My Library asks "Assign tags?" under its row
+  var mats='<div class="mst-mats"><div class="ms-lab">'+esc(MST_COPY.mats)+'</div>'+offer+
+    a.mats.map(function(m,i){return inOffer(m)?'':_msMatEditing('asg',i)?_msMatEditRow('asg',i,m):_msMatRow(m,libTag(m)+_msMatEditBtn('asg',i,m)+'<button type="button" class="ms-x" title="'+esc(MS_COPY.remove)+'" onclick="mstMatRemove('+i+')">✕</button>')+(_msPickAsks(m)?'':rMatTagAsk(m));}).join('')+
+    _msAddUI('asg')+'</div>';
   var busy=!!MST.busy;
   var btns='<div class="mst-ffoot'+(dr?' has-del':'')+'">'+
       '<button type="button" class="btn btn-s ms-sm"'+(busy?' disabled':'')+' onclick="mstPreview()">'+esc(MST.preview?MST_COPY.hidePreview:MST_COPY.preview)+'</button>'+
@@ -5826,22 +5921,39 @@ function _msEditKey(d){return MS.cardStu+'|'+d;}
 function _msHasSaved(d){var l=_msLes(d);return !!(String(l.activities||'').trim()||(l.materials||[]).length);}
 function _msEditOf(d){
   var k=_msEditKey(d);
-  if(!MS.edits[k]&&!_msHasSaved(d))MS.edits[k]={activities:'',materials:[],busy:false,err:'',blank:true};
+  if(!MS.edits[k]&&!_msHasSaved(d))MS.edits[k]={activities:'',notesHtml:'',materials:[],busy:false,err:'',blank:true};
   return MS.edits[k];
 }
 function msEdit(d){
   var l=_msLes(d);
-  MS.edits[_msEditKey(d)]={activities:l.activities||'',materials:(l.materials||[]).slice(),busy:false,err:''};
+  MS.edits[_msEditKey(d)]={activities:l.activities||'',notesHtml:l.notesHtml||'',materials:(l.materials||[]).slice(),busy:false,err:''};
   render();
   // The cursor goes into the notes, after the last word, ready to add to them.
   setTimeout(function(){
-    var t=document.getElementById('ms-act-'+d.replace(/-/g,''));if(!t)return;
-    _focusNoScroll(t);try{var n=t.value.length;t.setSelectionRange(n,n);}catch(e){}
+    var t=document.getElementById('ms-notes-'+d.replace(/-/g,''));if(!t)return;
+    _focusNoScroll(t);try{var r=document.createRange();r.selectNodeContents(t);r.collapse(false);var sel=window.getSelection();sel.removeAllRanges();sel.addRange(r);}catch(e){}
   },30);
 }
-// Typing never redraws; the words wait in the copy until Save.
-function msEditInput(d,v){
-  var ed=MS.edits[_msEditKey(d)];if(ed)ed.activities=v;
+// [1.899] — notes kept as words alone are shown in the editor as those words, a line to a line.
+function _msLinksIn(h){return /<a\b/i.test(String(h||''));}
+function _msNotesHtml(t){return esc(String(t||'')).replace(/\n/g,'<br>');}
+// Typing never redraws; the words wait in the copy until Save — as they look, and as plain words for every place that
+// shows a first line or searches (the server works the words out again from what it keeps).
+function msEditHtml(d,el){
+  var ed=MS.edits[_msEditKey(d)];if(!ed)return;
+  ed.notesHtml=el.innerHTML;
+  ed.activities=String(el.innerText!=null?el.innerText:el.textContent||'').replace(/\u00a0/g,' ').trim();
+}
+// The links written into the notes, each once by address, as materials — what Create Assignment offers and the day's card
+// opens. Read from the markup the server keeps (or the editor holds), which writes every link as <a href="…">.
+function _msNotesLinks(html){
+  var out=[],seen={},re=/<a\b[^>]*?href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi,m;
+  var dec=function(t){return String(t).replace(/<[^>]*>/g,'').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#0*39;|&apos;/g,"'").replace(/&nbsp;/g,' ').replace(/&amp;/g,'&');};
+  while((m=re.exec(String(html||'')))){
+    var u=dec(m[1]).trim(),k=u.toLowerCase();if(!u||seen[k])continue;seen[k]=1;
+    out.push({kind:'link',label:dec(m[2]).trim()||u,url:u});
+  }
+  return out;
 }
 function msEditCancel(d){
   delete MS.edits[_msEditKey(d)];
@@ -5868,40 +5980,42 @@ function _seqRun(key,fn){
 }
 var _msNotePend={},_msNoteOk={},_msNoteSeq={};
 // A lesson's notes, put into the open card: the lesson's box and the card's list of lessons.
-function _msPutNote(d,act,mats,keep){
-  var l=_msLes(d);l.activities=act;l.materials=mats.slice();
+function _msPutNote(d,act,mats,keep,html){
+  html=html||'';   // [1.899] — the notes with their links, beside the words
+  var l=_msLes(d);l.activities=act;l.notesHtml=html;l.materials=mats.slice();
   var n=_msNoteOf(d);
   if(n&&!keep&&!(n.sent||[]).length){MS.card.notes=MS.card.notes.filter(function(x){return x!==n;});return;}
-  if(n){n.activities=act;n.materials=mats.slice();}
-  else if(MS.card&&keep){MS.card.notes=MS.card.notes||[];MS.card.notes.push({lessonDate:d,lessonTime:l.lessonTime||'',activities:act,materials:mats.slice(),sent:[]});
+  if(n){n.activities=act;n.notesHtml=html;n.materials=mats.slice();}
+  else if(MS.card&&keep){MS.card.notes=MS.card.notes||[];MS.card.notes.push({lessonDate:d,lessonTime:l.lessonTime||'',activities:act,notesHtml:html,materials:mats.slice(),sent:[]});
     MS.card.notes.sort(function(x,y){return x.lessonDate<y.lessonDate?1:-1;});}
 }
 function msEditSave(d){
   var stu=MS.cardStu,k=_msEditKey(d),ed=MS.edits[k],l=_msLes(d);if(!ed||ed.busy)return;
-  var act=ed.activities||'',mats=(ed.materials||[]).slice(),time=l.lessonTime||'',blank=!!ed.blank;
-  if(!_msNotePend[k])_msNoteOk[k]={activities:l.activities||'',materials:(l.materials||[]).slice(),had:!!_msNoteOf(d)};
+  var act=ed.activities||'',html=_msLinksIn(ed.notesHtml)?ed.notesHtml:'',mats=(ed.materials||[]).slice(),time=l.lessonTime||'',blank=!!ed.blank;
+  if(MS_MATEDIT&&MS_MATEDIT.k==='les:'+d)msMatEditDone(true);   // [1.899] — a name half-changed is kept as it reads
+  if(!_msNotePend[k])_msNoteOk[k]={activities:l.activities||'',notesHtml:l.notesHtml||'',materials:(l.materials||[]).slice(),had:!!_msNoteOf(d)};
   _mstMine();var seq=_msNoteSeq[k]=(_msNoteSeq[k]||0)+1;
-  _msNotePend[k]={stu:stu,d:d,activities:act,materials:mats};
-  _msPutNote(d,act,mats,true);
+  _msNotePend[k]={stu:stu,d:d,activities:act,notesHtml:html,materials:mats};
+  _msPutNote(d,act,mats,true,html);
   delete MS.edits[k];
   if(MS.pick&&MS.pick.target==='les:'+d)MS.pick=null;
   actClear('les:'+k);render();
   _seqRun('les:'+k,function(next){
     _upWhenReady(mats,function(){   // [1.806] — a file still uploading is saved once it has arrived
     var sent=_mstDraftMats(_upArrived(mats));
-    api({action:'teacherSaveLessonNote',data:{teacherToken:TOKEN,studentId:stu,lessonDate:d,lessonTime:time,activities:act,materials:sent}},function(e,r){
+    api({action:'teacherSaveLessonNote',data:{teacherToken:TOKEN,studentId:stu,lessonDate:d,lessonTime:time,activities:act,notesHtml:html||null,materials:sent}},function(e,r){
       next();
       var good=!e&&r&&r.ok;
-      if(good)_msNoteOk[k]={activities:act,materials:sent,had:true};   // what the server now has
+      if(good)_msNoteOk[k]={activities:act,notesHtml:html,materials:sent,had:true};   // what the server now has
       if(seq!==_msNoteSeq[k])return;   // a newer save of this lesson follows, and its answer is the one that counts
       delete _msNotePend[k];
       if(good){actDone('les:'+k,MS_COPY.saved);return;}
       var why=(r&&r.error)||MS_COPY.saveFail,ok=_msNoteOk[k];
       // The held card has the words the server does not: dropped, so the next open asks afresh.
       delete API_KEEP['c|'+stu];delete API_KEEP_AT['c|'+stu];
-      if(MS.cardStu===stu&&MS.card)_msPutNote(d,ok.activities,ok.materials,ok.had);
+      if(MS.cardStu===stu&&MS.card)_msPutNote(d,ok.activities,ok.materials,ok.had,ok.notesHtml);
       if(MS.edits[k])MS.edits[k].err=why;   // opened again since: those words stay, with the reason
-      else MS.edits[k]={activities:act,materials:mats,busy:false,err:why,blank:blank};
+      else MS.edits[k]={activities:act,notesHtml:html,materials:mats,busy:false,err:why,blank:blank};
       if(!_mstOnStudent(stu))showMsg(MST_COPY.notesNotSaved(_mstStu(stu).studentName||'',mstDate(d)),'e');
       render();
     });
@@ -5912,8 +6026,12 @@ function _msYmdOf(ms){return _nyYmdOf(Number(ms)||0);}   // [1.762] — the New 
 function _msMatRow(m,tail,head){
   if(m.upFailed)return '';   // [1.806] — an upload that failed is not in the list
   var k={book:MS_COPY.book,link:MS_COPY.link,file:MS_COPY.file}[m.kind]||'';
+  // [1.899] — AC: *"In the materials list, any files or links should be clickable to open them up for easy access for the
+  // teacher."* A file's name opens it, as a link's always has.
   return '<div class="ms-mat">'+(head||'')+'<span class="ms-k">'+esc(k)+'</span><span class="ms-ml">'+
-    (m.kind==='link'?'<a href="'+esc(m.url)+'" target="_blank" rel="noopener noreferrer">'+esc(m.label||m.url)+'</a>':esc(m.label))+'</span>'+
+    (m.kind==='link'?'<a href="'+esc(m.url)+'" target="_blank" rel="noopener noreferrer">'+esc(m.label||m.url)+'</a>'
+      :m.kind==='file'&&m.attachmentId&&!m.uploading?'<button type="button" class="ms-matopen" title="'+esc(MST_COPY.openFile)+'" onclick="openAttachment('+jsq(m.attachmentId)+',\'view\')">'+esc(m.label)+'</button>'
+      :esc(m.label))+'</span>'+
     (m.uploading?'<span class="lib-said working"><span class="spin">&#8635;</span> '+esc(TLIB_COPY.attaching)+'</span>':'')+(tail||'')+'</div>';
 }
 // ── [1.790] Add file and Add link: the composer's picker, into the materials ──
@@ -5928,10 +6046,11 @@ function _msMatRow(m,tail,head){
 function _msAddUI(target){
   var p=MS.pick&&MS.pick.target===target?MS.pick:null;
   var b=function(kind,label){
-    return '<button type="button" class="btn ms-sm '+(p&&p.kind===kind?'btn-p':'btn-s')+'" aria-pressed="'+(p&&p.kind===kind?'true':'false')+'"'+
+    return '<button type="button" class="btn ms-sm btn-s'+(p&&p.kind===kind?' ms-on':'')+'" aria-pressed="'+(p&&p.kind===kind?'true':'false')+'"'+
       ' onclick="msPickOpen(\''+target+'\',\''+kind+'\')">'+esc(label)+'</button>';
   };
-  return '<div class="ms-matbtns">'+b('file',TLIB_COPY.pickFile)+b('link',TLIB_COPY.pickLink)+'</div>'+(p?rPickPanel('',p):'');
+  // [1.899] — Add file only: a link goes into the words, with the notes' or the message's own Add link.
+  return '<div class="ms-matbtns">'+b('file',TLIB_COPY.pickFile)+'</div>'+(p?rPickPanel('',p):'');
 }
 function msPickOpen(target,kind){
   // [1.794] — the row that opened it stays where it is on the screen (see _cmpHoldRow).
@@ -5942,6 +6061,125 @@ function msPickOpen(target,kind){
   loadLibrary();render();
 }
 function msPickClose(){MS.pick=null;render();}
+// ── [1.898] — the materials' own panel ─────────────────────────────────────
+// AC, 21 October 2026: *"the process of adding files and links to a lesson summary and an assignment are functional,
+// but still are confusing"*; *"the confusion comes from how things open, collapse, and are visually displayed, in
+// part"*; *"when adding files to the summary, there is a lot to pick from, and it's not entirely clear how to close the
+// window or be 'done' when adding files. It's easy to miss and gets confusing when the create assignment window is open
+// to compose a message"*. So the panel says where a ticked file goes, and has one way out: one wide Done that stays in
+// sight at the bottom, with Manage Library a quiet link beside it (AC, 10 September: Done next to Manage Library). No ×.
+// Then: *"is there a way to consolidate the my files and keylab master library into one simple place to select any file
+// that exists and is available?"* and *"keeping the add from your device option as is"* — so one list and no banners
+// (this panel only; the Library and Messages keep AC's 8 October banners): every file the teacher can use, each once,
+// the ones already used with this student first and marked so, the rest in the Library's order, Keylab's marked as in
+// the Library. Then: *"if I forget the name of a file I won't be able to find it. Search by tags?"* and *"search by tag
+// should not clutter up the window though"* — the search reads tag names and the teacher's own words as the Library's
+// does ([1.868]) and now says so; each file shows its tags; and one quiet Tags button opens them as buttons that narrow
+// the list with the search, as the Library's Tags do, a tag that would leave nothing greyed. The name opens a file and
+// the tick adds it (AC, 13 September); the tick takes it out again.
+function _msPickPanel(p){
+  var s=_mstStu(MS.cardStu)||{},first=String(s.studentName||'').split(' ')[0];
+  var h='<div class="lib-panel pick-in-thread ms-pick" id="pick-panel-mat"><div class="ms-pick-hd">'+
+      esc(MST_COPY.pickFilesTo(p.target==='asg'?MST_COPY.pickToAsg(first):MST_COPY.pickToLes))+'</div>'+
+    '<button type="button" class="btn btn-s ms-sm ms-pick-up" onclick="msPickDevice()">'+esc(TLIB_COPY.fromDevice)+'</button>';
+  if(p.busy)h+='<div class="att-guide"><span class="spin">&#8635;</span> '+esc(TLIB_COPY.attaching)+'</div>';
+  h+=_msPickDevHtml(p);
+  if(p.err)h+='<div class="tt-err">'+esc(p.err)+'</div>';
+  var q=p.q,seen={},all=[],rank={},sel=p.tagSel=p.tagSel||[],tagN={},tagName={};
+  _msUsed(p.target).forEach(function(m,i){rank[m.attachmentId]=i+1;});
+  if(p.target==='asg')_mstOffered(MS.asg.date).forEach(function(o){if(o.kind==='file')seen[o.attachmentId]=1;});   // ticked in the box above instead
+  _libMyFiles().concat(LIB_SHELF_STUDIO).forEach(function(f){var id=f.attachmentId||f.id;if(id&&!seen[id]){seen[id]=1;all.push(f);}});
+  all.forEach(function(f){
+    (f.tags||[]).concat(f.myTags||[]).forEach(function(t){var n=_libTagName(t);if(n){tagN[t]=(tagN[t]||0)+1;tagName[t]=n;}});
+    (f.privateTags||[]).forEach(function(w){tagN['p:'+w]=(tagN['p:'+w]||0)+1;tagName['p:'+w]=w;});
+  });
+  var tagList=Object.keys(tagN).sort(function(a,b){return (tagN[b]-tagN[a])||tagName[a].localeCompare(tagName[b]);});
+  var shownTags=p.allTags||tagList.length<=10?tagList:tagList.slice(0,10).concat(sel.filter(function(v){return tagList.slice(0,10).indexOf(v)<0;}));
+  var base=all,id=function(f){return f.attachmentId||f.id;};
+  all=_libSort(all.filter(function(f){return _libMatch(f,sel,q);}));
+  all=all.filter(function(f){return rank[id(f)];}).sort(function(a,b){return rank[id(a)]-rank[id(b)];}).concat(all.filter(function(f){return !rank[id(f)];}));
+  h+='<div class="ms-pick-q"><input id="pick-q-mat" class="lib-search" type="text" value="'+esc(q)+'" placeholder="'+esc(MST_COPY.searchAll)+'" aria-label="'+esc(MST_COPY.searchAll)+'" oninput="msPickSearch(this.value)">'+
+    (tagList.length?'<button type="button" class="ms-pick-tbtn'+(p.tagsOpen||sel.length?' on':'')+'" aria-expanded="'+(p.tagsOpen?'true':'false')+'" onclick="msPickTagsOpen()">'+esc(MST_COPY.tagsBtn(sel.length))+'</button>':'')+'</div>'+
+    (tagList.length&&p.tagsOpen?'<div class="ms-pick-tags">'+shownTags.map(function(v){
+      var on=sel.indexOf(v)>-1,left=on||base.some(function(f){return _libMatch(f,sel.concat([v]),q);});
+      return '<button type="button" class="lib-tag'+(v.indexOf('p:')===0?' priv':'')+(on?' on':'')+'" aria-pressed="'+(on?'true':'false')+'"'+(left?'':' disabled')+' onclick="msPickTag('+jsq(v)+')">'+esc(tagName[v])+'</button>';
+    }).join('')+(tagList.length>10?'<button type="button" class="ms-pick-more" onclick="msPickAllTags()">'+esc(p.allTags?MST_COPY.fewerTags:MST_COPY.allTags(tagList.length))+'</button>':'')+
+      (sel.length?'<button type="button" class="ms-pick-more" onclick="msPickTag(\'\')">'+esc(TLIB_COPY.tagMenuClear)+'</button>':'')+'</div>':'')+
+    (all.length?'<div class="ms-pick-list">'+all.map(function(f){
+      var fid=id(f),t=(f.tags||[]).concat(f.myTags||[]).map(_libTagName).filter(Boolean).concat(f.privateTags||[]);
+      return '<div class="ms-pick-row"><input type="checkbox"'+(_msMatHas(p.target,{kind:'file',attachmentId:fid})?' checked':'')+' aria-label="'+esc(TLIB_COPY.pickFile+': '+f.fileName)+'" onclick="msPickAdd('+jsq(fid)+')">'+
+        '<span class="lib-kind">'+esc(_attKind(f.fileName))+'</span>'+
+        '<span class="ms-pick-nm"><button type="button" class="ms-pick-name" title="'+esc(f.fileName)+'" onclick="pickOpenItem('+jsq(fid)+')">'+esc(f.fileName)+'</button>'+
+          (t.length?'<span class="ms-pick-ft">'+esc(t.join(' · '))+'</span>':'')+'</span>'+
+        (rank[fid]?'<span class="ms-pick-tag">'+esc(MST_COPY.usedWith(first))+'</span>':'')+
+        (_libIsStudio(f)?'<span class="lib-kind lib-keylab">'+esc(TLIB_COPY.keylabBadge)+'</span>':'')+'</div>';
+    }).join('')+'</div>':'<div class="lib-empty">'+esc(q||sel.length?TLIB_COPY.emptyFiltered:MST_COPY.noFilesYet)+'</div>');
+  return h+'<div class="ms-pick-foot"><button type="button" class="ms-pick-done" onclick="msPickClose()">'+esc(TLIB_COPY.editMessage)+'</button>'+
+    '<button type="button" class="ms-pick-lib" onclick="libraryOpen()">'+esc(TLIB_COPY.manageGo)+'</button></div></div>';
+}
+// The library files in this student's other lessons and the assignments sent for them, newest first, each once — what a
+// teacher most often adds again. A file sent with an assignment is counted as the library file it came from; in Create
+// Assignment, one the lesson summary already offers is left to that offer.
+function _msUsed(target){
+  var out=[],seen={},skip=target==='asg'?(MS.asg&&MS.asg.date):String(target).slice(4);
+  var offered=target==='asg'?_mstOffered(skip):[];
+  (MS.card&&MS.card.notes||[]).slice().sort(function(a,b){return a.lessonDate<b.lessonDate?1:-1;}).forEach(function(n){
+    if(n.lessonDate===skip)return;
+    var all=(n.materials||[]).slice();
+    (n.sent||[]).forEach(function(y){if(!y.pending)all=all.concat((y.materials||[]).map(function(m){return m.kind==='file'?{kind:'file',label:m.label,attachmentId:m.libId}:m;}));});
+    all.forEach(function(m){
+      if(m.kind!=='file'||!m.attachmentId||seen[m.attachmentId])return;
+      seen[m.attachmentId]=1;
+      if(!offered.some(function(o){return _msSameMat(o,m);}))out.push({kind:'file',label:m.label,attachmentId:m.attachmentId});
+    });
+  });
+  return out.slice(0,8);
+}
+// A tick puts it in; the same tick takes it out.
+function _msMatToggle(target,m){
+  var list=_msMatList(target);if(!list)return;
+  if(target==='asg')mstSyncHtml();
+  MS_MATEDIT=null;
+  if(_msMatHas(target,m)){for(var i=list.length-1;i>=0;i--)if(_msSameMat(m,list[i]))list.splice(i,1);}
+  else _msMatPush(target,Object.assign({},m));
+  render();
+}
+function msPickTag(v){var p=MS.pick;if(!p)return;var s=p.tagSel=p.tagSel||[],i=s.indexOf(v);if(!v)s.length=0;else if(i>-1)s.splice(i,1);else s.push(v);_pickRedraw(p);}   // '' clears them
+function msPickTagsOpen(){if(MS.pick){MS.pick.tagsOpen=!MS.pick.tagsOpen;_pickRedraw(MS.pick);}}
+function msPickAllTags(){if(MS.pick){MS.pick.allTags=!MS.pick.allTags;_pickRedraw(MS.pick);}}
+// ── [1.899] — Edit on a material: the name it goes by in this lesson ──────────
+// AC, 21 October 2026: *"Teacher should be able to edit these to add or adjust for clarity if possible, unless that is
+// going to create a bunch of api calls."* Edit on a row turns its name (and a link's address) into fields that change the
+// row as they are typed; Done closes them, Cancel puts back what was there, an empty name goes back to the old one. Kept
+// with Save Summary, or with the assignment's Save Draft or Send — no call of its own. The file keeps its Library name.
+var MS_MATEDIT=null;   // {k:'les:<date>'|'asg', i, was:{label,url}}
+function _msMatEditing(k,i){return !!(MS_MATEDIT&&MS_MATEDIT.k===k&&MS_MATEDIT.i===i);}
+function _msMatEditBtn(k,i,m){return m.uploading||m.kind==='book'?'':'<button type="button" class="ms-matedit" onclick="msMatEdit('+jsq(k)+','+i+')">'+esc(MS_COPY.edit)+'</button>';}
+function _msMatEdited(){var e=MS_MATEDIT;return e?(_msMatList(e.k)||[])[e.i]:null;}
+function msMatEdit(k,i){
+  var m=(_msMatList(k)||[])[i];if(!m)return;
+  if(k==='asg')mstSyncHtml();
+  MS_MATEDIT={k:k,i:i,was:{label:m.label||'',url:m.url||''}};render();
+  setTimeout(function(){var f=document.getElementById('ms-mated-l');if(f){_focusNoScroll(f);try{f.select();}catch(e){}}},30);
+}
+function msMatEditName(v){var m=_msMatEdited();if(m)m.label=String(v||'').trim()?String(v):MS_MATEDIT.was.label;}   // never blank
+function msMatEditUrl(v){var m=_msMatEdited(),u=_composerNormalizeUrl(v);if(m&&u)m.url=u;}
+function _msMatEditRow(k,i,m){
+  var key=function(){return ' onkeydown="if(event.key===\'Enter\'){event.preventDefault();msMatEditDone(true);}"';};
+  return '<div class="ms-matedrow"><span class="ms-k">'+esc(m.kind==='link'?MS_COPY.link:MS_COPY.file)+'</span>'+
+    '<div class="ms-mated-f"><input id="ms-mated-l" value="'+esc(m.label||'')+'" aria-label="'+esc(MST_COPY.displayText)+'" placeholder="'+esc(MST_COPY.displayText)+'" oninput="msMatEditName(this.value)"'+key()+'>'+
+    (m.kind==='link'?'<input value="'+esc(m.url||'')+'" aria-label="'+esc(MST_COPY.pasteLink)+'" placeholder="'+esc(MST_COPY.pasteLink)+'" oninput="msMatEditUrl(this.value)"'+key()+'>':'')+'</div>'+
+    '<button type="button" class="lib-done" onclick="msMatEditDone(true)">'+esc(TLIB_COPY.doneEditing)+'</button>'+
+    '<button type="button" class="ms-matedit" onclick="msMatEditDone(false)">'+esc(MST_COPY.cancel)+'</button></div>';
+}
+function msMatEditDone(keep){
+  var e=MS_MATEDIT,m=_msMatEdited();MS_MATEDIT=null;
+  if(m){
+    if(!keep){m.label=e.was.label;if(m.kind==='link')m.url=e.was.url;}
+    m.label=String(m.label||'').trim()||e.was.label;
+  }
+  render();
+}
 function msPickSearch(v){if(!MS.pick)return;MS.pick.q=String(v||'');_pickRedraw(MS.pick);}
 // The list a ticked item goes into: the Assignment's, or the lesson's copy being edited.
 function _msMatList(target){
@@ -5959,20 +6197,11 @@ function _msMatPush(target,m){
   list.push(target==='asg'?Object.assign({on:true},m):m);
 }
 function msPickAdd(id){
-  var p=MS.pick,it=_pickFind(id);if(!p||!it||_msMatHas(p.target,it))return;
+  var p=MS.pick,it=_pickFind(id);if(!p||!it)return;
+  if(_msMatHas(p.target,it)){_msMatToggle(p.target,it.kind==='link'?{kind:'link',url:it.url}:{kind:'file',attachmentId:it.attachmentId||it.id});return;}   // [1.898] — the tick takes it out
   _msMatPush(p.target,it.kind==='link'?{kind:'link',label:it.label||it.fileName||it.url,url:it.url}
                                      :{kind:'file',label:it.fileName,attachmentId:it.attachmentId||it.id});
   render();
-}
-// A new link, typed into the same two fields the composer has.
-function msPickLink(){
-  var p=MS.pick;if(!p)return;
-  var url=_composerNormalizeUrl(p.url);
-  if(!url){p.bad=true;p.url='';render();return;}
-  var _nl={kind:'link',label:String(p.text||'').trim()||url.replace(/^https?:\/\//i,''),url:url};
-  _msMatPush(p.target,_nl);
-  if(p.target==='asg'&&!_msLibShelf(_nl))_matTagOpen(_nl);   // [1.868] — it goes into My Library on send: tags first
-  p.url='';p.text='';p.bad=false;render();
 }
 // ── [1.868] — "Assign tags?" under a file or link added to Materials ──────
 //
@@ -6034,17 +6263,6 @@ function rMatTagAsk(m){
       '<button type="button" class="lib-act" onclick="matTagWord('+jsq(k)+')">'+esc(TLIB_COPY.privateAdd)+'</button>'+
       '<button type="button" class="lib-done" style="margin-left:auto" onclick="matTagsAsk('+jsq(k)+',false)">'+esc(TLIB_COPY.doneEditing)+'</button></div>'+
     rAct('mattags:'+k)+
-  '</div>';
-}
-function _msPickLinkRow(){
-  var p=MS.pick;
-  return '<div class="cmp-linkrow open">'+   // [1.794] — the same two labels as the composer's Add link
-    '<label class="cmp-ll"><span>'+esc(MST_COPY.pasteLink)+'</span><input id="ms-pick-url" class="'+(p.bad?'bad':'')+'" value="'+esc(p.url)+'" placeholder="'+esc(p.bad?CMP_COPY.linkRejected:CMP_COPY.linkUrlPlaceholder)+'"'+
-      ' aria-label="'+esc(CMP_COPY.linkUrlPlaceholder)+'" oninput="MS.pick.url=this.value" onkeydown="if(event.key===\'Enter\'){event.preventDefault();msPickLink();}"></label>'+
-    '<label class="cmp-ll"><span>'+esc(MST_COPY.displayText)+'</span><input id="ms-pick-text" value="'+esc(p.text)+'" placeholder="'+esc(CMP_COPY.linkTextPlaceholder)+'" aria-label="'+esc(CMP_COPY.linkTextPlaceholder)+'"'+
-      ' oninput="MS.pick.text=this.value" onkeydown="if(event.key===\'Enter\'){event.preventDefault();msPickLink();}"></label>'+
-    '<button type="button" class="cmp-mini cmp-mini-p" onclick="msPickLink()">'+esc(CMP_COPY.linkAdd)+'</button>'+
-    (_cmpNeedsSharing(p.url)?'<div class="cmp-guide">'+esc(CMP_COPY.linkSharing)+'</div>':'')+
   '</div>';
 }
 // Add from your device: filed into My Library, as the library's own upload is,
@@ -6113,7 +6331,7 @@ function _msLibShelf(m){
   if(_pickLinks(true).some(function(l){return String(l.url||'').trim().toLowerCase()===u;}))return 'mine';
   return '';
 }
-function msMatRemove(d,i){var ed=MS.edits[_msEditKey(d)];if(!ed)return;ed.materials.splice(i,1);render();}   // [1.774] — the copy, until Save
+function msMatRemove(d,i){var ed=MS.edits[_msEditKey(d)];if(!ed)return;MS_MATEDIT=null;ed.materials.splice(i,1);render();}   // [1.774] — the copy, until Save
 // Typing never redraws; the words go to the server a moment after typing stops.
 // ── [1.849] — to the student it was typed for, in order ──────────────────
 // The pre-launch review ([1.796] 4), rechecked 9 October 2026: the save read whichever card was open when it
@@ -10149,6 +10367,7 @@ function _composerSync(id){
   if(id==='family-composer' && ACTIVE_THREAD){ ACTIVE_THREAD.draft=v; _draftKeep(ACTIVE_THREAD, v); }
   if(id==='staff-composer' && ACTIVE_STAFF_THREAD){ ACTIVE_STAFF_THREAD.draft=v; _draftKeep(ACTIVE_STAFF_THREAD, v); }
   if(id===MST_CID && MS.asg){ MS.asg.html=el.innerHTML; }   // [1.794] — a link or template put in by the toolbar
+  if(id.indexOf('ms-notes-')===0 && el.oninput) el.oninput();   // [1.899] — a link put into the lesson notes
 }
 // [1.336] — one place the draft is written from, so the two composers cannot
 // end up keeping it differently.
@@ -11390,14 +11609,14 @@ function _pickRedraw(mat){
   var panel=mat?document.getElementById('pick-panel-mat'):document.getElementById('pick-panel');
   if(!panel){ render(); return; }
   var tops=[];
-  Array.prototype.forEach.call(panel.querySelectorAll('.lib-list'), function(l){ tops.push(l.scrollTop); });
+  Array.prototype.forEach.call(panel.querySelectorAll('.lib-list,.ms-pick-list'), function(l){ tops.push(l.scrollTop); });
   var tmp=document.createElement('div');
   tmp.innerHTML=rPickPanel(mat?'':_libComposerId, mat);
   var fresh=tmp.firstChild;
   if(!fresh){ render(); return; }
   var _typ=_typingNote(panel, true);   // [1.822] [1.823]
   panel.innerHTML=fresh.innerHTML;
-  Array.prototype.forEach.call(panel.querySelectorAll('.lib-list'), function(l, i){ if(tops[i]) l.scrollTop=tops[i]; });
+  Array.prototype.forEach.call(panel.querySelectorAll('.lib-list,.ms-pick-list'), function(l, i){ if(tops[i]) l.scrollTop=tops[i]; });
   _typingPutBack(panel, _typ);
 }
 // ── [1.495] — MY LIBRARY IS AN OVERLAY ──────────────────────────────────
@@ -15997,9 +16216,10 @@ function rComposerToolbar(id,opts){
       // accept a file the send cannot carry, and lose it without saying so.
       (opts.noFiles?'':_tbPick(id,'file',TLIB_COPY.pickFile))+
       (opts.noFiles?'':_tbPick(id,'link',TLIB_COPY.pickLink))+
+      (opts.asg?_tbPick(id,'link',TLIB_COPY.pickLink):'')+   // [1.899] — into the words, as in the lesson notes; Add file is under Materials
       // [1.794] — Create Assignment's own: Add file puts a file in its Materials,
       // Add link is the composer's (highlighted words become the link).
-      (opts.asg?_tbAsgFile()+_tbPick(id,'link',TLIB_COPY.pickLink):'')+
+
       // [1.794] — AC, 7 October 2026: "Templates section can take up less space also. Titles
       // should be single line." A third button beside Add file and Add link, equal in width
       // ([1.535]: "equal weight and width … no 3rd row needed"); its list opens under the row.
@@ -16010,13 +16230,8 @@ function rComposerToolbar(id,opts){
     // What the row opened, directly under it with the message just below ([1.794], AC: Add
     // link goes "above the message and under the add link buttons"). Create Assignment's
     // pickers are drawn here; Messages' are drawn where they always were ([1.507], [1.520]).
-    (opts.asg?(PICK==='link'&&_libComposerId===id?rPickPanel(id):'')+(MS.pick&&MS.pick.target==='asg'?rPickPanel('',MS.pick):''):'')+
+    (opts.asg?(PICK==='link'&&_libComposerId===id?rPickPanel(id):''):'')+
     (TPL_OPEN&&TPL_FOR===id?rTplPanel(id):'');
-}
-function _tbAsgFile(){
-  var on=!!(MS.pick&&MS.pick.target==='asg'&&MS.pick.kind==='file');
-  return '<button type="button" class="cmp-tb-btn cmp-tb-pick'+(on?' on':'')+'" aria-pressed="'+(on?'true':'false')+'"'+
-    ' onmousedown="event.preventDefault()" onclick="if(PICK){PICK=\'\';}mstSyncHtml();msPickOpen(\'asg\',\'file\')">'+esc(TLIB_COPY.pickFile)+'</button>';
 }
 // The template list: one line each, the studio's first, the full name and its opening words
 // on hover. Not labelled as two lists ([1.127]: where a template came from is not the question).
@@ -16958,6 +17173,7 @@ function rPickButtons(composerId){
 function rPickPanel(composerId, mat){
   var kind=mat?mat.kind:PICK;
   if(!kind) return '';
+  if(mat) return _msPickPanel(mat);   // [1.898] — the materials' own panel
   if(composerId && !mat) _libComposerId=composerId;
   // ── [1.794] — Add link is the link and nothing else ───────────────────
   //
@@ -16985,25 +17201,19 @@ function rPickPanel(composerId, mat){
     return '<div class="lib-panel cmp-panel cmp-linkpanel" id="pick-panel"><button type="button" class="cmp-px" aria-label="'+esc(TLIB_COPY.close)+'" title="'+esc(TLIB_COPY.close)+'"'+
       ' onclick="pickClose('+jsq(cid)+')">\u2715</button>'+rComposerLinkRow(cid)+menu+'</div>';
   }
-  var file=(kind==='file'), q=mat?mat.q:PICK_Q;
+  // From here on it is a message's picker: the materials have their own panel ([1.898]).
+  var file=(kind==='file'), q=PICK_Q;
   // [1.822] — My Files or My Links, then the whole Keylab Master Library, closed with its count until opened or
   // searched, so the studio's material is reachable without guessing a name.
-  var mine=mat?_pickFiltered(file?_libMyFiles():_pickLinks(true,true), q):(file?_pickFiles(true):_pickLinks(true));
-  var studio=mat?_pickFiltered(file?LIB_SHELF_STUDIO:LIB_STUDIO_LINKS, q):(file?_pickFiles(false):_pickLinks(false));
+  var mine=file?_pickFiles(true):_pickLinks(true);
+  var studio=file?_pickFiles(false):_pickLinks(false);
   mine=_libSort(mine); studio=_libSort(studio);   // [1.823] — in the order the Library's Sort is set to
-  var close=mat?'msPickClose()':'pickClose('+jsq(composerId)+')';
-  var h='<div class="lib-panel pick-in-thread" id="'+(mat?'pick-panel-mat':'pick-panel')+'">'+
+  var close='pickClose('+jsq(composerId)+')';
+  var h='<div class="lib-panel pick-in-thread" id="pick-panel">'+
     '<div class="lib-hd"><span class="lib-hd-t">'+esc(file?TLIB_COPY.pickFile:TLIB_COPY.pickLink)+'</span>'+
       '<button type="button" class="modal-x" aria-label="'+esc(TLIB_COPY.close)+'"'+
         ' onclick="'+close+'">&#215;</button></div>';
-  if(mat){
-    if(file){
-      h+='<button type="button" class="btn btn-p pick-from" onclick="msPickDevice()">'+esc(TLIB_COPY.fromDevice)+'</button>';
-      if(mat.busy) h+='<div class="att-guide"><span class="spin">&#8635;</span> '+esc(TLIB_COPY.attaching)+'</div>';
-      h+=_msPickDevHtml(mat);   // [1.869]
-    } else h+=_msPickLinkRow();
-    if(mat.err) h+='<div class="tt-err">'+esc(mat.err)+'</div>';
-  } else if(file){
+  if(file){
     h+='<button type="button" class="btn btn-p pick-from" onclick="attachPick()">'+esc(TLIB_COPY.fromDevice)+'</button>';
     // [1.516] — an affordance nobody can see is not built. Drag-and-drop and
     // paste are invisible by nature, so the one place a person is already
@@ -17014,16 +17224,16 @@ function rPickPanel(composerId, mat){
   } else {
     h+=rComposerLinkRow(composerId);
   }
-  h+='<input id="'+(mat?'pick-q-mat':'pick-q')+'" class="lib-search" type="text" value="'+esc(q)+'"'+
+  h+='<input id="pick-q" class="lib-search" type="text" value="'+esc(q)+'"'+
        ' placeholder="'+esc(file?TLIB_COPY.searchFiles:TLIB_COPY.searchLinks)+'"'+
        ' aria-label="'+esc(file?TLIB_COPY.searchFiles:TLIB_COPY.searchLinks)+'"'+
-       ' oninput="'+(mat?'msPickSearch':'pickSearch')+'(this.value)">';
+       ' oninput="pickSearch(this.value)">';
   if(!mine.length && !studio.length && q){
     h+='<div class="lib-empty">'+esc(file?TLIB_COPY.emptyFiltered:TLIB_COPY.emptyPickLinks)+'</div>';
   } else {
     var pk=file?'file':'link';
-    h+=rPickShelf(file?TLIB_COPY.mineFilesHd:TLIB_COPY.mineLinksHd, mine, composerId, mat, pk+'-mine', q)+
-       rPickShelf(TLIB_COPY.studio, studio, composerId, mat, pk+'-studio', q);
+    h+=rPickShelf(file?TLIB_COPY.mineFilesHd:TLIB_COPY.mineLinksHd, mine, composerId, null, pk+'-mine', q)+
+       rPickShelf(TLIB_COPY.studio, studio, composerId, null, pk+'-studio', q);
   }
   // ── [1.508] — Done lives HERE, with the panel it ends ──────────────────
   //
@@ -17038,8 +17248,6 @@ function rPickPanel(composerId, mat){
   // two primary buttons in one row would be two answers to one question.
   h+='<div class="lib-foot">'+
      (_isPhone()?'':'<button type="button" class="lib-done" onclick="'+close+'">'+esc(TLIB_COPY.editMessage)+'</button>')+
-     // [1.790] — the materials have no action row for Done to sit in on a phone, so it stays here.
-     ((mat&&_isPhone())?'<button type="button" class="lib-done" onclick="msPickClose()">'+esc(TLIB_COPY.editMessage)+'</button>':'')+
      '<button type="button" class="lnk-btn" onclick="libraryOpen()">'+esc(TLIB_COPY.manageGo)+'</button></div>';
   return h+'</div>';
 }

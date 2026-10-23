@@ -1054,15 +1054,14 @@ input[type=checkbox]{width:13px;height:13px;padding:0;margin:0;border:0;border-r
 .lib-tags-hd.on{border-color:var(--acc);color:var(--acc)}
 .lib-tags-hd .zcount{margin-left:auto}
 
-/* [1.535] — the composer's two rows at rest. Add file and Add link share the
-   width equally, which is AC's "equal weight and width"; the Aa disclosure sits
-   before them and takes only what it needs. Formatting expands ABOVE this row,
-   so opening it never moves the row or the buttons under it. */
-.cmp-row2{display:flex;gap:6px;align-items:stretch}
-.cmp-row2 .cmp-tb-pick{flex:1 1 0;justify-content:center;font-weight:600}
+/* [1.905] — above the box, one row: Aa, the formatting when it is open, Templates last and its own size. Under the box,
+   Add file and Add link, sharing the width equally (AC's "equal weight and width", [1.535]). */
+.cmp-tbrow{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+.cmp-tbrow .cmp-tb-tpl{margin-left:auto;font-weight:600;white-space:nowrap}
 .cmp-fmt-toggle{flex:0 0 auto;font-weight:700}
 .cmp-fmt-toggle.on{background:var(--acc);color:#fff;border-color:var(--acc)}
-.cmp-tb-fmt{margin-bottom:6px}
+.cmp-addrow{display:flex;gap:6px;align-items:stretch}
+.cmp-addrow .cmp-tb-pick{flex:1 1 0;justify-content:center;font-weight:600;white-space:nowrap}
 
 /* [1.532] — the More menu. Anchored to its button so it cannot drift, and
    above the row rather than below it: on a phone the row is near the bottom of
@@ -1593,8 +1592,7 @@ mark.guide-hit{background:var(--bbg);color:inherit;border-radius:2px;padding:0 1
 .ms-matedrow{display:flex;align-items:center;gap:6px;padding:4px 0}
 .ms-mated-f{flex:1 1 auto;display:flex;flex-direction:column;gap:4px;min-width:0}
 .ms-mated-f input{width:100%;padding:5px 7px;border:1px solid var(--border);border-radius:var(--r);font:inherit;font-size:12.5px}
-.ms-notes-wrap{margin:0}.ms-notes-wrap .cmp-row2{margin-bottom:4px;justify-content:flex-start}
-.ms-notes-wrap .cmp-row2 .cmp-tb-btn{flex:0 0 auto;padding-left:14px;padding-right:14px}
+.ms-notes-wrap{margin:0}.ms-notes-wrap .cmp-addrow{margin-top:6px}
 .ms-lnotes.tt-a{min-height:84px;font-size:13px;line-height:1.45;white-space:pre-wrap;outline:none}
 .ms-oc{display:flex;justify-content:flex-end;gap:6px;margin-bottom:6px}
 .ms-past{display:grid;grid-template-columns:auto 1fr auto auto;gap:8px;align-items:center;width:100%;font:inherit;font-size:12.5px;padding:7px 10px;border:1px solid var(--bg4);border-radius:var(--r);margin-bottom:4px;background:#fff;cursor:pointer;text-align:left;color:var(--text)}
@@ -2191,6 +2189,7 @@ select.cmp-lsel{font:inherit;font-size:13.5px;font-weight:700;padding:6px 8px;bo
   .mst-btns .btn{padding:8px 6px;font-size:13px;white-space:normal;line-height:1.2}
   .mst-ffoot{grid-template-columns:1fr 1fr}
   .mst-ffoot .mst-send,.mst-ffoot.has-del .mst-send{grid-column:1/-1;order:-3}
+  .mst-ffoot .mst-rnfoot{order:-3}   /* [1.907] — stays directly above Send, which moves first on a phone */
   .mst-ffoot .mst-del{grid-column:1/-1;order:1}
 }
 .mst-archpad{height:2px}
@@ -2203,6 +2202,11 @@ select.cmp-lsel{font:inherit;font-size:13.5px;font-weight:700;padding:6px 8px;bo
 .mst-qb.rn{color:#6D28D9;border-color:#A78BFA}.mst-qb.rn:hover,.mst-qb.rn.on{background:#EDE9FE}
 .mst-count.rn{background:#EDE9FE;border-color:#A78BFA;color:#6D28D9}
 .mst-rn{margin-top:8px}
+/* [1.907] — Reply needed beside Send: on its own line directly above Send in Create Assignment (and with it at the top
+   on a phone, where Send moves first), and right after Send in a conversation's row */
+.mst-ffoot .mst-rnfoot{grid-column:1/-1;justify-self:end;margin:0}
+.cmp-rn{display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:500;text-transform:none;letter-spacing:0;margin:0;color:var(--text2);cursor:pointer;white-space:nowrap}
+.cmp-rn input{margin:0}
 .mst-qb.on{box-shadow:inset 0 0 0 1px currentColor}
 .mst-sep{height:0;border-top:2px solid var(--border2);margin:12px 0 4px}
 .mst-xd{font-size:12px}
@@ -2233,9 +2237,8 @@ select.cmp-lsel{font:inherit;font-size:13.5px;font-weight:700;padding:6px 8px;bo
 .cmp-ls{flex:none}
 .cmp-ls select{margin:0;width:100%;padding:7px 8px;font:inherit;font-size:13px;font-weight:400;border:1px solid var(--border2);border-radius:var(--r);background:#fff;color:var(--text)}
 .lib-panel.cmp-panel{margin:6px 0 8px;padding:6px 30px 6px 8px}
-/* [1.904] — the link and template panels end with Cancel at their foot; no corner ✕, so no room kept for one */
-.lib-panel.cmp-panel.cmp-linkpanel,.lib-panel.cmp-panel.cmp-tplpanel{padding-right:12px}
-.cmp-pfoot{display:flex;justify-content:flex-end;margin-top:6px}
+/* [1.904] — no corner ✕ on the link and template panels, so no room kept for one */
+.lib-panel.cmp-panel.cmp-linkpanel,.lib-panel.cmp-panel.cmp-tplpanel{padding-right:8px}
 /* [1.904] — the one save line: grey while there is something to save, blue-grey while saving, green once saved */
 .save-line{font-size:12px;color:var(--text4);align-self:center;white-space:nowrap}.save-line:empty{display:none}
 .save-line.not{color:var(--text3)}.save-line.busy{color:var(--bt)}.save-line.ok{color:var(--green)}.save-line.bad{color:var(--red)}
@@ -2243,7 +2246,6 @@ select.cmp-lsel{font:inherit;font-size:13.5px;font-weight:700;padding:6px 8px;bo
 /* [1.904] — the one quiet opener for tags */
 .tag-open{margin:2px 0 4px}.ms-tagask .tag-open{margin-left:50px}
 .tag-open-b{background:none;border:0;padding:0;font:inherit;font-size:12px;color:var(--link);text-decoration:underline;cursor:pointer}
-.cmp-pcancel{background:none;border:0;padding:2px 4px;font:inherit;font-size:12.5px;color:var(--link);text-decoration:underline;cursor:pointer}
 .cmp-px{top:5px;right:5px;width:20px;height:20px;font-size:10px;padding:0}
 .cmp-linkpanel .cmp-linkrow{gap:6px;margin-bottom:5px;flex-wrap:nowrap;align-items:flex-end}
 .cmp-linkpanel .cmp-ll{font-size:11px;gap:2px;flex:1 1 0}
@@ -2257,7 +2259,6 @@ select.cmp-lsel{font:inherit;font-size:13.5px;font-weight:700;padding:6px 8px;bo
 .cmp-tpl{display:block;width:100%;min-width:0;height:26px;padding:0 8px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font:inherit;font-size:12px;color:var(--text);background:#fff;border:1px solid var(--border2);border-radius:var(--r);cursor:pointer}
 .cmp-tpl:hover{border-color:#1a4fc4;color:#1a4fc4}
 .cmp-tpl-none{font-size:12px;color:var(--text3);padding:3px 0}
-.cmp-row2 .cmp-tb-pick{white-space:nowrap;padding:0 6px}
 .mst-form .tpl-saveas{padding-top:4px}
 .cmp-linkpanel .cmp-linkrow{flex-wrap:wrap}
 .cmp-linkpanel .cmp-linkrow .cmp-ll:first-child{flex:1 1 190px}
@@ -2275,7 +2276,17 @@ select.cmp-lsel{font:inherit;font-size:13.5px;font-weight:700;padding:6px 8px;bo
 .cmp-linkpanel .cmp-ls select{width:100%}
 .cmp-tpls{grid-template-columns:minmax(0,1fr);max-height:150px}
 .cmp-tpl{height:34px;font-size:13px}
-.cmp-row2 .cmp-tb-pick{font-size:12px}
+}
+/* [1.905] — Add link's panel: Paste Link Here and Display Text, the saved links and Insert link, on one line where there
+   is room and two on a phone; nothing else in it. */
+.cmp-linkpanel .cmp-linkrow{flex-wrap:wrap;align-items:flex-end;gap:6px;margin:0}
+.cmp-linkpanel .cmp-linkrow .cmp-ll:first-child{flex:1 1 170px}
+.cmp-linkpanel .cmp-linkrow .cmp-ll:nth-child(2){flex:1 1 130px}
+.cmp-linkpanel .cmp-lgo{display:flex;gap:6px;align-items:flex-end;flex:0 0 auto}.cmp-linkpanel .cmp-lgo.has-menu{flex:1 1 230px;min-width:0}
+.cmp-linkpanel .cmp-lpick{flex:1 1 auto;min-width:0;height:26px;margin:0;padding:2px 6px;font:inherit;font-size:12px;border:1px solid var(--border2);border-radius:var(--r);background:#fff;color:var(--text)}
+.cmp-linkpanel .cmp-guide{flex:0 0 100%}
+@media(max-width:560px){
+.cmp-linkpanel .cmp-lpick{height:34px;font-size:16px}
 }
 </style>
 </head>
@@ -3783,8 +3794,8 @@ var GUIDE_COPY={
       {n:'Lesson Summary', k:'lesson notes activities materials books resources edit save file link date',
        q:'Choose the lesson date, type your lesson notes and add {{Materials & Resources}}, then click {{Save Summary}}. To change saved notes, click {{Edit}}.', m:[
         'Lesson notes and materials are private to you. They are not sent to the family. To send the family work, create an assignment.',
-        // [1.898] [1.899] — PLACEHOLDER sentences for AC to read.
-        'Click {{Add link}} above the notes to turn words in them into a link, as in a message. Click {{Add file}} under {{Materials & Resources}} to add a file from your device or your library, then click {{Done}}.',
+        // [1.898] [1.899] [1.905] — PLACEHOLDER sentences for AC to read.
+        'Click {{Add link}} under the notes to turn words in them into a link, as in a message. Click {{Add file}} beside it to add a file from your device or your library, then click {{Done}}. Files are listed under {{Materials & Resources}}.',
         'Click a file or link to open it. Click {{Edit}} beside it to change the name it shows for this lesson.',
         'While editing, click {{Cancel}} to discard your changes. Clicking {{Create Assignment for}} the student also saves the notes you are writing.',
         'The date list shows your weekly lesson day for the past six weeks, and any earlier date with notes or an assignment.'
@@ -3795,7 +3806,9 @@ var GUIDE_COPY={
         // [1.897] — PLACEHOLDER sentence for AC to read.
         'The files and links in the lesson summary are listed under {{Materials}}, unticked. Tick the ones to send with the assignment, or click {{Select all}}.',
         'Use the formatting buttons, {{Templates}} and {{Add link}} as in a message. Fill in any template field in brackets, such as [studentFirst], before sending.',
-        'Click {{Add file}} under {{Materials}} to add up to 10 files, 10 MB each. The family is asked to share them with the student.',
+        'Click {{Add file}} under the assignment to add up to 10 files, 10 MB each. They are listed under {{Materials}}. The family is asked to share them with the student.',   // [1.905]
+        // [1.907] — PLACEHOLDER sentence for AC to read.
+        'Tick {{Reply needed}} above the {{Send to}} button to keep the conversation open and list the assignment under {{Reply needed}} on the {{Students}} tab. Unticked, sending ends the conversation, unless the family has asked something you have not answered.',
         'Each parent you tick receives an email with the assignment and its materials. Files open in the family portal, not as email attachments. The assignment also appears in the family\u2019s conversation on {{Messages}}. You do not need to send a separate message.',
         // [1.888] — what Send shows. PLACEHOLDER sentence for AC to read.
         'After you click {{Send to}}, the assignment says it is sending, then that it was sent and to whom. The student is marked {{Assignment sent}} in your list.',
@@ -3819,6 +3832,8 @@ var GUIDE_COPY={
       ]},
       {n:'Send', k:'reply answer respond write back read receipt parents child sibling about',
        q:'Type your reply in the message box, then click {{Send}}.', m:[
+        // [1.907] — PLACEHOLDER sentence for AC to read.
+        'Tick {{Reply needed}} beside {{Send}} to keep the conversation open for the family\u2019s answer. Unticked, the conversation ends when your message is sent and moves to {{Archived Conversations}}. The family\u2019s reply brings it back.',
         'Opening a conversation marks it read. There is nothing to click. The reply clock starts when a message arrives, not when you open it. Reading a message or clicking {{Mark seen}} does not stop its timer. Only your reply does.',
         'Both parents are ticked. Untick a parent to stop their email; the message still appears in the family\u2019s conversation. If you teach more than one child in the family, use the {{About}} buttons to choose which child the message is about.',
         'Once the family reads your message, \u201cRead by\u201d appears with the parents\u2019 names and the time.',
@@ -3861,23 +3876,23 @@ var GUIDE_COPY={
         'Clear the flag when you are done. When you reply to a message, your message queue is cleared, but messages saved for review are not.'
       ]},
       {n:'Add file', k:'attachment attach upload photo picture image pdf document video size limit save keep library',
-       q:'Click {{Add file}} under {{Attached files}} to attach up to 10 files, 10 MB each. You can also drag and drop or paste files into a message.', m:[   // [1.904] — under the files, not on the writing row
+       q:'Click {{Add file}} under the message box to attach up to 10 files, 10 MB each. They are listed under {{Attached files}}. You can also drag and drop or paste files into a message.', m:[   // [1.905] — under the box, beside Add link
         // [1.898] [1.904] — PLACEHOLDER sentences for AC to read: one panel everywhere.
         'Click {{Add from your device}}, or tick a file in the list under it: your files and the {{Keylab Master Library}}\u2019s, each once. Click {{Accepted file types}} to see supported formats.',
         'Type in the search box, or click {{Tags}}, to find a file. Click a file\u2019s name to open it, tick it to add it, untick it to take it out, and click {{Done}} when finished. In a lesson summary or an assignment, the files used with the student come first.',
         'Click {{Save to Library}} beside a file in any conversation to keep it in your library, including a file a family sends you.'
       ]},
       {n:'Add link', k:'url website web address edit change remove hyperlink lesson notes summary',
-       q:'Highlight words in your message or lesson notes and click {{Add link}}, then paste the address under {{Paste Link Here}} and click {{Insert link}}.', m:[   // [1.899] — the lesson notes too
+       q:'Highlight words in your message or lesson notes and click {{Add link}} under the box, then paste the address under {{Paste Link Here}} and click {{Insert link}}. Click {{Add link}} again to close it.', m:[   // [1.899] — the lesson notes too; [1.905] — under the box, and it closes itself
         'The words in {{Display Text}} become the link. Left empty, the address itself is shown.',
-        'Choose from {{Saved Links}} to add a link you have saved, or one from the {{Keylab Master Library}}.',
+        'To add a link you have saved, or one from the {{Keylab Master Library}}, choose it from {{Choose a saved link}}.',   // [1.905] — the menu has no label above it now
         // [1.844] — PLACEHOLDER, AC to word: the link bubble.
         'Click a link in your message to see its address. Click the address to open it, {{Change}} to edit the words or the address, or {{Remove}} to keep the words without the link.'
       ]},
       {n:'Aa', k:'format formatting bold italic underline list bullet',
-       q:'The formatting buttons show above the message box. Click {{Aa}} to hide them, or to show them again.'},
+       q:'The formatting buttons show beside {{Aa}}, above the message box. Click {{Aa}} to hide them, or to show them again.'},   // [1.905]
       {n:'Templates', k:'saved message reuse quick reply canned',
-       q:'Click {{Templates}} and choose one to insert it where your cursor is. To keep the message you are writing, click {{Save as a new template}}.', m:[
+       q:'Click {{Templates}} and choose one to insert it where your cursor is. Click {{Templates}} again to close the list. To keep the message you are writing, click {{Save as a new template}}.', m:[   // [1.905]
         'If you teach more than one child in the family, choose the child beside {{About}} first, so the template fills in the right name.',
         'You can also create templates on the {{Library}} tab with {{New template}}.'
       ]},
@@ -3895,11 +3910,13 @@ var GUIDE_COPY={
        q:'Click {{More}}, then {{End Conversation}}, to close a resolved conversation. It moves to {{Archived Conversations}}.', m:[
         'Use it when a conversation is resolved or a message needs no reply. Ending it stops the reply clock and the reminders. If a reply is still owed, you are asked to confirm, and admin can see it ended without a reply.',
         'If you have messages saved for review, you will be asked to clear them first. Click {{Proceed}} to clear them and end it.',
-        'If anyone writes again, the conversation returns to {{Messages}}. In {{Admin & staff}}, {{End Conversation}} is beside {{Send}}.'
+        'If anyone writes again, the conversation returns to {{Messages}}. In {{Admin & staff}}, {{End Conversation}} is beside {{Send}}.',
+        // [1.907] — PLACEHOLDER sentence for AC to read.
+        'A message or assignment to a family ends the conversation by itself unless you tick {{Reply needed}} beside {{Send}}. Conversations in {{Admin & staff}} end only when you end them.'
       ]},
       {n:'Archived Conversations', k:'archived ended closed old past conversations history',
        q:'Click {{Archived Conversations}} to see the conversations you have ended, and click one to read it.', m:[
-        'A new message in it, from you or from them, moves it back to {{Messages}}.'
+        'A new message from them moves it back to {{Messages}}. So does one from you, except a message to a family sent without {{Reply needed}}, which ends it again.'   // [1.907]
       ]},
       {n:'Admin & staff', k:'office staff colleague teacher adrian help problem broken bug support contact private',
        q:'Click {{Admin & staff}} to message admin or another teacher, including for help with the portal. Families cannot see these messages.', m:[
@@ -5376,21 +5393,23 @@ function mstLessonBody(d,current){
     // behave just like the link added in an assignment."* So the notes take the assignment's Add link: the same panel (Paste
     // Link Here, Display Text, Insert link, Saved Links), highlighted words become the link, and it opens from the notes,
     // read or being written. Nothing else of the message's formatting is offered — only links were asked for.
-    (ed?(function(){var nid='ms-notes-'+id;return '<div class="composer-wrap ms-notes-wrap"><div class="cmp-tb cmp-row2">'+_tbPick(nid,'link',TLIB_COPY.pickLink)+'</div>'+
-        (PICK==='link'&&_libComposerId===nid?rPickPanel(nid):'')+
+    (ed?(function(){var nid='ms-notes-'+id;return '<div class="composer-wrap ms-notes-wrap">'+
         '<div id="'+nid+'" class="cmp-rich tt-a ms-lnotes" contenteditable="'+(ed.busy?'false':'true')+'" role="textbox" aria-multiline="true" aria-label="'+esc(MST_COPY.notesFor(mstDate(d)))+'"'+
         ' oninput="msEditHtml(\''+d+'\',this)" onkeyup="_composerState(\''+nid+'\')" onmouseup="_composerState(\''+nid+'\')" onblur="_composerStateClear(\''+nid+'\')" onpaste="_composerPaste(event)">'+
         (ed.notesHtml||_msNotesHtml(ed.activities))+'</div>'+
+        rComposerAddRow(nid,'les:'+d,true)+   // [1.905] — under the notes, as under every box
         // [1.902] — a new link asks to go into My Library, with its name and tags, as in a message: the question was set
         // and never drawn, so a link added here could not be tagged (AC: "it looks like you broke the ability to add/edit
         // tags for links").
         rLinkOffer(nid)+'</div>';})()
       :String(l.activities||'').trim()?'<div class="ms-ro">'+(l.notesHtml||esc(l.activities))+'</div>':'<div class="ms-ro ms-empty">'+esc(MS_COPY.noNotes)+'</div>')+'</div>';
-  if(ed){
+  // [1.905] — Materials & Resources, once there is something in it or its Add file panel is open (Add file is under the
+  // notes now, so an empty heading here would have said nothing).
+  if(ed&&((ed.materials||[]).length||MS.pick&&MS.pick.target==='les:'+d)){
     h+='<div class="ms-lf cz"><div class="ms-lab">'+esc(MS_COPY.materials)+'</div>'+
-      (ed.materials||[]).map(function(m,i){return _msMatEditing('les:'+d,i)?_msMatEditRow('les:'+d,i,m):_msMatRow(m,_msMatEditBtn('les:'+d,i,m)+'<button type="button" class="ms-x" title="'+esc(MS_COPY.remove)+'" onclick="msMatRemove(\''+d+'\','+i+')">✕</button>')+(_msPickAsks(m)?'':rMatTagAsk(m));}).join('')+
+      (ed.materials||[]).map(function(m,i){return _msMatEditing('les:'+d,i)?_msMatEditRow('les:'+d,i,m):_msMatRow(m,_msMatEditBtn('les:'+d,i,m)+'<button type="button" class="ms-x" title="'+esc(MS_COPY.remove)+'" onclick="msMatRemove(\''+d+'\','+i+')">✕</button>')+rMatTagAsk(m);}).join('')+
       _msAddUI('les:'+d)+'</div>';
-  }else{
+  }else if(!ed){
     h+=((l.materials||[]).length?'<div class="ms-lf"><div class="ms-lab">'+esc(MS_COPY.materials)+'</div>'+l.materials.map(function(m){return _msMatRow(m,'');}).join('')+'</div>':'');
   }
   var dr=_mstDraft(MS.cardStu,d),sc=_mstSched(MS.cardStu,d),formHere=!!(MS.asg&&MS.asg.date===d&&current);
@@ -5626,8 +5645,10 @@ function mstForm(){
           :'<button type="button" class="ms-matopen" onclick="openAttachment('+jsq(m.attachmentId)+',\'view\')">'+esc(m.label)+'</button>')+'</span>'+
         (at>-1?_msMatEditBtn('asg',at,m):'')+'</div>'+
         (at>-1?rMatTagAsk(o):'');}).join('')+'</div>':'';   // a ticked link new to My Library asks "Assign tags?" under its row
-  var mats='<div class="mst-mats cz"><div class="ms-lab">'+esc(MST_COPY.mats)+'</div>'+offer+
-    a.mats.map(function(m,i){return inOffer(m)?'':_msMatEditing('asg',i)?_msMatEditRow('asg',i,m):_msMatRow(m,libTag(m)+_msMatEditBtn('asg',i,m)+'<button type="button" class="ms-x" title="'+esc(MS_COPY.remove)+'" onclick="mstMatRemove('+i+')">✕</button>')+(_msPickAsks(m)?'':rMatTagAsk(m));}).join('')+
+  // [1.905] — drawn once there is something to show: the lesson summary's offer, a material, or the Add file panel (Add
+  // file is under the assignment's box now, beside Add link).
+  var mats=!(offer||a.mats.length||MS.pick&&MS.pick.target==='asg')?'':'<div class="mst-mats cz"><div class="ms-lab">'+esc(MST_COPY.mats)+'</div>'+offer+
+    a.mats.map(function(m,i){return inOffer(m)?'':_msMatEditing('asg',i)?_msMatEditRow('asg',i,m):_msMatRow(m,libTag(m)+_msMatEditBtn('asg',i,m)+'<button type="button" class="ms-x" title="'+esc(MS_COPY.remove)+'" onclick="mstMatRemove('+i+')">✕</button>')+rMatTagAsk(m);}).join('')+
     _msAddUI('asg')+'</div>';
   var busy=!!MST.busy;
   var btns='<div class="mst-ffoot'+(dr?' has-del':'')+'">'+
@@ -5636,6 +5657,9 @@ function mstForm(){
       '<button type="button" class="btn btn-s ms-sm mst-o2'+(MST.sched?' mst-on':'')+'"'+(who&&!busy?'':' disabled')+' onclick="mstSchedToggle()">'+esc(MST.busy==='sched'?MST_COPY.scheduling:MST_COPY.schedule)+'</button>')+
       '<button type="button" class="btn btn-s ms-sm"'+(busy?' disabled':'')+' onclick="mstAsgClose()">'+esc(MST_COPY.cancel)+'</button>'+
       (dr?'<button type="button" class="btn btn-danger ms-sm mst-del"'+(busy?' disabled':'')+' onclick="mstDeleteDraft()">'+esc(MST_COPY.delDraft)+'</button>':'')+
+      // [1.907] — Reply needed, directly above Send (AC, 23 October 2026: "That button should be by the send button").
+      // Unticked, sending ends the conversation; ticked, it stays open and the assignment goes on Reply needed ([1.870]).
+      '<label class="mst-to mst-rn mst-rnfoot" title="'+esc(TCH_COPY.rnTitle)+'"><input type="checkbox"'+(a.reply?' checked':'')+(busy?' disabled':'')+' onclick="mstSetReply(this.checked)"> '+esc(MST_COPY.replyNeeded)+'</label>'+
       '<button type="button" class="btn btn-p ms-sm mst-send"'+(who&&!busy?'':' disabled')+' onclick="mstSend(0)">'+esc(MST.busy==='send'?MST_COPY.sending:re?MST_COPY.resend:MS_COPY.send(who||'…'))+'</button></div>'+
       '<!--SAVELINE-->'+
       (MST.err&&!MST.errFor?'<div class="tt-err">'+esc(MST.err)+'</div>':'');
@@ -5654,7 +5678,7 @@ function mstForm(){
       (two?tick('p1',s.parent1Name)+tick('p2',s.parent2Name):'<span class="mst-to">'+esc(s.parent1Name||s.parent2Name||'')+'</span>')+
     // [1.870] — AC, 9 October 2026: no reply is expected of an assignment "unless the teacher requests it". The teacher's own
     // tracking: a ticked one goes on their Reply needed list. Nothing the family sees.
-      '<label class="mst-to mst-rn"><input type="checkbox"'+(a.reply?' checked':'')+' onclick="mstSetReply(this.checked)"> '+esc(MST_COPY.replyNeeded)+'</label></div>'+
+      '</div>'+   // [1.907] — Reply needed is beside Send now (AC: "That button should be by the send button")
     '<div class="mst-fnote">'+esc(MST_COPY.formNote)+'</div>'+
     comp;
   if(MST.preview)h+='<div class="mst-q" style="margin-top:14px">'+esc(MST_COPY.previewH)+'</div>'+
@@ -5836,8 +5860,10 @@ function _mstSendNow(o,done){
     o.mats.forEach(function(m){out.push(m.kind==='file'?{kind:'file',label:m.label,attachmentId:m._sendId,libId:m.attachmentId}:{kind:m.kind,label:m.label,url:m.url});});
     api({action:'sendMessage',data:{conversationType:'family_teacher',familyId:s.familyId,teacherId:TEACHER_ID,teacherToken:TOKEN,studentId:s.studentId,
       attachmentIds:att,notifyParents:o.notify,clientMsgId:cid,sendAt:o.at||'',resend:!!o.resendOf,   // [1.865]
-      assignment:{studentId:s.studentId,lessonDate:o.date,lessonTime:o.time,html:html,materials:out,replyNeeded:!!o.reply}}},function(e,r){   // [1.870]
+      assignment:{studentId:s.studentId,lessonDate:o.date,lessonTime:o.time,html:html,materials:out,replyNeeded:!!o.reply},
+      endOnSend:!o.reply}},function(e,r){   // [1.870]; [1.907] — unticked, the conversation ends as it goes
       if(e||!r||!r.ok){_sendFailed(key,cid,html,[],'');return done(r||{});}
+      if(r.ended)_convEndedOnSend(s.familyId,r);   // [1.907]
       _sendSucceeded(key);done(null,r);
     });
   };
@@ -6129,20 +6155,18 @@ function _msMatRow(m,tail,head){
 // book any more (AC: "If we added a book it would be a file").
 function _msAddUI(target){
   var p=MS.pick&&MS.pick.target===target?MS.pick:null;
-  var b=function(kind,label){
-    return '<button type="button" class="btn ms-sm btn-s'+(p&&p.kind===kind?' ms-on':'')+'" aria-pressed="'+(p&&p.kind===kind?'true':'false')+'"'+
-      ' onclick="msPickOpen(\''+target+'\',\''+kind+'\')">'+esc(label)+'</button>';
-  };
   // [1.899] — Add file only: a link goes into the words, with the notes' or the message's own Add link.
-  return '<div class="ms-matbtns">'+b('file',TLIB_COPY.pickFile)+'</div>'+(p?rPickPanel('',p):'');
+  // [1.905] — and the button is under the box, beside Add link (rComposerAddRow); here is only the panel it opens.
+  return p?rPickPanel('',p):'';
 }
 function msPickOpen(target,kind){
   // [1.794] — the row that opened it stays where it is on the screen (see _cmpHoldRow).
   var _paneMsg=_msIsMsg(target)&&!_isPhone();   // [1.904] — brought into view instead (below), so not held still
-  if(target==='asg')_cmpHoldRow(MST_CID);else if(!_paneMsg)_holdStill(function(){return document.querySelector(_msIsMsg(target)?'.msg-att .ms-matbtns':'.ms-matbtns');});
+  // [1.905] — the row that opened it is the add row under the box it belongs to, in every editor
+  if(!_paneMsg)_cmpHoldRow(target==='asg'?MST_CID:_msIsMsg(target)?target.slice(4):'ms-notes-'+String(target).slice(4).replace(/-/g,''));
   if(MS.pick&&MS.pick.target===target&&MS.pick.kind===kind){msPickClose();return;}   // the pressed button, pressed again
   MS.pick={target:target,kind:kind,q:'',busy:0,err:'',url:'',text:'',bad:false,dev:[]};   // [1.869] dev — the files chosen from the device here
-  if(target==='asg'||_msIsMsg(target)){TPL_OPEN=false;PICK='';PICK_Q='';}   // [1.904] — one panel open at a time
+  TPL_OPEN=false;PICK='';PICK_Q='';   // [1.904] — one panel open at a time; [1.905] — in a lesson summary too, where Add link and Add file sit side by side now
   loadLibrary();render();
   // [1.904] — on a desktop a message's panel opens at the foot of the conversation's own scrolling pane, below what shows;
   // it is brought into view there, with its Done (it stays at the panel's foot while the list is read).
@@ -6726,6 +6750,7 @@ function rTtplForm(i,t){
      ' onkeyup="_composerState(\'ttpl-b'+i+'\')" onmouseup="_composerState(\'ttpl-b'+i+'\')"'+
      ' onblur="_composerStateClear(\'ttpl-b'+i+'\')"'+
      ' onpaste="_composerPaste(event)">'+(t._txt?esc(_ttplToText(t.body)).replace(/\n/g,'<br>'):(t.body||''))+'</div>'+
+     rComposerAddRow('ttpl-b'+i,'',true)+   // [1.905] — Add link under the box, as in every editor; a template holds no file
      rLinkOffer('ttpl-b'+i)+   // [1.844]
      '</div>';
   // The tags, listed where a template is written rather than in a help page
@@ -8318,6 +8343,7 @@ function loadThreads(silent){
   if(THREADS._inFlight && !_guardStale(THREADS._inFlightAt)) return;
   THREADS._inFlight=true;
   THREADS._inFlightAt=Date.now();
+  var _askedAt=Date.now();   // [1.908]
   if(!silent){ THREADS.loading=true; render(); }
   api({action:'getTeacherThreads', data:{teacherToken:TOKEN}}, function(e,r){
     THREADS._inFlight=false;
@@ -8331,6 +8357,7 @@ function loadThreads(silent){
     // whether or not anything had changed, which looks identical. The roster is
     // only reapplied when it actually differs, so a silent poll on an unchanged
     // list costs nothing on screen.
+    _convEndingApply(r.threads, _askedAt);   // [1.908] — before the signature, so a held ending is not a change
     var _sig=_famSig(r.threads||[]);
     var _changed=(_sig!==THREADS._sig);
     THREADS._sig=_sig;
@@ -8795,7 +8822,7 @@ function rFamilyThread(){
     :(_upBusy
         ? '<button class="btn btn-p" disabled title="'+esc(TCH_COPY.sendBlockedUploading)+'">Send</button>'
         : '<button class="btn btn-p" onclick="sendFamilyMessage()">Send</button>')+
-      '')+
+      _rnBox(t, _sending))+   // [1.907] — Reply needed, beside Send
     // ── [1.532] — the occasional actions live behind MORE ──────────────────
     //
     // ~~[1.371]: beside Send, not inside a menu.~~ **Reversed by AC's approved
@@ -9203,16 +9230,63 @@ function _doCloseConversation(t){
   })[0] : null;
   var _was=!!(_src&&_src.closed);
   if(_src) _src.closed=true;
+  var _k=_convEndKey(_src); if(_k) CONV_ENDING[_k]={at:Date.now(),answeredAt:0};   // [1.908]
   _openPane('');            // [1.336]'s setter — nothing is open, and both flags say so
   render();
-  api({action:'setConversationClosed', data:_threadKey(t,{closed:true})}, function(e,r){
-    t.closing=false;
-    if(e||!r||!r.ok){
-      if(_src) _src.closed=_was;
-      showMsg((r&&r.error)||'Could not end that.','e'); render(); return;
-    }
-    // [1.418] case 2 — no follow-up fetch.
+  var _data=_threadKey(t,{closed:true}), _tries=0;
+  var go=function(){
+    api({action:'setConversationClosed', data:_data}, function(e,r){
+      // [1.908] — the server was busy with another change (its one lock): asked again, not shown, and the row stays ended
+      if(!e&&r&&!r.ok&&r.busy&&_tries<CONV_END_RETRIES){ _tries++; setTimeout(go, 1500*_tries); return; }
+      t.closing=false;
+      if(e||!r||!r.ok){
+        if(_k) delete CONV_ENDING[_k];
+        if(_src) _src.closed=_was;
+        showMsg((r&&r.error)||'Could not end that.','e'); render(); return;
+      }
+      if(_k&&CONV_ENDING[_k]) CONV_ENDING[_k].answeredAt=Date.now();
+      // [1.418] case 2 — no follow-up fetch.
+    });
+  };
+  go();
+}
+// ── [1.908] — a conversation ended here stays ended until the server has it ─────────────────────────────────────────
+// AC, 23 October 2026: "when closing multiple conversation in succession, the system doesn't respond quickly and doesn't
+// end all conversations, so you have to wait for 10 seconds or so between each when ending, but it should be immediate."
+// Ending was already immediate on the page ([1.337]). The server takes one change at a time (doPost's lock), and an end
+// reads every message before it writes, so three or four in a row queue. The list does not wait for them: opening the
+// next conversation, Back and the poll each fetch it (a lock-free read) and loadThreads put the server's list in place of
+// this one whole — so a conversation whose end was still queued came back under Messages. Now each one ended here is
+// kept ended in every list fetched until one asked for AFTER the server wrote it arrives; from then on the server's word
+// stands (a family that has written since reopens it, as always). A refusal puts it back with the reason, as before; one
+// that never answers is let go after CONV_END_HOLD_MS. The same as Reply needed's Clear ([1.870], _mstCleared).
+var CONV_ENDING={}, CONV_END_RETRIES=5, CONV_END_HOLD_MS=120000;
+function _convEndKey(row){ return row ? row.kind+':'+(row.kind==='admin'?'admin':row.id) : ''; }
+function _convEndingApply(list, askedAt){
+  (list||[]).forEach(function(row){
+    var k=_convEndKey(row), w=CONV_ENDING[k]; if(!w) return;
+    if((w.answeredAt && askedAt>w.answeredAt) || (!w.answeredAt && Date.now()-w.at>CONV_END_HOLD_MS)){ delete CONV_ENDING[k]; return; }
+    row.closed=true;
   });
+}
+// ── [1.907] — Reply needed beside Send: unticked, the message ends its conversation as it goes ────────────────────────
+// AC, 23 October 2026: "assignment messages should be closed after sending on default with the option to mark "reply
+// needed". That button should be by the send button", then "across the entire teacher and admin portals". So a message
+// or assignment to a family asks the server to end the conversation unless this is ticked (see _endsOnSend_ in
+// Code.js, which keeps it open when something must: a message saved for review, or a family question an assignment does
+// not answer). Conversations with staff have no box: "admin and staff conversations just stay like regular text message
+// threads". The tick is the open conversation's, unticked each time it opens and after each send.
+function _rnBox(t, busy){
+  return '<label class="cmp-rn" title="'+esc(TCH_COPY.rnTitle)+'"><input type="checkbox"'+(t&&t.replyNeeded?' checked':'')+(busy?' disabled':'')+
+    ' onclick="if(ACTIVE_THREAD)ACTIVE_THREAD.replyNeeded=this.checked"> '+esc(MST_COPY.replyNeeded)+'</label>';
+}
+// The server ended it: the row goes under Archived at once, and stays there against a list fetched before it was written.
+function _convEndedOnSend(familyId, r){
+  var row=(THREADS.list||[]).filter(function(x){ return x.kind==='family'&&x.id===familyId; })[0];
+  if(!row) return;
+  row.closed=true; row.closedAt=(r.message&&Number(r.message.sentAt))||Date.now(); row.closedByName=TEACHER_NAME||''; row.closedUnanswered=false;
+  var k=_convEndKey(row); if(k) CONV_ENDING[k]={at:Date.now(),answeredAt:Date.now()};
+  render();
 }
 
 // The four fields every one of these endpoints identifies a conversation by,
@@ -9473,7 +9547,8 @@ function sendFamilyMessage(sendAt){
   var _rowUndo=sendAt ? null : _setRowAnswered(t);   // [1.325] — the row stops owing a reply now
   render();
 
-  api({action:'sendMessage', data:{conversationType:'family_teacher', familyId:t.familyId, teacherId:TEACHER_ID, teacherToken:TOKEN, messageText:text, messageHtml:html, studentId:_stuId, notifyParents:notifyParents, clientMsgId:clientMsgId, attachmentIds:_att, sendAt:sendAt||''}}, function(e,r){
+  var _endAsk=!t.replyNeeded; t.replyNeeded=false;   // [1.907] — unticked ends the conversation as it goes; the box starts unticked again
+  api({action:'sendMessage', data:{conversationType:'family_teacher', familyId:t.familyId, teacherId:TEACHER_ID, teacherToken:TOKEN, messageText:text, messageHtml:html, studentId:_stuId, notifyParents:notifyParents, clientMsgId:clientMsgId, attachmentIds:_att, sendAt:sendAt||'', endOnSend:_endAsk}}, function(e,r){
     // ── [1.539] — the busy state is RESOLVED FIRST, always ─────────────────
     //
     // AC, 10 September 2026: *"I can't send a message. I can schedule one, but
@@ -9501,9 +9576,10 @@ function sendFamilyMessage(sendAt){
     // owing a reply again, and the id kept with the words.
     if(_failed){
       _draftKeep(t, html);
+      t.replyNeeded=!_endAsk;   // [1.907] — the tick comes back with the words
       _undoRowAnswered(_rowUndo);
       _sendFailed(_sk, clientMsgId, text, _attRows, (r&&r.error)||TCH_COPY.notSent);
-    } else _sendSucceeded(_sk);
+    } else { _sendSucceeded(_sk); if(r.ended) _convEndedOnSend(t.familyId, r); }   // [1.907]
     if(!_here){   // navigated away mid-flight
       actClear('send');   // [1.539] — Send is never left disabled; the note waits for this thread to reopen
       if(_failed) showMsg((r&&r.error)||'Could not send message.','e');
@@ -11587,9 +11663,9 @@ function pickOpen(kind, composerId){
   // [1.794] — not any more where the picker opens directly under its buttons, which on a
   // phone is always ([1.520]): the jump took the buttons away. The row is held still.
   _cmpHoldRow(composerId||_libComposerId);
-  if(PICK===kind){ pickClose(composerId); return; }   // the pressed button, pressed again
+  if(PICK===kind&&(!composerId||composerId===_libComposerId)){ pickClose(composerId); return; }   // the pressed button, pressed again; [1.905] — not another box's Add link, which opens its own
   PICK=kind; PICK_Q=''; TPL_OPEN=false;
-  if(MS.pick&&(MS.pick.target==='asg'||_msIsMsg(MS.pick.target))) MS.pick=null;   // [1.904] — one panel open at a time
+  if(MS.pick) MS.pick=null;   // [1.904] — one panel open at a time; [1.905] — a lesson summary's too
   _libComposerId=composerId||_libComposerId;
   loadLibrary();
   render();
@@ -14913,7 +14989,7 @@ function loadSavedTpls(){
 // [1.794] — one open thing under the row at a time: Templates closes Add file and Add link.
 var TPL_FOR='';
 function tplToggle(id){
-  _cmpHoldRow(id||TPL_FOR);
+  _cmpHoldRow(id||TPL_FOR, true);   // [1.905] — Templates is on the row above the box
   var open=!(TPL_OPEN&&TPL_FOR===id);
   TPL_OPEN=open; TPL_FOR=id||'';
   if(open){ PICK=''; PICK_Q=''; if(MS.pick) MS.pick=null; loadSavedTpls(); }
@@ -15864,6 +15940,7 @@ var TCH_COPY={
   attachHint:'Send a file. 10 MB limit. Maximum 10 files.',
   attachKeptGone:'This file was removed after a day unsent. Add it again.',   // [1.904] PLACEHOLDER — AC's to word
   draftKept:'Draft kept on this device',   // [1.904] PLACEHOLDER — the save line beside Send
+  rnTitle:'Leave unticked to end the conversation when this is sent. A reply opens it again.',   // [1.907] PLACEHOLDER — the hover on Reply needed
   attachFormats:'Accepted file types',
   attachTip:'Add a file',
   // [1.137] — AC's wording, 6 September. Word for word with the family
@@ -16142,8 +16219,9 @@ function _tbBtn(id,cmd,label,title){
 // [1.532] — Add file / Add link on the toolbar. Same handler as before, same
 // pressed state; only the row it lives in changed.
 function _tbPick(id, kind, label){
-  return '<button type="button" class="cmp-tb-btn cmp-tb-pick'+(PICK===kind?' on':'')+'"'+
-    ' aria-pressed="'+(PICK===kind?'true':'false')+'"'+
+  var on=PICK===kind&&_libComposerId===id;   // [1.905] — pressed on the box it is open for, not on every box on the page
+  return '<button type="button" class="cmp-tb-btn cmp-tb-pick'+(on?' on':'')+'"'+
+    ' aria-pressed="'+(on?'true':'false')+'"'+
     ' onmousedown="event.preventDefault()"'+
     ' onclick="pickOpen(\''+kind+'\','+jsq(id)+')">'+esc(label)+'</button>';
 }
@@ -16302,48 +16380,57 @@ function rComposerToolbar(id,opts){
   // against two. [1.434] put them here because a teacher writing an ordinary
   // message had no other way to reach them; AC has since decided an ordinary
   // message does not need them.
+  // ── [1.905] — one row above the box: Aa, the formatting when it is open, Templates last ───────────────────────────
+  // AC, 23 October 2026: *"why is the add files button separate from add link? The templates function will be used far
+  // less, and the add files function will be used the most."* Then: *"what if you put the add link and add file buttons
+  // below the message window?"*, and of Aa and Templates on one row above the box, the formatting opening inside that
+  // row: *"this sounds good."* So the two buttons that add something to the message are under the box
+  // (rComposerAddRow), right above what they add; this row holds what works on the words. It is one row at rest and
+  // stays one row when Aa opens the formatting (on a phone it wraps). This replaces [1.535]'s two rows (the formatting
+  // expanding above Aa · Add file · Add link) and [1.904]'s Aa · Add link · Templates.
   var fmtOn = _cmpFmtIsOpen(id);   // [1.615]
   var fmt = fmtOn
-    ? '<div class="cmp-tb cmp-tb-fmt">'+
-        _tbBtn(id,'bold','<b>B</b>',CMP_COPY.bold)+
-        _tbBtn(id,'italic','<i>I</i>',CMP_COPY.italic)+
-        _tbBtn(id,'underline','<u>U</u>',CMP_COPY.underline)+
-        '<span class="cmp-div"></span>'+
-        _tbBtn(id,'insertUnorderedList','• List',CMP_COPY.bullet)+
-        _tbBtn(id,'insertOrderedList','1. List',CMP_COPY.number)+
-        '<span class="cmp-div"></span>'+
-        '<button type="button" class="cmp-tb-btn" title="'+esc(CMP_COPY.clear)+'" onmousedown="event.preventDefault()"'+
-          ' onclick="_composerClearFmt(\''+id+'\')">'+esc(CMP_COPY.clear)+'</button>'+
-      '</div>'
+    ? _tbBtn(id,'bold','<b>B</b>',CMP_COPY.bold)+
+      _tbBtn(id,'italic','<i>I</i>',CMP_COPY.italic)+
+      _tbBtn(id,'underline','<u>U</u>',CMP_COPY.underline)+
+      '<span class="cmp-div"></span>'+
+      _tbBtn(id,'insertUnorderedList','• List',CMP_COPY.bullet)+
+      _tbBtn(id,'insertOrderedList','1. List',CMP_COPY.number)+
+      '<span class="cmp-div"></span>'+
+      '<button type="button" class="cmp-tb-btn" title="'+esc(CMP_COPY.clear)+'" onmousedown="event.preventDefault()"'+
+        ' onclick="_composerClearFmt(\''+id+'\')">'+esc(CMP_COPY.clear)+'</button>'
     : '';
-  return fmt+
-    '<div class="cmp-tb cmp-row2">'+
+  return '<div class="cmp-tb cmp-tbrow">'+
       '<button type="button" class="cmp-tb-btn cmp-fmt-toggle'+(fmtOn?' on':'')+'"'+
         ' aria-expanded="'+(fmtOn?'true':'false')+'" title="'+esc(CMP_COPY.formatting)+'"'+
         ' onmousedown="event.preventDefault()" onclick="_cmpFmtToggle('+jsq(id)+')">Aa</button>'+
-      // [1.344] — see rComposer's note: on the whole-day panel these two would
-      // accept a file the send cannot carry, and lose it without saying so.
-      // [1.904] — Add file is not on the writing row any more, here or anywhere: it sits under the list of what goes with
-      // the message (Attached files, Materials), as the lesson summary's and the assignment's do. AC, 22 October 2026, of
-      // the review: "sounds like a good plan … build everything". This replaces [1.535]'s Add file · Add link pair here.
-      ((opts.noFiles&&!opts.asg)?'':_tbPick(id,'link',TLIB_COPY.pickLink))+
-      // [1.794] — Create Assignment's own: Add file puts a file in its Materials,
-      // Add link is the composer's (highlighted words become the link).
-
-      // [1.794] — AC, 7 October 2026: "Templates section can take up less space also. Titles
-      // should be single line." A third button beside Add file and Add link, equal in width
-      // ([1.535]: "equal weight and width … no 3rd row needed"); its list opens under the row.
-      (opts.noTemplates?'':'<button type="button" class="cmp-tb-btn cmp-tb-pick'+(TPL_OPEN&&TPL_FOR===id?' on':'')+'"'+
+      fmt+
+      // [1.794] — AC, 7 October 2026: "Templates section can take up less space also. Titles should be single line."
+      // [1.905] — last on the row and its own size: the button used least (AC). Its list opens under the row; the button
+      // pressed again closes it.
+      (opts.noTemplates?'':'<button type="button" class="cmp-tb-btn cmp-tb-pick cmp-tb-tpl'+(TPL_OPEN&&TPL_FOR===id?' on':'')+'"'+
         ' aria-pressed="'+(TPL_OPEN&&TPL_FOR===id?'true':'false')+'" onmousedown="event.preventDefault()"'+
         ' onclick="tplToggle('+jsq(id)+')">'+esc(TTPL_COPY.composer)+'</button>')+
     '</div>'+
-    // What the row opened, directly under it with the message just below ([1.794], AC: Add
-    // link goes "above the message and under the add link buttons"). Create Assignment's
-    // pickers are drawn here; Messages' are drawn where they always were ([1.507], [1.520]).
-    // [1.904] — Add link opens here, under the writing row, in every editor (it opened in place of the conversation in
-    // Messages on a desktop, and under the files on a phone).
-    (PICK==='link'&&_libComposerId===id?rPickPanel(id):'')+
     (TPL_OPEN&&TPL_FOR===id?rTplPanel(id):'');
+}
+// ── [1.905] — Add file and Add link, side by side under the box ──────────────────────────────────────────────────
+// AC, 23 October 2026: *"what if you put the add link and add file buttons below the message window?"* — the two that
+// add something to what is being written, together, the same size ([1.535]: "equal weight and width"), directly over
+// the list a file goes into and with Add link's panel opening right under them. Add file is first: it is the one used
+// most. `fileTarget` is where a ticked file goes — a message ('msg:…'), the assignment ('asg') or a lesson summary
+// ('les:…') — and its panel opens under that list (Attached files, Materials, Materials & Resources). Add link keeps the
+// selection in the box (mousedown is held), so highlighted words become the link; Add file does not, so on a phone the
+// keyboard goes away and the panel is in sight. Each button, pressed again, closes what it opened.
+function rComposerAddRow(id,fileTarget,link){
+  if(!fileTarget&&!link) return '';
+  var fOn=!!(fileTarget&&MS.pick&&MS.pick.target===fileTarget&&MS.pick.kind==='file');
+  return '<div class="cmp-tb cmp-addrow">'+
+      (fileTarget?'<button type="button" class="cmp-tb-btn cmp-tb-pick'+(fOn?' on':'')+'" aria-pressed="'+(fOn?'true':'false')+'"'+
+        ' onclick="msPickOpen('+jsq(fileTarget)+',\'file\')">'+esc(TLIB_COPY.pickFile)+'</button>':'')+
+      (link?_tbPick(id,'link',TLIB_COPY.pickLink):'')+
+    '</div>'+
+    (link&&PICK==='link'&&_libComposerId===id?rPickPanel(id):'');
 }
 // The template list: one line each, the studio's first, the full name and its opening words
 // on hover. Not labelled as two lists ([1.127]: where a template came from is not the question).
@@ -16356,9 +16443,10 @@ function rTplPanel(id){
           ' onclick="tplUse('+jsq(id)+','+jsq(t.templateId)+')">'+esc(t.label)+'</button>';
       }).join('')+'</div>'
     :'<div class="cmp-tpl-none">'+esc(TTPL_COPY.empty)+'</div>';
-  // [1.904] — choosing a template closes the list; Cancel at its foot closes it without one (it had a ✕ in its corner).
-  return '<div class="lib-panel cmp-panel cmp-tplpanel">'+list+
-    '<div class="cmp-pfoot"><button type="button" class="cmp-pcancel" onmousedown="event.preventDefault()" onclick="_cmpHoldRow('+jsq(id)+');TPL_OPEN=false;render()">'+esc(TLIB_COPY.cancel)+'</button></div></div>';
+  // [1.904] — choosing a template closes the list. [1.905] — Templates pressed again closes it without one, as Add link's
+  // panel closes (AC, 23 October 2026: "no need for a cancel button, as clicking the "add link" button again closes the
+  // window"); ~~[1.904]'s Cancel at its foot~~.
+  return '<div class="lib-panel cmp-panel cmp-tplpanel">'+list+'</div>';
 }
 // ── [1.794] — opening a panel under the row never moves the screen ──────
 //
@@ -16385,8 +16473,10 @@ function _holdStill(find){
   };
   setTimeout(fix,0); setTimeout(fix,80);
 }
-function _cmpHoldRow(id){
-  _holdStill(function(){ var el=document.getElementById(id), w=el&&el.closest?el.closest('.composer-wrap'):null; return w?w.querySelector('.cmp-row2'):null; });
+// [1.905] — the add row under the box (Add file, Add link), or with `top` the row above it (Aa, Templates): whichever
+// opened the panel.
+function _cmpHoldRow(id, top){
+  _holdStill(function(){ var el=document.getElementById(id), w=el&&el.closest?el.closest('.composer-wrap'):null; return w?w.querySelector(top?'.cmp-tbrow':'.cmp-addrow'):null; });
 }
 
 // [1.535] — `_composerInsertTag` REMOVED with the merge-tag pills. AC decided
@@ -16401,7 +16491,7 @@ function _cmpHoldRow(id){
 // could not be styled or corrected and dropped the teacher out of their
 // message; worse, it refused anything without an https:// prefix. Hidden until
 // the Link button is pressed so the composer stays quiet in normal use.
-function rComposerLinkRow(id){
+function rComposerLinkRow(id,menu){
   var st=_cmpLinkState(id);
   // [1.494] — drawn inside the Add link picker and nowhere else, so it is
   // always open there; the picker's own × and Edit Message are the way out.
@@ -16420,9 +16510,14 @@ function rComposerLinkRow(id){
     // [1.510] — AC, 10 September 2026: *"The add link button should be blue."*
     // It is the one thing in this row that ACTS; the two fields and the
     // guidance beneath do not.
-    '<button type="button" class="cmp-mini cmp-mini-p" id="'+id+'-linkgo" onmousedown="event.preventDefault()" onclick="_composerLinkInsert(\''+id+'\')">'+esc(CMP_LINKEDIT[id]?CMP_COPY.linkUpdate:CMP_COPY.linkAdd)+'</button>'+
-    // [1.844] — said only when the box was opened with nothing selected; _cmpLinkRowSync keeps it true.
-    '<div class="cmp-linkhint" id="'+id+'-linkhint"'+(st.fromSel?' hidden':'')+'>'+esc(CMP_COPY.linkSelectHint)+'</div>'+
+    // [1.905] — the saved links and Insert link, kept together: where the line is too short for all four they move to a
+    // second line as a pair, never Insert link alone
+    '<span class="cmp-lgo'+(menu?' has-menu':'')+'">'+(menu||'')+
+    '<button type="button" class="cmp-mini cmp-mini-p" id="'+id+'-linkgo" onmousedown="event.preventDefault()" onclick="_composerLinkInsert(\''+id+'\')">'+esc(CMP_LINKEDIT[id]?CMP_COPY.linkUpdate:CMP_COPY.linkAdd)+'</button></span>'+
+    // ~~[1.844] — "To turn words in your message into a link, select them first, then click Add link.", said when the box
+    // was opened with nothing selected~~: [1.905], AC, 23 October 2026: "There is no need for the descriptive text". The
+    // Guide's Add link row says it. The words stay in CMP_COPY (linkSelectHint): admin's Add link still says them, and
+    // _cmpLinkRowSync is one function in both pages; here it finds no hint to show or hide.
     // [1.510] — and, once a SAVED link has filled the fields, the sentence
     // saying what to do next. AC: *"there should be a tooltip after clicking a
     // link to add: 'Click "Add link" to add the link to your message'."*
@@ -16534,6 +16629,8 @@ function rComposer(id,draft,onInput,sendBtn,opts){
       // [1.127] — the template picker, above the file row. It is the thing a
       // teacher reaches for BEFORE writing, so it sits closest to the box.
       (opts.noTemplates?'':rTemplateRow(id))+
+      // [1.905] — Add file and Add link, under the box (the whole-day panel has neither: it cannot carry a file, [1.344]).
+      rComposerAddRow(id, opts.asg?'asg':opts.noFiles?'':'msg:'+id, !opts.noFiles||!!opts.asg)+
       rLinkOffer(id)+   // [1.844]
       // [1.277] — the chips sit between what is being written and the button
       // that sends it, which is where a file being added belongs.
@@ -17192,10 +17289,13 @@ function rAttachRow(id){
   // account for how this affects the entire use of the tool". So a message's files are listed as an assignment's are —
   // kind, name (it opens the file), one status word on the row, × — with Add file under them and the one Add file panel
   // under that. Uploads, drag and drop, paste and the ten-file limit are unchanged; the limits line moves into the panel.
+  // [1.905] — Add file is under the box now (rComposerAddRow), beside Add link; this is the list and its panel, drawn
+  // once there is a file or the panel is open — an empty "Attached files" box said nothing.
   var tgt='msg:'+id, p=MS.pick&&MS.pick.target===tgt?MS.pick:null;
   var h='<input type="file" id="att-file" class="att-input" multiple '+
-        'accept="'+_attAccept()+'" onchange="attachChosen(this)">'+
-        '<div class="mst-mats msg-att cz"><div class="ms-lab">'+esc(TCH_COPY.attachedHead)+'</div>';
+        'accept="'+_attAccept()+'" onchange="attachChosen(this)">';
+  if(!ATT_PENDING.length&&!p) return h;
+  h+='<div class="mst-mats msg-att cz"><div class="ms-lab">'+esc(TCH_COPY.attachedHead)+'</div>';
   ATT_PENDING.forEach(function(a){
     var said=a.uploading?'<span class="lib-said working"><span class="spin">&#8635;</span> '+esc(TCH_COPY.attachOne)+'</span>'
       :a.failed?'<span class="lib-said bad">'+esc(a.error||TCH_COPY.attachFailed)+'</span>'
@@ -17207,8 +17307,7 @@ function rAttachRow(id){
       // **AC:** *"Add Blues Scale — Position 1.pdf to your library? / Add / No thanks"*, and *"ask every time"*.
       (a.uploading?'':_rAttKeep(a));
   });
-  return h+'<div class="ms-matbtns"><button type="button" class="btn ms-sm btn-s'+(p?' ms-on':'')+'" aria-pressed="'+(p?'true':'false')+'"'+
-    ' onclick="msPickOpen('+jsq(tgt)+',\'file\')">'+esc(TLIB_COPY.pickFile)+'</button></div>'+(p?rPickPanel('',p):'')+'</div>';
+  return h+(p?rPickPanel('',p):'')+'</div>';
 }
 // Drawn per file, and only where there is something to ask or show: a failed
 // upload has nothing to shelve, a file already on the shelf has nowhere to go,
@@ -17282,16 +17381,19 @@ function rPickPanel(composerId, mat){
     // teacher had already added. Both groups in the order the Library is sorted.
     var mineL=_libSort(allL.filter(function(l){ return !_libIsStudio(l); })), studioL=_libSort(LIB_STUDIO_LINKS||[]);
     var opt=function(l){ return '<option value="'+esc(l.id||l.attachmentId)+'">'+esc(l.label||l.fileName||l.url)+'</option>'; };
+    // [1.905] — the menu's first line says what it is ("Choose a saved link"), so it carries no label above it.
     var menu=(mineL.length||studioL.length)
-      ? '<label class="cmp-ll cmp-ls"><span>'+esc(MST_COPY.savedLinks)+'</span><select id="'+cid+'-linkpick" onchange="if(this.value){pickAdd(this.value,'+jsq(cid)+');}">'+
+      ? '<select id="'+cid+'-linkpick" class="cmp-lpick" aria-label="'+esc(MST_COPY.savedLinks)+'" onchange="if(this.value){pickAdd(this.value,'+jsq(cid)+');}">'+
         '<option value="">'+esc(MST_COPY.chooseSaved)+'</option>'+
         (mineL.length?'<optgroup label="'+esc(TLIB_COPY.mineLinksHd)+'">'+mineL.map(opt).join('')+'</optgroup>':'')+
-        (studioL.length?'<optgroup label="'+esc(TLIB_COPY.studio)+'">'+studioL.map(opt).join('')+'</optgroup>':'')+'</select></label>'
+        (studioL.length?'<optgroup label="'+esc(TLIB_COPY.studio)+'">'+studioL.map(opt).join('')+'</optgroup>':'')+'</select>'
       : '';
-    // [1.904] — one way out of every panel, at its foot: Insert link (or a saved link) closes it with the link in; Cancel
-    // closes it without. The ✕ in its corner went (the review: × and ✕ and Done, three looks for one act).
-    return '<div class="lib-panel cmp-panel cmp-linkpanel" id="pick-panel">'+rComposerLinkRow(cid)+menu+
-      '<div class="cmp-pfoot"><button type="button" class="cmp-pcancel" onmousedown="event.preventDefault()" onclick="pickClose('+jsq(cid)+')">'+esc(TLIB_COPY.cancel)+'</button></div></div>';
+    // [1.905] — AC, 23 October 2026: *"the pop up window after clicking "add link" for adding a link is really large. It
+    // only needs two fields and the dropdown to select the link. I think this can be smaller. THere is no need for the
+    // descriptive text, and no need for a cancel button, as clicking the "add link" button again closes the window"*. So:
+    // Paste Link Here and Display Text, the saved links and Insert link, on one line where there is room (two on a
+    // phone). Insert link, a saved link, Escape, or Add link pressed again closes it. ~~[1.904]'s Cancel at its foot~~.
+    return '<div class="lib-panel cmp-panel cmp-linkpanel" id="pick-panel">'+rComposerLinkRow(cid,menu)+'</div>';
   }
   // [1.904] — nothing else is drawn here any more. A message's Add file is the one Add file panel, under its Attached
   // files (rAttachRow → _msPickPanel), as a lesson summary's and an assignment's are; this was its old picker — the × and
@@ -17300,18 +17402,18 @@ function rPickPanel(composerId, mat){
   return '';
 }
 // [1.869] — the files chosen from the device while this box has been open, one line each, in the box's own words.
+// ── [1.906] — now only a file that did NOT reach the list ───────────────────────────────────────────────────────────
+// AC, 23 October 2026: "When adding a file I see two "attaching" progress bars." [1.869] drew a line here for every file
+// chosen from the device, because the box then opened away from Materials and AC could not see what had been chosen
+// ([1.806] already showed it in Materials while it went up). Since [1.898] and [1.905] the box opens directly under the
+// list, so the line repeated the row above it: "Adding your file…" twice. One line per file now — its row in the list
+// says Adding your file… until it is in, and carries its Add tags — and this says only why a file never got there (too
+// big, empty, refused), in red, where the teacher chose it.
 function _msPickDevHtml(p){
-  return (p.dev||[]).map(function(dv){
-    var m=dv.m,ok=m&&!m.uploading&&!m.upFailed&&!dv.err;
-    var st=dv.err?'<span class="lib-said bad">'+esc(dv.err)+'</span>'
-      :m&&m.uploading?'<span class="lib-said working"><span class="spin">&#8635;</span> '+esc(TCH_COPY.attachOne)+'</span>'
-      :ok?'<span class="lib-said">&#10003; '+esc(TLIB_COPY.fileAttached)+'</span>':'';
-    return '<div class="pick-dev"><span class="pick-dev-n">'+esc((m&&m.label)||dv.name)+'</span>'+st+'</div>'+(ok?rMatTagAsk(m):'');
+  return (p.dev||[]).filter(function(dv){return dv.err;}).map(function(dv){
+    return '<div class="pick-dev"><span class="pick-dev-n">'+esc((dv.m&&dv.m.label)||dv.name)+'</span><span class="lib-said bad">'+esc(dv.err)+'</span></div>';
   }).join('');
 }
-// Whether the open box is asking a file's "Assign tags?" itself, so Materials does not ask it twice; once the box
-// closes, an unanswered one is asked under the file in Materials again.
-function _msPickAsks(m){return !!(MS.pick&&(MS.pick.dev||[]).some(function(dv){return dv.m===m&&!dv.err;}));}
 // [1.904] — the message picker's shelves and rows (pickShelfToggle, rPickRow) went with it: a message's Add file is the one
 // Add file panel (_msPickPanel).
 

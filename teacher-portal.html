@@ -2040,6 +2040,28 @@ mark.guide-hit{background:var(--bbg);color:inherit;border-radius:2px;padding:0 1
 .mst-row.on{background:#fff;border-color:#1a4fc4;box-shadow:inset 3px 0 0 #1a4fc4}
 .mst-t{flex:0 0 44px;font-weight:700;font-size:12.5px;font-variant-numeric:tabular-nums;color:var(--text2)}
 .mst-rm{flex:1;min-width:0}
+/* [1.912] — the follow-up star beside each row, admin's .fu (amber when on); its note on the row while it is on */
+.mst-rowx{display:flex;align-items:stretch;gap:4px;margin-bottom:6px}.mst-rowx .mst-row{margin-bottom:0;flex:1 1 auto;min-width:0}
+.fu{font-size:11px;cursor:pointer;background:none;border:1px solid transparent;padding:2px 5px;border-radius:4px;color:var(--text4);font-family:"Inter",sans-serif}
+.fu.on{color:var(--amber);border-color:var(--amber);background:var(--abg)}
+.mst-rowx>.fu{flex:0 0 auto;align-self:center;font-size:14px;padding:4px 7px}
+.mst-fun{display:block;font-size:11.5px;color:var(--at);line-height:1.4;margin-top:2px;white-space:pre-wrap}
+.fu-page{display:flex;align-items:center;gap:6px;margin-top:8px}.fu-page .fu-big{font-size:15px;padding:3px 8px;border-color:var(--border2)}
+.fu-page .fu-big.on{border-color:var(--amber)}.fu-lbl{font-size:12.5px;color:var(--text3)}
+.fu-notel{display:block;font-size:11px;font-weight:700;color:var(--text3);margin:6px 0 3px;text-transform:none;letter-spacing:0}
+.fu-note{width:100%;min-height:52px;font-size:13px}
+/* [1.911] — admin's birthday pill */
+.mst-bday{display:inline-block;background:#A855F7;color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;margin-left:3px;vertical-align:middle;line-height:1.5}
+/* [1.910] — the family portal's Important dates, on the Students tab */
+.td-card{background:#fff;border:1px solid var(--border);border-radius:var(--rl);padding:8px 11px 10px;margin:0 0 8px}
+.td-hd{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--acc);margin-bottom:4px}
+.td-date{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:.35rem 0}.td-date+.td-date{border-top:1px dashed var(--border)}
+.td-ev{font-size:13px;font-weight:600;color:var(--text)}.td-when{font-size:12px;color:var(--text4)}
+.td-tag{font-size:10px;padding:1px 6px;border-radius:3px;border:1px solid;white-space:nowrap;flex:0 0 auto}
+.td-tag.cl{background:var(--rbg);color:var(--rt);border-color:var(--red)}.td-tag.op{background:var(--gbg);color:var(--gt);border-color:var(--green)}
+.td-none{font-size:12px;color:var(--text4);padding:.35rem 0}
+.td-btns{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.td-btns .btn{width:auto}
+.td-note{font-size:11px;color:var(--text3);line-height:1.5;margin-top:6px}
 .mst-rm b{display:block;font-size:13.5px;line-height:1.3}
 .mst-sub{display:block;font-size:11.5px;color:var(--text4);line-height:1.4;overflow:hidden;text-overflow:ellipsis}
 .mst-pill{flex:0 0 auto;font-size:10.5px;font-weight:700;border-radius:10px;padding:1px 8px;white-space:nowrap}
@@ -3761,6 +3783,17 @@ var GUIDE_COPY={
       // {{Opus Schedule}} is the one way into Opus from this tab.
       {n:'Cancel a Lesson in Opus', btn:'cancel', k:'cancel cancellation cancelling sick makeup make up opus lesson',
        q:'Cancel lessons in Opus: click {{Opus Schedule}}. During cancellation, Opus prompts you to leave a message for the family.'},
+      // [1.910] [1.911] [1.912] — PLACEHOLDER sentences for AC to read.
+      {n:'Upcoming Important Dates', k:'holiday closure closed calendar dates no lesson schools recess google',
+       q:'{{Upcoming Important Dates}} lists the next three studio dates that fall on days you teach, and whether the studio is closed. Click {{All Important Dates}} to see them all, and {{Hide Dates}} to close the list.', m:[
+        'Click {{Keylab Google Calendar}} for the full studio calendar, and {{Opus Schedule}} for your lessons in Opus.'
+      ]},
+      {n:'Birthday', k:'birthday birthdays bd countdown purple',
+       q:'A purple number beside a student\u2019s name counts down the days to their birthday, from two weeks before. On the day it says {{BD!}}.'},
+      {n:'Follow-up', k:'star follow up flag reminder todo to do note mark',
+       q:'Click the star beside a student to mark them for follow-up. Only you see it.', m:[
+        'On the student\u2019s page, type a {{Follow-up note}} under the star. While the star is on, the note shows on the student\u2019s row in your list. Click the star again to take it off.'
+      ]},
       // [1.848] — the menu is "Select Day View" (AC, 8 October); "All days" is its first choice.
       // [1.886] [1.892] — the day's materials and last week's lesson summaries. PLACEHOLDER sentences for AC to read.
       {n:'Select Day View', k:'student list day week schedule find today lesson students all days last week latest summaries prepare materials books sheets',
@@ -4563,9 +4596,115 @@ function loadOpusUrl(){
   OPUS.asked=true;
   api({action:'getPublicConfig',data:{}},function(e,r){
     var u=(!e&&r&&r.ok&&/^https:\/\//.test(String(r.schedulingBillingUrl||'')))?String(r.schedulingBillingUrl):'';
-    if(u&&u!==OPUS.url){ OPUS.url=u; render(); }
+    if(u&&u!==OPUS.url) OPUS.url=u;
+    // [1.910] — the studio's dates and its Google Calendar address, from the same public settings the family portal reads
+    if(!e&&r&&r.ok){
+      TCH_DATES.list=Array.isArray(r.upcomingDates)?r.upcomingDates:[];
+      TCH_DATES.cal=/^https:\/\//.test(String(r.keylabCalendarUrl||''))?String(r.keylabCalendarUrl):'';
+    }
+    render();
   });
 }
+// ── [1.910] — Important dates, as the family portal has them ───────────────────────────────────────────────────────────
+// AC, 23 October 2026: "Important dates with same buttons and options just like on the family portal with the same links
+// to Opus, etc." The family's Schedule card ([1.599], [1.606]): Upcoming Important Dates — the next three studio dates on
+// the family's lesson days, each with its badge ([1.582], [1.875]) — All Important Dates / Hide Dates, AC's note, and the
+// Keylab Google Calendar button. Here the days are the ones this teacher teaches. Its words are AC's own, from the
+// family portal. Its Opus link is Opus Schedule, directly above: AC made that the one way into Opus from this tab on
+// 7 October (the red Cancel a Lesson button went to the same page), so it is not drawn a second time.
+var TCH_DATES={list:null,cal:'',all:false};
+var TCH_DATES_COPY={head:'Upcoming Important Dates',all:'All Important Dates',hide:'Hide Dates',   // AC, 12 September 2026 ([1.606])
+  note:'Only dates occurring on your lesson day are listed. See Keylab Google calendar for full studio schedule',   // AC ([1.599])
+  cal:'Keylab Google Calendar',closed:'Closed',noLesson:'No lesson',open:'Keylab is open',
+  schoolsOpen:'NYC public schools closed, Keylab open',   // AC, 9 October 2026 ([1.875])
+  none:'No closures fall on your lesson days.'};
+var _TD_IDX={Sunday:0,Monday:1,Tuesday:2,Wednesday:3,Thursday:4,Friday:5,Saturday:6};
+function _tdYmdDate(ymd){var p=String(ymd||'').split('-');return p.length===3?new Date(+p[0],+p[1]-1,+p[2]):new Date(NaN);}
+// Every studio date that falls on a day this teacher teaches, from today, each date once, in date order.
+function _tdHits(){
+  var days={};_mstR().students.forEach(function(s){if(s.day&&_TD_IDX.hasOwnProperty(s.day))days[_TD_IDX[s.day]]=1;});
+  var today=_tdYmdDate(_mstToday()),hits=[];
+  (TCH_DATES.list||[]).forEach(function(e){
+    var d=_tdYmdDate(e.startDate),end=_tdYmdDate(e.endDate||e.startDate),guard=0;
+    if(isNaN(d.getTime())||isNaN(end.getTime()))return;
+    while(d<=end&&guard++<400){
+      if(d>=today&&days[d.getDay()])hits.push({e:e,d:new Date(d.getTime())});
+      d.setDate(d.getDate()+1);
+    }
+  });
+  return hits.sort(function(a,b){return a.d-b.d;});
+}
+function _tdRow(h){
+  var e=h.e,c=TCH_DATES_COPY;
+  var tag=(e.closed&&e.studioOpen)?'<span class="td-tag cl">'+esc(c.noLesson)+'</span>'
+    :(!e.closed&&e.schoolsClosed)?'<span class="td-tag op">'+esc(c.schoolsOpen)+'</span>'
+    :'<span class="td-tag '+(e.closed?'cl':'op')+'">'+esc(e.closed?c.closed:c.open)+'</span>';
+  return '<div class="td-date"><div><div class="td-ev">'+esc(e.event||'')+'</div>'+
+    '<div class="td-when">'+esc(h.d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}))+'</div></div>'+tag+'</div>';
+}
+function rTchDates(){
+  if(!TCH_DATES.list||!TCH_DATES.list.length)return '';
+  var hits=_tdHits(),shown=TCH_DATES.all?hits:hits.slice(0,3);
+  return '<div class="td-card"><div class="td-hd">'+esc(TCH_DATES_COPY.head)+'</div>'+
+    (shown.length?shown.map(_tdRow).join(''):'<div class="td-none">'+esc(TCH_DATES_COPY.none)+'</div>')+
+    '<div class="td-btns"><button type="button" class="btn btn-s ms-sm" aria-expanded="'+(TCH_DATES.all?'true':'false')+'" onclick="TCH_DATES.all=!TCH_DATES.all;render()">'+esc(TCH_DATES.all?TCH_DATES_COPY.hide:TCH_DATES_COPY.all)+'</button>'+
+      (TCH_DATES.cal?'<a class="btn btn-s ms-sm" href="'+esc(TCH_DATES.cal)+'" target="_blank" rel="noopener">'+esc(TCH_DATES_COPY.cal)+'</a>':'')+'</div>'+
+    '<div class="td-note">'+esc(TCH_DATES_COPY.note)+'</div></div>';
+}
+
+// ── [1.911] — a student's birthday, counted down on their row as admin's row does ────────────────────────────────────
+// AC, 23 October 2026: "birthday notices for teachers with student countdown mirroring the admin portal student row
+// data". Admin's purple pill (_bdayBadgeHtml): from 14 days out a countdown, BD! on the day, and the same hover words.
+// The server sends only the number of days (bdayIn), never the birth date.
+function _bdayPill(s){
+  var d=s&&s.bdayIn;
+  if(d===null||d===undefined||d===''||isNaN(Number(d))||Number(d)<0||Number(d)>14)return '';
+  d=Number(d);
+  var t=d===0?'Birthday today!':('Birthday in '+d+' day'+(d===1?'':'s'));   // admin's words
+  return ' <span class="mst-bday" title="'+esc(t)+'" aria-label="'+esc(t)+'">'+(d===0?'BD!':String(d))+'</span>';
+}
+
+// ── [1.912] — the teacher's own follow-up star, and its note ─────────────────────────────────────────────────────────
+// AC, 23 October 2026: "Allow teachers to mark a student with the same style star on the student row in admin portal for
+// follow up or to help teachers keep track of a student they need to do something for. The teacher can add a note for
+// context to the student card that displays without having to click if the follow up star is ticked". Admin's ★ (.fu,
+// amber when on), on the row and on the student's page; the note is written on the student's page and, while the star is
+// on, shows on the row. The teacher's own (teacherSetFollowUp, kept with their private notes), never admin's star.
+var FU_COPY={star:'Follow-up',   // PLACEHOLDER — the star's hover and the student page's button
+  noteLbl:'Follow-up note',   // PLACEHOLDER
+  notePh:'What do you need to do for this student?',   // PLACEHOLDER
+  failed:'Could not save the follow-up. Try again.'};   // PLACEHOLDER
+var _fuTimer=null,_fuWait=null;
+function _fuStar(s,cls){
+  var on=!!(s&&s.followUp);
+  return '<button type="button" class="fu'+(on?' on':'')+(cls?' '+cls:'')+'" title="'+esc(FU_COPY.star)+'" aria-label="'+esc(FU_COPY.star)+'" aria-pressed="'+(on?'true':'false')+'"'+
+    ' onclick="event.stopPropagation();fuToggle('+jsq(s.studentId)+')">\u2605</button>';
+}
+function fuToggle(id){
+  var s=_mstStu(id);if(!s)return;
+  var was=!!s.followUp;s.followUp=!was;actClear('fu:'+id);render();
+  api({action:'teacherSetFollowUp',data:{teacherToken:TOKEN,studentId:id,followUp:!was}},function(e,r){
+    if(e||!r||!r.ok){var t=_mstStu(id);if(t)t.followUp=was;actFail('fu:'+id,(r&&r.error)||FU_COPY.failed);render();}
+  });
+}
+function fuNoteInput(id,v){
+  var s=_mstStu(id);if(s)s.followUpNote=v;
+  clearTimeout(_fuTimer);_fuWait={id:id,v:v,tok:TOKEN};
+  _fuTimer=setTimeout(_fuNoteFlush,900);
+}
+function _fuNoteFlush(){
+  clearTimeout(_fuTimer);var w=_fuWait;_fuWait=null;if(!w)return;
+  api({action:'teacherSetFollowUp',data:{teacherToken:w.tok,studentId:w.id,followUpNote:w.v}},function(e,r){
+    if(e||!r||!r.ok){actFail('fu:'+w.id,(r&&r.error)||FU_COPY.failed);render();}
+  });
+}
+function rFuStudent(s){
+  var on=!!s.followUp;
+  return '<div class="fu-page">'+_fuStar(s,'fu-big')+'<span class="fu-lbl">'+esc(FU_COPY.star)+'</span>'+rAct('fu:'+s.studentId)+'</div>'+
+    (on?'<label class="fu-notel" for="fu-note">'+esc(FU_COPY.noteLbl)+'</label>'+
+      '<textarea id="fu-note" class="tt-a fu-note" rows="2" placeholder="'+esc(FU_COPY.notePh)+'" oninput="fuNoteInput('+jsq(s.studentId)+',this.value)">'+esc(s.followUpNote||'')+'</textarea>':'');
+}
+
 function rOpusButton(kind){
   // [1.779] — View My Schedule blue, Cancel a Lesson red (AC).
   return '<a class="btn '+(kind==='cancel'?'btn-cancel':'btn-p')+'" href="'+esc(_opusHref())+'" target="_blank" rel="noopener">'+esc(kind==='cancel'?OPUS_COPY.cancel:OPUS_COPY.view)+'</a>';
@@ -4919,6 +5058,7 @@ function mstListPane(){
   if(MST.open==='drafts')h+=mstDraftList(drafts);
   if(MST.open==='sched')h+=mstSchedList(sched);
   if(MST.open==='reply')h+=mstReplyList(reply);
+  h+=rTchDates();   // [1.910]
   var by={};
   R.students.forEach(function(s){var d=mstDayOf(s);if(d)(by[d]=by[d]||[]).push(s);});
   var days=MST_DAYS.filter(function(d){return by[d];});
@@ -5151,11 +5291,13 @@ function mstPill(st){
 function mstRow(s){
   var id=s.studentId,trial=!s.day,date=mstLessonOf(s);
   var on=MST.view==='student'&&MS.cardStu===id;
-  return '<button type="button" class="mst-row'+(on?' on':'')+'" onclick="mstOpen('+jsq(id)+')">'+
+  // [1.911] the birthday countdown beside the name; [1.912] the follow-up star beside the row, and its note on it while on
+  return '<div class="mst-rowx"><button type="button" class="mst-row'+(on?' on':'')+'" onclick="mstOpen('+jsq(id)+')">'+
     '<span class="mst-t">'+esc(mstTime(mstTimeOf(s)))+'</span>'+
-    '<span class="mst-rm"><b>'+esc(_nameAge(s.studentName,s.age))+(trial?' <span class="tt-pill bad">'+esc(MS_COPY.trial)+'</span>':'')+'</b>'+
-    '<span class="mst-sub">'+esc([s.instrument,s.duration?s.duration+' min':''].filter(Boolean).join(' · '))+'</span></span>'+
-    (date&&!trial?mstPill(mstState(id,date)):'')+'</button>';
+    '<span class="mst-rm"><b>'+esc(_nameAge(s.studentName,s.age))+(trial?' <span class="tt-pill bad">'+esc(MS_COPY.trial)+'</span>':'')+_bdayPill(s)+'</b>'+
+    '<span class="mst-sub">'+esc([s.instrument,s.duration?s.duration+' min':''].filter(Boolean).join(' · '))+'</span>'+
+    (s.followUp&&String(s.followUpNote||'').trim()?'<span class="mst-fun">'+esc(s.followUpNote)+'</span>':'')+'</span>'+
+    (date&&!trial?mstPill(mstState(id,date)):'')+'</button>'+_fuStar(s)+'</div>'+rAct('fu:'+id);
 }
 
 // ── Drafts and Scheduled: one line per student ──────────────────────────
@@ -5259,9 +5401,10 @@ function mstStudent(){
   var s=_mstStu(MS.cardStu),par=mstParents(s);
   h+='<div class="mst-head">'+
     (s.familyId?'<button type="button" class="btn btn-s ms-sm mst-msgfam" onclick="mstMessageFamily()">'+esc(MST_COPY.messageFamily)+'</button>':'')+   // [1.814]
-    '<div class="mst-name">'+esc(_nameAge(s.studentName,s.age))+'</div>'+
+    '<div class="mst-name">'+esc(_nameAge(s.studentName,s.age))+_bdayPill(s)+'</div>'+   // [1.911]
     '<div class="mst-det">'+esc([s.instrument,s.day?s.day+'s '+mstTime(s.time):'',s.duration?s.duration+' min':'',s.grade?s.grade+' grade':'',s.level].filter(Boolean).join(' · '))+'</div>'+
-    (par.length?'<div class="mst-det">'+esc(MST_COPY.parents+': '+_msNames(par))+'</div>':'')+'</div>';
+    (par.length?'<div class="mst-det">'+esc(MST_COPY.parents+': '+_msNames(par))+'</div>':'')+
+    rFuStudent(s)+'</div>';   // [1.912]
   // [1.887] — "Your notes about [name]" on dark gray, apart from the Lesson Summary's navy (AC, 21 October 2026).
   h+=_msArea(MS_COPY.notesAbout(s.first),'<span class="ms-tag">'+esc(MS_COPY.onlyYou)+'</span>',
     '<div class="ms-sec"><textarea id="ms-note" class="tt-a" rows="3" oninput="msNoteInput(this.value)">'+esc(MS.note||'')+'</textarea>'+

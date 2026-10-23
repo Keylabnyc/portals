@@ -596,8 +596,8 @@ button:active:not(:disabled),
 /* [1.734] an Assignment, drawn as in its email */
 .asg{background:#fff;border:1px solid #d9dee6;border-radius:10px;overflow:hidden;min-width:240px;color:#1f2937;text-align:left}
 .asg-hero{background:#C9E0E6;padding:12px 14px;border-bottom:3px solid #000}
-.asg-date{font-size:12px;font-weight:700;color:#35545C}
-.asg-title{font-size:17px;font-weight:700;color:#111;margin-top:2px;line-height:1.25}
+.asg-date{font-size:12px;font-weight:700;color:#35545C;margin-top:3px}   /* [1.909] — under the title now */
+.asg-title{font-size:17px;font-weight:700;color:#111;line-height:1.25}
 .asg-body{padding:12px 14px;font-size:14px;line-height:1.5}
 .asg-intro{margin-bottom:10px}
 .asg-files{background:#E8F1FD;border:1px solid #BBD3F5;border-radius:8px;padding:10px 12px;margin:0 0 12px;color:#1E3A6E}   /* [1.857] */
@@ -4163,8 +4163,14 @@ function _rKlAsgFiles(a){
     return x.attachmentId?'<button type="button" class="asg-file" onclick="klOpenAttachment('+jsq(x.attachmentId)+',\'view\')">'+esc(x.label||'')+'</button>':'<div class="asg-file">'+esc(x.label||'')+'</div>';
   }).join('')+'</div>';
 }
-// [1.794] — the lesson it is for, as the email says it. PLACEHOLDER wording.
-function _klAsgLesson(a){return 'Lesson on '+_klLongDate(a.lessonDate)+(a.lessonTime?' at '+a.lessonTime:'');}
+// [1.794] — the lesson it is for, as the email says it. [1.909] — in AC's words, 23 October 2026, under the title:
+// "for lesson taught on Tuesday, October 20th 2 pm" (the server's _asgLessonLine_ says the same).
+function _klAsgLesson(a){return 'for lesson taught on '+_klLongDate(a.lessonDate)+(a.lessonTime?' '+_klAsgTime(a.lessonTime):'');}
+function _klAsgTime(t){
+  var m=String(t||'').trim().match(/^(\d{1,2})(?::(\d{2}))?\s*([AaPp])\.?\s*[Mm]\.?$/);
+  if(!m)return String(t||'').trim().toLowerCase();
+  return Number(m[1])+(m[2]&&m[2]!=='00'?':'+m[2]:'')+' '+m[3].toLowerCase()+'m';
+}
 // AC, 7 October 2026: "If materials are included, parent should see an instruction in the email
 // notification and parent portal to 'Please share the following files and/or links with [student
 // first name]'" — files, links, or files and links, as attached; nothing when there is neither.
@@ -4190,8 +4196,9 @@ function _rKlAssignment(a){
     return '<div class="asg-m">'+inner+'</div>';
   }).join('');
   return '<div class="asg">'+
-    '<div class="asg-hero"><div class="asg-date">'+esc(a.html?_klAsgLesson(a):_klLongDate(a.lessonDate))+'</div>'+
-      '<div class="asg-title">'+esc('Here\u2019s '+(a.studentFirst||'')+'\u2019s Assignment from '+(a.teacherFirst||'')+'!')+'</div></div>'+
+    // [1.909] — the title first, then the lesson (AC, 23 October 2026: "reversing the order of these two"), his words
+    '<div class="asg-hero"><div class="asg-title">'+esc('Here\u2019s '+(a.studentFirst||'')+'\u2019s assignment from '+(a.teacherFirst||''))+'</div>'+
+      '<div class="asg-date">'+esc(_klAsgLesson(a.html?a:{lessonDate:a.lessonDate}))+'</div></div>'+
     '<div class="asg-body">'+
       _rKlAsgFiles(a)+   // [1.857] — the files, in their own box above the teacher's words
       // [1.794] — the teacher's formatted message, sanitized on the server when it was sent (as a

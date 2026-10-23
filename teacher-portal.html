@@ -60,6 +60,8 @@ label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:
 .btn{padding:10px 16px;border-radius:var(--r);font-size:13px;cursor:pointer;border:1px solid transparent;font-family:"Inter",sans-serif;transition:background .1s,opacity .1s;display:inline-flex;align-items:center;justify-content:center;gap:6px;font-weight:600;line-height:1;letter-spacing:.01em;width:100%}
 .btn-p{background:#1a4fc4;color:#fff;border-color:#1a4fc4}.btn-p:hover{background:#1440a8;border-color:#1440a8}
 .btn-s{background:rgba(0,0,0,.12);color:var(--text2);border-color:var(--border2)}.btn-s:hover{background:rgba(0,0,0,.2);color:var(--text)}
+/* [1.904] — outlined: a second action beside a blue one, so an area has one blue button */
+.btn-o{background:#fff;color:#1a4fc4;border-color:#1a4fc4}.btn-o:hover{background:var(--bbg)}
 .btn:disabled{opacity:.35;cursor:not-allowed}
 /* ── [1.577] — a button reacts to being PRESSED, not only to a hover ──────
    AC, 11 September 2026: *"All buttons should react when clicked or pressed."*
@@ -404,6 +406,13 @@ button:active:not(:disabled),
 .composer{display:flex;flex-direction:column;gap:8px;align-items:stretch;background:var(--bg4);
   padding:10px 10px 12px;border:1px solid var(--border);border-radius:var(--rl)}   /* [1.812] — AC: "the send and more buttons have no padding and run to the edge of the boxes" */
 .composer-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+/* [1.904] — three zones in every editor: what is written (the box), what goes with it (a light card of its own, under its
+   heading), and send or save (under a rule). The review: the files, the panel and the buttons ran together in one grey box. */
+.cz{background:#fff;border:1px solid var(--border);border-radius:var(--rl);padding:8px 10px 10px}
+.composer .cz,.mst-form .cz{margin:4px 0 2px}
+.ms-lf.cz{margin:8px 12px}
+.cz>.ms-lab{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:6px}
+.composer>.composer-actions{border-top:1px solid var(--border);padding-top:10px;margin-top:2px}
 .composer textarea{background:#fff;border:1px solid var(--border2);color:var(--text);border-radius:var(--r);padding:10px 11px;font-family:"Inter",sans-serif;font-size:14.5px;width:100%;outline:none;resize:none;min-height:72px;max-height:200px}
 .composer textarea:focus{border-color:var(--acc)}
 .composer .btn{width:auto;flex:0 0 auto}
@@ -1580,7 +1589,7 @@ mark.guide-hit{background:var(--bbg);color:inherit;border-radius:2px;padding:0 1
 .ms-mat .ms-ml a,.mst-offer .ms-ml a,.ms-lnotes a,.ms-ro a{color:var(--link);text-decoration:underline}
 .ms-matopen{background:none;border:0;padding:0;font:inherit;font-size:12.5px;color:var(--link);text-decoration:underline;cursor:pointer;text-align:left}
 .ms-matedit{background:none;border:0;padding:0 4px;font-size:12px;color:var(--link);text-decoration:underline;cursor:pointer;flex:0 0 auto}
-.ms-mat .ms-matedit{margin-left:auto}.ms-mat .ms-matedit+.ms-x{margin-left:0}
+.ms-mat .ms-matedit,.ms-pick-row .ms-matedit{margin-left:auto}.ms-mat .ms-matedit+.ms-x{margin-left:0}
 .ms-matedrow{display:flex;align-items:center;gap:6px;padding:4px 0}
 .ms-mated-f{flex:1 1 auto;display:flex;flex-direction:column;gap:4px;min-width:0}
 .ms-mated-f input{width:100%;padding:5px 7px;border:1px solid var(--border);border-radius:var(--r);font:inherit;font-size:12.5px}
@@ -2224,6 +2233,17 @@ select.cmp-lsel{font:inherit;font-size:13.5px;font-weight:700;padding:6px 8px;bo
 .cmp-ls{flex:none}
 .cmp-ls select{margin:0;width:100%;padding:7px 8px;font:inherit;font-size:13px;font-weight:400;border:1px solid var(--border2);border-radius:var(--r);background:#fff;color:var(--text)}
 .lib-panel.cmp-panel{margin:6px 0 8px;padding:6px 30px 6px 8px}
+/* [1.904] — the link and template panels end with Cancel at their foot; no corner ✕, so no room kept for one */
+.lib-panel.cmp-panel.cmp-linkpanel,.lib-panel.cmp-panel.cmp-tplpanel{padding-right:12px}
+.cmp-pfoot{display:flex;justify-content:flex-end;margin-top:6px}
+/* [1.904] — the one save line: grey while there is something to save, blue-grey while saving, green once saved */
+.save-line{font-size:12px;color:var(--text4);align-self:center;white-space:nowrap}.save-line:empty{display:none}
+.save-line.not{color:var(--text3)}.save-line.busy{color:var(--bt)}.save-line.ok{color:var(--green)}.save-line.bad{color:var(--red)}
+.ms-lc-b .save-line{margin-right:4px}.mst-saverow{display:flex;justify-content:flex-end;margin-top:6px}
+/* [1.904] — the one quiet opener for tags */
+.tag-open{margin:2px 0 4px}.ms-tagask .tag-open{margin-left:50px}
+.tag-open-b{background:none;border:0;padding:0;font:inherit;font-size:12px;color:var(--link);text-decoration:underline;cursor:pointer}
+.cmp-pcancel{background:none;border:0;padding:2px 4px;font:inherit;font-size:12.5px;color:var(--link);text-decoration:underline;cursor:pointer}
 .cmp-px{top:5px;right:5px;width:20px;height:20px;font-size:10px;padding:0}
 .cmp-linkpanel .cmp-linkrow{gap:6px;margin-bottom:5px;flex-wrap:nowrap;align-items:flex-end}
 .cmp-linkpanel .cmp-ll{font-size:11px;gap:2px;flex:1 1 0}
@@ -3802,7 +3822,8 @@ var GUIDE_COPY={
         'Opening a conversation marks it read. There is nothing to click. The reply clock starts when a message arrives, not when you open it. Reading a message or clicking {{Mark seen}} does not stop its timer. Only your reply does.',
         'Both parents are ticked. Untick a parent to stop their email; the message still appears in the family\u2019s conversation. If you teach more than one child in the family, use the {{About}} buttons to choose which child the message is about.',
         'Once the family reads your message, \u201cRead by\u201d appears with the parents\u2019 names and the time.',
-        'Anything you type stays in that conversation on this device until you send it.'
+        // [1.904] — PLACEHOLDER sentence for AC to read: the files are kept with the words.
+        'Anything you type, and any file you attach, stays in that conversation on this device until you send it. {{Draft kept on this device}} shows beside {{Send}}. A file left unsent for a day is removed, and you are asked to add it again.'
       ]},
       {n:'Edit / Unsend', k:'undo mistake typo delete recall take back change fix',
        q:'Click {{Edit}} or {{Unsend}} within 10 seconds of sending to change or take back a message.', m:[
@@ -3840,10 +3861,10 @@ var GUIDE_COPY={
         'Clear the flag when you are done. When you reply to a message, your message queue is cleared, but messages saved for review are not.'
       ]},
       {n:'Add file', k:'attachment attach upload photo picture image pdf document video size limit save keep library',
-       q:'Click {{Add file}} to attach up to 10 files, 10 MB each. You can also drag and drop or paste files into a message.', m:[
-        'Attach files from your device, your saved files, or the {{Keylab Master Library}}. Click {{Accepted file types}} to see supported formats.',
-        // [1.898] — PLACEHOLDER sentence for AC to read.
-        'In a lesson summary or an assignment, {{Add file}} lists every file you can use, the ones used with the student first. Type in the search box, or click {{Tags}}, to find one. Click a file\u2019s name to open it, tick it to add it, and click {{Done}} when finished.',
+       q:'Click {{Add file}} under {{Attached files}} to attach up to 10 files, 10 MB each. You can also drag and drop or paste files into a message.', m:[   // [1.904] — under the files, not on the writing row
+        // [1.898] [1.904] — PLACEHOLDER sentences for AC to read: one panel everywhere.
+        'Click {{Add from your device}}, or tick a file in the list under it: your files and the {{Keylab Master Library}}\u2019s, each once. Click {{Accepted file types}} to see supported formats.',
+        'Type in the search box, or click {{Tags}}, to find a file. Click a file\u2019s name to open it, tick it to add it, untick it to take it out, and click {{Done}} when finished. In a lesson summary or an assignment, the files used with the student come first.',
         'Click {{Save to Library}} beside a file in any conversation to keep it in your library, including a file a family sends you.'
       ]},
       {n:'Add link', k:'url website web address edit change remove hyperlink lesson notes summary',
@@ -3935,7 +3956,7 @@ var GUIDE_COPY={
         'Type in the search box to find anything in your files, links and templates, and in the {{Keylab Master Library}}. Only the sections with matches are shown.',
         'Tick items to tag or delete several at once. The buttons appear on that section\u2019s heading.',
         'Other teachers cannot see your library, and no one else sees your custom tags.',
-        'In a message, click {{Manage Library}} at the bottom of the {{Add file}} panel to open your library without leaving the message.'
+        'In a message, an assignment or a lesson summary, click {{Manage Library}} at the bottom of the {{Add file}} panel to open your library without leaving it.'   // [1.904] — the one panel, everywhere
       ]},
       {n:'Tags', k:'tag tags filter label studio custom grey blue',
        q:'Click {{Tags}}, tick one or more tags, then click {{Done}}. Only items with every ticked tag are shown.', m:[
@@ -4627,7 +4648,7 @@ var MST_COPY={
   // [1.897] [1.898] [1.899] — PLACEHOLDERS, AC's to word. ("Nothing added. Click Add file or Add link above." went: Add file
   // is right under the list now, and Add link puts a link into the words.)
   pickFilesTo:function(dest){return 'Add files to '+dest;},
-  pickToLes:'the lesson summary',pickToAsg:function(first){return first+'\u2019s assignment';},
+  pickToLes:'the lesson summary',pickToMsg:'your message',pickToAsg:function(first){return first+'\u2019s assignment';},
   usedWith:function(first){return 'Used with '+first;},openFile:'Open',searchAll:'Search by name or tag',tagsBtn:function(n){return n?'Tags ('+n+')':'Tags';},allTags:function(n){return 'All tags ('+n+')';},fewerTags:'Fewer tags',noFilesYet:'No files yet. Click Add from your device.',
   offerHd:function(first){return 'From '+first+'\u2019s lesson summary';},offerAll:'Select all',
   back:'All Students',                                                       // AC, 7 October ("No arrows ever!")
@@ -4763,6 +4784,43 @@ function mstMins(t){var m=String(t||'').match(/^(\d{1,2})(?::(\d{2}))?\s*([AP])M
 function mstDate(ymd){var p=String(ymd||'').split('-');if(p.length!==3)return String(ymd||'');return _MS_DAY[_msDow(ymd)]+', '+_MS_MO[+p[1]-1]+' '+mstOrd(+p[2]);}
 function mstLessonLine(ymd,t){return mstDate(ymd)+(t?' • '+mstTime(t):'');}
 // In the device's time, as every other time in this portal is ([1.371]).
+// ── [1.904] — one save line, beside each editor's main button ─────────────────────────────────────────────────────────
+// The review: a message draft was kept in silence, an assignment said "Assignment draft saved" in one place and "Draft
+// saved [time]" in another, the lesson summary's "✓ Saved" went after four seconds, and a Library rename said nothing.
+// Now each says where its button is: Not saved (there are changes), Saving…, or ✓ Saved and when. The line is updated as
+// the words are typed (typing never redraws the page).
+function _saveLineHtml(id,o){
+  return '<span class="save-line'+(o?' '+o.st:'')+'" id="'+id+'">'+(o?esc(o.t):'')+'</span>';
+}
+function _saveLineSet(id,o){
+  var el=document.getElementById(id);if(!el)return;
+  el.className='save-line'+(o?' '+o.st:'');el.textContent=o?o.t:'';
+}
+var _msSavedAt={};   // a lesson summary saved in this visit -> when the server had it
+function _msMatSig(list){return JSON.stringify((list||[]).map(function(m){return [m.kind,m.label||'',m.url||'',m.attachmentId||''];}));}
+function _msEdDirty(ed,l){
+  var links=function(h){return JSON.stringify(_msNotesLinks(h).map(function(x){return [x.url,x.label];}));};
+  return String(ed.activities||'').trim()!==String(l.activities||'').trim()||links(ed.notesHtml)!==links(l.notesHtml)||_msMatSig(ed.materials)!==_msMatSig(l.materials);
+}
+function _msSaveState(d){
+  var k=_msEditKey(d),ed=MS.edits[k],l=_msLes(d);
+  if(_msNotePend[k])return {st:'busy',t:MS_COPY.saving};
+  if(ed&&!ed.err&&_msEdDirty(ed,l))return {st:'not',t:MST_COPY.notSaved};
+  if(_msSavedAt[k])return {st:'ok',t:'\u2713 '+MS_COPY.saved+' '+mstStamp(_msSavedAt[k])};
+  return null;
+}
+function _msSaveLineSync(d){_saveLineSet('ms-save-'+String(d).replace(/-/g,''),_msSaveState(d));}
+function _mstSnap(a){return JSON.stringify([String(a.html||'').replace(/\s+/g,' ').trim(),_msMatSig(a.mats),a.to||{},!!a.reply]);}
+function _mstSaveState(){
+  var a=MS.asg;if(!a)return null;
+  var dr=a.resendOf?null:_mstDraft(MS.cardStu,a.date);
+  if(MST.busy==='draft'||(dr&&dr.pending))return {st:'busy',t:MS_COPY.saving};
+  if(dr&&dr.failed)return {st:'bad',t:dr.notSent?MST_COPY.notSent:MST_COPY.notSaved};
+  if(a.resendOf)return null;
+  if(!dr||a.snap==null||_mstSnap(a)!==a.snap)return {st:'not',t:MST_COPY.notSaved};
+  return {st:'ok',t:'\u2713 '+MST_COPY.savedOn(mstStamp(dr.savedAt))};
+}
+function _mstSaveLineSync(){_saveLineSet('mst-save',_mstSaveState());}
 function mstStamp(ms){
   if(!ms)return '';
   var d=new Date(Number(ms)),h=d.getHours(),m=d.getMinutes();
@@ -5322,10 +5380,14 @@ function mstLessonBody(d,current){
         (PICK==='link'&&_libComposerId===nid?rPickPanel(nid):'')+
         '<div id="'+nid+'" class="cmp-rich tt-a ms-lnotes" contenteditable="'+(ed.busy?'false':'true')+'" role="textbox" aria-multiline="true" aria-label="'+esc(MST_COPY.notesFor(mstDate(d)))+'"'+
         ' oninput="msEditHtml(\''+d+'\',this)" onkeyup="_composerState(\''+nid+'\')" onmouseup="_composerState(\''+nid+'\')" onblur="_composerStateClear(\''+nid+'\')" onpaste="_composerPaste(event)">'+
-        (ed.notesHtml||_msNotesHtml(ed.activities))+'</div></div>';})()
+        (ed.notesHtml||_msNotesHtml(ed.activities))+'</div>'+
+        // [1.902] — a new link asks to go into My Library, with its name and tags, as in a message: the question was set
+        // and never drawn, so a link added here could not be tagged (AC: "it looks like you broke the ability to add/edit
+        // tags for links").
+        rLinkOffer(nid)+'</div>';})()
       :String(l.activities||'').trim()?'<div class="ms-ro">'+(l.notesHtml||esc(l.activities))+'</div>':'<div class="ms-ro ms-empty">'+esc(MS_COPY.noNotes)+'</div>')+'</div>';
   if(ed){
-    h+='<div class="ms-lf"><div class="ms-lab">'+esc(MS_COPY.materials)+'</div>'+
+    h+='<div class="ms-lf cz"><div class="ms-lab">'+esc(MS_COPY.materials)+'</div>'+
       (ed.materials||[]).map(function(m,i){return _msMatEditing('les:'+d,i)?_msMatEditRow('les:'+d,i,m):_msMatRow(m,_msMatEditBtn('les:'+d,i,m)+'<button type="button" class="ms-x" title="'+esc(MS_COPY.remove)+'" onclick="msMatRemove(\''+d+'\','+i+')">✕</button>')+(_msPickAsks(m)?'':rMatTagAsk(m));}).join('')+
       _msAddUI('les:'+d)+'</div>';
   }else{
@@ -5342,9 +5404,10 @@ function mstLessonBody(d,current){
       '<button type="button" class="btn btn-p ms-sm" onclick="msEditSave(\''+d+'\')"'+(ed.busy?' disabled':'')+'>'+esc(ed.busy?MS_COPY.saving:MS_COPY.save)+'</button>'
     :'<button type="button" class="btn btn-s ms-sm" onclick="msEdit(\''+d+'\')">'+esc(MS_COPY.edit)+'</button>';
   // One assignment waiting per lesson: a draft opens, a scheduled one is cancelled back to a draft first.
-  if(current&&!formHere&&!dr&&!sc&&!_mstOut[MS.cardStu+'|'+d])btns+='<button type="button" class="btn btn-p ms-sm" onclick="mstAsgNew()">'+esc(MS_COPY.createFor(s.first))+'</button>';
-  var said=ACT['les:'+_msEditKey(d)];   // [1.805] — "Saved", once the server has answered
-  h+='<div class="ms-lc-f mst-lfoot">'+(ed&&ed.err?'<span class="ms-lc-err">'+esc(ed.err)+'</span>':said?'<span class="mst-st ok">\u2713 '+esc(said.text)+'</span>':line)+'<span class="ms-lc-b">'+btns+'</span></div>';
+  if(current&&!formHere&&!dr&&!sc&&!_mstOut[MS.cardStu+'|'+d])btns+='<button type="button" class="btn btn-o ms-sm" onclick="mstAsgNew()">'+esc(MS_COPY.createFor(s.first))+'</button>';   // [1.904] — outlined: one blue button per area
+  // [1.805] — "Saved", once the server has answered; [1.904] — kept, with the time, on the one save line beside the buttons
+  var sv=current?_saveLineHtml('ms-save-'+id,_msSaveState(d)):'';
+  h+='<div class="ms-lc-f mst-lfoot">'+(ed&&ed.err?'<span class="ms-lc-err">'+esc(ed.err)+'</span>':line)+'<span class="ms-lc-b">'+sv+btns+'</span></div>';
   var sec=sent.map(function(x){return mstCard(d,x,'ok');}).join('')+(formHere?mstForm():dr?mstCard(d,dr,'dr'):sc?mstCard(d,sc,'sc'):'');
   if(sec)h+='<div class="mst-asec"'+(current?' id="ms-asg-area"':'')+'>'+sec+'</div>';
   return h;
@@ -5484,10 +5547,6 @@ function mstEditDraft(id,d){
   _mstFormOpened();
   if(x.failed){MST.err=x.failed;render();}   // [1.805] — why it is not saved (or [1.806] sent), beside Save Draft
 }
-// [1.805] — "Draft saved …" only once the server has it; nothing while it is on its way; red when it was not.
-function _mstDraftStamp(x){
-  return x.failed?'<span class="mst-stamp bad">'+esc(x.notSent?MST_COPY.notSent:MST_COPY.notSaved)+'</span>':x.pending?'':'<span class="mst-stamp dr">'+esc(MST_COPY.savedOn(mstStamp(x.savedAt)))+'</span>';
-}
 // [1.865] — a sent assignment, back in the Create Assignment editor as it went: its words, the parents it went to, and
 // its materials — a file as the library file it was attached from ([1.794] keeps that id), so it is attached afresh on
 // Resend, exactly as a draft's is. The editor sends a NEW assignment; the one already sent stays as it was. Save Draft
@@ -5520,8 +5579,19 @@ function _mstOffered(d){
   var ed=MS.edits[_msEditKey(d)],n=_msNoteOf(d),l=((ed?ed.materials:n&&n.materials)||[]).concat(_msNotesLinks(ed?ed.notesHtml:n&&n.notesHtml));
   return l.filter(function(m){return !m.uploading&&!m.upFailed&&(m.kind==='link'?!!m.url:m.kind==='file'&&!!m.attachmentId);});
 }
+// [1.901] — one material, however it came: a link by its address; a file by its Library file, or by its name. AC,
+// 22 October 2026, of a draft whose Materials held *Ode To Joy - guitar tab.pdf* while the lesson summary's box offered it
+// again, unticked: *"ethan's ode to joy file was already added but now it looks like it's asking me to confirm to add
+// again?"* The same PDF put in from a device twice — once in the lesson summary, once in the assignment, as every
+// teacher had to before [1.897] — is two Library files with one name, and a teacher sees one file.
+function _msMatName(m){return String((m&&(m.label||m.fileName))||'').trim().toLowerCase();}
 function _msSameMat(a,b){
-  return a.kind==='link'?b.kind==='link'&&String(a.url||'').trim().toLowerCase()===String(b.url||'').trim().toLowerCase():b.kind==='file'&&a.attachmentId===b.attachmentId;
+  if(!a||!b)return false;
+  var ka=a.kind||'file',kb=b.kind||'file';
+  if(ka==='link'||kb==='link')return ka===kb&&String(a.url||'').trim().toLowerCase()===String(b.url||'').trim().toLowerCase();
+  if(ka!=='file'||kb!=='file')return false;
+  var ia=a.attachmentId||a.id,ib=b.attachmentId||b.id;
+  return !!(ia&&ia===ib)||(!!_msMatName(a)&&_msMatName(a)===_msMatName(b));
 }
 // A link not yet in My Library goes in with the assignment, so it asks "Assign tags?" as a new one always has ([1.868]).
 function _mstOfferIn(o){if(o.kind==='link'&&!_msLibShelf(o))_matTagOpen(o);}
@@ -5533,7 +5603,7 @@ function mstForm(){
   var re=!!a.resendOf;   // [1.865] — Resend: no draft of its own, so none of the draft's buttons
   var dr=re?null:_mstDraft(MS.cardStu,a.date);
   var libTag=function(m){
-    if(m.kind==='book'||m.uploading)return '';   // [1.806] — on a shelf once it has arrived
+    if(m.kind==='book'||m.uploading||m.libNo)return '';   // [1.806] — on a shelf once it has arrived; [1.904] — not for one said No thanks to
     var sh=_msLibShelf(m);
     return '<span class="ms-lib'+(sh?'':' new')+'">'+esc(sh==='studio'?TLIB_COPY.studio:sh?MS_COPY.inLib:MS_COPY.willAdd)+'</span>';
   };
@@ -5545,12 +5615,18 @@ function mstForm(){
   var first=String(s.studentName||'').split(' ')[0],offered=re?[]:_mstOffered(a.date),inOffer=function(m){return offered.some(function(o){return _msSameMat(o,m);});};
   var offer=offered.length?'<div class="mst-offer"><div class="mst-offer-hd"><span>'+esc(MST_COPY.offerHd(first))+'</span>'+
       (offered.every(function(o){return _msMatHas('asg',o);})?'':'<button type="button" class="mst-offer-all" onclick="mstOfferAll()">'+esc(MST_COPY.offerAll)+'</button>')+'</div>'+
-      offered.map(function(o,i){return '<div class="ms-pick-row"><input type="checkbox"'+(_msMatHas('asg',o)?' checked':'')+' aria-label="'+esc(o.label||o.url)+'" onclick="mstOfferTick('+i+')">'+
-        '<span class="ms-k">'+esc(o.kind==='link'?MS_COPY.link:MS_COPY.file)+'</span><span class="ms-ml">'+   // the name opens it, the tick sends it (AC, 13 September)
-        (o.kind==='link'?'<a href="'+esc(o.url)+'" target="_blank" rel="noopener noreferrer">'+esc(o.label||o.url)+'</a>'
-          :'<button type="button" class="ms-matopen" onclick="openAttachment('+jsq(o.attachmentId)+',\'view\')">'+esc(o.label)+'</button>')+'</span></div>'+
-        (_msMatHas('asg',o)?rMatTagAsk(o):'');}).join('')+'</div>':'';   // a ticked link new to My Library asks "Assign tags?" under its row
-  var mats='<div class="mst-mats"><div class="ms-lab">'+esc(MST_COPY.mats)+'</div>'+offer+
+      offered.map(function(o,i){
+        // [1.901] — a ticked one is the assignment's own copy (perhaps renamed): shown by that name, with its Edit.
+        var at=-1;a.mats.forEach(function(m,k){if(at<0&&_msSameMat(o,m))at=k;});
+        var m=at>-1?a.mats[at]:o;
+        if(at>-1&&_msMatEditing('asg',at))return _msMatEditRow('asg',at,m);
+        return '<div class="ms-pick-row"><input type="checkbox"'+(at>-1?' checked':'')+' aria-label="'+esc(m.label||m.url)+'" onclick="mstOfferTick('+i+')">'+
+        '<span class="ms-k">'+esc(m.kind==='link'?MS_COPY.link:MS_COPY.file)+'</span><span class="ms-ml">'+   // the name opens it, the tick sends it (AC, 13 September)
+        (m.kind==='link'?'<a href="'+esc(m.url)+'" target="_blank" rel="noopener noreferrer">'+esc(m.label||m.url)+'</a>'
+          :'<button type="button" class="ms-matopen" onclick="openAttachment('+jsq(m.attachmentId)+',\'view\')">'+esc(m.label)+'</button>')+'</span>'+
+        (at>-1?_msMatEditBtn('asg',at,m):'')+'</div>'+
+        (at>-1?rMatTagAsk(o):'');}).join('')+'</div>':'';   // a ticked link new to My Library asks "Assign tags?" under its row
+  var mats='<div class="mst-mats cz"><div class="ms-lab">'+esc(MST_COPY.mats)+'</div>'+offer+
     a.mats.map(function(m,i){return inOffer(m)?'':_msMatEditing('asg',i)?_msMatEditRow('asg',i,m):_msMatRow(m,libTag(m)+_msMatEditBtn('asg',i,m)+'<button type="button" class="ms-x" title="'+esc(MS_COPY.remove)+'" onclick="mstMatRemove('+i+')">✕</button>')+(_msPickAsks(m)?'':rMatTagAsk(m));}).join('')+
     _msAddUI('asg')+'</div>';
   var busy=!!MST.busy;
@@ -5561,16 +5637,19 @@ function mstForm(){
       '<button type="button" class="btn btn-s ms-sm"'+(busy?' disabled':'')+' onclick="mstAsgClose()">'+esc(MST_COPY.cancel)+'</button>'+
       (dr?'<button type="button" class="btn btn-danger ms-sm mst-del"'+(busy?' disabled':'')+' onclick="mstDeleteDraft()">'+esc(MST_COPY.delDraft)+'</button>':'')+
       '<button type="button" class="btn btn-p ms-sm mst-send"'+(who&&!busy?'':' disabled')+' onclick="mstSend(0)">'+esc(MST.busy==='send'?MST_COPY.sending:re?MST_COPY.resend:MS_COPY.send(who||'…'))+'</button></div>'+
+      '<!--SAVELINE-->'+
       (MST.err&&!MST.errFor?'<div class="tt-err">'+esc(MST.err)+'</div>':'');
   a.html=_mstStarterApply(a.html,s,a);   // [1.807] — the greeting and the files sentence, as the ticks and Materials are now
-  var comp=rComposer(MST_CID,a.html,'MS.asg.html=this.innerHTML',btns,{noFiles:true,asg:true,beforeActions:mats+(MST.sched?mstSchedPanel('one'):'')});
+  if(a.snap==null)a.snap=_mstSnap(a);   // [1.904] — what was there when it opened, so the save line knows a change
+  btns=btns.replace('<!--SAVELINE-->','<div class="mst-saverow">'+_saveLineHtml('mst-save',_mstSaveState())+'</div>');
+  var comp=rComposer(MST_CID,a.html,'MS.asg.html=this.innerHTML;_mstSaveLineSync()',btns,{noFiles:true,asg:true,beforeActions:mats+(MST.sched?mstSchedPanel('one'):'')});
   // [1.888] — AC, 20 October 2026: "because all of the headers for all of the items here are the same, it's a bit confusing
   // visually". The assignment is its own panel inside the Lesson Summary (still the same box, AC's 7 October rule): a blue
   // band with the title and the lesson date, "Sending to" and the names on one line with Reply needed beside them, and
   // AC's sentence saying the notes are private and the assignment is the family's message.
   var h='<div class="mst-form mst-asgp"><div class="mst-ctop"><div class="mst-ctitle"><b>'+esc((re?MST_COPY.sentFor:dr?MST_COPY.draftFor:MST_COPY.newFor)(s.studentName))+'</b>'+
       '<span>'+esc(MST_COPY.lessonDate(mstLessonLine(a.date,a.time)))+'</span></div>'+
-      (dr?_mstDraftStamp(dr):'')+'</div>'+
+      '</div>'+   // [1.904] — the draft's stamp is the save line beside the buttons now
     '<div class="mst-sendto"><label class="tt-q">'+esc(MST_COPY.sendTo)+'</label>'+
       (two?tick('p1',s.parent1Name)+tick('p2',s.parent2Name):'<span class="mst-to">'+esc(s.parent1Name||s.parent2Name||'')+'</span>')+
     // [1.870] — AC, 9 October 2026: no reply is expected of an assignment "unless the teacher requests it". The teacher's own
@@ -5729,7 +5808,7 @@ function _mstSendOne(o,fin){
   _seqRun('asg:'+dk,function(next){_mstSendNow(o,function(err,r){next();if(!err&&!o.resendOf)delete _mstLocal[dk];fin(err,r);});});
 }
 function _mstSendNow(o,done){
-  var s=o.s,files=o.mats.filter(function(m){return m.kind==='file';}),newLinks=o.mats.filter(function(m){return m.kind==='link'&&!_msLibShelf(m);});
+  var s=o.s,files=o.mats.filter(function(m){return m.kind==='file';}),newLinks=o.mats.filter(function(m){return m.kind==='link'&&!_msLibShelf(m)&&!m.libNo;});   // [1.904] — No thanks is no
   var html=o.html;
   if(_tplUnfilledTags(html).length)return done({error:MST_COPY.unfilled});
   // The server binds ten files to a message; an eleventh would be a card row that opens nothing.
@@ -5943,6 +6022,7 @@ function msEditHtml(d,el){
   var ed=MS.edits[_msEditKey(d)];if(!ed)return;
   ed.notesHtml=el.innerHTML;
   ed.activities=String(el.innerText!=null?el.innerText:el.textContent||'').replace(/\u00a0/g,' ').trim();
+  _msSaveLineSync(d);   // [1.904] — Not saved, the moment there is something to save
 }
 // The links written into the notes, each once by address, as materials — what Create Assignment offers and the day's card
 // opens. Read from the markup the server keeps (or the editor holds), which writes every link as <a href="…">.
@@ -5958,8 +6038,11 @@ function _msNotesLinks(html){
 function msEditCancel(d){
   delete MS.edits[_msEditKey(d)];
   if(MS.pick&&MS.pick.target==='les:'+d)MS.pick=null;
+  _msNotesOfferDone(d);
   render();
 }
+// [1.902] — the notes' "Add … to your library?" goes with the notes it was asked under, as Create Assignment's does.
+function _msNotesOfferDone(d){if(LINK_OFFER&&LINK_OFFER.composerId==='ms-notes-'+String(d).replace(/-/g,''))LINK_OFFER=null;}
 // ── [1.805] Save is instant ──────────────────────────────────────────────
 // AC, 7 October 2026: "Saving an assignment draft or saving lesson notes takes a little bit
 // longer than I would prefer. Can we make these optimistic as well while the server is
@@ -5999,6 +6082,7 @@ function msEditSave(d){
   _msPutNote(d,act,mats,true,html);
   delete MS.edits[k];
   if(MS.pick&&MS.pick.target==='les:'+d)MS.pick=null;
+  _msNotesOfferDone(d);
   actClear('les:'+k);render();
   _seqRun('les:'+k,function(next){
     _upWhenReady(mats,function(){   // [1.806] — a file still uploading is saved once it has arrived
@@ -6006,7 +6090,7 @@ function msEditSave(d){
     api({action:'teacherSaveLessonNote',data:{teacherToken:TOKEN,studentId:stu,lessonDate:d,lessonTime:time,activities:act,notesHtml:html||null,materials:sent}},function(e,r){
       next();
       var good=!e&&r&&r.ok;
-      if(good)_msNoteOk[k]={activities:act,notesHtml:html,materials:sent,had:true};   // what the server now has
+      if(good){_msNoteOk[k]={activities:act,notesHtml:html,materials:sent,had:true};_msSavedAt[k]=Date.now();}   // what the server now has
       if(seq!==_msNoteSeq[k])return;   // a newer save of this lesson follows, and its answer is the one that counts
       delete _msNotePend[k];
       if(good){actDone('les:'+k,MS_COPY.saved);return;}
@@ -6032,7 +6116,7 @@ function _msMatRow(m,tail,head){
     (m.kind==='link'?'<a href="'+esc(m.url)+'" target="_blank" rel="noopener noreferrer">'+esc(m.label||m.url)+'</a>'
       :m.kind==='file'&&m.attachmentId&&!m.uploading?'<button type="button" class="ms-matopen" title="'+esc(MST_COPY.openFile)+'" onclick="openAttachment('+jsq(m.attachmentId)+',\'view\')">'+esc(m.label)+'</button>'
       :esc(m.label))+'</span>'+
-    (m.uploading?'<span class="lib-said working"><span class="spin">&#8635;</span> '+esc(TLIB_COPY.attaching)+'</span>':'')+(tail||'')+'</div>';
+    (m.uploading?'<span class="lib-said working"><span class="spin">&#8635;</span> '+esc(TCH_COPY.attachOne)+'</span>':'')+(tail||'')+'</div>';
 }
 // ── [1.790] Add file and Add link: the composer's picker, into the materials ──
 // AC, 6 October 2026: "Teachers need to be able to add links or files from their
@@ -6054,11 +6138,15 @@ function _msAddUI(target){
 }
 function msPickOpen(target,kind){
   // [1.794] — the row that opened it stays where it is on the screen (see _cmpHoldRow).
-  if(target==='asg')_cmpHoldRow(MST_CID);else _holdStill(function(){return document.querySelector('.ms-matbtns');});
+  var _paneMsg=_msIsMsg(target)&&!_isPhone();   // [1.904] — brought into view instead (below), so not held still
+  if(target==='asg')_cmpHoldRow(MST_CID);else if(!_paneMsg)_holdStill(function(){return document.querySelector(_msIsMsg(target)?'.msg-att .ms-matbtns':'.ms-matbtns');});
   if(MS.pick&&MS.pick.target===target&&MS.pick.kind===kind){msPickClose();return;}   // the pressed button, pressed again
   MS.pick={target:target,kind:kind,q:'',busy:0,err:'',url:'',text:'',bad:false,dev:[]};   // [1.869] dev — the files chosen from the device here
-  if(target==='asg')TPL_OPEN=false;
+  if(target==='asg'||_msIsMsg(target)){TPL_OPEN=false;PICK='';PICK_Q='';}   // [1.904] — one panel open at a time
   loadLibrary();render();
+  // [1.904] — on a desktop a message's panel opens at the foot of the conversation's own scrolling pane, below what shows;
+  // it is brought into view there, with its Done (it stays at the panel's foot while the list is read).
+  if(_paneMsg)setTimeout(function(){_klIntoView('#pick-panel-mat');},120);
 }
 function msPickClose(){MS.pick=null;render();}
 // ── [1.898] — the materials' own panel ─────────────────────────────────────
@@ -6079,16 +6167,22 @@ function msPickClose(){MS.pick=null;render();}
 // the tick adds it (AC, 13 September); the tick takes it out again.
 function _msPickPanel(p){
   var s=_mstStu(MS.cardStu)||{},first=String(s.studentName||'').split(' ')[0];
+  var msg=_msIsMsg(p.target);
   var h='<div class="lib-panel pick-in-thread ms-pick" id="pick-panel-mat"><div class="ms-pick-hd">'+
-      esc(MST_COPY.pickFilesTo(p.target==='asg'?MST_COPY.pickToAsg(first):MST_COPY.pickToLes))+'</div>'+
-    '<button type="button" class="btn btn-s ms-sm ms-pick-up" onclick="msPickDevice()">'+esc(TLIB_COPY.fromDevice)+'</button>';
-  if(p.busy)h+='<div class="att-guide"><span class="spin">&#8635;</span> '+esc(TLIB_COPY.attaching)+'</div>';
+      esc(MST_COPY.pickFilesTo(msg?MST_COPY.pickToMsg:p.target==='asg'?MST_COPY.pickToAsg(first):MST_COPY.pickToLes))+'</div>'+
+    '<button type="button" class="btn btn-s ms-sm ms-pick-up" onclick="msPickDevice()">'+esc(TLIB_COPY.fromDevice)+'</button>'+
+    // [1.904] — a message's limits and the drag-and-drop hint, here where a file is added (they sat under every message box)
+    (msg?'<div class="att-guide">'+esc(TCH_COPY.attachHint)+
+      ' <button type="button" class="att-formats" onclick="attToggleFormats()">'+esc(TCH_COPY.attachFormats)+'</button>'+
+      (ATT_FORMATS_OPEN?'<span class="att-formats-list">'+esc(_attFormatList())+'</span>':'')+'</div><div class="att-guide">'+esc(TLIB_COPY.dropHint)+'</div>':'');
+  if(p.busy)h+='<div class="att-guide"><span class="spin">&#8635;</span> '+esc(TCH_COPY.attachOne)+'</div>';
   h+=_msPickDevHtml(p);
   if(p.err)h+='<div class="tt-err">'+esc(p.err)+'</div>';
   var q=p.q,seen={},all=[],rank={},sel=p.tagSel=p.tagSel||[],tagN={},tagName={};
   _msUsed(p.target).forEach(function(m,i){rank[m.attachmentId]=i+1;});
-  if(p.target==='asg')_mstOffered(MS.asg.date).forEach(function(o){if(o.kind==='file')seen[o.attachmentId]=1;});   // ticked in the box above instead
-  _libMyFiles().concat(LIB_SHELF_STUDIO).forEach(function(f){var id=f.attachmentId||f.id;if(id&&!seen[id]){seen[id]=1;all.push(f);}});
+  var offered=p.target==='asg'?_mstOffered(MS.asg.date):[];   // ticked in the box above instead
+  _libMyFiles().concat(LIB_SHELF_STUDIO).forEach(function(f){var id=f.attachmentId||f.id;
+    if(id&&!seen[id]&&!offered.some(function(o){return _msSameMat(o,f);})){seen[id]=1;all.push(f);}});
   all.forEach(function(f){
     (f.tags||[]).concat(f.myTags||[]).forEach(function(t){var n=_libTagName(t);if(n){tagN[t]=(tagN[t]||0)+1;tagName[t]=n;}});
     (f.privateTags||[]).forEach(function(w){tagN['p:'+w]=(tagN['p:'+w]||0)+1;tagName['p:'+w]=w;});
@@ -6107,7 +6201,7 @@ function _msPickPanel(p){
       (sel.length?'<button type="button" class="ms-pick-more" onclick="msPickTag(\'\')">'+esc(TLIB_COPY.tagMenuClear)+'</button>':'')+'</div>':'')+
     (all.length?'<div class="ms-pick-list">'+all.map(function(f){
       var fid=id(f),t=(f.tags||[]).concat(f.myTags||[]).map(_libTagName).filter(Boolean).concat(f.privateTags||[]);
-      return '<div class="ms-pick-row"><input type="checkbox"'+(_msMatHas(p.target,{kind:'file',attachmentId:fid})?' checked':'')+' aria-label="'+esc(TLIB_COPY.pickFile+': '+f.fileName)+'" onclick="msPickAdd('+jsq(fid)+')">'+
+      return '<div class="ms-pick-row"><input type="checkbox"'+(_msMatHas(p.target,{kind:'file',attachmentId:fid,label:f.fileName})?' checked':'')+' aria-label="'+esc(TLIB_COPY.pickFile+': '+f.fileName)+'" onclick="msPickAdd('+jsq(fid)+')">'+
         '<span class="lib-kind">'+esc(_attKind(f.fileName))+'</span>'+
         '<span class="ms-pick-nm"><button type="button" class="ms-pick-name" title="'+esc(f.fileName)+'" onclick="pickOpenItem('+jsq(fid)+')">'+esc(f.fileName)+'</button>'+
           (t.length?'<span class="ms-pick-ft">'+esc(t.join(' · '))+'</span>':'')+'</span>'+
@@ -6121,6 +6215,7 @@ function _msPickPanel(p){
 // teacher most often adds again. A file sent with an assignment is counted as the library file it came from; in Create
 // Assignment, one the lesson summary already offers is left to that offer.
 function _msUsed(target){
+  if(_msIsMsg(target))return [];   // [1.904] — a message is not a lesson
   var out=[],seen={},skip=target==='asg'?(MS.asg&&MS.asg.date):String(target).slice(4);
   var offered=target==='asg'?_mstOffered(skip):[];
   (MS.card&&MS.card.notes||[]).slice().sort(function(a,b){return a.lessonDate<b.lessonDate?1:-1;}).forEach(function(n){
@@ -6184,21 +6279,24 @@ function msPickSearch(v){if(!MS.pick)return;MS.pick.q=String(v||'');_pickRedraw(
 // The list a ticked item goes into: the Assignment's, or the lesson's copy being edited.
 function _msMatList(target){
   if(target==='asg')return MS.asg?MS.asg.mats:null;
+  // [1.904] — a message's files, as the Library file each came from (or the upload itself)
+  if(_msIsMsg(target))return ATT_PENDING.filter(function(a){return !a.failed;}).map(function(a){return {kind:'file',attachmentId:a.fromLibrary||a.attachmentId,label:a.fileName};});
   var ed=MS.edits[_msEditKey(String(target).slice(4))];return ed?ed.materials:null;
 }
-function _msMatHas(target,it){
-  return (_msMatList(target)||[]).some(function(m){
-    return it.kind==='link'?m.kind==='link'&&String(m.url||'').trim().toLowerCase()===String(it.url||'').trim().toLowerCase()
-                           :m.kind==='file'&&m.attachmentId===(it.attachmentId||it.id);
-  });
-}
+function _msMatHas(target,it){return (_msMatList(target)||[]).some(function(m){return _msSameMat(it,m);});}   // [1.901] — by name too
 function _msMatPush(target,m){
   var list=_msMatList(target);if(!list)return;
   list.push(target==='asg'?Object.assign({on:true},m):m);
 }
 function msPickAdd(id){
   var p=MS.pick,it=_pickFind(id);if(!p||!it)return;
-  if(_msMatHas(p.target,it)){_msMatToggle(p.target,it.kind==='link'?{kind:'link',url:it.url}:{kind:'file',attachmentId:it.attachmentId||it.id});return;}   // [1.898] — the tick takes it out
+  if(_msIsMsg(p.target)){   // [1.904] — a message attaches the file as it is ticked (as it always has), and lets it go when unticked
+    var cid=p.target.slice(4),m={kind:'file',attachmentId:it.attachmentId||it.id,label:it.fileName};
+    var on=ATT_PENDING.filter(function(a){return !a.failed&&_msSameMat(m,{kind:'file',attachmentId:a.fromLibrary||a.attachmentId,label:a.fileName});});
+    if(on.length){on.forEach(function(a){attachRemove(a.tempId);});return;}
+    libAttach(it.attachmentId||it.id,cid);return;
+  }
+  if(_msMatHas(p.target,it)){_msMatToggle(p.target,it.kind==='link'?{kind:'link',url:it.url}:{kind:'file',attachmentId:it.attachmentId||it.id,label:it.fileName||it.label});return;}   // [1.898] — the tick takes it out ([1.901]: by its name too)
   _msMatPush(p.target,it.kind==='link'?{kind:'link',label:it.label||it.fileName||it.url,url:it.url}
                                      :{kind:'file',label:it.fileName,attachmentId:it.attachmentId||it.id});
   render();
@@ -6218,6 +6316,8 @@ function _matFind(k){
   Object.keys(MS.edits||{}).forEach(function(x){ all=all.concat((MS.edits[x]&&MS.edits[x].materials)||[]); });
   return all.filter(function(m){ return (m.kind==='file'||m.kind==='link') && _matTagKey(m)===k; })[0]||null;
 }
+function matLinkKeep(k){var m=_matFind(k);if(m)libAddOpen({kind:'link', at:'mat:'+k, url:m.url, text:m.label||''});}   // [1.904]
+function matLinkNo(k){var m=_matFind(k);if(m){if(MS.asg)mstSyncHtml();m.libNo=true;}render();}
 function matTagsAsk(k, yes){
   var st=MAT_TAGS[k]; if(!st) return;
   if(yes) st.open=true; else delete MAT_TAGS[k];
@@ -6249,9 +6349,15 @@ function rMatTagAsk(m){
   if(!m || m.uploading || m.upFailed || (m.kind!=='file' && m.kind!=='link')) return '';
   var k=_matTagKey(m), st=MAT_TAGS[k];
   if(!st || (m.kind==='link' && _msLibShelf(m))) return '';
-  if(!st.open) return '<div class="lib-ask ms-tagask"><span class="lib-ask-q">'+esc(TLIB_COPY.tagsAsk)+'</span>'+
-    '<button type="button" class="lib-done" onclick="matTagsAsk('+jsq(k)+',true)">'+esc(TLIB_COPY.tagsAskYes)+'</button>'+
-    '<button type="button" class="lnk-btn" onclick="matTagsAsk('+jsq(k)+',false)">'+esc(TLIB_COPY.tagsAskNo)+'</button></div>';
+  // [1.904] — a new link: the question and card a link written into a message gets ("Add … to your library?"), so it goes
+  // into My Library NOW, with its tags — they were held on the material until Send, and a saved draft lost them. No
+  // thanks keeps it out of My Library (it went in on Send, asked or not).
+  if(m.kind==='link'){
+    if(LIBADD && LIBADD.at==='mat:'+k) return rLibAddCard('mat:'+k);
+    if(m.libNo) return '';
+    return rLibAddAsk(m.label||m.url, 'matLinkKeep('+jsq(k)+')', 'matLinkNo('+jsq(k)+')');
+  }
+  if(!st.open) return '<div class="ms-tagask">'+_tagsOpener('matTagsAsk('+jsq(k)+',true)')+'</div>';   // [1.904]
   var ch=_libTagChoices(m.label, m.tags||[], m.privateTags||[]);
   return '<div class="ms-tagask ms-tagask-open">'+
     (ch.length?'<div class="lib-lbl">'+esc(TLIB_COPY.lblTags)+'</div><div class="lib-tags" style="padding-top:0">'+_libTagChoiceHtml(ch,
@@ -6267,7 +6373,9 @@ function rMatTagAsk(m){
 }
 // Add from your device: filed into My Library, as the library's own upload is,
 // and put in the list. The composer's size and empty-file guards, and its words.
+function _msIsMsg(t){return String(t||'').indexOf('msg:')===0;}
 function msPickDevice(){
+  if(MS.pick&&_msIsMsg(MS.pick.target)){attachPick();return;}   // [1.904] — a message's own upload: its row says how it goes
   var inp=document.createElement('input');inp.type='file';inp.multiple=true;inp.accept=_attAccept();
   inp.onchange=function(){Array.prototype.slice.call(inp.files||[]).forEach(_msPickUpload);};
   inp.click();
@@ -6608,9 +6716,9 @@ function rTtplForm(i,t){
   // rich box. `ttplBodyTyped` still exists for the merge-tag inserter below.
   h+='<div class="lnk-lb">'+esc(TTPL_COPY.bodyLbl)+'</div>'+
      '<div class="composer-wrap">'+
-     rComposerToolbar('ttpl-b'+i)+
-     // [1.844] — opened by Add link and closed once the link is in, as in a message; it was always open here.
-     (PICK==='link'&&_libComposerId==='ttpl-b'+i?rComposerLinkRow('ttpl-b'+i):'')+
+     // [1.904] — the one Add link panel, from the toolbar, as in every editor (it had its own fields here, with no Saved
+     // Links); and no Add file, which opened nothing: a template holds words only.
+     rComposerToolbar('ttpl-b'+i,{noFiles:true,asg:true})+
      '<div id="ttpl-b'+i+'" class="cmp-rich" contenteditable="true" role="textbox" aria-multiline="true"'+
      ' aria-label="'+esc(TTPL_COPY.bodyLbl)+'" data-ph="'+esc(TTPL_COPY.bodyPh)+'"'+
      ' oninput="TSET.tpls['+i+'].body=_composerInput(this);TSET.tpls['+i+']._txt=false;_composerState(\'ttpl-b'+i+'\')"'+
@@ -6655,19 +6763,15 @@ function rTtplForm(i,t){
           function(c){ return c.priv ? (_tpl.privateTags||[]).indexOf(c.name)>-1 : _tplTags.indexOf(c.v)>-1; },
           function(c){ return c.priv ? 'ttplWord('+i+','+jsq(c.name)+')' : 'ttplTag('+i+','+jsq(c.v)+')'; })+
       '</div>'+
+      // [1.904] — the same New custom tag field as the Library's and the materials' (it read "Add a custom tag")
+      '<div class="lib-lbl">'+esc(TLIB_COPY.lblMine)+'</div>'+
       '<div class="lib-fld-row lib-newtag">'+
-        '<input id="ttpl-pt'+i+'" type="text" maxlength="40" placeholder="'+esc(TLIB_COPY.customAddPh)+'"'+
-          ' aria-label="'+esc(TLIB_COPY.customAddPh)+'"'+
+        '<input id="ttpl-pt'+i+'" type="text" maxlength="40" placeholder="'+esc(TLIB_COPY.privatePh)+'"'+
+          ' aria-label="'+esc(TLIB_COPY.privatePh)+'"'+
           ' onkeydown="if(event.key===\'Enter\'){event.preventDefault();ttplWordAdd('+i+');}">'+
-        '<button type="button" class="lib-act" onclick="ttplWordAdd('+i+')">'+esc(TLIB_COPY.customAdd)+'</button>'+
+        '<button type="button" class="lib-act" onclick="ttplWordAdd('+i+')">'+esc(TLIB_COPY.privateAdd)+'</button>'+
       '</div>'
-    : '<div class="lib-ask">'+
-        '<span class="lib-ask-q">'+esc(TLIB_COPY.tagsAsk)+'</span>'+
-        '<button type="button" class="lib-done" onclick="ttplTagsAsk(true)">'+
-          esc(TLIB_COPY.tagsAskYes)+'</button>'+
-        '<button type="button" class="lnk-btn" onclick="ttplTagsAsk(false)">'+
-          esc(TLIB_COPY.tagsAskNo)+'</button>'+
-      '</div>';
+    : _tagsOpener('ttplTagsAsk(true)');   // [1.904]
   h+='<div class="lnk-lb tpl-lb">'+esc(TTPL_COPY.tagsLbl)+'</div>'+
      '<div class="tpl-tags">'+TPL_TAGS_OFFERED.map(function(tag){
        return '<button type="button" class="tpl-tag" onmousedown="event.preventDefault()"'+
@@ -8609,14 +8713,14 @@ function rFamilyThread(){
   // move — so what is being written and what is already attached stay on screen
   // throughout. That is the clarity he asked for, and it is also why [1.502]'s
   // missing device-file confirmation stops mattering: the chip appears in view.
-  if(PICK && !_isPhone()){ h+=rPickPanel('family-composer'); }   // [1.520] — on a phone it goes under the controls instead
-  else if(_spin) h+='<div style="text-align:center;padding:2rem;color:var(--text3)"><span class="spin" style="font-size:20px">↻</span></div>';
+  // [1.904] — ~~[1.507] a picker takes the history's place on a desktop~~: reversed by AC's go on the review, 22 October
+  // 2026. Add file opens under Attached files and Add link under the writing row, so the conversation stays in view.
+  if(_spin) h+='<div style="text-align:center;padding:2rem;color:var(--text3)"><span class="spin" style="font-size:20px">↻</span></div>';
   // [1.371] — a thread with nothing sent but something scheduled is not an
   // empty conversation. The scheduled bubbles come LAST, where the message
   // will be when it goes.
   var _sched=(t.scheduled||[]);
-  if(PICK && !_isPhone()){ /* [1.507] — the picker has the history's space, on a desktop */ }
-  else if(_spin){ /* [1.493] — drawn above */ } else if(!t.messages.length && !_sched.length){
+  if(_spin){ /* [1.493] — drawn above */ } else if(!t.messages.length && !_sched.length){
     h+='<div class="empty-state">No messages yet — send a message to get started.</div>';
   } else {
     var _r=_convRow(t.familyId);
@@ -8686,11 +8790,9 @@ function rFamilyThread(){
   // it still is — `disabled` on the same button, in the same place.
   var _sending=(t.sending || actBusy('send'));
   var sendBtn=AMEND.kind==='edit' ? rEditActions() : (_sending
-    ?rPickButtons('family-composer')+
-      '<button class="btn btn-p" disabled>'+esc(TCH_COPY.sending)+'</button>'+
+    ?'<button class="btn btn-p" disabled>'+esc(TCH_COPY.sending)+'</button>'+
       '<button type="button" class="btn btn-s" disabled>'+esc(TCH_COPY.sendLater)+'</button>'
-    :rPickButtons('family-composer')+
-      (_upBusy
+    :(_upBusy
         ? '<button class="btn btn-p" disabled title="'+esc(TCH_COPY.sendBlockedUploading)+'">Send</button>'
         : '<button class="btn btn-p" onclick="sendFamilyMessage()">Send</button>')+
       '')+
@@ -8706,6 +8808,7 @@ function rFamilyThread(){
     // **Send is the only primary, always last, and never moves.** That is what
     // the menu buys, and it is the whole point of the proposal AC approved.
     _rMore(t, _cRow, _r)+
+    _saveLineHtml('cmp-draft-line', AMEND.kind==='edit'?null:_cmpDraftState(t.draft))+   // [1.904]
     '<span style="flex:1"></span>'+
     // [1.287] — nothing sent yet, so there is nothing to close. AC: "a
     // conversation that is opened but never started should not need to be
@@ -9339,6 +9442,7 @@ function sendFamilyMessage(sendAt){
   else t.messages=t.messages.concat([pending]);
   t.draft='';
   _attClear();         // [1.277]
+  _attKeep(ATT_OWNER);   // [1.904] — sent: nothing kept for this conversation any more
   TPL_USED=null; TPL_NAMING=false;   // [1.127] — sent, so there is nothing left to offer to save — sent, so the chips go with the draft
   _draftKeep(t, '');   // [1.336] — sent is not a draft any more
   // Stops the 5s poll delivering this same message back before the server has
@@ -9417,8 +9521,8 @@ function sendFamilyMessage(sendAt){
       // [1.277] — and the files come back with the words. They are still
       // uploaded and still unbound, so the ids are good and a retry sends them.
       ATT_PENDING=_attRows.map(function(a){ return {tempId:'t'+a.attachmentId, fileName:a.fileName,
-        mimeType:a.mimeType, sizeBytes:a.sizeBytes, uploading:false, attachmentId:a.attachmentId}; });
-      ATT_BUSY=0;
+        mimeType:a.mimeType, sizeBytes:a.sizeBytes, uploading:false, attachmentId:a.attachmentId, at:Date.now()}; });
+      ATT_BUSY=0; _attKeep(ATT_OWNER);   // [1.904]
       // [1.753] — the saved draft and the answered mark were put back above,
       // before the where-is-the-teacher check, so they hold either way.
       showMsg((r&&r.error)||'Could not send message.','e');
@@ -10109,11 +10213,10 @@ function rStaffThread(){
   // move — so what is being written and what is already attached stay on screen
   // throughout. That is the clarity he asked for, and it is also why [1.502]'s
   // missing device-file confirmation stops mattering: the chip appears in view.
-  if(PICK && !_isPhone()){ h+=rPickPanel('staff-composer'); }   // [1.520]
-  else if(_spin) h+='<div style="text-align:center;padding:2rem;color:var(--text3)"><span class="spin" style="font-size:20px">↻</span></div>';
+  // [1.904] — the conversation is never replaced by a picker (see the family thread)
+  if(_spin) h+='<div style="text-align:center;padding:2rem;color:var(--text3)"><span class="spin" style="font-size:20px">↻</span></div>';
   var _sched=(t.scheduled||[]);   // [1.371] — see the family thread above
-  if(PICK && !_isPhone()){ /* [1.507] — the picker has the history's space, on a desktop */ }
-  else if(_spin){ /* [1.493] — drawn above */ } else if(!t.messages.length && !_sched.length){
+  if(_spin){ /* [1.493] — drawn above */ } else if(!t.messages.length && !_sched.length){
     h+='<div class="empty-state">No messages yet — send a message to get started.</div>';
   } else {
     h+='<div class="msg-list">'+t.messages.map(function(_m,_i,_all){
@@ -10123,7 +10226,7 @@ function rStaffThread(){
   }
   var sendBtn=AMEND.kind==='edit' ? rEditActions() : (t.sending
     ?'<button class="btn btn-p" disabled><span class="spin">↻</span></button>'
-    :rPickButtons('staff-composer')+'<button class="btn btn-p" onclick="sendStaffMessage()">Send</button>'+
+    :'<button class="btn btn-p" onclick="sendStaffMessage()">Send</button>'+
       '<button type="button" class="btn btn-s" onclick="openSendLater()">'+esc(TCH_COPY.sendLater)+'</button>')+
     // Same row as the family thread, minus "Ask admin about this" — you do not
     // ask admin about a conversation you are already having with them.
@@ -10374,6 +10477,13 @@ function _composerSync(id){
 function _draftKeep(t, v){
   var w=_draftWhere(t);
   if(w) _draftSet(w[0], w[1], v);
+  _saveLineSet('cmp-draft-line', _cmpDraftState(v));   // [1.904]
+}
+// [1.904] — a message being written is kept as it is typed, with its files, on this device ([1.336]); the save line beside
+// Send says so (it said nothing).
+function _cmpDraftState(v){
+  var words=String(v||'').replace(/<[^>]*>/g,'').replace(/&nbsp;/g,' ').trim();
+  return (words||ATT_PENDING.some(function(a){return a.attachmentId&&!a.failed;}))?{st:'ok',t:'\u2713 '+TCH_COPY.draftKept}:null;
 }
 
 function _composerCmd(id,cmd){
@@ -10940,6 +11050,7 @@ var TLIB_COPY={
   // 'Assign tags?'"* — his words, verbatim. The two answers are mine and are
   // his to reword.
   tagsAsk:'Assign tags?', tagsAskYes:'Yes', tagsAskNo:'No',
+  addTags:'Add tags',   // [1.904] PLACEHOLDER — the one opener for tags, in place of the question above
   myTagsHead:'Custom tags',
   // ── [1.600] — PLACEHOLDERS, flagged, AC's to reword ────────────────────
   // His instruction is that a teacher may take a studio tag off their own list
@@ -10964,7 +11075,7 @@ var TLIB_COPY={
   // is curled, and [1.606] settled that a slip in a message is not a voice
   // choice. Nothing else is touched.
   studioTagsBlurb:'These are admin added tags. You can\u2019t delete these permanently, but you can add or remove them from your master list. Add them back any time. Custom tags are tags that you create when adding a file, link, or template. These can be deleted permanently. Click the small \u201cx\u201d on a tag to remove it from an item. Bulk add tags to multiple files, links, and templates at the same time by ticking the checkbox on the items.',
-  lblUrl:'Web address',   // [1.615]
+  lblUrl:'Paste Link Here',   // [1.615] — [1.904]: AC's label for it in every link form (it was "Web address")
   // [1.622] — the box says what it is for, in a title and an aria-label, the
   // same as the library's own ([1.596]). Two kinds, two verbs: a file is
   // attached to the message, a link goes into the words.
@@ -11018,7 +11129,6 @@ var TLIB_COPY={
   emptyStudio:'Nothing in the Keylab Master Library yet.',
   // AC's words, 10 September 2026. FINAL.
   emptyFiltered:"That file isn't here",
-  attaching:'Attaching…',
   attachFailed:'That file could not be attached.',
   save:'Save to Library',               // AC's own phrase, final
   saving:'Saving to your library…',
@@ -11135,8 +11245,8 @@ var TLIB_COPY={
   // display text here` ([1.517], his words, final). The labels name the same
   // two things the boxes below them ask for, so the card cannot call them one
   // thing while the box calls them another.
-  lblAddress:'Address',
-  lblDisplay:'Display text',
+  lblAddress:'Paste Link Here',   // [1.904] — AC's label for it in every link form (it was "Address")
+  lblDisplay:'Display Text',   // [1.904] — as in the message's Add link
   // Said on the press rather than guessed at: a paste of several addresses
   // cannot share one display text, and quietly dropping what a teacher typed
   // is the kind of silence this project has a rule about.
@@ -11305,7 +11415,7 @@ function rLibPickEdit(f){
     '</div>'+
     '<div class="lib-foot">'+
       (_libPicked(f)?'<button type="button" class="lib-act" onclick="libEditClose();libMasterPick('+jsq(id)+',false)">'+esc(TLIB_COPY.unshelve)+'</button>':'')+
-      '<button type="button" class="lib-act" style="margin-left:auto" onclick="libEdit('+jsq(id)+')">'+esc(TLIB_COPY.doneEditing)+'</button>'+
+      '<button type="button" class="lib-done" style="margin-left:auto" onclick="libEdit('+jsq(id)+')">'+esc(TLIB_COPY.doneEditing)+'</button>'+   // [1.904] — Done is the blue one, everywhere
     '</div>'+
   '</div>';
 }
@@ -11479,7 +11589,7 @@ function pickOpen(kind, composerId){
   _cmpHoldRow(composerId||_libComposerId);
   if(PICK===kind){ pickClose(composerId); return; }   // the pressed button, pressed again
   PICK=kind; PICK_Q=''; TPL_OPEN=false;
-  if(MS.pick&&MS.pick.target==='asg') MS.pick=null;
+  if(MS.pick&&(MS.pick.target==='asg'||_msIsMsg(MS.pick.target))) MS.pick=null;   // [1.904] — one panel open at a time
   _libComposerId=composerId||_libComposerId;
   loadLibrary();
   render();
@@ -11519,7 +11629,6 @@ function pickClose(composerId){
     var sel=window.getSelection(); sel.removeAllRanges(); sel.addRange(r);
   }catch(e){}
 }
-function pickSearch(v){ PICK_Q=String(v||''); _pickRedraw(); }
 // A press on a row. A file becomes one of [1.277]'s chips through libAttach;
 // a link goes into the words through the same insertion the paste row uses.
 // Either way the ROW says so — see rPickRow — and the picker stays open for
@@ -11579,11 +11688,6 @@ function pickOpenItem(id){
   }
   openAttachment(it.attachmentId||id, _attCanView(it.mimeType, it.fileName)?'view':'download');
 }
-// The picker's items. Files: the two shelves' files. Links: the two shelves'
-// links, plus a teacher's older quick links ([1.338], a separate sheet) that
-// are not already on the shelf by address — so nothing a teacher saved before
-// the library existed disappears from the one place they now look for it.
-function _pickFiles(mine){ return _pickFiltered(mine?_libMyFiles():LIB_SHELF_STUDIO); }   // [1.822] — My Files, then the whole Master Library
 // [1.790] — `all` returns the teacher's links unfiltered, for a caller that
 // filters by its own search (the materials picker) or not at all.
 function _pickLinks(mine, all){
@@ -11866,6 +11970,7 @@ function libAttach(id, composerId){
     rec.uploading=false;
     rec.attachmentId=r.attachment.attachmentId;
     rec.fileName=r.attachment.fileName;
+    rec.at=Date.now(); _attKeep(ATT_OWNER);   // [1.904] — kept with the draft
     ATT_BUSY--; render();
   });
 }
@@ -12002,6 +12107,7 @@ function libRename(id){
     // drawn — not what was typed.
     it.fileName=r.fileName||r.label||name;
     if(it.kind==='link') it.label=it.fileName;
+    actDone('lib:'+id, MS_COPY.saved);   // [1.904] — ✓ Saved, the one word for it
     _libRedraw();
   });
 }
@@ -12121,6 +12227,7 @@ function libLinkUrl(id){
       return;
     }
     it.url=r.url||url;
+    actDone('lib:'+id, MS_COPY.saved);   // [1.904]
     _libRedraw();
   });
 }
@@ -12630,11 +12737,9 @@ function libAddNameIn(el){ if(LIBADD) LIBADD.name=el.value; }
 // [1.601] — Yes opens the tags on the card that is already open; No is a real
 // answer and saves at once, which is what makes it a button rather than a
 // collapsed section a teacher has to notice and ignore.
-function libAddTagsAsk(yes){
-  if(!LIBADD) return;
-  if(yes){ LIBADD.tagsAsked=true; _libRedraw(); return; }
-  LIBADD.tags=[]; LIBADD.priv=[];
-  libAddGo();
+function libAddTagsAsk(yes){   // [1.904] — opens the tags; there is no No any more (Add to library keeps it untagged)
+  if(!LIBADD || !yes) return;
+  LIBADD.tagsAsked=true; _libRedraw();
 }
 function libAddTag(tagId){
   if(!LIBADD) return;
@@ -12822,13 +12927,7 @@ function rLibAddCard(at){
             : '<div class="lib-empty">'+esc(TLIB_COPY.noTagsYet)+'</div>';
         })()+
       '</div>'
-        : '<div class="lib-ask">'+
-            '<span class="lib-ask-q">'+esc(TLIB_COPY.tagsAsk)+'</span>'+
-            '<button type="button" class="lib-done" onclick="libAddTagsAsk(true)">'+
-              esc(TLIB_COPY.tagsAskYes)+'</button>'+
-            '<button type="button" class="lnk-btn" onclick="libAddTagsAsk(false)">'+
-              esc(TLIB_COPY.tagsAskNo)+'</button>'+
-          '</div>')+
+        : _tagsOpener('libAddTagsAsk(true)'))+   // [1.904]
       (LIBADD.tagsAsked
         ? '<div class="lib-fld">'+
         '<div class="lib-lbl">'+esc(TLIB_COPY.lblMine)+'</div>'+
@@ -12857,6 +12956,12 @@ function rLibAddCard(at){
 // three attachments is three offers and an unnamed one does not say which.
 // Drawn BESIDE the thing it is about, never in a corner
 // ([[lesson-status-banners]]).
+// [1.904] — one quiet "Add tags" under the thing, in place of every "Assign tags? Yes / No" (the review: No meant three
+// different things — save untagged, stop asking, or nothing yet). Nothing is asked; the tags open when wanted, and the
+// thing is kept the same either way.
+function _tagsOpener(onclick){
+  return '<div class="tag-open"><button type="button" class="tag-open-b" onclick="'+onclick+'">'+esc(TLIB_COPY.addTags)+'</button></div>';
+}
 function rLibAddAsk(name, yes, no){
   return '<div class="lib-ask">'+
     '<span class="lib-ask-t">'+esc(TLIB_COPY.keepAsk(name))+'</span>'+
@@ -14174,10 +14279,10 @@ function rLibMyTagManager(){
     (studio.length?'<p class="lib-blurb">'+esc(TLIB_COPY.studioTagsBlurb)+'</p>':'')+
     '<div class="lib-fld-row lib-newtag">'+
       '<input id="lib-newtag" type="text" value="'+esc(LIB_NEWTAG)+'" maxlength="40"'+
-        ' placeholder="'+esc(TLIB_COPY.customAddPh)+'" aria-label="'+esc(TLIB_COPY.customAddPh)+'"'+
+        ' placeholder="'+esc(TLIB_COPY.privatePh)+'" aria-label="'+esc(TLIB_COPY.privatePh)+'"'+   // [1.904] — "Your own tag", as everywhere
         ' oninput="LIB_NEWTAG=this.value"'+
         ' onkeydown="if(event.key===\'Enter\'){event.preventDefault();libCustomAdd();}">'+
-      '<button type="button" class="lib-done" onclick="libCustomAdd()">'+esc(TLIB_COPY.customAdd)+'</button>'+
+      '<button type="button" class="lib-act" onclick="libCustomAdd()">'+esc(TLIB_COPY.privateAdd)+'</button>'+   // [1.904] — the same grey Add as everywhere
     '</div>'+
     (rows.length
       ? rows.map(function(r){ return r.priv ? customRow(r.w) : studioRow(r.t); }).join('')
@@ -14567,7 +14672,7 @@ function rLibEdit(f){
   //   removals          last, behind a rule, because they undo rather than edit
   return '<div class="lib-edit">'+
     '<div class="lib-fld">'+
-      '<div class="lib-lbl">'+esc(TLIB_COPY.lblName)+'</div>'+
+      '<div class="lib-lbl">'+esc(link?TLIB_COPY.lblDisplay:TLIB_COPY.lblName)+'</div>'+   // [1.904] — a link's words are its Display Text
       '<div class="lib-fld-row">'+
         // [1.488] — Enter leaves the field, and leaving the field is what
         // saves. One behaviour, and the same one the just-added block has.
@@ -14598,6 +14703,7 @@ function rLibEdit(f){
           '</div>'+
         '</div>'
       : '')+
+    rAct('lib:'+id)+   // [1.904] — a change of name or address says ✓ Saved here, where it was made (it said nothing)
     // [1.487] — same one row here as on a just-added item. [1.824] — the
     // studio's tags and the teacher's custom tags together, A–Z, each pressed
     // on or off; the box below makes a new custom tag.
@@ -14631,8 +14737,8 @@ function rLibEdit(f){
             esc(TLIB_COPY.unshelve)+'</button>')+
       '<button type="button" class="lib-act bad" onclick="libAskDelete('+jsq(id)+')">'+
         esc(link?TLIB_COPY.linkDel:TLIB_COPY.del)+'</button>'+
-      '<button type="button" class="lib-act" style="margin-left:auto"'+
-        ' onclick="libEdit('+jsq(id)+')">'+esc(TLIB_COPY.doneEditing)+'</button>'+
+      '<button type="button" class="lib-done" style="margin-left:auto"'+
+        ' onclick="libEdit('+jsq(id)+')">'+esc(TLIB_COPY.doneEditing)+'</button>'+   // [1.904] — Done is the blue one, everywhere
     '</div>'+
   '</div>';
 }
@@ -15238,6 +15344,7 @@ function tplSaveAsDo(id){
       SAVED_TPLS=[]; _savedTplsLoaded=false; _savedTplsInFlight=false; loadSavedTpls();
       TSET.tpls=null;   // the settings panel's copy, stale the moment this saves
     }
+    actClear('tpl');   // [1.904] — it was never cleared, and the Library's template Save stayed greyed out until a reload
     showMsg(TTPL_COPY.savedToast,'s');
     render();
   });
@@ -15755,6 +15862,8 @@ var TCH_COPY={
   // list of file types accepted", so it cannot drift from what is accepted.
   attach:'Add file',
   attachHint:'Send a file. 10 MB limit. Maximum 10 files.',
+  attachKeptGone:'This file was removed after a day unsent. Add it again.',   // [1.904] PLACEHOLDER — AC's to word
+  draftKept:'Draft kept on this device',   // [1.904] PLACEHOLDER — the save line beside Send
   attachFormats:'Accepted file types',
   attachTip:'Add a file',
   // [1.137] — AC's wording, 6 September. Word for word with the family
@@ -16214,9 +16323,10 @@ function rComposerToolbar(id,opts){
         ' onmousedown="event.preventDefault()" onclick="_cmpFmtToggle('+jsq(id)+')">Aa</button>'+
       // [1.344] — see rComposer's note: on the whole-day panel these two would
       // accept a file the send cannot carry, and lose it without saying so.
-      (opts.noFiles?'':_tbPick(id,'file',TLIB_COPY.pickFile))+
-      (opts.noFiles?'':_tbPick(id,'link',TLIB_COPY.pickLink))+
-      (opts.asg?_tbPick(id,'link',TLIB_COPY.pickLink):'')+   // [1.899] — into the words, as in the lesson notes; Add file is under Materials
+      // [1.904] — Add file is not on the writing row any more, here or anywhere: it sits under the list of what goes with
+      // the message (Attached files, Materials), as the lesson summary's and the assignment's do. AC, 22 October 2026, of
+      // the review: "sounds like a good plan … build everything". This replaces [1.535]'s Add file · Add link pair here.
+      ((opts.noFiles&&!opts.asg)?'':_tbPick(id,'link',TLIB_COPY.pickLink))+
       // [1.794] — Create Assignment's own: Add file puts a file in its Materials,
       // Add link is the composer's (highlighted words become the link).
 
@@ -16230,7 +16340,9 @@ function rComposerToolbar(id,opts){
     // What the row opened, directly under it with the message just below ([1.794], AC: Add
     // link goes "above the message and under the add link buttons"). Create Assignment's
     // pickers are drawn here; Messages' are drawn where they always were ([1.507], [1.520]).
-    (opts.asg?(PICK==='link'&&_libComposerId===id?rPickPanel(id):''):'')+
+    // [1.904] — Add link opens here, under the writing row, in every editor (it opened in place of the conversation in
+    // Messages on a desktop, and under the files on a phone).
+    (PICK==='link'&&_libComposerId===id?rPickPanel(id):'')+
     (TPL_OPEN&&TPL_FOR===id?rTplPanel(id):'');
 }
 // The template list: one line each, the studio's first, the full name and its opening words
@@ -16244,8 +16356,9 @@ function rTplPanel(id){
           ' onclick="tplUse('+jsq(id)+','+jsq(t.templateId)+')">'+esc(t.label)+'</button>';
       }).join('')+'</div>'
     :'<div class="cmp-tpl-none">'+esc(TTPL_COPY.empty)+'</div>';
-  return '<div class="lib-panel cmp-panel cmp-tplpanel"><button type="button" class="cmp-px" aria-label="'+esc(TLIB_COPY.close)+'" title="'+esc(TLIB_COPY.close)+'"'+
-    ' onclick="_cmpHoldRow('+jsq(id)+');TPL_OPEN=false;render()">\u2715</button>'+list+'</div>';
+  // [1.904] — choosing a template closes the list; Cancel at its foot closes it without one (it had a ✕ in its corner).
+  return '<div class="lib-panel cmp-panel cmp-tplpanel">'+list+
+    '<div class="cmp-pfoot"><button type="button" class="cmp-pcancel" onmousedown="event.preventDefault()" onclick="_cmpHoldRow('+jsq(id)+');TPL_OPEN=false;render()">'+esc(TLIB_COPY.cancel)+'</button></div></div>';
 }
 // ── [1.794] — opening a panel under the row never moves the screen ──────
 //
@@ -16424,11 +16537,7 @@ function rComposer(id,draft,onInput,sendBtn,opts){
       rLinkOffer(id)+   // [1.844]
       // [1.277] — the chips sit between what is being written and the button
       // that sends it, which is where a file being added belongs.
-      (opts.noFiles?'':rAttachRow())+
-        // [1.520] — ON A PHONE the picker is drawn here, under the controls that
-      // opened it, which is AC's own proposal. On a desktop this is empty and
-      // the thread draws it in the message history's place ([1.507]).
-      (opts.noFiles?'':(_isPhone()?rPickPanel(id):''))+
+      (opts.noFiles?'':rAttachRow(id))+   // [1.904] — the files, Add file and its panel, on a phone and a desktop alike
     // [1.404]/[1.428] — the status for this composer, beside its buttons.
     // ── [1.455] — ONE working line, not two ────────────────────────────
     //
@@ -16913,6 +17022,7 @@ function attachUpload(file){
       rec.uploading=false;
       rec.attachmentId=r.attachment.attachmentId;
       rec.fileName=r.attachment.fileName;   // the server cleans the name; show what it stored
+      rec.at=Date.now(); _attKeep(ATT_OWNER);   // [1.904] — kept with the draft
       ATT_BUSY--; render();
     });
   };
@@ -16955,6 +17065,7 @@ function attachRemove(tempId){
   // doing nothing already does.
   ATT_PENDING=ATT_PENDING.filter(function(x){ return x.tempId!==tempId; });
   ATT_BUSY=ATT_PENDING.filter(function(x){ return x.uploading; }).length;
+  _attKeep(ATT_OWNER);   // [1.904]
   render();
 }
 function _attTakeIds(){
@@ -16962,6 +17073,7 @@ function _attTakeIds(){
                     .map(function(x){ return x.attachmentId; });
 }
 function _attClear(){ ATT_PENDING=[]; ATT_BUSY=0; PICK=''; PICK_Q=''; LINK_ADDED={}; LINK_SELECTED='';
+  if(MS.pick&&_msIsMsg(MS.pick.target)) MS.pick=null;   // [1.904]
   // [1.553] — the offer and the card go with the thread. An offer about a link
   // typed into another conversation would open a card that adds it here.
   LINK_OFFER=null; LIB_NO={};
@@ -16972,8 +17084,32 @@ function _attClear(){ ATT_PENDING=[]; ATT_BUSY=0; PICK=''; PICK_Q=''; LINK_ADDED
 // another tab, or from the list on a phone) cleared them while its words came back; now only another conversation,
 // or leaving an Edit (whose files were the sent message's), clears them.
 var ATT_OWNER='';
+// [1.904] — a message draft keeps its files. The words were kept per conversation on this device ([1.336]); the files were
+// dropped the moment another conversation was opened (the review's finding). Now the files that have arrived go with the
+// words: kept per conversation, on this device, and back when it is opened again. A file sent nowhere is removed by the
+// server a day after it went up (ATTACH_ORPHAN_MS), so one kept longer than that comes back marked to be added again.
+var ATT_KEPT_MS=23*60*60*1000;
+function _attKeptLoad(){try{return JSON.parse(localStorage.getItem('kl_teacher_draft_files')||'{}')||{};}catch(e){return {};}}
+function _attKeptSave(all){try{localStorage.setItem('kl_teacher_draft_files',JSON.stringify(all));}catch(e){}}
+function _attKeep(key){
+  if(!key)return;
+  var all=_attKeptLoad(),keep=ATT_PENDING.filter(function(a){return a.attachmentId&&!a.uploading&&!a.failed;})
+    .map(function(a){return {attachmentId:a.attachmentId,fileName:a.fileName,mimeType:a.mimeType||'',sizeBytes:a.sizeBytes||0,fromLibrary:a.fromLibrary||'',at:a.at||Date.now()};});
+  if(keep.length)all[key]=keep;else delete all[key];
+  _attKeptSave(all);
+}
+function _attKeptBack(key){
+  var kept=(_attKeptLoad()[key]||[]),now=Date.now();
+  ATT_PENDING=kept.map(function(a){
+    var gone=now-(Number(a.at)||0)>ATT_KEPT_MS;
+    return {tempId:'t'+a.attachmentId,fileName:a.fileName,mimeType:a.mimeType,sizeBytes:a.sizeBytes,uploading:false,
+      attachmentId:a.attachmentId,fromLibrary:a.fromLibrary||undefined,at:a.at,failed:gone,error:gone?TCH_COPY.attachKeptGone:''};
+  });
+  ATT_BUSY=0;
+}
 function _attForThread(key, wasEditing){
-  if(ATT_OWNER!==key || wasEditing) _attClear();
+  if(ATT_OWNER && ATT_OWNER!==key && !wasEditing) _attKeep(ATT_OWNER);   // [1.904] — the files go with the draft they belong to
+  if(ATT_OWNER!==key || wasEditing){ _attClear(); if(!wasEditing) _attKeptBack(key); }
   // and the remembered cursor: one box serves every family (and every colleague), so another conversation's
   // position put a template or link at a stale spot in this one's draft
   if(ATT_OWNER!==key){ delete _cmpLinkSel['family-composer']; delete _cmpLinkSel['staff-composer']; }
@@ -17050,50 +17186,29 @@ function attToggleFormats(){ ATT_FORMATS_OPEN=!ATT_FORMATS_OPEN; render(); }
 // invisible on a phone, which is where teachers use this — so the limits are
 // stated where they will be read, and the full list is one press away rather
 // than something you discover by being refused.
-function rAttachRow(){
+function rAttachRow(id){
+  // ── [1.904] — Attached files: the same list, button and panel as Materials ───────────────────────────────────────
+  // AC, 22 October 2026, on the review: "sounds like a good plan … build everything in one go, but make sure that you
+  // account for how this affects the entire use of the tool". So a message's files are listed as an assignment's are —
+  // kind, name (it opens the file), one status word on the row, × — with Add file under them and the one Add file panel
+  // under that. Uploads, drag and drop, paste and the ten-file limit are unchanged; the limits line moves into the panel.
+  var tgt='msg:'+id, p=MS.pick&&MS.pick.target===tgt?MS.pick:null;
   var h='<input type="file" id="att-file" class="att-input" multiple '+
         'accept="'+_attAccept()+'" onchange="attachChosen(this)">'+
-        '<div class="att-guide">'+esc(TCH_COPY.attachHint)+
-          ' <button type="button" class="att-formats" onclick="attToggleFormats()">'+
-          esc(TCH_COPY.attachFormats)+'</button>'+
-          (ATT_FORMATS_OPEN?'<span class="att-formats-list">'+esc(_attFormatList())+'</span>':'')+
-        '</div>';
-  if(!ATT_PENDING.length) return h;
-  // [1.403] — the family portal's twin, same two states, same wording. The
-  // finished state is the loud one: a chip with an × reads as an input
-  // control, not as confirmation that the file is attached.
-  var _up=ATT_PENDING.filter(function(a){ return a.uploading; });
-  if(_up.length){
-    h+='<div class="att-banner"><span class="spin">&#8635;</span> '+
-       esc(_up.length>1?TCH_COPY.attachMany:TCH_COPY.attachOne)+'</div>';
-  }
-  var _done=ATT_PENDING.filter(function(a){ return !a.uploading; });
-  if(_done.length){
-    h+='<div class="att-done">'+
-       '<div class="att-done-hd">'+esc(TCH_COPY.attachedHead)+'</div>'+
-       _done.map(function(a){
-         return '<div class="att-done-row'+(a.failed?' bad':'')+'">'+
-           '<span class="att-tick">'+(a.failed?'&#33;':'&#10003;')+'</span>'+
-           '<span class="att-chip-name">'+esc(a.fileName)+'</span>'+
-           '<span class="att-size">'+esc(_attSize(a.sizeBytes))+'</span>'+
-           (a.failed?'<span class="att-err">'+esc(a.error||TCH_COPY.attachFailed)+'</span>':'')+
-           '<button type="button" class="att-x" aria-label="'+esc(TCH_COPY.attachRemove)+'"'+
-             ' onclick="attachRemove('+jsq(a.tempId)+')">&#215;</button></div>'+
-           // ── [1.553] — the offer, under the file it is about ─────────────
-           //
-           // **AC:** *"Add Blues Scale — Position 1.pdf to your library? / Add /
-           // No thanks"*, and *"ask every time"* — once per file, so saying No
-           // thanks to this one changes nothing about the next.
-           //
-           // [1.465]'s Save to Library button is GONE FROM HERE and its job is
-           // done by this: two controls for one act, one of them silent about
-           // tags, is how a library fills with untagged files. It stays on a
-           // file in a SENT message, which is a different question — keeping
-           // something somebody else named, not filing something you are adding.
-           _rAttKeep(a);
-       }).join('')+'</div>';
-  }
-  return h;
+        '<div class="mst-mats msg-att cz"><div class="ms-lab">'+esc(TCH_COPY.attachedHead)+'</div>';
+  ATT_PENDING.forEach(function(a){
+    var said=a.uploading?'<span class="lib-said working"><span class="spin">&#8635;</span> '+esc(TCH_COPY.attachOne)+'</span>'
+      :a.failed?'<span class="lib-said bad">'+esc(a.error||TCH_COPY.attachFailed)+'</span>'
+      :'<span class="lib-said">&#10003; '+esc(TLIB_COPY.fileAttached)+'</span>';
+    h+='<div class="ms-mat'+(a.failed?' bad':'')+'"><span class="ms-k">'+esc(MS_COPY.file)+'</span><span class="ms-ml">'+
+      (a.attachmentId&&!a.failed?'<button type="button" class="ms-matopen" onclick="openAttachment('+jsq(a.attachmentId)+',\'view\')">'+esc(a.fileName)+'</button>':esc(a.fileName))+'</span>'+
+      said+'<button type="button" class="ms-x" aria-label="'+esc(TCH_COPY.attachRemove)+'" title="'+esc(TCH_COPY.attachRemove)+'" onclick="attachRemove('+jsq(a.tempId)+')">✕</button></div>'+
+      // ── [1.553] — the offer, under the file it is about ─────────────
+      // **AC:** *"Add Blues Scale — Position 1.pdf to your library? / Add / No thanks"*, and *"ask every time"*.
+      (a.uploading?'':_rAttKeep(a));
+  });
+  return h+'<div class="ms-matbtns"><button type="button" class="btn ms-sm btn-s'+(p?' ms-on':'')+'" aria-pressed="'+(p?'true':'false')+'"'+
+    ' onclick="msPickOpen('+jsq(tgt)+',\'file\')">'+esc(TLIB_COPY.pickFile)+'</button></div>'+(p?rPickPanel('',p):'')+'</div>';
 }
 // Drawn per file, and only where there is something to ask or show: a failed
 // upload has nothing to shelve, a file already on the shelf has nowhere to go,
@@ -17138,33 +17253,8 @@ function libKeepPick(attachmentId){
   var src=_libFind(rec.fromLibrary);
   libAddOpen({kind:'pick', at:'att:'+attachmentId, attachmentId:attachmentId, itemId:rec.fromLibrary, name:(src&&src.fileName)||rec.fileName||''});
 }
-// [1.494] — Add file · Add link · (Edit Message, while a picker is open),
-// beside Send, in "the row where the things you do with a message already
-// live" — [1.234]'s own words. Not on the formatting toolbar.
-function rPickButtons(composerId){
-  function b(kind, label){
-    return '<button type="button" class="btn btn-s'+(PICK===kind?' lib-on':'')+'"'+
-      ' aria-pressed="'+(PICK===kind?'true':'false')+'"'+
-      ' onclick="pickOpen(\''+kind+'\','+jsq(composerId)+')">'+esc(label)+'</button>';
-  }
-  // ── [1.524] — Done follows the PANEL, not a fixed spot ─────────────────
-  //
-  // AC, 10 September 2026: *"On desktop, the done button is placed correctly in
-  // the new location, but on mobile the button needs to appear with the other
-  // buttons."*
-  //
-  // **Right, and the reason is [1.520].** On a desktop the panel is up where the
-  // history was, far from this row, so Done belongs with the panel it ends. On a
-  // phone the panel is directly under these buttons, so the panel's own footer is
-  // below the fold and Done belongs here, with everything else the thumb is on.
-  // **One control either way — it is drawn in exactly one of the two places.**
-  // [1.532] — Add file and Add link have moved to the TOOLBAR, where writing
-  // happens. This row keeps only what you press when you are finished, so Done
-  // is all that is left of the pair.
-  return ((PICK && _isPhone())
-      ? '<button type="button" class="btn btn-p" onclick="pickClose('+jsq(composerId)+')">'+esc(TLIB_COPY.editMessage)+'</button>'
-      : '');
-}
+// [1.904] — ~~rPickButtons: Done beside Send on a phone ([1.524])~~ gone: every panel ends with its own one Done, and a
+// blue Done beside the blue Send was two look-alike buttons for two different things (the review's finding).
 // The picker itself. One shape for both kinds: the new thing first, the
 // search, the two shelves holding only that kind, Manage Library last.
 // [1.790] — `mat` is the second destination: a lesson's or an Assignment's
@@ -17198,65 +17288,23 @@ function rPickPanel(composerId, mat){
         (mineL.length?'<optgroup label="'+esc(TLIB_COPY.mineLinksHd)+'">'+mineL.map(opt).join('')+'</optgroup>':'')+
         (studioL.length?'<optgroup label="'+esc(TLIB_COPY.studio)+'">'+studioL.map(opt).join('')+'</optgroup>':'')+'</select></label>'
       : '';
-    return '<div class="lib-panel cmp-panel cmp-linkpanel" id="pick-panel"><button type="button" class="cmp-px" aria-label="'+esc(TLIB_COPY.close)+'" title="'+esc(TLIB_COPY.close)+'"'+
-      ' onclick="pickClose('+jsq(cid)+')">\u2715</button>'+rComposerLinkRow(cid)+menu+'</div>';
+    // [1.904] — one way out of every panel, at its foot: Insert link (or a saved link) closes it with the link in; Cancel
+    // closes it without. The ✕ in its corner went (the review: × and ✕ and Done, three looks for one act).
+    return '<div class="lib-panel cmp-panel cmp-linkpanel" id="pick-panel">'+rComposerLinkRow(cid)+menu+
+      '<div class="cmp-pfoot"><button type="button" class="cmp-pcancel" onmousedown="event.preventDefault()" onclick="pickClose('+jsq(cid)+')">'+esc(TLIB_COPY.cancel)+'</button></div></div>';
   }
-  // From here on it is a message's picker: the materials have their own panel ([1.898]).
-  var file=(kind==='file'), q=PICK_Q;
-  // [1.822] — My Files or My Links, then the whole Keylab Master Library, closed with its count until opened or
-  // searched, so the studio's material is reachable without guessing a name.
-  var mine=file?_pickFiles(true):_pickLinks(true);
-  var studio=file?_pickFiles(false):_pickLinks(false);
-  mine=_libSort(mine); studio=_libSort(studio);   // [1.823] — in the order the Library's Sort is set to
-  var close='pickClose('+jsq(composerId)+')';
-  var h='<div class="lib-panel pick-in-thread" id="pick-panel">'+
-    '<div class="lib-hd"><span class="lib-hd-t">'+esc(file?TLIB_COPY.pickFile:TLIB_COPY.pickLink)+'</span>'+
-      '<button type="button" class="modal-x" aria-label="'+esc(TLIB_COPY.close)+'"'+
-        ' onclick="'+close+'">&#215;</button></div>';
-  if(file){
-    h+='<button type="button" class="btn btn-p pick-from" onclick="attachPick()">'+esc(TLIB_COPY.fromDevice)+'</button>';
-    // [1.516] — an affordance nobody can see is not built. Drag-and-drop and
-    // paste are invisible by nature, so the one place a person is already
-    // looking to add a file says they exist.
-    //
-    // PLACEHOLDER WORDING, flagged: teacher-facing, so it is AC's to write.
-    h+='<div class="att-guide">'+esc(TLIB_COPY.dropHint)+'</div>';
-  } else {
-    h+=rComposerLinkRow(composerId);
-  }
-  h+='<input id="pick-q" class="lib-search" type="text" value="'+esc(q)+'"'+
-       ' placeholder="'+esc(file?TLIB_COPY.searchFiles:TLIB_COPY.searchLinks)+'"'+
-       ' aria-label="'+esc(file?TLIB_COPY.searchFiles:TLIB_COPY.searchLinks)+'"'+
-       ' oninput="pickSearch(this.value)">';
-  if(!mine.length && !studio.length && q){
-    h+='<div class="lib-empty">'+esc(file?TLIB_COPY.emptyFiltered:TLIB_COPY.emptyPickLinks)+'</div>';
-  } else {
-    var pk=file?'file':'link';
-    h+=rPickShelf(file?TLIB_COPY.mineFilesHd:TLIB_COPY.mineLinksHd, mine, composerId, null, pk+'-mine', q)+
-       rPickShelf(TLIB_COPY.studio, studio, composerId, null, pk+'-studio', q);
-  }
-  // ── [1.508] — Done lives HERE, with the panel it ends ──────────────────
-  //
-  // AC, 10 September 2026: *"The done button should be blue and next to the
-  // manage library button, not with the other buttons."*
-  //
-  // It was beside Send, which was right when [1.494] called it Edit Message and
-  // the job was getting back to the box. Now that it ENDS the picking, it
-  // belongs to the picker: the last control in the panel, primary, so the way
-  // out is the most prominent thing in the thing you are trying to leave.
-  // Manage Library stays a quiet link beside it — it goes somewhere else, and
-  // two primary buttons in one row would be two answers to one question.
-  h+='<div class="lib-foot">'+
-     (_isPhone()?'':'<button type="button" class="lib-done" onclick="'+close+'">'+esc(TLIB_COPY.editMessage)+'</button>')+
-     '<button type="button" class="lnk-btn" onclick="libraryOpen()">'+esc(TLIB_COPY.manageGo)+'</button></div>';
-  return h+'</div>';
+  // [1.904] — nothing else is drawn here any more. A message's Add file is the one Add file panel, under its Attached
+  // files (rAttachRow → _msPickPanel), as a lesson summary's and an assignment's are; this was its old picker — the × and
+  // a Done, two dark blue bands closed until clicked ([1.808]), a tick that could not be unticked — and could no longer be
+  // opened.
+  return '';
 }
 // [1.869] — the files chosen from the device while this box has been open, one line each, in the box's own words.
 function _msPickDevHtml(p){
   return (p.dev||[]).map(function(dv){
     var m=dv.m,ok=m&&!m.uploading&&!m.upFailed&&!dv.err;
     var st=dv.err?'<span class="lib-said bad">'+esc(dv.err)+'</span>'
-      :m&&m.uploading?'<span class="lib-said working"><span class="spin">&#8635;</span> '+esc(TLIB_COPY.attaching)+'</span>'
+      :m&&m.uploading?'<span class="lib-said working"><span class="spin">&#8635;</span> '+esc(TCH_COPY.attachOne)+'</span>'
       :ok?'<span class="lib-said">&#10003; '+esc(TLIB_COPY.fileAttached)+'</span>':'';
     return '<div class="pick-dev"><span class="pick-dev-n">'+esc((m&&m.label)||dv.name)+'</span>'+st+'</div>'+(ok?rMatTagAsk(m):'');
   }).join('');
@@ -17264,86 +17312,8 @@ function _msPickDevHtml(p){
 // Whether the open box is asking a file's "Assign tags?" itself, so Materials does not ask it twice; once the box
 // closes, an unanswered one is asked under the file in Materials again.
 function _msPickAsks(m){return !!(MS.pick&&(MS.pick.dev||[]).some(function(dv){return dv.m===m&&!dv.err;}));}
-// A shelf with nothing on it draws nothing: there is nothing to pick.
-// ── [1.808] — the two shelves are dark blue headers that open and close ──
-// AC, 8 October 2026: "The screenshot of the assignment creator shows expanded your saved files and keylab
-// master library. They should be dark blue banners that expand and collapse when clicked." The Library's own
-// band (.lib-band, [1.619]), closed at rest with how many it holds; a search opens the ones it found something
-// in, as the Library's shelves do ([1.546]). One state for the picker wherever it is drawn.
-var PICK_SHELF_OPEN={};   // 'file-mine', 'file-studio', 'link-mine', 'link-studio'
-function pickShelfToggle(k){
-  PICK_SHELF_OPEN[k]=!PICK_SHELF_OPEN[k];
-  // [1.823] — the panel, where it is. render() rebuilt the page and the panel jumped back to its top, taking the
-  // section just opened out of sight.
-  if(MS.pick) _pickRedraw(MS.pick); else if(PICK) _pickRedraw(); else render();
-}
-function rPickShelf(label, items, composerId, mat, key, q){
-  if(!items.length) return '';
-  var open=!!String(q||'').trim()||!!PICK_SHELF_OPEN[key];
-  return '<div class="lib-shelf pick-shelf"><div class="lib-band lib-band-wrap pick-band">'+
-      '<button type="button" class="lib-band-btn" aria-expanded="'+(open?'true':'false')+'" onclick="pickShelfToggle('+jsq(key)+')">'+
-      esc(label)+'<span class="zcount">'+items.length+'</span></button></div>'+
-    (open?'<div class="lib-list">'+items.map(function(f){ return rPickRow(f, composerId, mat); }).join('')+'</div>':'')+'</div>';
-}
-// The row says what happened to it — AC's two words, on the row the thumb
-// pressed, never in a corner ([[lesson-status-banners]]).
-function rPickRow(f, composerId, mat){
-  var id=f.id||f.attachmentId;
-  var link=f.kind==='link';
-  var said='', rec=null;
-  if(mat){
-    // [1.790] — in the materials, "in" means already on the list.
-    if(_msMatHas(mat.target, f)) said='<span class="lib-said">&#10003; '+esc(link?TLIB_COPY.linkAdded:TLIB_COPY.fileAttached)+'</span>';
-  } else if(link){
-    // [1.622] — `LINK_SELECTED` said "this link is sitting in the fields waiting
-    // for Add link". Nothing sets it now: a tick inserts. The state is removed
-    // rather than left drawn and unreachable.
-    if(LINK_ADDED[id]) said='<span class="lib-said">&#10003; '+esc(TLIB_COPY.linkAdded)+'</span>';
-  } else {
-    rec=ATT_PENDING.filter(function(a){ return a.fromLibrary===id; })[0];
-    if(rec){
-      said = rec.uploading ? '<span class="lib-said working"><span class="spin">&#8635;</span> '+esc(TLIB_COPY.attaching)+'</span>'
-           : rec.failed    ? '<span class="lib-said bad">'+esc(rec.error||TLIB_COPY.attachFailed)+'</span>'
-           :                 '<span class="lib-said">&#10003; '+esc(TLIB_COPY.fileAttached)+'</span>';
-    }
-  }
-  // ── [1.622] — the TICK adds it; the NAME opens it ──────────────────────
-  //
-  // **AC, 13 September 2026:** *"Throughout the library, clicking on the name of
-  // a file or link should open it. Clicking edit allows editing. When attaching
-  // a file in the composer for teacher, there needs to be a checkbox to tick to
-  // add it so the teacher can bulk add files and/or links. Currently the only
-  // way for a teacher to add is to click the title, which should only open the
-  // file or link."*
-  //
-  // **[1.613] made the name open the item everywhere EXCEPT here**, because
-  // this row's press was the only way to attach and taking it away would have
-  // left no way at all. The box is that way, and it is the same box the library
-  // screen already uses — so one gesture means "several of these" on both
-  // screens.
-  //
-  // **Ticked and disabled once it is in**, beside the ✓ the row already says.
-  // Taking a file back out is the composer's own job: the attachment sits under
-  // the message with its own remove, and a second control for that would be two
-  // answers to one question.
-  var _on=mat ? _msMatHas(mat.target, f) : link ? !!LINK_ADDED[id] : !!(rec && !rec.failed);
-  var _busy=!!(rec && rec.uploading);
-  return '<div class="lib-row'+(link?' lib-link':'')+'">'+
-    '<div style="display:flex;align-items:flex-start;gap:8px">'+
-      '<input type="checkbox" class="lib-tick"'+(_on?' checked':'')+((_on||_busy)?' disabled':'')+
-        ' onclick="event.stopPropagation();'+(mat?'msPickAdd('+jsq(id)+')':'pickAdd('+jsq(id)+','+jsq(composerId)+')')+'"'+
-        // [1.790] — in the materials nothing goes "to this message": the picker's own two words.
-        ' title="'+esc(mat?(link?TLIB_COPY.pickLink:TLIB_COPY.pickFile):(link?TLIB_COPY.pickTickLink:TLIB_COPY.pickTickFile))+'"'+
-        ' aria-label="'+esc(mat?(link?TLIB_COPY.pickLink:TLIB_COPY.pickFile):(link?TLIB_COPY.pickTickLink:TLIB_COPY.pickTickFile))+': '+esc(f.fileName)+'">'+
-      '<button type="button" class="lib-pick" title="'+esc(link?f.url:f.fileName)+'"'+
-        ' onclick="pickOpenItem('+jsq(id)+')">'+
-        '<span class="lib-kind">'+esc(link?TLIB_COPY.linkKind:_attKind(f.fileName))+'</span>'+
-        '<span class="lib-name">'+esc(f.fileName)+'</span>'+
-      '</button>'+
-    '</div>'+
-    '<div class="lib-row-foot"><span class="lib-meta">'+esc(link?_libLinkHost(f.url):_attSize(f.sizeBytes))+'</span>'+said+'</div>'+
-  '</div>';
-}
+// [1.904] — the message picker's shelves and rows (pickShelfToggle, rPickRow) went with it: a message's Add file is the one
+// Add file panel (_msPickPanel).
 
 // ── [1.276] — one merge for every poll in this file ─────────────────────
 // Three things can come back from a poll now, not one: messages that arrived,
@@ -18700,6 +18670,7 @@ function sendStaffMessage(sendAt){
   else t.messages=t.messages.concat([pending]);
   t.draft='';
   _attClear();         // [1.277]
+  _attKeep(ATT_OWNER);   // [1.904] — sent: nothing kept for this conversation any more
   TPL_USED=null; TPL_NAMING=false;   // [1.127] — sent, so there is nothing left to offer to save
   _draftKeep(t, '');   // [1.336]
   // [1.531] — nothing to reset; the flag is gone from this portal.
@@ -18750,8 +18721,8 @@ function sendStaffMessage(sendAt){
       else t.messages=t.messages.filter(function(m){ return m!==pending; });
       t.draft=html;
       ATT_PENDING=_attRows.map(function(a){ return {tempId:'t'+a.attachmentId, fileName:a.fileName,   // [1.277]
-        mimeType:a.mimeType, sizeBytes:a.sizeBytes, uploading:false, attachmentId:a.attachmentId}; });
-      ATT_BUSY=0;
+        mimeType:a.mimeType, sizeBytes:a.sizeBytes, uploading:false, attachmentId:a.attachmentId, at:Date.now()}; });
+      ATT_BUSY=0; _attKeep(ATT_OWNER);   // [1.904]
       // [1.753] — draft and answered mark already put back above.
       showMsg((r&&r.error)||'Could not send message.','e');
       render();
@@ -18925,7 +18896,7 @@ function doSignOut(){
   API_KEEP={}; API_KEEP_AT={}; API_THISWEEK='';   // [1.736] — nothing held survives signing out
   _ktClearSession();
   // [1.336] — drafts are this teacher's unsent words on a shared machine.
-  DRAFTS={}; try{ localStorage.removeItem('kl_teacher_drafts'); }catch(e){}
+  DRAFTS={}; try{ localStorage.removeItem('kl_teacher_drafts'); localStorage.removeItem('kl_teacher_draft_files'); }catch(e){}   // [1.904] — and the files kept with them
   // [1.465] — this teacher's shelves go with them off a shared machine, and so
   // does the panel's open state. The remembered FILTER stays: it is a tag
   // preference, not anybody's material, and it is what makes the next sign-in

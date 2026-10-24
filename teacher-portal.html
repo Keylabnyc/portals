@@ -2040,6 +2040,9 @@ mark.guide-hit{background:var(--bbg);color:inherit;border-radius:2px;padding:0 1
 .mst-row.on{background:#fff;border-color:#1a4fc4;box-shadow:inset 3px 0 0 #1a4fc4}
 .mst-t{flex:0 0 44px;font-weight:700;font-size:12.5px;font-variant-numeric:tabular-nums;color:var(--text2)}
 .mst-rm{flex:1;min-width:0}
+/* [1.915] — the newest message on its way; [1.916] — the box to tick before ending without replying */
+.msg-coming{font-size:12px;color:var(--text3);padding:6px 4px;text-align:right}
+.end-nr{display:flex;align-items:center;gap:6px;font-size:13px;margin-bottom:.55rem;cursor:pointer;text-transform:none;letter-spacing:0}
 /* [1.912] — the follow-up star beside each row, admin's .fu (amber when on); its note on the row while it is on */
 .mst-rowx{display:flex;align-items:stretch;gap:4px;margin-bottom:6px}.mst-rowx .mst-row{margin-bottom:0;flex:1 1 auto;min-width:0}
 .fu{font-size:11px;cursor:pointer;background:none;border:1px solid transparent;padding:2px 5px;border-radius:4px;color:var(--text4);font-family:"Inter",sans-serif}
@@ -2061,7 +2064,7 @@ mark.guide-hit{background:var(--bbg);color:inherit;border-radius:2px;padding:0 1
 .td-tag.cl{background:var(--rbg);color:var(--rt);border-color:var(--red)}.td-tag.op{background:var(--gbg);color:var(--gt);border-color:var(--green)}
 .td-none{font-size:12px;color:var(--text4);padding:.35rem 0}
 .td-btns{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.td-btns .btn{width:auto}
-.td-note{font-size:11px;color:var(--text3);line-height:1.5;margin-top:6px}
+
 .mst-rm b{display:block;font-size:13.5px;line-height:1.3}
 .mst-sub{display:block;font-size:11.5px;color:var(--text4);line-height:1.4;overflow:hidden;text-overflow:ellipsis}
 .mst-pill{flex:0 0 auto;font-size:10.5px;font-weight:700;border-radius:10px;padding:1px 8px;white-space:nowrap}
@@ -2390,7 +2393,10 @@ Object.defineProperty(FAMILY_THREADS, 'list', { get: function(){
             closedAt:r.closedAt, closedUnanswered:r.closedUnanswered,
             lastMessageText:r.lastMessageText, lastSenderName:r.lastSenderName,
             lastSenderIsTeacher:r.lastSenderIsTeacher,
-            hasMessages:r.hasMessages};
+            hasMessages:r.hasMessages,
+            // [1.916] — and whether the family is waiting for a reply. Dropped here since this view was made (@718, 4
+            // September), so End Conversation's question ([1.438], _owesFamilyReply) has never once been asked.
+            awaitingReply:r.awaitingReply};
   });
 } });
 Object.defineProperty(FAMILY_THREADS, 'loading', { get: function(){ return THREADS.loading; } });
@@ -3785,8 +3791,8 @@ var GUIDE_COPY={
        q:'Cancel lessons in Opus: click {{Opus Schedule}}. During cancellation, Opus prompts you to leave a message for the family.'},
       // [1.910] [1.911] [1.912] — PLACEHOLDER sentences for AC to read.
       {n:'Upcoming Important Dates', k:'holiday closure closed calendar dates no lesson schools recess google',
-       q:'{{Upcoming Important Dates}} lists the next three studio dates that fall on days you teach, and whether the studio is closed. Click {{All Important Dates}} to see them all, and {{Hide Dates}} to close the list.', m:[
-        'Click {{Keylab Google Calendar}} for the full studio calendar, and {{Opus Schedule}} for your lessons in Opus.'
+       q:'{{Upcoming Important Dates}} lists the studio\u2019s next three dates, and whether the studio is open or closed. Click {{All Important Dates}} to see them all, and {{Hide Dates}} to close the list.', m:[   // [1.913] — every date
+        'Click {{Opus Schedule}} for your full schedule in Opus, and {{Keylab Google Calendar}} for the studio calendar.'
       ]},
       {n:'Birthday', k:'birthday birthdays bd countdown purple',
        q:'A purple number beside a student\u2019s name counts down the days to their birthday, from two weeks before. On the day it says {{BD!}}.'},
@@ -3941,7 +3947,8 @@ var GUIDE_COPY={
       ]},
       {n:'End Conversation', k:'archive archived close resolve resolved done finish no reply needed',
        q:'Click {{More}}, then {{End Conversation}}, to close a resolved conversation. It moves to {{Archived Conversations}}.', m:[
-        'Use it when a conversation is resolved or a message needs no reply. Ending it stops the reply clock and the reminders. If a reply is still owed, you are asked to confirm, and admin can see it ended without a reply.',
+        // [1.916] — PLACEHOLDER sentence for AC to read.
+        'Use it when a conversation is resolved or a message needs no reply. Ending it stops the reply clock and the reminders. If the family is waiting for a reply, tick {{End without replying}} first, for a conversation settled another way, such as in person. Admin can see it ended without a reply.',
         'If you have messages saved for review, you will be asked to clear them first. Click {{Proceed}} to clear them and end it.',
         'If anyone writes again, the conversation returns to {{Messages}}. In {{Admin & staff}}, {{End Conversation}} is beside {{Send}}.',
         // [1.907] — PLACEHOLDER sentence for AC to read.
@@ -4607,32 +4614,34 @@ function loadOpusUrl(){
 }
 // ── [1.910] — Important dates, as the family portal has them ───────────────────────────────────────────────────────────
 // AC, 23 October 2026: "Important dates with same buttons and options just like on the family portal with the same links
-// to Opus, etc." The family's Schedule card ([1.599], [1.606]): Upcoming Important Dates — the next three studio dates on
-// the family's lesson days, each with its badge ([1.582], [1.875]) — All Important Dates / Hide Dates, AC's note, and the
-// Keylab Google Calendar button. Here the days are the ones this teacher teaches. Its words are AC's own, from the
-// family portal. Its Opus link is Opus Schedule, directly above: AC made that the one way into Opus from this tab on
-// 7 October (the red Cancel a Lesson button went to the same page), so it is not drawn a second time.
+// to Opus, etc." The family's Schedule card ([1.599], [1.606]): Upcoming Important Dates, each with its badge ([1.582],
+// [1.875]), All Important Dates / Hide Dates and the Keylab Google Calendar button; its words are AC's own, from the
+// family portal. No red Cancel a Lesson: AC made Opus Schedule the one way into Opus from this tab on 7 October (the
+// Cancel button went to the same page). [1.913] — every studio date, and Opus Schedule among the buttons (see above).
 var TCH_DATES={list:null,cal:'',all:false};
+// ── [1.913] — every studio date, not only the teacher's lesson days ─────────────────────────────────────────────────────
+// AC, 23 October 2026, on @900: "the message under the important dates saying only dates occurring on your lesson day are
+// listed … is incorrect. Teachers have students on multiple days and should be able to see all important dates that the
+// studio is open or closed for full context. Families are the ones that need the limited view as is currently built for
+// them. The teacher needs to see their full schedule in Opus not the Google calendar". And: "There should be a link to
+// the teachers Opus schedule as well as a link to the Google calendar and all important dates." So every upcoming studio
+// date, open or closed, one row each with its dates (a range for a recess); no note; Opus Schedule, Keylab Google
+// Calendar and All Important Dates under them. ~~[1.910]: only the teacher's lesson days, with the family's note.~~
 var TCH_DATES_COPY={head:'Upcoming Important Dates',all:'All Important Dates',hide:'Hide Dates',   // AC, 12 September 2026 ([1.606])
-  note:'Only dates occurring on your lesson day are listed. See Keylab Google calendar for full studio schedule',   // AC ([1.599])
   cal:'Keylab Google Calendar',closed:'Closed',noLesson:'No lesson',open:'Keylab is open',
   schoolsOpen:'NYC public schools closed, Keylab open',   // AC, 9 October 2026 ([1.875])
-  none:'No closures fall on your lesson days.'};
-var _TD_IDX={Sunday:0,Monday:1,Tuesday:2,Wednesday:3,Thursday:4,Friday:5,Saturday:6};
+  none:'No upcoming dates.'};   // PLACEHOLDER
 function _tdYmdDate(ymd){var p=String(ymd||'').split('-');return p.length===3?new Date(+p[0],+p[1]-1,+p[2]):new Date(NaN);}
-// Every studio date that falls on a day this teacher teaches, from today, each date once, in date order.
+// Every studio date still to come (or under way), once each, in date order, with its dates as the family portal says a range.
 function _tdHits(){
-  var days={};_mstR().students.forEach(function(s){if(s.day&&_TD_IDX.hasOwnProperty(s.day))days[_TD_IDX[s.day]]=1;});
-  var today=_tdYmdDate(_mstToday()),hits=[];
-  (TCH_DATES.list||[]).forEach(function(e){
-    var d=_tdYmdDate(e.startDate),end=_tdYmdDate(e.endDate||e.startDate),guard=0;
-    if(isNaN(d.getTime())||isNaN(end.getTime()))return;
-    while(d<=end&&guard++<400){
-      if(d>=today&&days[d.getDay()])hits.push({e:e,d:new Date(d.getTime())});
-      d.setDate(d.getDate()+1);
-    }
-  });
-  return hits.sort(function(a,b){return a.d-b.d;});
+  var today=_tdYmdDate(_mstToday());
+  return (TCH_DATES.list||[]).map(function(e){return {e:e,d:_tdYmdDate(e.startDate),end:_tdYmdDate(e.endDate||e.startDate)};})
+    .filter(function(h){return !isNaN(h.d.getTime())&&!isNaN(h.end.getTime())&&h.end>=today;})
+    .sort(function(a,b){return a.d-b.d;});
+}
+function _tdWhen(h){
+  var day={weekday:'short',month:'short',day:'numeric'},md={month:'short',day:'numeric'};
+  return h.end.getTime()===h.d.getTime()?h.d.toLocaleDateString('en-US',day):h.d.toLocaleDateString('en-US',md)+' \u2013 '+h.end.toLocaleDateString('en-US',md);
 }
 function _tdRow(h){
   var e=h.e,c=TCH_DATES_COPY;
@@ -4640,16 +4649,17 @@ function _tdRow(h){
     :(!e.closed&&e.schoolsClosed)?'<span class="td-tag op">'+esc(c.schoolsOpen)+'</span>'
     :'<span class="td-tag '+(e.closed?'cl':'op')+'">'+esc(e.closed?c.closed:c.open)+'</span>';
   return '<div class="td-date"><div><div class="td-ev">'+esc(e.event||'')+'</div>'+
-    '<div class="td-when">'+esc(h.d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}))+'</div></div>'+tag+'</div>';
+    '<div class="td-when">'+esc(_tdWhen(h))+'</div></div>'+tag+'</div>';
 }
 function rTchDates(){
   if(!TCH_DATES.list||!TCH_DATES.list.length)return '';
   var hits=_tdHits(),shown=TCH_DATES.all?hits:hits.slice(0,3);
   return '<div class="td-card"><div class="td-hd">'+esc(TCH_DATES_COPY.head)+'</div>'+
     (shown.length?shown.map(_tdRow).join(''):'<div class="td-none">'+esc(TCH_DATES_COPY.none)+'</div>')+
-    '<div class="td-btns"><button type="button" class="btn btn-s ms-sm" aria-expanded="'+(TCH_DATES.all?'true':'false')+'" onclick="TCH_DATES.all=!TCH_DATES.all;render()">'+esc(TCH_DATES.all?TCH_DATES_COPY.hide:TCH_DATES_COPY.all)+'</button>'+
-      (TCH_DATES.cal?'<a class="btn btn-s ms-sm" href="'+esc(TCH_DATES.cal)+'" target="_blank" rel="noopener">'+esc(TCH_DATES_COPY.cal)+'</a>':'')+'</div>'+
-    '<div class="td-note">'+esc(TCH_DATES_COPY.note)+'</div></div>';
+    // [1.913] — Opus Schedule (the teacher's own schedule), Keylab Google Calendar, All Important Dates, in AC's order
+    '<div class="td-btns"><a class="btn btn-s ms-sm" href="'+esc(_opusHref())+'" target="_blank" rel="noopener">'+esc(OPUS_COPY.view)+'</a>'+
+      (TCH_DATES.cal?'<a class="btn btn-s ms-sm" href="'+esc(TCH_DATES.cal)+'" target="_blank" rel="noopener">'+esc(TCH_DATES_COPY.cal)+'</a>':'')+
+      '<button type="button" class="btn btn-s ms-sm" aria-expanded="'+(TCH_DATES.all?'true':'false')+'" onclick="TCH_DATES.all=!TCH_DATES.all;render()">'+esc(TCH_DATES.all?TCH_DATES_COPY.hide:TCH_DATES_COPY.all)+'</button></div></div>';
 }
 
 // ── [1.911] — a student's birthday, counted down on their row as admin's row does ────────────────────────────────────
@@ -5030,6 +5040,19 @@ function rMyStudents(){
 // AC, 7 October: "the 'my students' button should say 'All Students' and should not be gray and hidden."
 function mstPhoneBack(){return '<div class="mst-sm mst-back"><button type="button" class="btn btn-p ms-sm" onclick="mstBack()">'+esc(MST_COPY.back)+'</button></div>';}
 function mstBack(){_msNoteFlush();MST.view='';_mstFormReset();MS.asg=null;render();window.scrollTo(0,0);}
+// ── [1.914] — choosing another day closes the student that was open ──────────────────────────────────────────────────
+// AC, 23 October 2026: "After sending a student assignment, if I switch the day that student still remains visible in the
+// lesson summary and assignment area. It would be ideal if I switch to another day or all days that this goes away so I'm
+// not looking at the student information and assignment that I just sent." So a new choice in Select Day View closes the
+// open student, as All Students does — unless an assignment is open with words or materials not yet saved, which would be
+// lost: then the student stays, and the day still changes in the list. A lesson summary being edited is kept either way
+// (MS.edits), as it is when All Students is pressed.
+function mstDayPick(v){
+  MST.day=v;
+  var a=MS.asg,writing=!!(a&&a.snap!=null&&_mstSnap(a)!==a.snap);
+  if(MST.view==='student'&&!writing){_msNoteFlush();MST.view='';_mstFormReset();MS.asg=null;}
+  render();
+}
 function _mstFormReset(){MS.pick=null;if(PICK&&_libComposerId===MST_CID)PICK='';if(TPL_FOR===MST_CID)TPL_OPEN=false;MST.sched=false;MST.preview=false;MST.previewHtml='';MST.err='';MST.errFor='';MST.busy='';}
 function mstOpen(id,date,time){
   var s=_mstStu(id);
@@ -5064,7 +5087,7 @@ function mstListPane(){
   var days=MST_DAYS.filter(function(d){return by[d];});
   if(MST.day&&!by[MST.day])MST.day='';
   h+='<div class="mst-sep" role="separator"></div><label class="mst-dayl" for="mst-day">'+esc(MST_COPY.dayView)+'</label>'+   // [1.810]
-    '<select id="mst-day" class="mst-day" onchange="MST.day=this.value;render()">'+
+    '<select id="mst-day" class="mst-day" onchange="mstDayPick(this.value)">'+   // [1.914]
     '<option value="">'+esc(MST_COPY.allDays+' ('+R.students.length+')')+'</option>'+
     days.map(function(d){return '<option value="'+d+'"'+(MST.day===d?' selected':'')+'>'+esc(d+' ('+by[d].length+')')+'</option>';}).join('')+'</select>';
   // [1.886] — with a day chosen, a narrow screen shows that day's lessons here in place of the rows (the right side, where
@@ -8528,6 +8551,7 @@ function loadThreads(silent){
     }
     if(!silent || _changed) render();
     _prefetchThreads();   // [1.418] case 1 — the ids are known now, and only now
+    _refreshChanged();   // [1.915] — and a conversation with a newer message than its copy is fetched in the background
   });
 }
 // Kept as names so nothing that called them has to know they are now one call.
@@ -8623,6 +8647,46 @@ function _threadCacheKey(d){
 function _cachedMessages(d){
   var m=THREAD_CACHE[_threadCacheKey(d)];
   return (m && m.length) ? m : null;
+}
+// ── [1.915] — the copy a conversation opens on is kept up to date ────────────────────────────────────────────────────
+// AC, 23 October 2026: "when logging in to check a message for the teacher they don't see the parent message directly
+// after the previous message sent by the teacher until about 5 or 10 seconds go by which can be confusing and make it
+// seem like there was no message sent to them at all." A conversation opens on the copy this page holds (THREAD_CACHE)
+// while the server is asked for the current one, which takes about four seconds (measured, 23 October). A message that
+// arrived after the copy was taken was missing for that time, with nothing saying more was coming.
+// So (a) a conversation opened on a copy older than the list's last message says so where the message will appear
+// (_newerThanCopy, the line in rFamilyThread), and (b) whenever the list shows a conversation has a newer message than
+// its copy — or has one unread and no copy — that one is fetched quietly, one at a time (_refreshChanged, after each list).
+function _newestAt(msgs){ return (msgs||[]).reduce(function(m,x){ return Math.max(m, Number(x.sentAt)||0); }, 0); }
+function _newerThanCopy(had, row){
+  if(!had||!had.length||!row) return null;
+  if(!(Number(row.lastMessageAt)>_newestAt(had)+1000)) return null;
+  return row.lastSenderIsTeacher ? '' : String(row.lastSenderName||'').trim().split(' ')[0];
+}
+function _threadReqOf(r){
+  return (r.kind==='family')
+    ? {conversationType:'family_teacher', familyId:r.id, teacherId:TEACHER_ID, teacherToken:TOKEN}
+    : (r.kind==='admin'
+        ? {conversationType:'teacher_admin', teacherId:TEACHER_ID, teacherToken:TOKEN}
+        : {conversationType:'staff_staff', teacherId:TEACHER_ID, staffId2:r.id, teacherToken:TOKEN});
+}
+var _refreshBusy=false, _refreshBusyAt=0;
+function _refreshChanged(){
+  if((_refreshBusy&&!_guardStale(_refreshBusyAt))||_prefetchBusy) return;
+  var pick=null;
+  (THREADS.list||[]).some(function(r){
+    if(!r||!r.hasMessages||!r.lastMessageAt) return false;
+    if(r.kind==='family'&&ACTIVE_THREAD&&ACTIVE_THREAD.familyId===r.id) return false;   // open: its own poll keeps it
+    var d=_threadReqOf(r), c=_cachedMessages(d);
+    if((c&&Number(r.lastMessageAt)>_newestAt(c)+1000)||(!c&&Number(r.unread)>0)){ pick=d; return true; }
+    return false;
+  });
+  if(!pick) return;
+  _refreshBusy=true; _refreshBusyAt=Date.now();
+  api({action:'getConversation', data:pick}, function(e,r){
+    _refreshBusy=false;
+    if(!e&&r&&r.ok&&(r.messages||[]).length) THREAD_CACHE[_threadCacheKey(pick)]=r.messages;   // no render: nothing shown moved
+  });
 }
 
 // ── [1.418] case 1 — the conversation is already there when it is opened ──
@@ -8730,7 +8794,8 @@ function openFamilyThread(familyId, p1, p2, focusReview){
   var _knownEmpty=(_row.hasMessages===false);
   // [1.336] — the draft comes back with the conversation. This line is the
   // whole fix for the data loss: it used to read draft:''.
-  ACTIVE_THREAD = {familyId:familyId, parent1Name:p1, parent2Name:p2, messages:_had||[],
+  var _coming=_newerThanCopy(_had,_row);   // [1.915]
+  ACTIVE_THREAD = {familyId:familyId, parent1Name:p1, parent2Name:p2, messages:_had||[], coming:_coming,
                    draft:_draftGet('family', familyId), sending:false,
                    loading:!_had && !_knownEmpty, refreshing:!!_had || _knownEmpty, notifyP1:true, notifyP2:true,
                    students:_row.students||[]};
@@ -8740,7 +8805,7 @@ function openFamilyThread(familyId, p1, p2, focusReview){
   render();
   api({action:'getConversation', data:_req}, function(e,r){
     if(!ACTIVE_THREAD || ACTIVE_THREAD.familyId!==familyId) return; // navigated away before this resolved
-    ACTIVE_THREAD.loading=false; ACTIVE_THREAD.refreshing=false;
+    ACTIVE_THREAD.loading=false; ACTIVE_THREAD.refreshing=false; ACTIVE_THREAD.coming=null;   // [1.915]
     if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not load conversation.','e'); render(); return; }
     ACTIVE_THREAD.messages=_mergeLoaded(r.messages||[], ACTIVE_THREAD.messages);   // [1.493]
     // [1.371] — the sender's own scheduled messages for this thread, in their
@@ -8898,6 +8963,8 @@ function rFamilyThread(){
       return rMessageBubble(_m,_all[_i-1],_all[_i+1]);   // [1.413]
     }).join('')+
        (_r?rClosedLine(_r.closedAt,_r.closedByName,_r.closedUnanswered):'')+
+       // [1.915] — opened on an older copy: the newest message is on its way, said where it will appear
+       (t.coming!=null&&t.refreshing?'<div class="msg-coming"><span class="spin">\u21bb</span> '+esc(t.coming?TCH_COPY.comingFrom(t.coming):TCH_COPY.comingNew)+'</div>':'')+
        _sched.map(rScheduledBubble).join('')+'</div>';
   }
   // Recipient choice only matters when there are two distinct parents on
@@ -9033,14 +9100,18 @@ function rFamilyThread(){
   // [1.438] — the same inline shape, for the case AC named: ending a
   // conversation a family is still waiting on. In the thread, where the
   // messages that are unanswered are on screen behind it.
+  // [1.916] — AC, 23 October 2026: "the teacher should have to select a checkbox to end without replying. This would be
+  // useful for a situation where a teacher talk to a parent at the studio and resolved everything". So the question is a
+  // box to tick: End it does nothing until End without replying is ticked.
   if(t.closeUnansweredAsk){
     h+='<div class="fwd-box">'+
-       '<div style="margin-bottom:.55rem">'+esc(TCH_COPY.closeUnansweredAsk)+'</div>'+
+       '<label class="end-nr"><input type="checkbox"'+(t.closeNoReplyTick?' checked':'')+(t.closing?' disabled':'')+
+         ' onclick="if(ACTIVE_THREAD){ACTIVE_THREAD.closeNoReplyTick=this.checked;render();}"> '+esc(TCH_COPY.endNoReply)+'</label>'+
        '<div style="display:flex;gap:8px;justify-content:flex-end">'+
          '<button class="btn btn-s" onclick="cancelCloseUnanswered()">'+esc(TCH_COPY.closeUnansweredBack)+'</button>'+
          (t.closing
            ? '<button class="btn btn-p" disabled><span class="spin">↻</span></button>'
-           : '<button class="btn btn-p" onclick="confirmCloseUnanswered()">'+esc(TCH_COPY.closeUnansweredGo)+'</button>')+
+           : '<button class="btn btn-p"'+(t.closeNoReplyTick?'':' disabled')+' onclick="confirmCloseUnanswered()">'+esc(TCH_COPY.closeUnansweredGo)+'</button>')+
        '</div></div>';
   }
   // [1.359] — the forward panel is gone. Ask Admin opens the teacher's own
@@ -9312,12 +9383,13 @@ function closeConversation(){
 function cancelCloseUnanswered(){
   var t=ACTIVE_THREAD||ACTIVE_STAFF_THREAD;
   if(!t) return;
-  t.closeUnansweredAsk=false; render();
+  t.closeUnansweredAsk=false; t.closeNoReplyTick=false; render();
 }
 function confirmCloseUnanswered(){
   var t=ACTIVE_THREAD||ACTIVE_STAFF_THREAD;
   if(!t) return;
-  t.closeUnansweredAsk=false; t.closeUnansweredOk=true;
+  if(!t.closeNoReplyTick) return;   // [1.916] — only once End without replying is ticked
+  t.closeUnansweredAsk=false; t.closeNoReplyTick=false; t.closeUnansweredOk=true;
   _doCloseConversation(t);
 }
 // Clear & close: one action, in that order. Closing first and clearing after
@@ -9682,8 +9754,11 @@ function sendFamilyMessage(sendAt){
   // existed** — AC settled `Scheduling message…` and `Message scheduled to be
   // sent` when [1.371] was built — so this is his copy being used where it
   // belongs, not new copy.
-  actStart('send', sendAt ? TCH_COPY.schedulingMsg : TCH_COPY.sending);
-  t._sendInFlight=true;
+  // [1.915] — an ordinary send no longer holds Send: the message is on screen at once, and the next one can be written and
+  // sent straight away; they go to the server one after another, in the order sent (_seqRun below). AC, 23 October
+  // 2026: "Message loading and sending seem to take a little bit too long." Scheduling keeps its working line.
+  if(sendAt) actStart('send', TCH_COPY.schedulingMsg); else actClear('send');
+  t._sendInFlight=(Number(t._sendInFlight)||0)+1;   // a count now: the poll waits while any is on its way
   _shouldScrollMsgList=true;
   // [1.371] — and it does NOT stop the clock. A scheduled reply is not a
   // reply; the family is still waiting, and the row must go on saying so.
@@ -9691,7 +9766,8 @@ function sendFamilyMessage(sendAt){
   render();
 
   var _endAsk=!t.replyNeeded; t.replyNeeded=false;   // [1.907] — unticked ends the conversation as it goes; the box starts unticked again
-  api({action:'sendMessage', data:{conversationType:'family_teacher', familyId:t.familyId, teacherId:TEACHER_ID, teacherToken:TOKEN, messageText:text, messageHtml:html, studentId:_stuId, notifyParents:notifyParents, clientMsgId:clientMsgId, attachmentIds:_att, sendAt:sendAt||'', endOnSend:_endAsk}}, function(e,r){
+  _seqRun('send:'+_sk, function(_done){   // [1.915] — one at a time per conversation, in the order sent
+  api({action:'sendMessage', data:{conversationType:'family_teacher', familyId:t.familyId, teacherId:TEACHER_ID, teacherToken:TOKEN, messageText:text, messageHtml:html, studentId:_stuId, notifyParents:notifyParents, clientMsgId:clientMsgId, attachmentIds:_att, sendAt:sendAt||'', endOnSend:_endAsk}}, function(e,r){ try{
     // ── [1.539] — the busy state is RESOLVED FIRST, always ─────────────────
     //
     // AC, 10 September 2026: *"I can't send a message. I can schedule one, but
@@ -9718,7 +9794,8 @@ function sendFamilyMessage(sendAt){
     // where the teacher is now: the words back in its saved draft, its row
     // owing a reply again, and the id kept with the words.
     if(_failed){
-      _draftKeep(t, html);
+      var _keepBox=document.getElementById('family-composer'), _keepNow=_keepBox?_keepBox.innerHTML:'';   // [1.915]
+      _draftKeep(t, String(_composerPlain(_keepNow)||'').trim()?html+'<br>'+_keepNow:html);
       t.replyNeeded=!_endAsk;   // [1.907] — the tick comes back with the words
       _undoRowAnswered(_rowUndo);
       _sendFailed(_sk, clientMsgId, text, _attRows, (r&&r.error)||TCH_COPY.notSent);
@@ -9730,17 +9807,22 @@ function sendFamilyMessage(sendAt){
     }
     if(_failed){ SEND_RETRY[_sk].err=''; actFail('send', (r&&r.error)||TCH_COPY.notSent); }
     else actDone('send', sendAt ? TCH_COPY.scheduledConfirm : TCH_COPY.sentOk);   // [1.536]
-    t._sendInFlight=false;
+    t._sendInFlight=Math.max(0,(Number(t._sendInFlight)||0)-1);   // [1.915]
     if(e||!r||!r.ok){
       // Put it back where the teacher can see and retry it, rather than losing
       // words they watched "send".
       if(sendAt) t.scheduled=(t.scheduled||[]).filter(function(m){ return m!==pending; });
       else t.messages=t.messages.filter(function(m){ return m!==pending; });
-      t.draft=html;
+      // [1.915] — Send no longer waits, so the box may already hold the next message: the failed words go back ABOVE it,
+      // and its files beside the new ones, never in place of them.
+      var _boxEl=document.getElementById('family-composer'), _boxNow=_boxEl?_boxEl.innerHTML:(t.draft||'');
+      var _boxHas=!!String(_composerPlain(_boxNow)||'').trim();
+      t.draft=_boxHas?html+'<br>'+_boxNow:html;
+      if(_boxEl) _boxEl.innerHTML=t.draft;
       // [1.277] — and the files come back with the words. They are still
       // uploaded and still unbound, so the ids are good and a retry sends them.
-      ATT_PENDING=_attRows.map(function(a){ return {tempId:'t'+a.attachmentId, fileName:a.fileName,
-        mimeType:a.mimeType, sizeBytes:a.sizeBytes, uploading:false, attachmentId:a.attachmentId, at:Date.now()}; });
+      ATT_PENDING=ATT_PENDING.filter(function(x){ return !_attRows.some(function(a){ return a.attachmentId===x.attachmentId; }); }).concat(_attRows.map(function(a){ return {tempId:'t'+a.attachmentId, fileName:a.fileName,
+        mimeType:a.mimeType, sizeBytes:a.sizeBytes, uploading:false, attachmentId:a.attachmentId, at:Date.now()}; }));
       ATT_BUSY=0; _attKeep(ATT_OWNER);   // [1.904]
       // [1.753] — the saved draft and the answered mark were put back above,
       // before the where-is-the-teacher check, so they hold either way.
@@ -9790,6 +9872,7 @@ function sendFamilyMessage(sendAt){
     // the same content plus two words, and the composer's caret survives a
     // render ([1.332]).
     if(_canAmendMsg(pending)) render();
+  } finally { _done(); } });
   });
 }
 
@@ -16101,7 +16184,10 @@ var TCH_COPY={
   // [1.454] — PLACEHOLDER, flagged. Shown beside Send when a merge tag could
   // not be filled in, which in practice means no child has been picked.
   tagUnfilled:'Pick which child this is about \u2014 {tags} could not be filled in',
-  closeUnansweredAsk:'End conversation without a reply?',
+  closeUnansweredAsk:'End conversation without a reply?',   // ~~the question~~ — [1.916] a box to tick now (endNoReply)
+  endNoReply:'End without replying',   // [1.916] — AC's words, 23 October 2026 ("a checkbox to end without replying")
+  comingFrom:function(n){return 'Loading '+n+'\u2019s new message\u2026';},   // [1.915] PLACEHOLDER
+  comingNew:'Loading the newest messages\u2026',   // [1.915] PLACEHOLDER
   closeUnansweredGo:'End it',
   closeUnansweredBack:'Go back',
   // AC's own wording, 8 September 2026, for the gated Send.

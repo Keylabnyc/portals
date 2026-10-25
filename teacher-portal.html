@@ -2063,6 +2063,7 @@ mark.guide-hit{background:var(--bbg);color:inherit;border-radius:2px;padding:0 1
 .td-tag{font-size:10px;padding:1px 6px;border-radius:3px;border:1px solid;white-space:nowrap;flex:0 0 auto}
 .td-tag.cl{background:var(--rbg);color:var(--rt);border-color:var(--red)}.td-tag.op{background:var(--gbg);color:var(--gt);border-color:var(--green)}
 .td-none{font-size:12px;color:var(--text4);padding:.35rem 0}
+.td-tags{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex:0 0 auto}   /* [1.917] — Keylab's badge, then BHMS's */
 .td-btns{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.td-btns .btn{width:auto}
 
 .mst-rm b{display:block;font-size:13.5px;line-height:1.3}
@@ -4630,14 +4631,39 @@ var TCH_DATES={list:null,cal:'',all:false};
 var TCH_DATES_COPY={head:'Upcoming Important Dates',all:'All Important Dates',hide:'Hide Dates',   // AC, 12 September 2026 ([1.606])
   cal:'Keylab Google Calendar',closed:'Closed',noLesson:'No lesson',open:'Keylab is open',
   schoolsOpen:'NYC public schools closed, Keylab open',   // AC, 9 October 2026 ([1.875])
-  none:'No upcoming dates.'};   // PLACEHOLDER
+  none:'No upcoming dates.',   // PLACEHOLDER
+  // [1.917] — a BHMS teacher's own dates. PLACEHOLDERS for AC.
+  bhmsOpen:'BHMS open',bhmsClosed:'BHMS closed',keylabClosed:'Keylab closed',keylabOpen:'Keylab open'};
 function _tdYmdDate(ymd){var p=String(ymd||'').split('-');return p.length===3?new Date(+p[0],+p[1]-1,+p[2]):new Date(NaN);}
+// ── [1.917] — what BHMS is doing, for a teacher who works there ─────────────────────────────────────────────────────────
+// AC, 25 October 2026: *"The portal must differentiate properly and show the correct info. On November 11th, Keylab is
+// closed but BHMS is open. Non-bhms teachers don't need to know BHMS is open, but bhms teachers do."* The server sends,
+// with the student list, the weekdays this teacher is on BHMS and BHMS's calendar on those days (the rule the reminders
+// use, so the card and the emails agree); nothing for a teacher who is not at BHMS, whose card is as it was. A date on
+// one of their BHMS days inside a BHMS term says BHMS open or BHMS closed beside Keylab's own badge, and BHMS's own
+// closed days on their days are rows of their own.
+function _tdBhmsOn(d){
+  var b=_mstR().bhms;if(!b||!b.days)return '';
+  var y=d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);
+  var dn=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][d.getDay()];
+  if(b.days.indexOf(dn)<0)return '';
+  if(!(b.terms||[]).some(function(t){return t&&t.day===dn&&t.first&&t.last&&y>=t.first&&y<=t.last;}))return '';
+  return (b.closed||[]).some(function(c){return c&&c.date===y;})?'closed':'open';
+}
 // Every studio date still to come (or under way), once each, in date order, with its dates as the family portal says a range.
 function _tdHits(){
   var today=_tdYmdDate(_mstToday());
-  return (TCH_DATES.list||[]).map(function(e){return {e:e,d:_tdYmdDate(e.startDate),end:_tdYmdDate(e.endDate||e.startDate)};})
-    .filter(function(h){return !isNaN(h.d.getTime())&&!isNaN(h.end.getTime())&&h.end>=today;})
-    .sort(function(a,b){return a.d-b.d;});
+  var hits=(TCH_DATES.list||[]).map(function(e){return {e:e,d:_tdYmdDate(e.startDate),end:_tdYmdDate(e.endDate||e.startDate)};})
+    .filter(function(h){return !isNaN(h.d.getTime())&&!isNaN(h.end.getTime())&&h.end>=today;});
+  // [1.917] — BHMS's own closed days on this teacher's BHMS days, when Keylab has no date of its own then.
+  var b=_mstR().bhms;
+  ((b&&b.closed)||[]).forEach(function(c){
+    var d=_tdYmdDate(c&&c.date);
+    if(isNaN(d.getTime())||d<today||_tdBhmsOn(d)!=='closed')return;
+    if(hits.some(function(h){return !h.bhmsOnly&&h.d<=d&&h.end>=d;}))return;
+    hits.push({e:{event:String(c.reason||'')||TCH_DATES_COPY.bhmsClosed},d:d,end:d,bhmsOnly:true});
+  });
+  return hits.sort(function(a,b){return a.d-b.d;});
 }
 function _tdWhen(h){
   var day={weekday:'short',month:'short',day:'numeric'},md={month:'short',day:'numeric'};
@@ -4645,9 +4671,18 @@ function _tdWhen(h){
 }
 function _tdRow(h){
   var e=h.e,c=TCH_DATES_COPY;
-  var tag=(e.closed&&e.studioOpen)?'<span class="td-tag cl">'+esc(c.noLesson)+'</span>'
+  // [1.917] — BHMS on this teacher's BHMS days in the date's range ('' for every teacher not at BHMS).
+  var st={};
+  if(h.bhmsOnly)st.closed=1;
+  else for(var d=new Date(h.d.getTime());d<=h.end;d.setDate(d.getDate()+1)){var s=_tdBhmsOn(d);if(s)st[s]=1;}
+  var bh=Object.keys(st);
+  var tag=h.bhmsOnly?'<span class="td-tag op">'+esc(c.keylabOpen)+'</span>'
+    :(e.closed&&e.studioOpen)?'<span class="td-tag cl">'+esc(c.noLesson)+'</span>'
     :(!e.closed&&e.schoolsClosed)?'<span class="td-tag op">'+esc(c.schoolsOpen)+'</span>'
-    :'<span class="td-tag '+(e.closed?'cl':'op')+'">'+esc(e.closed?c.closed:c.open)+'</span>';
+    // beside a BHMS badge, Keylab's own says whose it is, so "Closed" cannot be read as BHMS's
+    :'<span class="td-tag '+(e.closed?'cl':'op')+'">'+esc(e.closed?(bh.length?c.keylabClosed:c.closed):c.open)+'</span>';
+  if(bh.length)tag='<div class="td-tags">'+tag+bh.map(function(s){
+    return '<span class="td-tag '+(s==='open'?'op':'cl')+'">'+esc(s==='open'?c.bhmsOpen:c.bhmsClosed)+'</span>';}).join('')+'</div>';
   return '<div class="td-date"><div><div class="td-ev">'+esc(e.event||'')+'</div>'+
     '<div class="td-when">'+esc(_tdWhen(h))+'</div></div>'+tag+'</div>';
 }

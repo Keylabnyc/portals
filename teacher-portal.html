@@ -1006,6 +1006,11 @@ input[type=checkbox]{width:13px;height:13px;padding:0;margin:0;border:0;border-r
   background:transparent;color:var(--text2);font-size:11px;font-weight:600}
 .att-dl:hover{background:#fff;color:var(--acc)}
 .bubble.mine .att-dl{background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.45);color:#fff}
+/* [1.928] — Save to Library, on your OWN message. It sits in the tile beside
+   Download and kept `.lib-mini`'s page colours: dark grey on the navy bubble,
+   and barely readable. Drawn as Download is. Admin's page, the same rule. */
+.bubble.mine .lib-mini{background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.45);color:#fff}
+.bubble.mine .lib-mini:hover{background:rgba(255,255,255,.28);border-color:rgba(255,255,255,.45);color:#fff}
 /* [1.417] — the tile says what is happening, because the tile is what was
    pressed. AC, three times: "when clicking on an attached file, nothing tells
    the user what's happening, but the file is downloading." A toast fired all
@@ -1098,6 +1103,12 @@ input[type=checkbox]{width:13px;height:13px;padding:0;margin:0;border:0;border-r
 .act-working{border:1px solid var(--blue);background:var(--bbg);color:var(--bt)}
 .act-done{border:1px solid var(--green);background:rgba(22,163,74,.10);color:var(--gt)}
 .act-failed{border:1px solid var(--red);background:rgba(220,38,38,.08);color:var(--red)}
+/* [1.928] — the same notes on your OWN message ("Saved …", "Could not
+   unsend."). Their fills are see-through tints made for the white page; on the
+   navy bubble the dark green and dark red text landed on dark. A solid surface
+   of their own there, as the red not-emailed line keeps. Admin's page, the same. */
+.bubble.mine .act-done{background:var(--gbg)}
+.bubble.mine .act-failed{background:var(--rbg)}
 /* [1.544] — a deletion that WORKED. Red, because it is irreversible and worth a
    beat of attention, and AC asked for red by name. Distinguished from a failure
    by its × rather than its ! — the colour says "notice this", the icon says
@@ -1232,6 +1243,12 @@ input[type=checkbox]{width:13px;height:13px;padding:0;margin:0;border:0;border-r
 .lib-add-card .lib-fld > input:focus,.lib-add-card .lib-fld > textarea:focus{
   border-color:var(--acc);outline:none}
 .lib-add-card .lib-edit-acts .btn{width:auto;flex:0 0 auto;padding:7px 14px;font-size:12.5px}
+/* [1.928] — Save on a file opens this card INSIDE the message, and on your own
+   message the card took the navy bubble's white. The card is a light surface
+   wherever it sits, so it keeps the page's colours. Admin's page, the same. */
+.bubble.mine .lib-new{color:var(--text)}
+.bubble.mine .lib-new .lnk-btn{background:rgba(0,0,0,.10);border-color:var(--border2);color:var(--text)}
+.bubble.mine .lib-new .lnk-btn:hover{background:rgba(0,0,0,.18);color:var(--text);border-color:var(--text4)}
 /* The offer, beside the thing it is about ([[lesson-status-banners]]) — never a
    corner toast, and never grey: the question is the loudest thing in the row
    because it is the only thing being asked. */

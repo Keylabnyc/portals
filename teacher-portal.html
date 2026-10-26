@@ -4676,11 +4676,12 @@ function _tdRow(h){
   if(h.bhmsOnly)st.closed=1;
   else for(var d=new Date(h.d.getTime());d<=h.end;d.setDate(d.getDate()+1)){var s=_tdBhmsOn(d);if(s)st[s]=1;}
   var bh=Object.keys(st);
+  // [1.922] — an event day has no lessons, billed or not; a date's own description replaces Keylab's standard words.
   var tag=h.bhmsOnly?'<span class="td-tag op">'+esc(c.keylabOpen)+'</span>'
-    :(e.closed&&e.studioOpen)?'<span class="td-tag cl">'+esc(c.noLesson)+'</span>'
-    :(!e.closed&&e.schoolsClosed)?'<span class="td-tag op">'+esc(c.schoolsOpen)+'</span>'
+    :((e.closed&&e.studioOpen)||e.noLessons)?'<span class="td-tag cl">'+esc(e.description||c.noLesson)+'</span>'
+    :(!e.closed&&e.schoolsClosed)?'<span class="td-tag op">'+esc(e.description||c.schoolsOpen)+'</span>'
     // beside a BHMS badge, Keylab's own says whose it is, so "Closed" cannot be read as BHMS's
-    :'<span class="td-tag '+(e.closed?'cl':'op')+'">'+esc(e.closed?(bh.length?c.keylabClosed:c.closed):c.open)+'</span>';
+    :'<span class="td-tag '+(e.closed?'cl':'op')+'">'+esc(e.description||(e.closed?(bh.length?c.keylabClosed:c.closed):c.open))+'</span>';
   if(bh.length)tag='<div class="td-tags">'+tag+bh.map(function(s){
     return '<span class="td-tag '+(s==='open'?'op':'cl')+'">'+esc(s==='open'?c.bhmsOpen:c.bhmsClosed)+'</span>';}).join('')+'</div>';
   return '<div class="td-date"><div><div class="td-ev">'+esc(e.event||'')+'</div>'+

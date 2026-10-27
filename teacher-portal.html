@@ -51,6 +51,10 @@ a:hover{text-decoration:underline}
 .card{background:rgba(255,255,255,.45);border:1px solid var(--border);border-radius:var(--rl);padding:1.25rem;margin-bottom:1rem;text-align:left}
 .msg{padding:10px 14px;border-radius:var(--r);font-size:13px;margin-bottom:1rem;border:1px solid;line-height:1.5}
 .ms{background:var(--gbg);color:var(--gt);border-color:var(--green)}
+/* [1.934] — the 👍 banner an email's button opens: the page's success colours, solid, alone on the page */
+.ack-banner{max-width:520px;width:calc(100% - 32px);margin:24px auto 0;padding:14px 18px;border:1px solid var(--green);
+  border-radius:var(--rl);background:var(--gbg);color:var(--gt);font:600 16px/1.4 Inter,system-ui,sans-serif;text-align:center}
+.ack-banner.bad{border-color:var(--red);background:var(--rbg);color:var(--rt)}
 .me{background:var(--rbg);color:var(--rt);border-color:var(--red)}
 input{background:rgba(255,255,255,.45);border:1px solid var(--border2);color:var(--text);border-radius:var(--r);padding:9px 10px;font-family:"Inter",sans-serif;font-size:14px;width:100%;outline:none;margin-top:4px;-webkit-appearance:none}
 input:focus{border-color:var(--acc);background:rgba(255,255,255,.65)}
@@ -822,6 +826,11 @@ input[type=checkbox]{width:13px;height:13px;padding:0;margin:0;border:0;border-r
    before the other side opens the message. */
 .read-mark{color:var(--text4)}
 .bubble.mine .read-mark{color:rgba(255,255,255,.88)}
+/* [1.934] — a 👍 given: in the page's success green, where the button was */
+.ack-done{font-size:12px;font-weight:600;color:var(--green);white-space:nowrap}
+/* the line under the teacher's own message once admin has 👍'd it; the time small beside the name (AC) */
+.ack-line{font-size:12px;margin-top:3px}
+.ack-when{font-size:10.5px;opacity:.8;margin-left:7px;white-space:nowrap}
 .msg-tools{display:flex;flex-wrap:wrap;gap:2px 8px;align-items:center;margin-top:3px;padding-top:0;
   border-top:0;font-size:9.5px;line-height:1.25;color:var(--text3)}
 /* EVERY property the page-wide `label{}` rule at the top of this file sets is
@@ -2334,6 +2343,55 @@ select.cmp-lsel{font:inherit;font-size:13.5px;font-weight:700;padding:6px 8px;bo
 </style>
 </head>
 <body>
+<script>
+// ── [1.934] — the 👍 from an email: a success banner, at once, and nothing else ──
+//
+// AC, 26 October 2026: *"They don't need a whole confirmation page. They just need a quick success banner or something
+// like that that is instant and inspires confidence their action was initiated sucessfully."*
+//
+// So this runs FIRST, before the 1.2 MB below it has arrived: it draws the banner the moment the browser opens and sends
+// the 👍 behind it. The link is the message's id and the server's signature over it — not a sign-in — so the page
+// below never starts (boot() stands down on _klAckPage) and nothing is asked of the teacher. Only if the server says
+// no does the banner change, to red, saying so. A failed send is tried once more first: a 👍 twice is one 👍.
+var GAS_URL = 'https://script.google.com/a/macros/keylab.nyc/s/AKfycbzY4K1XCbYZlj4fXksfwEZ3Kxbeolr9abRuifT-_TY4hgfPZP9gbL1dSCn1_zeFRsvl3g/exec';
+var ACK_COPY = {
+  done: '\u2713 Admin can see you\u2019ve read this.',   // AC, 26 October 2026
+  unsent: 'This message was unsent, so there is nothing to acknowledge.',   // PLACEHOLDER
+  failed: 'Your \uD83D\uDC4D did not go through. Sign in to the teacher portal and click \uD83D\uDC4D Got it on the message.'   // PLACEHOLDER
+};
+var _klAckPage = false;
+(function(){
+  var m = /[?&]ack=([^&#]+)/.exec(window.location.search || '');
+  if (!m) return;
+  _klAckPage = true;
+  var token = '';
+  try { token = decodeURIComponent(m[1]); } catch (e) { token = m[1]; }
+  try { if (window.history && window.history.replaceState) window.history.replaceState(null, '', window.location.pathname); } catch (e) {}
+  var el = document.createElement('div');
+  el.id = 'ack-banner';
+  el.setAttribute('role', 'status');
+  el.className = 'ack-banner';
+  el.textContent = ACK_COPY.done;
+  document.body.insertBefore(el, document.body.firstChild);
+  function fail(reason){
+    el.className = 'ack-banner bad';
+    el.setAttribute('role', 'alert');
+    el.textContent = reason === 'unsent' ? ACK_COPY.unsent : ACK_COPY.failed;
+  }
+  function send(again){
+    fetch(GAS_URL, { method: 'POST', keepalive: true, headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                     body: JSON.stringify({ action: 'ackFromEmail', data: { ack: token } }) })
+      .then(function(res){ return res.json(); })
+      .then(function(r){
+        if (r && r.ok) return;
+        // A refusal is final; anything else (Google failing a moment) is asked once more.
+        if (r && r.reason) { fail(r.reason); return; }
+        if (again) setTimeout(function(){ send(false); }, 1500); else fail('');
+      }, function(){ if (again) setTimeout(function(){ send(false); }, 1500); else fail(''); });
+  }
+  send(true);
+})();
+</script>
 <div class="wrap" id="app"></div>
 <script>
 'use strict';
@@ -2598,7 +2656,7 @@ var SPW = {checking:false, invalid:false, resent:false, resending:false, email:'
 // ============================================================
 // API
 // ============================================================
-var GAS_URL = 'https://script.google.com/a/macros/keylab.nyc/s/AKfycbzY4K1XCbYZlj4fXksfwEZ3Kxbeolr9abRuifT-_TY4hgfPZP9gbL1dSCn1_zeFRsvl3g/exec';
+// GAS_URL is set in the first script on the page ([1.934]): the 👍 banner sends with it before this one has loaded.
 // ── [1.736] rows 1, 5, 6 — the portal answers from what it already holds ──
 //
 // AC, 28 September 2026: "Everything should load at login for fast movement
@@ -2898,6 +2956,16 @@ function fmtMsgTime(ms){
   var h12=h%12; if(h12===0) h12=12;
   var mm=mins<10?'0'+mins:String(mins);
   return days[d.getDay()]+', '+(d.getMonth()+1)+'/'+d.getDate()+'/'+String(d.getFullYear()).slice(-2)+' '+h12+':'+mm+' '+ampm;
+}
+// [1.934] — the 👍's time, short: "Mon 10/26/26 5 pm" (AC, 27 October 2026: "the detailed format is so long"). For
+// the 👍 alone — every message time keeps fmtMsgTime's full form, which AC wants left as it is — and display only: what
+// is stored is the same epoch milliseconds as every other time.
+function _ackTime(ms){
+  var n=Number(ms); if(!n || n < 946684800000) return '';
+  var d=new Date(n); if(isNaN(d.getTime())) return '';
+  var h=d.getHours(), m=d.getMinutes(), ap=h<12?'am':'pm'; h=h%12||12;
+  return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()]+' '+(d.getMonth()+1)+'/'+d.getDate()+'/'+String(d.getFullYear()).slice(-2)+
+    ' '+h+(m?':'+(m<10?'0':'')+m:'')+' '+ap;
 }
 
 // AC, 3 September: "The teacher should see a reply by deadline on a message to
@@ -8327,6 +8395,8 @@ function _rowWaitLine(r){
   //   YOU owe it    "From Rachel Lande to you" — you know you owe it; what you
   //                 want is who it is from.
   if((r.row||{}).lastSenderIsTeacher){
+    // [1.937] — once admin has 👍'd what you wrote last ([1.934]), nobody is waiting: AC's "Admin has seen your message".
+    if(r.kind!=='family' && r.row.lastAckAt && r.name) return '<span class="wait-line">\uD83D\uDC4D '+esc(TCH_COPY.ackSeen.replace('{name}', r.name))+'</span>';
     var first=String(_rosterParentLine(r.row)||r.name||'').trim().split(/\s+/)[0];
     return first ? '<span class="wait-line">Waiting for '+esc(first)+' to reply</span>' : '';
   }
@@ -16368,6 +16438,10 @@ var TCH_COPY={
   // [1.861] — PLACEHOLDER, AC to word: under a message to a test family whose "Send emails for this test student" is off.
   notEmailedTest:'Not emailed: emails are off for this test student.',
   markSeen:'Mark seen',
+  // [1.934] — AC's words, 26 October 2026: the 👍 on admin's message, here and in the email.
+  ackBtn:'\uD83D\uDC4D Got it',
+  ackSeen:'{name} has seen your message',   // AC, 27 October 2026
+  ackFailed:'Could not send your \uD83D\uDC4D. Try again.',   // PLACEHOLDER
   // [1.326] — AC, 5 September: the ✕ and this button were both called
   // "close". "Hovering over the x in teacher portal says 'close this
   // conversation' which argues with existing nomenclature. Close this
@@ -18714,6 +18788,7 @@ function rMessageBubble(m, prev, next){
     // turns, which was the readable half — and admin's sides ([1.413]'s other
     // half, which AC asked for by name) are untouched.
     '<div class="bubble-foot"><div class="bubble-time">'+_bubbleMeta(m)+_readMark(m, mine)+'</div>'+rMsgTools(m,mine)+'</div>'+   // [1.811]
+    _ackLine(m, mine)+   // [1.934]
     rNotifyWarn(m)+
     '</div></div>';
 }
@@ -18749,7 +18824,11 @@ function _msgOpenAsg(id){
 // word. That is [1.178] read the other way round — the resting state here is
 // no mark at all, because "not yet" is not a thing that has happened.
 function _readMark(m, mine){
-  if(!mine || m._pending || !m.readAt) return '';
+  if(!mine || m._pending) return '';
+  // [1.934] — once admin has 👍'd this teacher's message, the time line says nothing more: _ackLine says it on a line of
+  // its own (AC, 27 October 2026: "It's a little confusing to see the timestamp next to the submission").
+  if(m.ackAt) return '';
+  if(!m.readAt) return '';
   var who=_readWho();
   return '<span class="read-mark">'+
     (who?' · Read by '+esc(who)+' at: ':' · Read at: ')+esc(fmtMsgTime(m.readAt))+'</span>';
@@ -18757,6 +18836,12 @@ function _readMark(m, mine){
 // Who the reader is, from the thread this bubble is in. A family thread's
 // reader is the parent; the office thread's is Admin. Named rather than
 // guessed: "Read at" with no name is better than the wrong name.
+// [1.934] — under this teacher's own message once admin has 👍'd it: the line admin's page draws, from the other seat.
+function _ackLine(m, mine){
+  if(!mine || !m || !m.ackAt || m._pending) return '';
+  return '<div class="ack-line">\uD83D\uDC4D '+esc(TCH_COPY.ackSeen.replace('{name}', _readWho()||'Admin'))+
+    '<span class="ack-when">'+esc(_ackTime(m.ackAt))+'</span></div>';
+}
 function _readWho(){
   if(_openKind()==='family'){   // [1.782]
     var t=ACTIVE_THREAD;
@@ -18906,6 +18991,25 @@ function rClosedLine(closedAt, closedByName, unanswered){
 // never automatic, and it does NOT stop the clock: the conversation goes on
 // ageing and stays where it is until a real reply is sent. Being seen is not
 // being answered.
+// ── [1.934] — the 👍 ────────────────────────────────────────────────────
+// AC, 26 October 2026: a teacher acknowledges admin's message in one click — from the email without signing in (the
+// banner at the top of this file), and here. Admin's messages to this teacher only: never a family's, never another
+// teacher's (the server refuses those too).
+function _ackable(m){
+  var s=ACTIVE_STAFF_THREAD;
+  return !!(m && s && s.contactType==='admin' && m.senderType==='admin' && !m._pending && !_tIsTruthy(m.isAuto));
+}
+function ackMsg(id){
+  var t=ACTIVE_STAFF_THREAD; if(!t||!id) return;
+  var find=function(){ return (t.messages||[]).filter(function(x){ return x.messageId===id; })[0]; };
+  var m=find(); if(!m||m.ackAt) return;
+  m.ackAt=Date.now(); render();   // at once; taken back only if the server says no
+  api({action:'ackMessage', data:_threadKey(t,{messageId:id})}, function(e,r){
+    var cur=find()||m;
+    if(e||!r||!r.ok){ cur.ackAt=''; actFail('msg:'+id,(r&&r.error)||TCH_COPY.ackFailed); render(); return; }
+    cur.ackAt=r.ackAt||cur.ackAt; render();
+  });
+}
 function rMsgTools(m, mine){
   var saved = !!m.reviewAt;
   var h = '<div class="msg-tools" onclick="event.stopPropagation()">'+   // [1.811] — a press here is not a press on an assignment's bubble
@@ -18919,6 +19023,12 @@ function rMsgTools(m, mine){
     h += '<span class="msg-tools-sep">·</span>'+
       '<button type="button" class="lnk-btn" onclick="event.stopPropagation();markSeen()">'+
       esc(TCH_COPY.markSeen)+'</button>';
+    // [1.934] — the 👍 on admin's message: the same record the email's button writes, so a teacher reading it here
+    // says so the same way. Once given it is the time it was given, not a button.
+    if(_ackable(m)) h += '<span class="msg-tools-sep">·</span>'+(m.ackAt
+      ? '<span class="ack-done" title="'+esc(_ackTime(m.ackAt))+'">'+esc(TCH_COPY.ackBtn)+'</span>'   // the time on hover (AC)
+      : '<button type="button" class="lnk-btn ack-btn" onclick="event.stopPropagation();ackMsg('+jsq(m.messageId)+')">'+
+        esc(TCH_COPY.ackBtn)+'</button>');
   }
   // UNSEND IS ONE PRESS. There is no "are you sure", and its absence is the
   // decision rather than an omission.
@@ -19468,6 +19578,7 @@ function boot(){
 }
 
 document.addEventListener('DOMContentLoaded', function(){
+  if(_klAckPage) return;   // [1.934] — the 👍 banner is the whole page
   render();
   boot();
 });

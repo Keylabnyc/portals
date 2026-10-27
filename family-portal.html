@@ -552,6 +552,17 @@ button:active:not(:disabled),
 .bubble.mine .att-size{color:rgba(255,255,255,.7)}
 .bubble-time{font-size:11.5px;font-weight:500;color:var(--text4);margin-top:.35rem}
 .bubble.mine .bubble-time{color:rgba(255,255,255,.88)}
+/* [1.945] — a family's ✅ Got it under a teacher's or admin's message, and the banner the email's button opens. White
+   with a green edge, as in the email: the ✅ is itself green and disappears on a green button. Pressed, the words in
+   green and nothing to press. The banner is the teacher portal's own ([1.934]). */
+.kl-ack{display:inline-flex;align-items:center;gap:6px;margin-top:10px;padding:7px 14px;border:2px solid #15803d;border-radius:6px;
+  background:#fff;color:#15803d;font:600 15px/1.2 Inter,system-ui,sans-serif;cursor:pointer}
+.kl-ack:hover{background:#F0FAF3}
+.kl-ack.done{border-color:transparent;background:transparent;padding-left:0;cursor:default}
+.kl-ack-err{display:block;margin-top:6px;font-size:13px;color:var(--rt)}
+.ack-banner{max-width:520px;width:calc(100% - 32px);margin:24px auto 0;padding:14px 18px;border:1px solid var(--green);
+  border-radius:var(--rl);background:var(--gbg);color:var(--gt);font:600 16px/1.4 Inter,system-ui,sans-serif;text-align:center}
+.ack-banner.bad{border-color:var(--red);background:var(--rbg);color:var(--rt)}
 /* The two notices above the composer (BACKLOG 1.125, 1.132). Away is the
    louder of the two on purpose: it means "not today", where after-hours only
    means "not right now". */
@@ -626,6 +637,57 @@ div.asg-m{cursor:default}
 </style>
 </head>
 <body>
+<script>
+// ── [1.945] — a parent's ✅ Got it from an email: a thank-you banner, at once, and nothing else ──
+//
+// [1.934]'s shape for a family. AC, 27 October 2026, the banner's words: "Thanks for letting dana know you've seen their
+// message!" It runs FIRST, before the rest of this page has arrived: it draws the banner the moment the browser opens and
+// sends the ✅ behind it. The link is the message's id, the parent's slot and the server's signature over both — not a
+// sign-in — so the page below never starts (the start stands down on _klAckPage) and nothing is asked of the parent.
+// `to` is the sender's name for the banner and nothing more. Only if the server says no does the banner change, to red.
+var GAS_URL = 'https://script.google.com/a/macros/keylab.nyc/s/AKfycbzY4K1XCbYZlj4fXksfwEZ3Kxbeolr9abRuifT-_TY4hgfPZP9gbL1dSCn1_zeFRsvl3g/exec';
+var FAM_ACK_COPY = {
+  done: 'Thanks for letting [NAME] know you\u2019ve seen their message!',   // AC, 27 October 2026
+  nobody: 'your teacher',   // PLACEHOLDER — only when a link reaches the page without its name
+  unsent: 'This message was unsent, so there is nothing to acknowledge.',   // PLACEHOLDER
+  failed: 'Your \u2705 did not go through. Go to the Family Portal and click \u2705 Got it under the message.'   // PLACEHOLDER
+};
+var _klAckPage = false;
+(function(){
+  var q = window.location.search || '';
+  var m = /[?&]ack=([^&#]+)/.exec(q);
+  if (!m) return;
+  _klAckPage = true;
+  var token = '', to = '';
+  try { token = decodeURIComponent(m[1]); } catch (e) { token = m[1]; }
+  var n = /[?&]to=([^&#]*)/.exec(q);
+  try { to = n ? decodeURIComponent(n[1].replace(/\+/g, ' ')) : ''; } catch (e) { to = ''; }
+  try { if (window.history && window.history.replaceState) window.history.replaceState(null, '', window.location.pathname); } catch (e) {}
+  var el = document.createElement('div');
+  el.id = 'ack-banner';
+  el.setAttribute('role', 'status');
+  el.className = 'ack-banner';
+  el.textContent = FAM_ACK_COPY.done.replace('[NAME]', String(to).trim() || FAM_ACK_COPY.nobody);
+  document.body.insertBefore(el, document.body.firstChild);
+  function fail(reason){
+    el.className = 'ack-banner bad';
+    el.setAttribute('role', 'alert');
+    el.textContent = reason === 'unsent' ? FAM_ACK_COPY.unsent : FAM_ACK_COPY.failed;
+  }
+  function send(again){
+    fetch(GAS_URL, { method: 'POST', keepalive: true, headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                     body: JSON.stringify({ action: 'famAckFromEmail', data: { ack: token } }) })
+      .then(function(res){ return res.json(); })
+      .then(function(r){
+        if (r && r.ok) return;
+        // A refusal is final; anything else (Google failing a moment) is asked once more. A ✅ twice is one ✅.
+        if (r && r.reason) { fail(r.reason); return; }
+        if (again) setTimeout(function(){ send(false); }, 1500); else fail('');
+      }, function(){ if (again) setTimeout(function(){ send(false); }, 1500); else fail(''); });
+  }
+  send(true);
+})();
+</script>
 <div class="wrap" id="app"></div>
 <script>
 'use strict';
@@ -1395,7 +1457,8 @@ function blankSlot(){ return {day:'',start:'',end:'',pref:'',source:''}; }
 // ============================================================
 // API
 // ============================================================
-var GAS_URL = 'https://script.google.com/a/macros/keylab.nyc/s/AKfycbzY4K1XCbYZlj4fXksfwEZ3Kxbeolr9abRuifT-_TY4hgfPZP9gbL1dSCn1_zeFRsvl3g/exec';
+// GAS_URL is set in the first script on the page, ahead of everything ([1.945]): the ✅ banner sends with it before
+// the rest of the page has arrived.
 function api(payload, cb){
   fetch(GAS_URL, {
     method:'POST',
@@ -4639,7 +4702,33 @@ function rMsgBubble(m, prev, next){
     // turns, which was the readable half — and admin's sides ([1.413]'s other
     // half, which AC asked for by name) are untouched.
     '<div class="bubble-time">'+_klBubbleMeta(m)+'</div>'+
+    (mine?'':_klAckBtn(m))+   // [1.945]
     '</div></div>';
+}
+// ── [1.945] — ✅ Got it under a teacher's or admin's message ─────────────────
+// The same record the email's button writes, so a parent already here says so the same way. AC: the line above it is
+// the email's alone ("leave it out of the family portal"). Pressed by either parent, it is pressed for the household.
+var KL_ACK_COPY = {
+  btn: '\u2705 Got it',   // AC, 27 October 2026
+  failed: 'Your \u2705 did not go through. Please try again.'   // PLACEHOLDER
+};
+function _klAckBtn(m){
+  if(!m || !m.messageId || m._pending || (m.senderType!=='teacher' && m.senderType!=='admin')) return '';
+  if(m.ackAt) return '<span class="kl-ack done">'+esc(KL_ACK_COPY.btn)+'</span>';
+  return '<button type="button" class="kl-ack" onclick="klAckMsg('+jsq(m.messageId)+')">'+esc(KL_ACK_COPY.btn)+'</button>'+
+    (m._ackErr?'<span class="kl-ack-err" role="alert">'+esc(KL_ACK_COPY.failed)+'</span>':'');
+}
+function klAckMsg(id){
+  var t=HOME_EXPANDED; if(!t||!id) return;
+  var find=function(){ return (t.messages||[]).filter(function(x){ return x.messageId===id; })[0]; };
+  var m=find(); if(!m||m.ackAt) return;
+  m.ackAt=Date.now(); m._ackErr=false; render();   // at once; taken back only if the server says no
+  fapi('ackMessage', {conversationType:'family_teacher', familyId:FAMILY_ID, teacherId:t.teacherId, messageId:id,
+                      senderParentSlot:MY_PARENT_SLOT}, function(e,r){
+    var cur=find()||m;
+    if(e||!r||!r.ok){ cur.ackAt=''; cur._ackErr=true; render(); return; }
+    cur.ackAt=r.ackAt||cur.ackAt; render();
+  });
 }
 // The one meta line every human message carries: who, then when.
 function _klBubbleMeta(m){
@@ -9265,6 +9354,7 @@ function _klLoadPublicConfig(attempt){
 
 
 document.addEventListener('DOMContentLoaded', function(){
+  if (_klAckPage) return;   // [1.945] — the email's ✅: the banner is the whole page
   render();
   boot();
 });

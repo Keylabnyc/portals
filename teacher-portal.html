@@ -18839,8 +18839,20 @@ function _readMark(m, mine){
 // [1.934] — under this teacher's own message once admin has 👍'd it: the line admin's page draws, from the other seat.
 function _ackLine(m, mine){
   if(!mine || !m || !m.ackAt || m._pending) return '';
+  // [1.945] — a parent's ✅ Got it, one line per parent who pressed it, in AC's sentence with the ✅ (his emoji for families).
+  var fam=_famAcks(m);
+  if(fam.length) return fam.map(function(a){
+    return '<div class="ack-line">\u2705 '+esc(TCH_COPY.ackSeen.replace('{name}', a.name))+
+      '<span class="ack-when">'+esc(_ackTime(a.at))+'</span></div>';
+  }).join('');
+  if(_openKind()==='family') return '';   // a family thread's ackAt is only ever a parent's
   return '<div class="ack-line">\uD83D\uDC4D '+esc(TCH_COPY.ackSeen.replace('{name}', _readWho()||'Admin'))+
     '<span class="ack-when">'+esc(_ackTime(m.ackAt))+'</span></div>';
+}
+// [1.945] — who in the family pressed ✅ Got it, and when: [{name, at}], oldest first. Empty for anything else.
+function _famAcks(m){
+  var a=[]; try{ a=JSON.parse(m && m.ackBy || '[]'); }catch(e){ a=[]; }
+  return (Array.isArray(a)?a:[]).filter(function(x){ return x && x.name && Number(x.at); });
 }
 function _readWho(){
   if(_openKind()==='family'){   // [1.782]

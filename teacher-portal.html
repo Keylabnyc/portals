@@ -1110,6 +1110,7 @@ input[type=checkbox]{width:13px;height:13px;padding:0;margin:0;border:0;border-r
 .act-note{display:flex;align-items:center;gap:6px;margin-top:6px;padding:6px 10px;
   border-radius:var(--r);font-size:12.5px;font-weight:600;line-height:1.35}
 .act-working{border:1px solid var(--blue);background:var(--bbg);color:var(--bt)}
+.act-info{border:1px solid var(--blue);background:var(--bbg);color:var(--bt)}   /* [1.949] — already there: information, light blue */
 .act-done{border:1px solid var(--green);background:rgba(22,163,74,.10);color:var(--gt)}
 .act-failed{border:1px solid var(--red);background:rgba(220,38,38,.08);color:var(--red)}
 /* [1.928] — the same notes on your OWN message ("Saved …", "Could not
@@ -2172,6 +2173,7 @@ mark.guide-hit{background:var(--bbg);color:inherit;border-radius:2px;padding:0 1
 .mst-xacts .btn{width:auto}
 .mst-xlist .mst-sched{margin:0;border:0;border-top:1px solid var(--bg4);border-radius:0;background:var(--bg5)}
 .mst-xlist .mst-flash{margin:8px 10px}
+.mst-xlist>.act-note{margin:0 10px 8px}   /* [1.947] — a refused Clear, under its line */
 /* [1.810] — the day menu's label, AC's words */
 .mst-dayl{display:block;margin:8px 0 0;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3)}
 select.mst-day{width:100%;margin:6px 0 10px;padding:8px 10px;font:inherit;font-size:13.5px;font-weight:600;background:#fff;border:1px solid var(--border2);border-radius:var(--r);color:var(--text);cursor:pointer}
@@ -2579,7 +2581,7 @@ function _tIsTruthy(v){ return v===true||v==='TRUE'||v==='true'; }
 // [1.348] — the search reaches into the MESSAGES as well as the names now.
 // hits/hitsFor hold the server's answer and the query it belongs to, so a
 // stale answer is never drawn against a newer query.
-var MSG_SEARCH = {query:'', open:false, hits:{}, hitsFor:'', searching:false, _t:null};
+var MSG_SEARCH = {query:'', open:false, hits:{}, hitsFor:'', searching:false, failedFor:'', _t:null};   // [1.947] — failedFor: the query whose message search failed
 // [1.261] — FAMILY_PICKER and its six functions were here. The picker screen
 // is gone: the roster contains every family this teacher teaches ([1.172]) and
 // every staff contact including Admin ([1.260]), so the search on the roster
@@ -2651,7 +2653,7 @@ var LF = {email:'', password:'', remember:true};
 // forgot password / reset password
 var FP = {email:'', done:false, success:false, error:'', busy:false};
 // set/reset password (reached via emailed ?resetToken= link)
-var SPW = {checking:false, invalid:false, resent:false, resending:false, email:'', pw1:'', pw2:'', busy:false, success:false, error:''};
+var SPW = {checking:false, invalid:false, resent:false, resending:false, email:'', pw1:'', pw2:'', busy:false, success:false, error:'', unreached:false, dead:false};   // [1.947] — unreached: the link's check got no answer; dead: Save found the link expired or used
 
 // ============================================================
 // API
@@ -2703,6 +2705,7 @@ function _apiPatchKept(payload){
     if(!n){ n={lessonDate:d.lessonDate,lessonTime:'',activities:'',materials:[],sent:[]}; c.notes.push(n);
       c.notes.sort(function(a,b){return a.lessonDate<b.lessonDate?1:a.lessonDate>b.lessonDate?-1:0;}); }
     n.lessonTime=d.lessonTime||n.lessonTime; n.activities=String(d.activities||''); n.materials=d.materials||[];
+    n.notesHtml=String(d.notesHtml||'');   // [1.947] — the notes with their links, which the drawing and Edit read first: reopening a student showed the old ones
   }
 }
 function api(payload, cb){
@@ -2922,8 +2925,19 @@ function actGone(key, text){
   _actTimers[key] = setTimeout(function(){ delete ACT[key]; delete _actTimers[key]; render(); }, 4000);
   render();
 }
+// [1.949] — a press answered line by line (the Library card's Add): each line in its own colour — done green, already
+// there light blue, refused red — kept like a failure while one needs putting right, cleared like a success otherwise.
+function actRows(key, rows, stays){
+  ACT[key] = {state:stays?'failed':'done', text:'', rows:rows||[]};
+  if(_actTimers[key]){ clearTimeout(_actTimers[key]); delete _actTimers[key]; }
+  if(!stays) _actTimers[key] = setTimeout(function(){ delete ACT[key]; delete _actTimers[key]; render(); }, 4000);
+  render();
+}
 function rAct(key){
   var a=ACT[key]; if(!a) return '';
+  if(a.rows) return a.rows.map(function(x){   // [1.949]
+    return '<div class="act-note act-'+x.state+'">'+(x.state==='done'?'✓ ':x.state==='failed'?'! ':'')+esc(x.text||'')+'</div>';
+  }).join('');
   var icon = a.state==='working' ? '<span class="spin">\u21bb</span> '
            : a.state==='done'    ? '\u2713 '
            : a.state==='gone'    ? '\u2715 ' : '\u0021 ';
@@ -3647,22 +3661,46 @@ function doBeginReset(){
 // ============================================================
 // SET / RESET PASSWORD (reached via emailed ?resetToken= link)
 // ============================================================
+// [1.947] — the reset link's check, asked again by Try again with the token kept in memory (it is already off the address bar).
+function _spwCheck(){
+  SPW.checking=true; SPW.unreached=false;
+  render();
+  api({action:'teacherValidateResetToken', data:{resetToken:RESET_TOKEN}}, function(e2,r2){
+    SPW.checking=false;
+    if(e2||!r2){ SPW.unreached=true; render(); return; }   // [1.947] — no answer says nothing about the link: not "expired"
+    if(!r2.ok){
+      SPW.invalid=true;
+      SPW.email=r2.email||'';
+    } else {
+      SPW.email=r2.email||'';
+    }
+    render();
+  });
+}
 function rSetPassword(){
   if(SPW.checking){
     return '<div class="login-w">'+loginHeader()+'<div style="text-align:center;padding:2rem;color:var(--text3)"><span class="spin" style="font-size:22px">↻</span></div></div>';
   }
+  // [1.947] — the check got no answer: say so, and Try again asks once more.
+  if(SPW.unreached){
+    return '<div class="login-w">'+loginHeader()+
+      '<p style="color:var(--rt)">'+esc(TCH_COPY.linkUnchecked)+'</p>'+
+      '<button class="btn btn-p" onclick="_spwCheck()">Try again</button>'+
+      '<button class="btn btn-s" style="margin-top:.5rem" onclick="PAGE=&apos;login&apos;;render()">Back to Sign In</button></div>';
+  }
+  // [1.947] — also reached from the password form below, whose link went dead between opening and Save.
+  if(SPW.resent){
+    return '<div class="login-w">'+loginHeader()+
+      '<h1>Check your email</h1>'+
+      '<p>We’ve sent a fresh reset link to <strong>'+esc(SPW.email)+'</strong>.</p>'+
+      '<button class="btn btn-p" onclick="PAGE=&apos;login&apos;;render()">Back to Sign In</button></div>';
+  }
+  var resendBtn=SPW.email
+    ?(SPW.resending
+      ?'<button class="btn btn-p" disabled><span class="spin">↻</span> Sending...</button>'
+      :'<button class="btn btn-p" onclick="doResendResetLink()">Send me a new link</button>')
+    :'';
   if(SPW.invalid){
-    if(SPW.resent){
-      return '<div class="login-w">'+loginHeader()+
-        '<h1>Check your email</h1>'+
-        '<p>We’ve sent a fresh reset link to <strong>'+esc(SPW.email)+'</strong>.</p>'+
-        '<button class="btn btn-p" onclick="PAGE=&apos;login&apos;;render()">Back to Sign In</button></div>';
-    }
-    var resendBtn=SPW.email
-      ?(SPW.resending
-        ?'<button class="btn btn-p" disabled><span class="spin">↻</span> Sending...</button>'
-        :'<button class="btn btn-p" onclick="doResendResetLink()">Send me a new link</button>')
-      :'';
     return '<div class="login-w">'+loginHeader()+
       '<h1>This link has expired</h1>'+
       (resendBtn||'')+
@@ -3678,6 +3716,8 @@ function rSetPassword(){
     '<h1>Set your password</h1>'+
     '<p>Must be at least 8 characters.</p>'+
     (SPW.error?'<p style="color:var(--rt)">'+esc(SPW.error)+'</p>':'')+
+    // [1.947] — a link that went dead before Save: the way to a new one and the way back, under the reason.
+    (SPW.dead?'<div style="margin-bottom:1rem">'+resendBtn+'<button class="btn btn-s" style="margin-top:.5rem" onclick="PAGE=&apos;login&apos;;render()">Back to Sign In</button></div>':'')+
     (SPW.email?'<p style="font-size:13px;color:var(--text3)">Setting a password for <strong>'+esc(SPW.email)+'</strong></p>':'')+
     '<div class="field"><label>New password<span class="req">*</span></label>'+
     '<input id="spw1" type="password" autocomplete="new-password" value="'+esc(SPW.pw1)+'" oninput="SPW.pw1=this.value"></div>'+
@@ -3689,7 +3729,7 @@ function rSetPassword(){
 function doCompleteReset(){
   var pw1=(document.getElementById('spw1')||{}).value||SPW.pw1;
   var pw2=(document.getElementById('spw2')||{}).value||SPW.pw2;
-  SPW.pw1=pw1; SPW.pw2=pw2; SPW.error='';
+  SPW.pw1=pw1; SPW.pw2=pw2; SPW.error=''; SPW.dead=false;
   if(!pw1||pw1.length<8){ SPW.error='Password must be at least 8 characters.'; render(); return; }
   if(pw1!==pw2){ SPW.error='Passwords don\'t match'; render(); return; }
   SPW.busy=true; render();
@@ -3697,6 +3737,7 @@ function doCompleteReset(){
     SPW.busy=false;
     if(e||!r||!r.ok){
       SPW.error=(r&&r.error)||'Something went wrong. Please try again.';
+      SPW.dead=!e&&!!r&&(!!r.expired||/\binvalid\b/i.test(String(r.error||'')));   // [1.947] — the server says the link itself is expired or used
       render(); return;
     }
     SPW.success=true;
@@ -4417,6 +4458,7 @@ var TT_COPY={
   send:'Send report to Adrian',sending:'Sending…',
   autosave:'Your answers save as you type, so you can close this and finish later.',
   saveFail:'Your last answers were not saved. Check your connection.',
+  sendFail:'The report was not sent. Check your connection and try again.',   // PLACEHOLDER — [1.947], AC to word
   missing:function(n){return 'Answer every question before sending ('+n+' left).';},   // PLACEHOLDER — AC's wording
   // [1.773] — AC, 5 October 2026: "Allow teachers to archive trial messages
   // that have reports that have been sent to admin". PLACEHOLDER wording.
@@ -4433,7 +4475,8 @@ function loadTrials(quiet){
     // [1.736] — a report sent from this screen stays sent, even when a refresh
     // asked for before the send landed answers after it.
     var _mine={};((TT.data&&TT.data.taught)||[]).forEach(function(t){if(t.submittedAt)_mine[t.key]=t;});
-    (r.taught||[]).forEach(function(t){var m=_mine[t.key];if(m&&!t.submittedAt){t.submittedAt=m.submittedAt;t.report=m.report;}});
+    // [1.947] — and not owed: the server's owed:true from before the send would otherwise put it back under Report due.
+    (r.taught||[]).forEach(function(t){var m=_mine[t.key];if(m&&!t.submittedAt){t.submittedAt=m.submittedAt;t.report=m.report;t.owed=false;}});
     TT.data=r;
     // Answers being typed are kept; everything else comes from the server.
     (r.taught||[]).forEach(function(t){if(!TT.timer[t.key])TT.ans[t.key]=Object.assign({},t.report||{});});
@@ -4510,22 +4553,27 @@ function _ttSentCard(t,archived){
     return '<div class="card tt-card"><div class="tt-sent-row"><div class="tt-row" style="flex:1 1 auto;min-width:0">'+
       '<span><b>'+esc(_nameAge(t.studentName,t.age))+'</b><span class="tt-sub">'+esc(t.details||'')+'</span></span>'+
       '<span class="tt-pill ok">'+esc(TT_COPY.markedOn(t.mark,_ttWhen(t.markedAt)))+'</span></div>'+
-      '<button type="button" class="btn btn-s ms-sm" onclick="ttArchive('+jsq(t.key)+','+(archived?'false':'true')+')">'+esc(archived?TT_COPY.restore:TT_COPY.archive)+'</button></div></div>';
+      '<button type="button" class="btn btn-s ms-sm" onclick="ttArchive('+jsq(t.key)+','+(archived?'false':'true')+')">'+esc(archived?TT_COPY.restore:TT_COPY.archive)+'</button></div>'+
+      rAct('tt:'+t.key)+'</div>';   // [1.947] — an Archive or Restore that was refused says why on its own card
   }
   return '<div class="card tt-card"><div class="tt-sent-row"><button type="button" class="tt-row tt-btn" onclick="ttToggle('+jsq(t.key)+')">'+
     '<span><b>'+esc(_nameAge(t.studentName,t.age))+'</b></span>'+
     '<span class="tt-pill ok">'+esc(TT_COPY.sentOn(_ttWhen(t.submittedAt)))+'</span></button>'+
     '<button type="button" class="btn btn-s ms-sm" onclick="ttArchive('+jsq(t.key)+','+(archived?'false':'true')+')">'+esc(archived?TT_COPY.restore:TT_COPY.archive)+'</button></div>'+
+    rAct('tt:'+t.key)+   // [1.947] — an Archive or Restore that was refused says why on its own card
     (on?_ttAnswersHTML(t):'')+'</div>';
 }
 // [1.773] — moved at once, and put back if the server says no.
 function ttArchive(k,on){
   var t=((TT.data&&TT.data.taught)||[]).filter(function(x){return x.key===k;})[0];if(!t)return;
   var was=t.teacherArchivedAt||'';
+  if(ACT['tt:'+k])delete ACT['tt:'+k];   // [1.947] — a new press clears the last refusal on this card
   t.teacherArchivedAt=on?(was||'now'):'';TT.open[k]=false;render();
   api({action:'teacherArchiveTrial',data:{teacherToken:TOKEN,key:k,archived:!!on}},function(e,r){
-    if(e||!r||!r.ok){t.teacherArchivedAt=was;showMsg((r&&r.error)||TT_COPY.saveFail,'e');render();return;}
-    t.teacherArchivedAt=r.teacherArchivedAt||'';render();
+    // [1.947] — the reason beside the card that moved back, not the corner toast; "answers were not saved" was never this press's.
+    var c=((TT.data&&TT.data.taught)||[]).filter(function(x){return x.key===k;})[0]||t;   // [1.947] — the card as it is now: a refresh may have replaced `t`
+    if(e||!r||!r.ok){c.teacherArchivedAt=was;actFail('tt:'+k,(r&&r.error)||MS_COPY.saveFail);return;}
+    c.teacherArchivedAt=r.teacherArchivedAt||'';render();
   });
 }
 function ttToggle(k){TT.open[k]=!TT.open[k];render();}
@@ -4573,13 +4621,16 @@ function ttAnswer(i,k,v){
   var t=TT.data.taught[i];if(!t)return;
   var a=TT.ans[t.key]=TT.ans[t.key]||{};a[k]=v;
   clearTimeout(TT.timer[t.key]);
-  TT.timer[t.key]=setTimeout(function(){_ttSave(t,null);},1200);
+  var id=TT.timer[t.key]=setTimeout(function(){_ttSave(t,null,id);},1200);
 }
-function _ttSave(t,then){
+function _ttSave(t,then,id){
   api({action:'teacherSaveTrialReport',data:{teacherToken:TOKEN,key:t.key,answers:TT.ans[t.key]||{}}},function(e,r){
-    TT.timer[t.key]=null;
+    // [1.947] — only this save's own timer is forgotten: nulling a newer one let Send's clearTimeout miss it.
+    if(TT.timer[t.key]===id)TT.timer[t.key]=null;
     var bad=e||!r||!r.ok;
-    if(bad!==!!TT.err[t.key]){TT.err[t.key]=bad?TT_COPY.saveFail:'';render();}
+    // [1.947] — a refusal says the server's reason; only no answer is "check your connection".
+    var msg=bad?((!e&&r&&r.error)||TT_COPY.saveFail):'';
+    if(msg!==(TT.err[t.key]||'')){TT.err[t.key]=msg;render();}
     if(then)then(!bad);
   });
 }
@@ -4602,17 +4653,19 @@ function ttSubmit(i){
   clearTimeout(TT.timer[t.key]);TT.timer[t.key]=null;
   TT.miss[t.key]=[];TT.err[t.key]='';
   TT.sending[t.key]=true;
-  var before=t.report;
-  t.submittedAt=_ttNowLabel();t.report=Object.assign({},TT.ans[t.key]||{});
+  var before=t.report,owedWas=t.owed,k=t.key;
+  // [1.947] — owed:false as well: the list and the tab's count read the server's owed, so submittedAt alone left it under Report due.
+  t.submittedAt=_ttNowLabel();t.report=Object.assign({},TT.ans[t.key]||{});t.owed=false;
   render();
   api({action:'teacherSubmitTrialReport',data:{teacherToken:TOKEN,key:t.key,answers:TT.ans[t.key]||{}}},function(e,r){
-    TT.sending[t.key]=false;
+    TT.sending[k]=false;
+    var c=((TT.data&&TT.data.taught)||[])[_ttIdx(k)]||t;   // [1.947] — the report as it is now: a refresh may have replaced `t`
     if(e||!r||!r.ok){
-      t.submittedAt='';t.report=before;TT.open[t.key]=true;
-      TT.miss[t.key]=(r&&r.missing)||[];
-      TT.err[t.key]=(r&&r.error)||TT_COPY.saveFail;render();return;
+      c.submittedAt='';c.report=before;c.owed=owedWas;TT.open[k]=true;
+      TT.miss[k]=(r&&r.missing)||[];
+      TT.err[k]=(r&&r.error)||TT_COPY.sendFail;render();return;   // [1.947] — it is the report that did not go, not the answers
     }
-    t.submittedAt=r.submittedAt||t.submittedAt;
+    c.submittedAt=r.submittedAt||c.submittedAt;
     render();
   });
 }
@@ -4811,15 +4864,21 @@ function _fuStar(s,cls){
   return '<button type="button" class="fu'+(on?' on':'')+(cls?' '+cls:'')+'" title="'+esc(FU_COPY.star)+'" aria-label="'+esc(FU_COPY.star)+'" aria-pressed="'+(on?'true':'false')+'"'+
     ' onclick="event.stopPropagation();fuToggle('+jsq(s.studentId)+')">\u2605</button>';
 }
+// [1.947] — written on every record the star is drawn from: with the student's page open, _mstStu hands back a merged copy,
+// so the press changed that copy and neither the page's star nor the row's moved (the server saved it).
+function _fuSet(id,f,v){
+  [_mstR().students.filter(function(x){return x.studentId===id;})[0], MS.card&&MS.cardStu===id&&MS.card.student,
+   API_KEEP['c|'+id]&&API_KEEP['c|'+id].student].forEach(function(x){if(x)x[f]=v;});
+}
 function fuToggle(id){
   var s=_mstStu(id);if(!s)return;
-  var was=!!s.followUp;s.followUp=!was;actClear('fu:'+id);render();
+  var was=!!s.followUp;_fuSet(id,'followUp',!was);actClear('fu:'+id);render();
   api({action:'teacherSetFollowUp',data:{teacherToken:TOKEN,studentId:id,followUp:!was}},function(e,r){
-    if(e||!r||!r.ok){var t=_mstStu(id);if(t)t.followUp=was;actFail('fu:'+id,(r&&r.error)||FU_COPY.failed);render();}
+    if(e||!r||!r.ok){_fuSet(id,'followUp',was);actFail('fu:'+id,(r&&r.error)||FU_COPY.failed);render();}
   });
 }
 function fuNoteInput(id,v){
-  var s=_mstStu(id);if(s)s.followUpNote=v;
+  _fuSet(id,'followUpNote',v);
   clearTimeout(_fuTimer);_fuWait={id:id,v:v,tok:TOKEN};
   _fuTimer=setTimeout(_fuNoteFlush,900);
 }
@@ -4976,6 +5035,10 @@ var MST_COPY={
   notSent:'Not sent',lineNotSent:'Assignment not sent',                      // PLACEHOLDER — [1.806] a send the server refused or never answered, back in Drafts
   sendNotDone:function(n){return 'The assignment for '+n+' was not sent. It is in Drafts.';},                                 // PLACEHOLDER
   deleteNotDone:function(n){return 'The draft assignment for '+n+' was not deleted.';},                                       // PLACEHOLDER
+  cancelling:'Cancelling…',                                                                                             // PLACEHOLDER — [1.947], AC to word
+  cancelNotDone:function(n){return 'The scheduled assignment for '+n+' was not cancelled. It is still in Scheduled.';},       // PLACEHOLDER — [1.947], AC to word
+  // [1.947] — Message Family for a family this teacher does not teach yet (a trial): the server's refusal, TEACHER_NOT_FAMILY_TEACHER
+  msgFamNo:'You can only message families of students you currently teach. Please contact admin.',                          // PLACEHOLDER — [1.947], AC to word
   draftNotSaved:function(n){return 'The draft assignment for '+n+' was not saved. It is in Drafts.';},                        // PLACEHOLDER
   notesNotSaved:function(n,d){return 'Lesson notes for '+n+', '+d+', were not saved. Open '+n+' to save them again.';},      // PLACEHOLDER
   unfilled:'This assignment still has a template field to fill in, such as [studentFirst].',   // PLACEHOLDER
@@ -5050,7 +5113,7 @@ function _mstMine(){
 }
 function _mstKeepLocal(R){
   _mstMine();
-  R.drafts=(R.drafts||[]).filter(function(y){var k=_mstDraftKey(y);return !_mstOut[k]&&!_mstHide[k];});
+  R.drafts=(R.drafts||[]).filter(function(y){var k=_mstDraftKey(y);return !(_mstOut[k]&&!_mstOut[k].resend)&&!_mstHide[k];});   // [1.947] — a Resend never takes the lesson's draft away
   Object.keys(_mstLocal).forEach(function(k){R.drafts=R.drafts.filter(function(y){return _mstDraftKey(y)!==k;}).concat([_mstLocal[k]]);});
   R.scheduled=R.scheduled||[];
   Object.keys(_mstOut).forEach(function(k){var x=_mstOut[k].x;if(_mstOut[k].at&&R.scheduled.indexOf(x)<0)R.scheduled=R.scheduled.concat([x]);});
@@ -5422,7 +5485,8 @@ function mstDayOf(s){return s.day||(s.trialDate?_MS_DAY[_msDow(s.trialDate)]:'')
 function mstTimeOf(s){return s.day?s.time:s.trialTime;}
 function mstLessonOf(s){return s.day?_msLastLesson(s,_mstToday()):(s.trialDate||'');}
 function mstState(id,d){
-  var o=_mstOut[id+'|'+d];if(o&&!o.at)return 'sn';   // [1.888] — on its way: Sending
+  // [1.947] — a Resend on its way leaves the lesson's draft on the badge; with no draft it says Sending, as a send does
+  var o=_mstOut[id+'|'+d];if(o&&!o.at&&!(o.resend&&_mstDraft(id,d)))return 'sn';   // [1.888] — on its way: Sending
   if(_mstDraft(id,d))return 'dr';
   var sc=_mstSched(id,d);if(sc&&!sc.pending)return 'sc';   // [1.806] — not while it is on its way
   var s=_mstR().students.filter(function(x){return x.studentId===id;})[0];
@@ -5453,8 +5517,8 @@ function mstRow(s){
 function mstDraftList(list){
   var h='';
   if(MST.flash)h+='<div class="act-note act-done mst-flash">\u2713 '+esc(MST.flash)+'</div>';
-  if(!list.length)h+='<div class="mst-xnone">'+esc(MST_COPY.noDrafts)+'</div>';
-  else h+=_mstDraftRows(list);
+  if(!list.length&&!MST.bulkBusy)h+='<div class="mst-xnone">'+esc(MST_COPY.noDrafts)+'</div>';
+  else h+=_mstDraftRows(list);   // [1.947] — the buttons stay while a run goes, so its Sending… / Scheduling… shows
   return '<div class="mst-xlist">'+h+'</div>';
 }
 function _mstDraftRows(list){
@@ -5476,7 +5540,7 @@ function _mstDraftRows(list){
       '<span class="mst-xd">'+esc(MST_COPY.forLesson(_mstShortDay(x.lessonDate)))+'</span>'+(x.failed?'<span class="mst-xd bad">'+esc(x.notSent?MST_COPY.notSent:MST_COPY.notSaved)+'</span>':'')+'</button></div>';
   });
   h+='<div class="mst-xacts"><button type="button" class="btn btn-s ms-sm'+(MST.bulk?' mst-on':'')+'"'+(n&&!MST.bulkBusy?'':' disabled')+
-      ' onclick="MST.bulk=!MST.bulk;if(MST.bulk&&!MST.bulkAt)MST.bulkAt=_schedDefault();render()">'+esc(n?MST_COPY.schedN(n):MST_COPY.schedule)+'</button>'+
+      ' onclick="MST.bulk=!MST.bulk;if(MST.bulk&&!MST.bulkAt)MST.bulkAt=_schedDefault();render()">'+esc(MST.bulkBusy==='sched'?MST_COPY.scheduling:n?MST_COPY.schedN(n):MST_COPY.schedule)+'</button>'+   // [1.947] — Scheduling… while the run goes
     '<button type="button" class="btn btn-p ms-sm"'+(n&&!MST.bulkBusy?'':' disabled')+' onclick="mstBulk(0)">'+esc(MST.bulkBusy==='send'?MST_COPY.sending:n?MST_COPY.sendN(n):MST_COPY.send)+'</button></div>';
   if(MST.bulkErr)h+='<div class="tt-err mst-xerr">'+esc(MST.bulkErr)+'</div>';
   if(MST.bulk&&n)h+=mstSchedPanel('bulk');
@@ -5503,7 +5567,8 @@ function mstReplyList(list){
       (x.gone?'<span class="mst-xd bad">'+esc(MST_COPY.goneStudent)+'</span>':'');
     h+='<div class="mst-xrow">'+(x.gone?'<span class="mst-xopen mst-gone">'+inner+'</span>'
       :'<button type="button" class="mst-xopen" onclick="mstOpenAt('+jsq(x.studentId)+','+jsq(x.lessonDate)+','+jsq(x.lessonTime)+')">'+inner+'</button>')+
-      '<button type="button" class="btn btn-s ms-sm" onclick="mstReplyClear('+jsq(x.messageId)+')">'+esc(MST_COPY.clear)+'</button></div>';
+      '<button type="button" class="btn btn-s ms-sm" onclick="mstReplyClear('+jsq(x.messageId)+')">'+esc(MST_COPY.clear)+'</button></div>'+
+      rAct('rn:'+x.messageId);   // [1.947] — a refused Clear, under its own line
   });
   return '<div class="mst-xlist">'+h+'</div>';
 }
@@ -5511,6 +5576,7 @@ function mstReplyList(list){
 function mstReplyClear(id){
   var was=(_mstR().replyNeeded||[]).filter(function(x){return x.messageId===id;})[0];if(!was)return;
   _mstMine();_mstCleared[id]=true;
+  actClear('rn:'+id);   // [1.947] — a reason from an earlier try goes with the line
   _mstRosterPatch(function(R){_mstKeepLocal(R);});
   api({action:'teacherClearReplyNeeded',data:{teacherToken:TOKEN,messageId:id}},function(e,r){
     if(!e&&r&&r.ok)return;
@@ -5518,7 +5584,9 @@ function mstReplyClear(id){
     _mstRosterPatch(function(R){
       if(!(R.replyNeeded||[]).some(function(x){return x.messageId===id;}))R.replyNeeded=(R.replyNeeded||[]).concat([was]).sort(function(a,b){return a.sentAt-b.sentAt;});
     });
-    showMsg((r&&r.error)||MST_COPY.failed,'e');
+    // [1.947] — said beside the line it came back to while the list is open; in a message only once the teacher has left it
+    if(HOME_TAB==='students'&&MST.open==='reply')actFail('rn:'+id,(r&&r.error)||MST_COPY.failed);
+    else showMsg((r&&r.error)||MST_COPY.failed,'e');
   });
 }
 // Open a student at a lesson; once their card has arrived, bring its assignment into view.
@@ -5548,11 +5616,12 @@ function mstStudent(){
     '<div class="mst-name">'+esc(_nameAge(s.studentName,s.age))+_bdayPill(s)+'</div>'+   // [1.911]
     '<div class="mst-det">'+esc([s.instrument,s.day?s.day+'s '+mstTime(s.time):'',s.duration?s.duration+' min':'',s.grade?s.grade+' grade':'',s.level].filter(Boolean).join(' · '))+'</div>'+
     (par.length?'<div class="mst-det">'+esc(MST_COPY.parents+': '+_msNames(par))+'</div>':'')+
+    rAct('msgfam:'+s.studentId)+   // [1.947] — why Message Family cannot open this family
     rFuStudent(s)+'</div>';   // [1.912]
   // [1.887] — "Your notes about [name]" on dark gray, apart from the Lesson Summary's navy (AC, 21 October 2026).
   h+=_msArea(MS_COPY.notesAbout(s.first),'<span class="ms-tag">'+esc(MS_COPY.onlyYou)+'</span>',
     '<div class="ms-sec"><textarea id="ms-note" class="tt-a" rows="3" oninput="msNoteInput(this.value)">'+esc(MS.note||'')+'</textarea>'+
-    (MS.st?'<div class="ms-st">'+esc(MS.st)+'</div>':'')+'</div>','ms-notes');
+    (MS.st?'<div class="ms-st" id="ms-note-st">'+esc(MS.st)+'</div>':'')+'</div>','ms-notes');   // [1.947] — an id, so typing can change it without a redraw
   // AC, 7 October: "Create assignment button located at bottom of lesson notes box, not in
   // separate box. Expands in same box with clear visual separation." [1.888] — AC, 21 October 2026: "notes about mia and
   // lesson summary notes are both private, but only indicating on one implies the summaries may be public facing" — so
@@ -5682,14 +5751,14 @@ function mstLessonBody(d,current){
     // read or being written. Nothing else of the message's formatting is offered — only links were asked for.
     (ed?(function(){var nid='ms-notes-'+id;return '<div class="composer-wrap ms-notes-wrap">'+
         '<div id="'+nid+'" class="cmp-rich tt-a ms-lnotes" contenteditable="'+(ed.busy?'false':'true')+'" role="textbox" aria-multiline="true" aria-label="'+esc(MST_COPY.notesFor(mstDate(d)))+'"'+
-        ' oninput="msEditHtml(\''+d+'\',this)" onkeyup="_composerState(\''+nid+'\')" onmouseup="_composerState(\''+nid+'\')" onblur="_composerStateClear(\''+nid+'\')" onpaste="_composerPaste(event)">'+
+        ' oninput="msEditHtml(\''+d+'\',this)" onkeydown="if(event.metaKey||event.ctrlKey)_composerKey(event,\''+nid+'\')" onkeyup="_composerState(\''+nid+'\')" onmouseup="_composerState(\''+nid+'\')" onblur="_composerStateClear(\''+nid+'\')" onpaste="_composerPaste(event)">'+   // [1.949] — Cmd+K only: Tab here still leaves the notes
         (ed.notesHtml||_msNotesHtml(ed.activities))+'</div>'+
         rComposerAddRow(nid,'les:'+d,true)+   // [1.905] — under the notes, as under every box
         // [1.902] — a new link asks to go into My Library, with its name and tags, as in a message: the question was set
         // and never drawn, so a link added here could not be tagged (AC: "it looks like you broke the ability to add/edit
         // tags for links").
         rLinkOffer(nid)+'</div>';})()
-      :String(l.activities||'').trim()?'<div class="ms-ro">'+(l.notesHtml||esc(l.activities))+'</div>':'<div class="ms-ro ms-empty">'+esc(MS_COPY.noNotes)+'</div>')+'</div>';
+      :String(l.activities||'').trim()?'<div class="ms-ro">'+(l.notesHtml?_linksOpenNew(l.notesHtml):esc(l.activities))+'</div>':'<div class="ms-ro ms-empty">'+esc(MS_COPY.noNotes)+'</div>')+'</div>';
   // [1.905] — Materials & Resources, once there is something in it or its Add file panel is open (Add file is under the
   // notes now, so an empty heading here would have said nothing).
   if(ed&&((ed.materials||[]).length||MS.pick&&MS.pick.target==='les:'+d)){
@@ -5743,7 +5812,8 @@ function mstCard(d,m,st){
     (lines.length?'<span class="mst-q">'+esc(MST_COPY.assignment)+'</span><ol class="mst-ol">'+lines.map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ol>':'')+
     (mats.length?'<span class="mst-q">'+esc(MST_COPY.mats)+'</span>'+mats.map(function(x){return _msMatRow(x,'');}).join('').replace(/<a /g,'<a onclick="event.stopPropagation()" '):'');
   var foot=st==='dr'?'<button type="button" class="btn btn-s ms-sm" onclick="'+go+'">'+esc(MST_COPY.open)+'</button>'
-    :st==='sc'&&!m.pending?'<button type="button" class="btn btn-s ms-sm"'+(MST.busy?' disabled':'')+' onclick="mstCancelSend('+jsq(m.messageId)+')">'+esc(MST_COPY.cancelSend)+'</button>'   // [1.806] — no Cancel Send until it has an id
+    :st==='sc'&&!m.pending?'<button type="button" class="btn btn-s ms-sm"'+(MST.busy?' disabled':'')+' onclick="mstCancelSend('+jsq(m.messageId)+')">'+esc(MST.busy==='cancel'?MST_COPY.cancelling:MST_COPY.cancelSend)+'</button>'   // [1.806] — no Cancel Send until it has an id
+    // [1.947] — Cancelling… while it goes: it was only greyed, and looked like nothing had happened
     // [1.865] — Resend, on a sent one once the server has it (AC, 9 October 2026: "Teacher clicks "resend" button on a sent
     // assignment. Editor opens up. Teacher can edit if they want, or just click resend to send it").
     :st==='ok'&&!m.pending&&m.messageId?'<button type="button" class="btn btn-s ms-sm"'+(MST.busy?' disabled':'')+' onclick="mstResend('+jsq(d)+','+jsq(m.messageId)+')">'+esc(MST_COPY.resend)+'</button>':'';
@@ -5757,8 +5827,14 @@ function mstCancelSend(id){
   var sc=_mstR().scheduled.filter(function(x){return x.messageId===id;})[0];if(!sc||MST.busy)return;
   MST.busy='cancel';MST.err='';render();
   api({action:'unscheduleMessage',data:{conversationType:'family_teacher',familyId:sc.familyId,teacherId:TEACHER_ID,teacherToken:TOKEN,messageId:id}},function(e,r){
-    MST.busy='';
-    if(e||!r||!r.ok){MST.err=(r&&r.error)||MST_COPY.failed;MST.errFor=id;render();return;}
+    if(MST.busy==='cancel')MST.busy='';   // [1.947] — its own working state only, never a send started since on another student
+    if(e||!r||!r.ok){
+      var d=sc.lessonDate;
+      // [1.947] — on its card while that card is on screen; in a message once the teacher has moved on, where it was lost
+      if(_mstOnStudent(sc.studentId)&&MS.cardDate===d&&!(MS.asg&&MS.asg.date===d)){MST.err=(r&&r.error)||MST_COPY.failed;MST.errFor=id;render();}
+      else showMsg(MST_COPY.cancelNotDone(sc.studentName||''),'e');
+      return;
+    }
     SCHED_GONE[id]=true;
     _mstRosterPatch(function(R){
       R.scheduled=R.scheduled.filter(function(x){return x.messageId!==id;});
@@ -5910,7 +5986,7 @@ function mstForm(){
   var dr=re?null:_mstDraft(MS.cardStu,a.date);
   var libTag=function(m){
     if(m.kind==='book'||m.uploading||m.libNo)return '';   // [1.806] — on a shelf once it has arrived; [1.904] — not for one said No thanks to
-    var sh=_msLibShelf(m);
+    var sh=_msLibShelf(m)||(m.kind==='link'&&_libStudioUnkept(m.url)?'studio':'');   // [1.949] — a Master Library link not kept is still Keylab's
     return '<span class="ms-lib'+(sh?'':' new')+'">'+esc(sh==='studio'?TLIB_COPY.studio:sh?MS_COPY.inLib:MS_COPY.willAdd)+'</span>';
   };
   var tick=function(slot,name){return '<label class="mst-to"><input type="checkbox"'+(a.to[slot]?' checked':'')+' onclick="mstSetTo(\''+slot+'\',this.checked)"> '+esc(name)+'</label>';};
@@ -5931,7 +6007,8 @@ function mstForm(){
         (m.kind==='link'?'<a href="'+esc(m.url)+'" target="_blank" rel="noopener noreferrer">'+esc(m.label||m.url)+'</a>'
           :'<button type="button" class="ms-matopen" onclick="openAttachment('+jsq(m.attachmentId)+',\'view\')">'+esc(m.label)+'</button>')+'</span>'+
         (at>-1?_msMatEditBtn('asg',at,m):'')+'</div>'+
-        (at>-1?rMatTagAsk(o):'');}).join('')+'</div>':'';   // a ticked link new to My Library asks "Assign tags?" under its row
+        // [1.947] — drawn from the assignment's copy, the one a press reaches (it drew the lesson summary's)
+        (at>-1?rMatTagAsk(m):'');}).join('')+'</div>':'';   // a ticked link new to My Library asks "Assign tags?" under its row
   // [1.905] — drawn once there is something to show: the lesson summary's offer, a material, or the Add file panel (Add
   // file is under the assignment's box now, beside Add link).
   var mats=!(offer||a.mats.length||MS.pick&&MS.pick.target==='asg')?'':'<div class="mst-mats cz"><div class="ms-lab">'+esc(MST_COPY.mats)+'</div>'+offer+
@@ -6019,6 +6096,7 @@ function _mstDraftMats(list){
 function mstSaveDraft(){
   var a=MS.asg;if(!a||MST.busy)return;
   mstSyncHtml();
+  if(MS_MATEDIT&&MS_MATEDIT.k==='asg'&&!msMatEditDone(true))return;   // [1.949] — as Send
   var stu=MS.cardStu,s=_mstStu(stu),html=_mstCleanHtml(),key=stu+'|'+a.date;
   var data={teacherToken:TOKEN,studentId:stu,lessonDate:a.date,lessonTime:a.time,html:html,notifyParents:mstNotify(s,a.to),materials:_mstDraftMats(a.mats),replyNeeded:!!a.reply};
   var done=function(d){_mstRosterPatch(function(R){R.drafts=R.drafts.filter(function(x){return _mstDraftKey(x)!==key;}).concat([d]);});};
@@ -6119,8 +6197,8 @@ function _mstSendOne(o,fin){
   _seqRun('asg:'+dk,function(next){_mstSendNow(o,function(err,r){next();if(!err&&!o.resendOf)delete _mstLocal[dk];fin(err,r);});});
 }
 function _mstSendNow(o,done){
-  var s=o.s,files=o.mats.filter(function(m){return m.kind==='file';}),newLinks=o.mats.filter(function(m){return m.kind==='link'&&!_msLibShelf(m)&&!m.libNo;});   // [1.904] — No thanks is no
-  var html=o.html;
+  var s=o.s,files=o.mats.filter(function(m){return m.kind==='file';}),newLinks=o.mats.filter(function(m){return m.kind==='link'&&!_msLibShelf(m)&&!m.libNo&&!_libStudioUnkept(m.url);});   // [1.904] — No thanks is no; [1.949] — a Master Library link is never copied in on send
+  var html=_linkifyBare(o.html);   // [1.949] — Choice B: a bare address in the words goes as a link (one send, Drafts, Resend, scheduled)
   if(_tplUnfilledTags(html).length)return done({error:MST_COPY.unfilled});
   // The server binds ten files to a message; an eleventh would be a card row that opens nothing.
   if(files.length>ATT_MAX_FILES)return done({error:TCH_COPY.attachTooMany});
@@ -6163,6 +6241,7 @@ function _mstSendNow(o,done){
 function mstSend(at){
   var a=MS.asg;if(!a||MST.busy)return;
   mstSyncHtml();
+  if(MS_MATEDIT&&MS_MATEDIT.k==='asg'&&!msMatEditDone(true))return;   // [1.949] — a Materials address the rule refuses is said beside it, not sent as the old one
   var stu=MS.cardStu,s=_mstStu(stu);if(!mstWho(s,a.to))return;
   var html=_mstCleanHtml(),key=stu+'|'+a.date;
   var why=_tplUnfilledTags(html).length?MST_COPY.unfilled:a.mats.filter(function(m){return m.kind==='file';}).length>ATT_MAX_FILES?TCH_COPY.attachTooMany:'';
@@ -6191,7 +6270,7 @@ function _mstMark(o){
   var x={studentId:stu,studentName:o.s.studentName||'',familyId:o.s.familyId||'',lessonDate:o.date,lessonTime:o.time,html:o.html,
     materials:o.mats.slice(),notifyParents:o.notify||null,pending:true,messageId:'',replyNeeded:!!o.reply};
   if(o.at)x.sendAt=o.at;
-  _mstOut[key]={x:x,at:o.at||0};
+  _mstOut[key]={x:x,at:o.at||0,resend:!!o.resendOf};   // [1.947] — marked, so a Resend does not hide the lesson's draft (_mstKeepLocal, mstState)
   if(!o.resendOf){delete _mstLocal[key];delete MST.tick[key];}   // [1.865] — a resend leaves the lesson's draft alone
   _mstRosterPatch(function(R){_mstKeepLocal(R);});
   if(!o.at)_mstShowSent(x);
@@ -6276,17 +6355,21 @@ function mstBulk(scheduled){
   var run=list.map(function(x){
     var s=_mstStu(x.studentId);if(!s.familyId)s=Object.assign({},s,{familyId:x.familyId});
     var o={s:s,date:x.lessonDate,time:x.lessonTime,html:x.html,mats:(x.materials||[]).slice(),notify:x.notifyParents||undefined,at:at,reply:!!x.replyNeeded};
-    return {o:o,draft:x,x:_mstMark(o)};
+    var local=_mstLocal[_mstDraftKey(x)]===x&&!x.pending?x:null;   // [1.947] — a draft only this page has (Not saved), before _mstMark lets it go
+    return {o:o,draft:x,local:local,x:_mstMark(o)};
   });
+  MST.bulkBusy=scheduled?'sched':'send';   // [1.947] — the run's own label and disabling, until it ends
   var n=0,ids=[];
   var next=function(k){
-    if(k>=run.length){MST.flash=scheduled?MST_COPY.schedNDone(n,mstStamp(at)):MST_COPY.sentN(n);_mstAfterSend(ids,!!scheduled);render();return;}
+    if(k>=run.length){MST.bulkBusy='';MST.flash=scheduled?MST_COPY.schedNDone(n,mstStamp(at)):MST_COPY.sentN(n);_mstAfterSend(ids,!!scheduled);render();return;}   // [1.947] — done
     var it=run[k];
     _mstFire(it.o,it.x,true,function(err){
       if(err){
+        MST.bulkBusy='';   // [1.947] — stopped
         MST.bulkErr=MST_COPY.bulkStopped(it.x.studentName||it.x.studentId,err.error||MST_COPY.failed);
         run.slice(k+1).forEach(function(u){
           var uk=_mstDraftKey(u.draft);if(_mstOut[uk]&&_mstOut[uk].x===u.x)delete _mstOut[uk];
+          if(u.local&&!_mstLocal[uk])_mstLocal[uk]=u.local;   // [1.947] — the page's own again, so the list fetched next keeps it
           _mstUnshow(u.x);
           _mstRosterPatch(function(R){R.scheduled=R.scheduled.filter(function(y){return y!==u.x;});
             if(!R.drafts.some(function(y){return _mstDraftKey(y)===uk;}))R.drafts=R.drafts.concat([u.draft]);});
@@ -6328,6 +6411,13 @@ function msEdit(d){
 }
 // [1.899] — notes kept as words alone are shown in the editor as those words, a line to a line.
 function _msLinksIn(h){return /<a\b/i.test(String(h||''));}
+// [1.949] — the notes as read: a just-saved summary is the editor's markup, whose links have no target, so they opened in
+// this tab (the server's copy opens a new one). Every link opens one way: a new tab, no opener, no referrer.
+function _linksOpenNew(html){
+  return String(html||'').replace(/<a\b([^>]*)>/gi, function(all, at){
+    return '<a'+at.replace(/\s(?:target|rel)\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]*)/gi,'')+' target="_blank" rel="noopener noreferrer">';
+  });
+}
 function _msNotesHtml(t){return esc(String(t||'')).replace(/\n/g,'<br>');}
 // Typing never redraws; the words wait in the copy until Save — as they look, and as plain words for every place that
 // shows a first line or searches (the server works the words out again from what it keeps).
@@ -6388,7 +6478,7 @@ function _msPutNote(d,act,mats,keep,html){
 function msEditSave(d){
   var stu=MS.cardStu,k=_msEditKey(d),ed=MS.edits[k],l=_msLes(d);if(!ed||ed.busy)return;
   var act=ed.activities||'',html=_msLinksIn(ed.notesHtml)?ed.notesHtml:'',mats=(ed.materials||[]).slice(),time=l.lessonTime||'',blank=!!ed.blank;
-  if(MS_MATEDIT&&MS_MATEDIT.k==='les:'+d)msMatEditDone(true);   // [1.899] — a name half-changed is kept as it reads
+  if(MS_MATEDIT&&MS_MATEDIT.k==='les:'+d&&!msMatEditDone(true))return;   // [1.899] — a name half-changed is kept as it reads; [1.949] — a refused address is said, not saved
   if(!_msNotePend[k])_msNoteOk[k]={activities:l.activities||'',notesHtml:l.notesHtml||'',materials:(l.materials||[]).slice(),had:!!_msNoteOf(d)};
   _mstMine();var seq=_msNoteSeq[k]=(_msNoteSeq[k]||0)+1;
   _msNotePend[k]={stu:stu,d:d,activities:act,notesHtml:html,materials:mats};
@@ -6569,22 +6659,31 @@ function msMatEdit(k,i){
   setTimeout(function(){var f=document.getElementById('ms-mated-l');if(f){_focusNoScroll(f);try{f.select();}catch(e){}}},30);
 }
 function msMatEditName(v){var m=_msMatEdited();if(m)m.label=String(v||'').trim()?String(v):MS_MATEDIT.was.label;}   // never blank
-function msMatEditUrl(v){var m=_msMatEdited(),u=_composerNormalizeUrl(v);if(m&&u)m.url=u;}
+// [1.949] — the address is kept as typed, and the row takes it once the rule accepts it; Done says why it would not (it kept
+// the old address silently).
+function msMatEditUrl(v){var m=_msMatEdited(),c=_linkClean(v);if(!MS_MATEDIT)return;MS_MATEDIT.url=String(v);if(m&&c.url)m.url=c.url;}
 function _msMatEditRow(k,i,m){
   var key=function(){return ' onkeydown="if(event.key===\'Enter\'){event.preventDefault();msMatEditDone(true);}"';};
   return '<div class="ms-matedrow"><span class="ms-k">'+esc(m.kind==='link'?MS_COPY.link:MS_COPY.file)+'</span>'+
-    '<div class="ms-mated-f"><input id="ms-mated-l" value="'+esc(m.label||'')+'" aria-label="'+esc(MST_COPY.displayText)+'" placeholder="'+esc(MST_COPY.displayText)+'" oninput="msMatEditName(this.value)"'+key()+'>'+
-    (m.kind==='link'?'<input value="'+esc(m.url||'')+'" aria-label="'+esc(MST_COPY.pasteLink)+'" placeholder="'+esc(MST_COPY.pasteLink)+'" oninput="msMatEditUrl(this.value)"'+key()+'>':'')+'</div>'+
+    '<div class="ms-mated-f"><input id="ms-mated-l" value="'+esc(m.label||'')+'"'+(m.kind==='link'?' maxlength="200"':'')+' aria-label="'+esc(MST_COPY.displayText)+'" placeholder="'+esc(MST_COPY.displayText)+'" oninput="msMatEditName(this.value)"'+key()+'>'+   // [1.949] — a link's name, the server's cap
+    // [1.949] — the address as typed (a refused one too), with why it was refused under the row
+    (m.kind==='link'?'<input value="'+esc(MS_MATEDIT&&MS_MATEDIT.url!=null?MS_MATEDIT.url:(m.url||''))+'"'+(MS_MATEDIT&&MS_MATEDIT.bad?' class="bad"':'')+' aria-label="'+esc(MST_COPY.pasteLink)+'" placeholder="'+esc(MST_COPY.pasteLink)+'" oninput="msMatEditUrl(this.value)"'+key()+'>':'')+'</div>'+
     '<button type="button" class="lib-done" onclick="msMatEditDone(true)">'+esc(TLIB_COPY.doneEditing)+'</button>'+
-    '<button type="button" class="ms-matedit" onclick="msMatEditDone(false)">'+esc(MST_COPY.cancel)+'</button></div>';
+    '<button type="button" class="ms-matedit" onclick="msMatEditDone(false)">'+esc(MST_COPY.cancel)+'</button></div>'+
+    _cmpLinkBadHtml(MS_MATEDIT&&MS_MATEDIT.bad);
 }
 function msMatEditDone(keep){
-  var e=MS_MATEDIT,m=_msMatEdited();MS_MATEDIT=null;
+  var e=MS_MATEDIT,m=_msMatEdited();
+  // [1.949] — Done on an address the rule refuses: said under the row, which stays open with the words as typed
+  var c=keep&&e&&m&&m.kind==='link'&&e.url!=null?_linkClean(e.url):null;
+  if(c&&!c.url&&c.error!=='empty'){e.bad=_linkWhy(c.error);render();return false;}
+  MS_MATEDIT=null;
   if(m){
-    if(!keep){m.label=e.was.label;if(m.kind==='link')m.url=e.was.url;}
+    if(!keep||(c&&c.error==='empty')){if(!keep)m.label=e.was.label;if(m.kind==='link')m.url=e.was.url;}   // [1.949] — an emptied address goes back, as an emptied name does
     m.label=String(m.label||'').trim()||e.was.label;
   }
   render();
+  return true;
 }
 function msPickSearch(v){if(!MS.pick)return;MS.pick.q=String(v||'');_pickRedraw(MS.pick);}
 // The list a ticked item goes into: the Assignment's, or the lesson's copy being edited.
@@ -6627,8 +6726,19 @@ function _matFind(k){
   Object.keys(MS.edits||{}).forEach(function(x){ all=all.concat((MS.edits[x]&&MS.edits[x].materials)||[]); });
   return all.filter(function(m){ return (m.kind==='file'||m.kind==='link') && _matTagKey(m)===k; })[0]||null;
 }
-function matLinkKeep(k){var m=_matFind(k);if(m)libAddOpen({kind:'link', at:'mat:'+k, url:m.url, text:m.label||''});}   // [1.904]
-function matLinkNo(k){var m=_matFind(k);if(m){if(MS.asg)mstSyncHtml();m.libNo=true;}render();}
+// [1.947] — every copy of one material: Create Assignment holds a copy of the lesson summary's, and a press reached only the first.
+function _matAll(k){
+  var all=(MS.asg&&MS.asg.mats||[]).slice();
+  Object.keys(MS.edits||{}).forEach(function(x){ all=all.concat((MS.edits[x]&&MS.edits[x].materials)||[]); });
+  return all.filter(function(m){ return (m.kind==='file'||m.kind==='link') && _matTagKey(m)===k; });
+}
+// [1.947] — links put into My Library from Materials this session, by key: the question stops before the Library is read again.
+var MAT_IN={};
+function matLinkKeep(k){var m=_matFind(k);if(!m)return;
+  var st=_libStudioUnkept(m.url);   // [1.949] — a Keylab Master Library link is kept (with "Assign tags?"), not copied
+  if(st)libAddOpen({kind:'pick', at:'mat:'+k, itemId:st.id, name:st.fileName||st.label||''});
+  else libAddOpen({kind:'link', at:'mat:'+k, url:m.url, text:m.label||''});}   // [1.904]
+function matLinkNo(k){var m=_matFind(k);if(m){if(MS.asg)mstSyncHtml();_matAll(k).forEach(function(x){x.libNo=true;});}render();}   // [1.947] — on every copy, so the row pressed on is answered
 function matTagsAsk(k, yes){
   var st=MAT_TAGS[k]; if(!st) return;
   if(yes) st.open=true; else delete MAT_TAGS[k];
@@ -6639,14 +6749,16 @@ function matTagSet(k, v){
   var m=_matFind(k); if(!m) return;
   var word=v.indexOf('p:')===0, list=(word?m.privateTags:m.tags)||[], x=word?v.slice(2):v, i=list.indexOf(x);
   list=list.slice(); if(i>-1) list.splice(i,1); else list.push(x);
-  if(word) m.privateTags=list; else m.tags=list;
+  // [1.947] — on every copy of it (the row pressed may be the lesson summary's), each kept as it was to put back if refused
+  var fld=word?'privateTags':'tags', was=_matAll(k).map(function(c){ return [c, c[fld]]; });
+  was.forEach(function(p){ p[0][fld]=list.slice(); });
   render();
   if(m.kind!=='file') return;
   _seqRun('mattags:'+m.attachmentId, function(next){
     api({action:'setAttachmentTags', data:{attachmentId:m.attachmentId, tags:(m.tags||[]).slice(), privateTags:(m.privateTags||[]).slice(),
          teacherId:TEACHER_ID, teacherToken:TOKEN}}, function(e,r){
       next();
-      if(e||!r||!r.ok){ actFail('mattags:'+k,(r&&r.error)||TLIB_COPY.tagSaveFailed); render(); return; }
+      if(e||!r||!r.ok){ was.forEach(function(p){ p[0][fld]=p[1]; }); actFail('mattags:'+k,(r&&r.error)||TLIB_COPY.tagSaveFailed); render(); return; }   // [1.947] — the chip goes back
       var f=_libFind(m.attachmentId); if(f){ f.tags=r.tags||m.tags; f.privateTags=r.privateTags||m.privateTags; }
     });
   });
@@ -6654,19 +6766,22 @@ function matTagSet(k, v){
 function matTagWord(k){
   var st=MAT_TAGS[k], el=st?document.getElementById('mat-pt-'+st.n):null, w=el?String(el.value||'').trim():'';
   var m=_matFind(k); if(!w || !m) return;
+  el.value='';   // [1.947] — emptied for the next one, as every other own-tag box is
   if((m.privateTags||[]).indexOf(w)<0) matTagSet(k, 'p:'+w);
 }
 function rMatTagAsk(m){
   if(!m || m.uploading || m.upFailed || (m.kind!=='file' && m.kind!=='link')) return '';
   var k=_matTagKey(m), st=MAT_TAGS[k];
-  if(!st || (m.kind==='link' && _msLibShelf(m))) return '';
+  if(!st) return '';
   // [1.904] — a new link: the question and card a link written into a message gets ("Add … to your library?"), so it goes
   // into My Library NOW, with its tags — they were held on the material until Send, and a saved draft lost them. No
   // thanks keeps it out of My Library (it went in on Send, asked or not).
   if(m.kind==='link'){
+    // [1.947] — once it is in My Library the question stops at once, and what Add did (or why not) is said beside it
+    if(_msLibShelf(m) || MAT_IN[k]) return rAct('libadd:mat:'+k);
     if(LIBADD && LIBADD.at==='mat:'+k) return rLibAddCard('mat:'+k);
     if(m.libNo) return '';
-    return rLibAddAsk(m.label||m.url, 'matLinkKeep('+jsq(k)+')', 'matLinkNo('+jsq(k)+')');
+    return rLibAddAsk(m.label||m.url, 'matLinkKeep('+jsq(k)+')', 'matLinkNo('+jsq(k)+')')+rAct('libadd:mat:'+k);
   }
   if(!st.open) return '<div class="ms-tagask">'+_tagsOpener('matTagsAsk('+jsq(k)+',true)')+'</div>';   // [1.904]
   var ch=_libTagChoices(m.label, m.tags||[], m.privateTags||[]);
@@ -6745,10 +6860,10 @@ function _msLibShelf(m){
     if(LIB_SHELF_STUDIO.some(function(f){return f.attachmentId===m.attachmentId;}))return 'studio';
     return 'mine';   // a file is only ever added from a shelf or uploaded into My Library
   }
-  var u=String(m.url||'').trim().toLowerCase();if(!u)return '';
-  if(LIB_STUDIO_LINKS.some(function(l){return String(l.url||'').trim().toLowerCase()===u;}))return 'studio';
-  if(_pickLinks(true).some(function(l){return String(l.url||'').trim().toLowerCase()===u;}))return 'mine';
-  return '';
+  // [1.949] — the one question _libHasUrl asks (by _linkKey, own and kept): a Master Library link not kept is not on a
+  // shelf yet, so it is asked about (matLinkKeep keeps the studio's)
+  var f=_libLinkFind(m.url);if(!f||!f.on)return '';
+  return _libIsStudio(f.item)?'studio':'mine';
 }
 function msMatRemove(d,i){var ed=MS.edits[_msEditKey(d)];if(!ed)return;MS_MATEDIT=null;ed.materials.splice(i,1);render();}   // [1.774] — the copy, until Save
 // Typing never redraws; the words go to the server a moment after typing stops.
@@ -6766,6 +6881,8 @@ function msNoteInput(v){
   MS.note=v;clearTimeout(MS.timer._note);
   _msNoteWait={stu:MS.cardStu,tok:TOKEN,v:v};
   _msStuNote[MS.cardStu]={v:v,bad:false};
+  // [1.947] — "Saved" was left showing beside words not yet saved: it says Saving… until the server has these
+  if(MS.st===MS_COPY.saved){MS.st=MS_COPY.saving;var el=document.getElementById('ms-note-st');if(el)el.textContent=MS.st;}
   MS.timer._note=setTimeout(_msNoteFlush,900);
 }
 function _msNoteFlush(){
@@ -6781,7 +6898,8 @@ function _msNoteFlush(){
       if(good){ if(p&&p.v===v)delete _msStuNote[stu]; }
       else if(p)p.bad=true;
       else _msStuNote[stu]={v:v,bad:true};
-      if(MS.cardStu===stu){var st=good?MS_COPY.saved:MS_COPY.saveFail;if(st!==MS.st){MS.st=st;render();}}
+      // [1.947] — not Saved while newer words typed since are still waiting to go
+      if(MS.cardStu===stu){var st=good?(_msNoteWait&&_msNoteWait.stu===stu?MS_COPY.saving:MS_COPY.saved):MS_COPY.saveFail;if(st!==MS.st){MS.st=st;render();}}
     });
   });
 }
@@ -6924,7 +7042,7 @@ function ttplAdd(){
   TSET.tplTagsAsked=false;    // [1.601] — a new one is asked about like any other
   LIB_SEE.templates=true; delete LIB_SHUT.templates;   // [1.822] — written at the top of its band
   if(TSET.tplEdit>=0 && TSET.tplBackup && TSET.tpls[TSET.tplEdit]) TSET.tpls[TSET.tplEdit]=TSET.tplBackup;   // [1.823]
-  _ttplDropUnsaved();
+  _ttplDropUnsaved(); _ttplFailClear();   // [1.947] — an old refusal goes with this press
   TSET.tpls=(TSET.tpls||[]).concat([{templateId:'', label:'', body:'', _txt:false}]);
   TSET.tplEdit=TSET.tpls.length-1; TSET.tplDel=-1; TSET.tplBackup=null;
   render();
@@ -7158,7 +7276,7 @@ function ttplEdit(i){ TSET.tplTagsAsked=false;
   // [1.823] — leaving an unsaved New template for another: it goes, and the index moves with it
   var _was=TSET.tplEdit, _row=(TSET.tpls||[])[i];
   if(_was>=0 && TSET.tplBackup && TSET.tpls[_was]) TSET.tpls[_was]=TSET.tplBackup;
-  _ttplDropUnsaved(); i=(TSET.tpls||[]).indexOf(_row); if(i<0) return;
+  _ttplDropUnsaved(); _ttplFailClear(); i=(TSET.tpls||[]).indexOf(_row); if(i<0) return;   // [1.947] — an old refusal goes with this press
   _ttplClearRowSaid(_row);   // [1.824]
   // A copy first, so Cancel is a real way back — the boxes write straight into
   // the list as they are typed ([1.338]).
@@ -7169,10 +7287,13 @@ function ttplCancel(){ TSET.tplTagsAsked=false;
   var i=TSET.tplEdit;
   if(i>=0 && TSET.tpls && TSET.tpls[i] && TSET.tplBackup) TSET.tpls[i]=TSET.tplBackup;
   _ttplDropUnsaved();   // [1.823]
+  _ttplFailClear();   // [1.947] — an old refusal goes with this press
   TSET.tplEdit=-1; TSET.tplBackup=null; render();
 }
 // [1.823] — a New template that was never saved leaves the list when it is cancelled or left for another. It stayed,
 // and every later save sent it: "Every template needs a message." for an empty one, or the cancelled one saved.
+// [1.947] — a refused Save's reason goes with the next press on a template; it stayed under the list until the next Save.
+function _ttplFailClear(){ if(ACT.tpl && ACT.tpl.state==='failed') delete ACT.tpl; }
 function _ttplDropUnsaved(){
   var i=TSET.tplEdit, t=(TSET.tpls||[])[i];
   if(i>=0 && t && !t.templateId){ TSET.tpls.splice(i,1); TSET.tplEdit=-1; }
@@ -7271,7 +7392,7 @@ function ttplSave(){
       var u=TSET._delUndo; TSET._delUndo=null;
       if(u && TSET.tpls){ _ttplListChange(function(){ TSET.tpls.splice(Math.min(u.i,TSET.tpls.length),0,u.row); }); }
       else { TSET.tplEdit=_editWas; TSET.tplBackup=_backupWas; }
-      TSET.tplsErr=(r&&r.error)||'Could not save.'; actFail('tpl',(r&&r.error)||'Could not save.'); render(); return;
+      actFail('tpl',(r&&r.error)||'Could not save.'); render(); return;   // [1.947] — said once, in the form (tplsErr drew it a second time)
     }
     // ── [1.608] — the server's own rows, drawn. No refetch ────────────────
     //
@@ -7324,11 +7445,14 @@ function ttplSave(){
 
 
 
-function loadTeacherSettings(){
+function loadTeacherSettings(n){
+  var tok=TOKEN;n=n||0;
   TSET.loading=true;
   api({action:'teacherGetSettings', data:{teacherToken:TOKEN}}, function(e,r){
     TSET.loading=false;
-    if(e||!r||!r.ok) return;   // silent: a settings read must never block messaging
+    if(tok!==TOKEN) return;   // [1.947] — signed out meanwhile: this teacher's status is not the next one's
+    // [1.947] — the switch is drawn only once its state is known, so one failed read left no switch until a reload: asked again, three times.
+    if(e||!r||!r.ok){ if(n<3) setTimeout(function(){ if(tok===TOKEN&&!TSET.loaded) loadTeacherSettings(n+1); }, 5000*(n+1)); return; }   // silent: a settings read must never block messaging
     var st=r.settings||{};
     TSET.awayEnabled=!!st.awayEnabled;
     TSET.absentUntil=st.absentUntil||'';   // [1.759]
@@ -7367,10 +7491,11 @@ function _saveSettings(fields){
   if(fields.afterHoursMessage!==undefined) TSET.afterHoursMessage=String(fields.afterHoursMessage||'');
   actDone('away', TSET.awayEnabled?TCH_COPY.awayOnDone:TCH_COPY.awayOffDone);
   render();
-  var d={teacherToken:TOKEN};
+  var d={teacherToken:TOKEN},tok=TOKEN;
   for(var k in fields) if(fields[k]!==undefined) d[k]=fields[k];
   api({action:'teacherSaveSettings', data:d}, function(e,r){
     TSET.saving=false;
+    if(tok!==TOKEN) return;   // [1.947] — signed out meanwhile: the answer is not the next teacher's status
     if(e||!r||!r.ok){ Object.assign(TSET,_was); actFail('away',(r&&r.error)||'Could not save.'); render(); return; }
     var st=r.settings||{};
     TSET.awayEnabled=!!st.awayEnabled;
@@ -7961,11 +8086,16 @@ function rMsgSearch(){
   }
   if(MSG_SEARCH.open && q){
     var hits=_searchNames(q);
+    // [1.947] — the message-text search still running, or failed, is said as that, never as "Nothing matches that."
+    var _sFail=!!MSG_SEARCH.failedFor && MSG_SEARCH.failedFor===q.trim();
     h+='<div class="msg-search-menu">'+
-      (hits.length?hits.map(function(o){
+      hits.map(function(o){
         return '<div class="msg-search-item" onclick="'+o.open+'">'+esc(o.label)+
           (o.sub?'<span class="msg-search-sub">'+esc(o.sub)+'</span>':'')+'</div>';
-      }).join(''):'<div class="msg-search-item q">Nothing matches that.</div>')+
+      }).join('')+
+      (MSG_SEARCH.searching ? '<div class="msg-search-item q"><span class="spin">↻</span> '+esc(TCH_COPY.searching)+'</div>'
+        : _sFail ? '<div class="act-note act-failed">! '+esc(TCH_COPY.searchFailed)+'</div>'
+        : hits.length ? '' : '<div class="msg-search-item q">Nothing matches that.</div>')+
       '</div>';
   }
   return h+'</div>';
@@ -7982,7 +8112,9 @@ function tchNewMessage(){
   },0);
 }
 function onMsgSearch(v){
-  MSG_SEARCH.query=v; MSG_SEARCH.open=true; render();
+  MSG_SEARCH.query=v; MSG_SEARCH.open=true; MSG_SEARCH.failedFor='';   // [1.947] — a new query has not failed
+  MSG_SEARCH.searching=String(v||'').trim().length>=2;   // [1.947] — set before this draw, so "Searching…" shows at once (and a short query shows none)
+  render();
   // ── [1.348] — searching what was SAID, not only who it was said to ──────
   //
   // Until now this box matched names and nothing else: the server has had an
@@ -7998,11 +8130,12 @@ function onMsgSearch(v){
   MSG_SEARCH.searching=true;
   MSG_SEARCH._t=setTimeout(function(){
     api({action:'searchTeacherMessages', data:{teacherToken:TOKEN, query:q}}, function(e,r){
-      MSG_SEARCH.searching=false;
       // The box may have moved on while this was in flight. Answering a query
       // the teacher has stopped typing would mark rows against words that are
       // no longer on screen.
       if(String(MSG_SEARCH.query||'').trim()!==q) return;
+      MSG_SEARCH.searching=false;   // [1.947] — only this query's answer ends its "Searching…"; an older one's does not
+      MSG_SEARCH.failedFor=(e||!r||!r.ok)?q:'';   // [1.947] — said, rather than read as no matches
       MSG_SEARCH.hits=(!e&&r&&r.ok&&r.matches)||{};
       MSG_SEARCH.hitsFor=q;
       render();
@@ -8012,6 +8145,7 @@ function onMsgSearch(v){
 function clearMsgSearch(){
   MSG_SEARCH.query=''; MSG_SEARCH.open=false;
   MSG_SEARCH.hits={}; MSG_SEARCH.hitsFor='';
+  MSG_SEARCH.searching=false; MSG_SEARCH.failedFor='';   // [1.947] — a cleared box is searching nothing
   if(MSG_SEARCH._t) clearTimeout(MSG_SEARCH._t);
   render();
 }
@@ -8182,11 +8316,16 @@ function _kidWhen(st, plural){
 function mstMessageFamily(){
   var s=_mstStu(MS.cardStu); if(!s.familyId) return;
   var row=_threadsOfKind('family').filter(function(t){ return t.id===s.familyId; })[0];
+  // [1.947] — a family not on the list (a trial's; the server refuses it) is said beside the button: it opened an empty Messages
+  actClear('msgfam:'+s.studentId);
+  if(!row && THREADS._loadedAt){ actFail('msgfam:'+s.studentId, MST_COPY.msgFamNo); return; }
   switchTab('family');
   if(row){ openStudentRow(row.id, s.studentId); return; }
   _pendingOpenFamilyId=s.familyId; _pendingStudentId=s.studentId||'';
+  _msgFamWant=s.familyId;   // [1.947] — so the list, when it comes, can say it if the family is not on it
   loadFamilyThreads();
 }
+var _msgFamWant='';
 function openStudentRow(familyId, studentId){
   var t=(THREADS.list||[]).filter(function(x){ return x.kind==='family' && x.id===familyId; })[0];
   if(!t) return;
@@ -8651,6 +8790,7 @@ function loadThreads(silent){
     var _changed=(_sig!==THREADS._sig);
     THREADS._sig=_sig;
     THREADS.list=r.threads||[];
+    THREADS._loadedAt=Date.now();   // [1.947] — the list has come at least once (Message Family reads it)
     // [1.333] — warm the link library here, minutes before anyone presses
     // Link, rather than making the first press pay for it. Guarded inside
     // loadSavedLinks(), so the poll running every few seconds costs one call.
@@ -8670,7 +8810,9 @@ function loadThreads(silent){
       var _want=_pendingOpenFamilyId;
       _pendingOpenFamilyId='';
       var _row=_threadsOfKind('family').filter(function(t){return t.id===_want;})[0];
+      var _fromMsgFam=_msgFamWant===_want; _msgFamWant='';
       if(_row){ HOME_TAB='family'; openFamilyThread(_row.id, _row.parent1Name, _row.parent2Name); return; }
+      if(_fromMsgFam) showMsg(MST_COPY.msgFamNo,'e');   // [1.947] — Message Family pressed before the list came: the teacher is on Messages now
     }
     if(!silent || _changed) render();
     _prefetchThreads();   // [1.418] case 1 — the ids are known now, and only now
@@ -8880,7 +9022,13 @@ function _prefetchThreads(){
 // the thread is opened, so there is nothing here worth interrupting anyone
 // for — and nothing worth making them wait for either.
 function _markThreadRead(reqData){
+  // [1.947] — this row's unread goes now, so the Messages tab count does not wait a poll; local only, receipts unchanged
+  var _k=reqData.conversationType==='family_teacher' ? ['family', reqData.familyId]
+        : reqData.conversationType==='teacher_admin' ? ['admin', 'admin'] : ['staff', reqData.staffId2];
+  var _was=0;
+  (THREADS.list||[]).forEach(function(row){ if(row.kind===_k[0] && (_k[0]==='admin' || row.id===_k[1])){ _was+=Number(row.unread)||0; row.unread=0; } });
   api({action:'markConversationRead', data:reqData}, function(){});
+  if(_was) render();
 }
 
 function openFamilyThread(familyId, p1, p2, focusReview){
@@ -9150,7 +9298,7 @@ function rFamilyThread(){
   // it still is — `disabled` on the same button, in the same place.
   var _sending=(t.sending || actBusy('send'));
   var sendBtn=AMEND.kind==='edit' ? rEditActions() : (_sending
-    ?'<button class="btn btn-p" disabled>'+esc(TCH_COPY.sending)+'</button>'+
+    ?'<button class="btn btn-p" disabled>'+esc(ACT.send&&ACT.send.text===TCH_COPY.schedulingMsg?TCH_COPY.schedulingMsg:TCH_COPY.sending)+'</button>'+   // [1.947] — a schedule says AC's "Scheduling message…" here too, never "Sending…" ([1.536])
       '<button type="button" class="btn btn-s" disabled>'+esc(TCH_COPY.sendLater)+'</button>'
     :(_upBusy
         ? '<button class="btn btn-p" disabled title="'+esc(TCH_COPY.sendBlockedUploading)+'">Send</button>'
@@ -9218,7 +9366,7 @@ function rFamilyThread(){
          (t.closing
            ? '<button class="btn btn-p" disabled><span class="spin">↻</span></button>'
            : '<button class="btn btn-p" onclick="clearAndClose()">'+esc(TCH_COPY.clearAndClose)+'</button>')+
-       '</div></div>';
+       '</div>'+rAct('close')+'</div>';   // [1.947] — why clearing failed, under Proceed
   }
   // [1.438] — the same inline shape, for the case AC named: ending a
   // conversation a family is still waiting on. In the thread, where the
@@ -9258,6 +9406,7 @@ function _convRow(familyId){
 function toggleReview(messageId, on){
   var t=ACTIVE_THREAD||ACTIVE_STAFF_THREAD;
   if(!t) return;
+  actClear('msg:'+messageId);   // [1.947] — a tick that works does not sit under the last one's reason
   var was=null;
   (t.messages||[]).forEach(function(m){
     if(m.messageId!==messageId) return;
@@ -9276,7 +9425,10 @@ function toggleReview(messageId, on){
     if(e||!r||!r.ok){
       // Put it back rather than leaving a tick that did not stick.
       (t.messages||[]).forEach(function(m){ if(m.messageId===messageId) m.reviewAt=was; });
-      showMsg((r&&r.error)||'Could not save that for review.','e'); render(); return;
+      // [1.947] — on the message's own line, beside the tick; the corner only if the teacher has left the conversation
+      if(t===ACTIVE_THREAD||t===ACTIVE_STAFF_THREAD) actFail('msg:'+messageId,(r&&r.error)||'Could not save that for review.');
+      else showMsg((r&&r.error)||'Could not save that for review.','e');
+      render(); return;
     }
     // ── [1.315] — the ROW's count moves too, not only the thread's ─────────
     //
@@ -9381,6 +9533,20 @@ function _undoRowAnswered(undo){
   undo.forEach(function(u){
     u.row.awaitingReply=u.awaitingReply; u.row.waitingSince=u.waitingSince;
     u.row.unread=u.unread; u.row.replyDueBy=u.replyDueBy;
+    if(u.reopened) Object.assign(u.row, u.reopened);   // [1.947] — a send that did not go leaves the conversation where it was
+  });
+}
+// [1.947] — "ended" rides the newest message on the server (_applyMessageToRow_), so a send that does not end it reopens it
+function _setRowReopened(t, undo){
+  if(!t) return;
+  var kind = t.familyId ? 'family' : (t.contactType==='admin' ? 'admin' : 'staff');
+  var id = t.familyId || (kind==='admin' ? 'admin' : t.otherId);
+  (THREADS.list||[]).forEach(function(row){
+    if(row.kind!==kind || (kind!=='admin' && row.id!==id) || !row.closed) return;
+    var was={closed:row.closed, closedAt:row.closedAt, closedByName:row.closedByName, closedUnanswered:row.closedUnanswered};
+    (undo||[]).forEach(function(u){ if(u.row===row && !u.reopened) u.reopened=was; });
+    row.closed=false; row.closedAt=0; row.closedByName=''; row.closedUnanswered=false;
+    delete CONV_ENDING[_convEndKey(row)];
   });
 }
 
@@ -9405,10 +9571,13 @@ function clearAllReviews(t, done){
     if(e||!r||!r.ok){
       // Nothing was cleared and nothing is closed — put the thread back the
       // way it was and say so, rather than leaving a half-done action.
-      t.closing=false; t.closeReviewOpen=false;
-      showMsg((r&&r.error)||'Could not clear those.','e');
+      t.closing=false;
+      // [1.947] — the question stays open with the reason under Proceed; the corner only if the teacher has left it
+      if(t===ACTIVE_THREAD||t===ACTIVE_STAFF_THREAD) actFail('close',(r&&r.error)||'Could not clear those.');
+      else { t.closeReviewOpen=false; showMsg((r&&r.error)||'Could not clear those.','e'); }
       _refreshOpenThread(); render(); return;
     }
+    _setRowReviewCount(t, 0);   // [1.947] — the row's circle goes now, as Save for review's does ([1.315]), not on the next poll
     // [1.418] case 2 — the poll owns the roster.
     if(done) done();
   });
@@ -9419,13 +9588,17 @@ function clearAllReviews(t, done){
 // admin's list until someone actually answers. Being seen is not being
 // answered, and the tool must never let the two look the same — that is the
 // whole of the item.
-function markSeen(){
+function markSeen(id){
   var t=ACTIVE_THREAD||ACTIVE_STAFF_THREAD;
   if(!t||t.seenSending) return;
-  t.seenSending=true; render();
+  t.seenSending=id||true; if(id) actClear('msg:'+id); render();   // [1.947] — which button was pressed, so it can say "Marking…"
   api({action:'markMessageSeen', data:_threadKey(t,{})}, function(e,r){
     t.seenSending=false;
-    if(e||!r||!r.ok){ showMsg((r&&r.error)||'Could not send that.','e'); render(); return; }
+    if(e||!r||!r.ok){   // [1.947] — beside the button pressed, unless the teacher has left this conversation
+      if(id && (t===ACTIVE_THREAD||t===ACTIVE_STAFF_THREAD)) actFail('msg:'+id,(r&&r.error)||'Could not send that.');
+      else showMsg((r&&r.error)||'Could not send that.','e');
+      render(); return;
+    }
     // ── [1.461] — the note appears NOW, not after a second round trip ─────
     //
     // AC, 9 September 2026: *"clicking mark seen system message takes almost
@@ -9497,7 +9670,7 @@ function _owesFamilyReply(t){
 function closeConversation(){
   var t=ACTIVE_THREAD||ACTIVE_STAFF_THREAD;
   if(!t||t.closing) return;
-  if(_openReviewMarks(t)){ t.closeReviewOpen=true; render(); return; }
+  if(_openReviewMarks(t)){ t.closeReviewOpen=true; actClear('close'); render(); return; }   // [1.947] — an earlier conversation's reason does not open with it
   if(t===ACTIVE_THREAD && _owesFamilyReply(t) && !t.closeUnansweredOk){
     t.closeUnansweredAsk=true; render(); return;
   }
@@ -9521,6 +9694,7 @@ function confirmCloseUnanswered(){
 function clearAndClose(){
   var t=ACTIVE_THREAD||ACTIVE_STAFF_THREAD;
   if(!t||t.closing) return;
+  actClear('close');   // [1.947] — a second try does not sit under the first one's reason
   t.closing=true; render();
   // [1.853] — the flags cleared, a reply still owed is asked about exactly as End Conversation asks it. Proceed went
   // straight to closing, so a conversation with saved messages ended without "End conversation without a reply?" —
@@ -9534,7 +9708,7 @@ function clearAndClose(){
 function cancelCloseReview(){
   var t=ACTIVE_THREAD||ACTIVE_STAFF_THREAD;
   if(!t) return;
-  t.closeReviewOpen=false; t.closing=false; render();
+  t.closeReviewOpen=false; t.closing=false; actClear('close'); render();   // [1.947] — the reason goes with the question
 }
 // ── [1.337] — ending from inside the thread moves the row too ───────────
 //
@@ -9799,6 +9973,7 @@ function sendFamilyMessage(sendAt){
   // known — the child may be picked after the tag is inserted, and merging at
   // insert would freeze whichever child was chosen first.
   html=_tplMerge(html);
+  html=_linkifyBare(html);   // [1.949] — Choice B: a bare address typed in the message goes as a link (now or scheduled)
   var _unfilled=_tplUnfilledTags(html);
   if(_unfilled.length){
     actFail('send', TCH_COPY.tagUnfilled.replace('{tags}',
@@ -9809,7 +9984,7 @@ function sendFamilyMessage(sendAt){
   // [1.277] — a message can be a file with nothing written on it, which is
   // most of why a teacher wants this at all: a photo of a page of music.
   var _att=_attTakeIds();
-  if(!text && !_att.length) return;
+  if(!text && !_att.length){ actFail('send', TCH_COPY.dayNoWords); return; }   // [1.947] — said beside Send, and never leaves Schedule Send's working state behind
   // A file still going up is the one thing worth waiting for. Sending now
   // would send the message without it and leave the upload orphaned.
   // [1.428] — the button is disabled while an upload is in flight, so this is
@@ -9886,6 +10061,7 @@ function sendFamilyMessage(sendAt){
   // [1.371] — and it does NOT stop the clock. A scheduled reply is not a
   // reply; the family is still waiting, and the row must go on saying so.
   var _rowUndo=sendAt ? null : _setRowAnswered(t);   // [1.325] — the row stops owing a reply now
+  if(!sendAt && (t.replyNeeded || _openReviewMarks(t))) _setRowReopened(t, _rowUndo);   // [1.947] — what keeps it open on the server (_endsOnSend_)
   render();
 
   var _endAsk=!t.replyNeeded; t.replyNeeded=false;   // [1.907] — unticked ends the conversation as it goes; the box starts unticked again
@@ -9922,7 +10098,8 @@ function sendFamilyMessage(sendAt){
       t.replyNeeded=!_endAsk;   // [1.907] — the tick comes back with the words
       _undoRowAnswered(_rowUndo);
       _sendFailed(_sk, clientMsgId, text, _attRows, (r&&r.error)||TCH_COPY.notSent);
-    } else { _sendSucceeded(_sk); if(r.ended) _convEndedOnSend(t.familyId, r); }   // [1.907]
+    } else { _sendSucceeded(_sk); if(r.ended) _convEndedOnSend(t.familyId, r);   // [1.907]
+      else if(!sendAt && !(r.message&&r.message.sendAt)) _setRowReopened(t, null); }   // [1.947] — the server kept it open, so it is out of Archived
     if(!_here){   // navigated away mid-flight
       actClear('send');   // [1.539] — Send is never left disabled; the note waits for this thread to reopen
       if(_failed) showMsg((r&&r.error)||'Could not send message.','e');
@@ -10417,6 +10594,7 @@ function sendDayBatch(){
     var fresh=_dayCancelWords(DAY_SEND.slot);
     if(_composerPlain(html)!==_composerPlain(fresh)) html=fresh;
   }
+  html=_linkifyBare(html);   // [1.949] — a message to the day's families is sent as every other is: bare addresses as links
 
   var batch=[], unfilled={};
   fams.forEach(function(f){
@@ -10659,7 +10837,8 @@ function rStaffThread(){
     // [1.287] — nothing sent yet, so there is nothing to close. AC: "a
     // conversation that is opened but never started should not need to be
     // closed. It should be as though it never existed."
-    ((t.messages||[]).length
+    // [1.947] — only with the office: doSetConversationClosed refuses a conversation between two teachers, every time
+    ((t.messages||[]).length && t.contactType==='admin'
       ? '<button type="button" class="btn btn-s" onclick="closeConversation()">'+esc(TCH_COPY.closeConversation)+'</button>'
       : '');
   // ── [1.531] — no "Also send by email" for a teacher ────────────────────
@@ -10700,7 +10879,7 @@ function rStaffThread(){
          (t.closing
            ? '<button class="btn btn-p" disabled><span class="spin">↻</span></button>'
            : '<button class="btn btn-p" onclick="clearAndClose()">'+esc(TCH_COPY.clearAndClose)+'</button>')+
-       '</div></div>';
+       '</div>'+rAct('close')+'</div>';   // [1.947] — why clearing failed, under Proceed
   }
   return h;
 }
@@ -10762,7 +10941,9 @@ function _composerClean(node){
       var href=n.getAttribute('href')||'';
       // Mirrors the server's rule so the toolbar can't silently produce a link
       // the server will then drop. The server still re-checks it.
-      if(/^(https?:\/\/|mailto:)/i.test(href) && !/[\s"'<>\\]/.test(href)) out+='<a href="'+esc(href)+'">'+inner+'</a>';
+      // [1.949] — through the one rule, so a pasted "youtube.com/…" keeps its link with https:// added (it was dropped)
+      var _h=_linkClean(href, {mailto:true});
+      if(_h.url) out+='<a href="'+esc(_h.url)+'">'+inner+'</a>';
       else out+=inner;
       continue;
     }
@@ -10988,6 +11169,13 @@ function _composerPaste(ev){
 // browser's indent emits a blockquote, which is exactly the confusion [1.332]
 // removed the buttons over.
 function _composerKey(ev,id){
+  // [1.949] — Cmd+K (Ctrl+K) opens Add link in a box that has one, the highlighted words its Display Text, as Gmail and
+  // Docs do; the browser's own Cmd+K (the search bar) does not fire.
+  if((ev.metaKey||ev.ctrlKey) && !ev.altKey && !ev.shiftKey && String(ev.key||'').toLowerCase()==='k' && CMP_HAS_LINK[id]){
+    ev.preventDefault(); _cmpRemember(id);
+    if(PICK==='link' && _libComposerId===id) _composerLinkOpen(id); else pickOpen('link', id);
+    return;
+  }
   if(ev.key!=='Tab'||ev.altKey||ev.ctrlKey||ev.metaKey) return;
   if(!_composerSelIn(id,'li')) return;
   ev.preventDefault();
@@ -11680,6 +11868,11 @@ var TLIB_COPY={
   addLinksDupe:'{n} were already in your library.',
   addLinksBad:'{n} were not web addresses.',
   addLinksFailed:'Those links could not be added.',
+  // [1.949] — the Add's answer line by line: an address already saved, and a line refused (it stays in the box).
+  // PLACEHOLDER — [1.949], AC to word
+  alreadyAs:function(n){ return 'Already saved as '+(n||'a link in your library'); },
+  // PLACEHOLDER — [1.949], AC to word
+  badLine:function(line, why){ return line+' — '+why; },
   linkDel:'Delete link',
   linkDelAsk:'Delete this link?',   // PLACEHOLDER — [1.824]: it said Remove, under a button that says Delete link
   linkDelSafe:'Messages you have already sent keep working \u2014 a link has no file to take away.',
@@ -11838,6 +12031,7 @@ function rLibPickEdit(f){
         '<button type="button" class="lib-act" onclick="libPickWordAdd('+jsq(id)+')">'+esc(TLIB_COPY.privateAdd)+'</button>'+
       '</div>'+
     '</div>'+
+    rAct('lib:'+id)+   // [1.947] — a refused tag is said here, where it was pressed; it went to the row behind the box
     '<div class="lib-foot">'+
       (_libPicked(f)?'<button type="button" class="lib-act" onclick="libEditClose();libMasterPick('+jsq(id)+',false)">'+esc(TLIB_COPY.unshelve)+'</button>':'')+
       '<button type="button" class="lib-done" style="margin-left:auto" onclick="libEdit('+jsq(id)+')">'+esc(TLIB_COPY.doneEditing)+'</button>'+   // [1.904] — Done is the blue one, everywhere
@@ -12108,7 +12302,7 @@ function pickOpenItem(id){
   var it=_pickFind(id); if(!it) return;
   if(it.kind==='link'){
     if(!it.url) return;
-    try{ window.open(it.url,'_blank','noopener'); }catch(e){}
+    try{ window.open(it.url,'_blank','noopener,noreferrer'); }catch(e){}   // [1.949] — every link opens one way: new tab, no opener, no referrer
     return;
   }
   openAttachment(it.attachmentId||id, _attCanView(it.mimeType, it.fileName)?'view':'download');
@@ -12365,7 +12559,10 @@ function libAttach(id, composerId){
   // button already uses. Nothing is uploaded, nothing is bound, and the family
   // gets an address they can open on any device.
   if(it.kind==='link'){ _libInsertLink(it, composerId); return; }
-  if(ATT_PENDING.length >= ATT_MAX_FILES){ showMsg(TCH_COPY.attachTooMany,'e'); return; }
+  ATT_PENDING=ATT_PENDING.filter(function(x){ return !(x.failed && x.fromLibrary===id); });   // [1.947] — a failed try goes, and this one attaches afresh
+  // [1.947] — said in the Add file panel the tick was in, not the corner; the corner only when no panel is open
+  if(ATT_PENDING.length >= ATT_MAX_FILES){ if(MS.pick && _msIsMsg(MS.pick.target)){ MS.pick.err=TCH_COPY.attachTooMany; render(); } else showMsg(TCH_COPY.attachTooMany,'e'); return; }
+  if(MS.pick && MS.pick.err===TCH_COPY.attachTooMany) MS.pick.err='';   // [1.947] — and it goes once a file can be added again
   var f=it;
   // Pressing a row twice is a press, not an intention. Two chips of one file
   // would send a family the same attachment twice, and the second is
@@ -12484,9 +12681,9 @@ function libOpenItem(id){
 }
 function libOpenLink(id){
   var it=_libFind(id); if(!it || !it.url) return;
-  try{ window.open(it.url,'_blank','noopener'); }catch(e){}
+  try{ window.open(it.url,'_blank','noopener,noreferrer'); }catch(e){}   // [1.949] — as every link opens: no referrer either
 }
-function libEdit(id){ libCentreOn('.lib-modal-2'); LIB_EDIT = (LIB_EDIT===id?'':id); LIB_DEL=''; _libRedraw(); }   // [1.590]
+function libEdit(id){ libCentreOn('.lib-modal-2'); LIB_EDIT = (LIB_EDIT===id?'':id); LIB_DEL=''; LIB_URL_TYPED={}; _libRedraw(); }   // [1.590]; [1.949] — opened again, it shows the saved address
 // ── [1.488] — the name saves when you leave the field ────────────────────
 //
 // AC asked what could be condensed out of seven buttons, and told me to use my
@@ -12634,19 +12831,27 @@ function libBulkDelete(){
 // model first so it changes under the finger, and the request is the only thing
 // that waits ([1.485]). The server normalises, so what comes back is drawn
 // rather than what was typed — https:// supplied, a refusal reported.
+// [1.949] — what was typed in an Edit address that was refused, by link id: the field keeps it, with the reason under it.
+var LIB_URL_TYPED={};
 function libLinkUrl(id){
   var el=document.getElementById('lib-url-'+id);
   var it=_libFind(id);
   if(!el || !it) return;
-  var url=String(el.value||'').trim();
-  if(!url || url===it.url){ el.value=it.url||''; return; }
+  var typed=String(el.value||''), url=typed.trim();
+  if(!url || url===it.url){ delete LIB_URL_TYPED[id]; el.value=it.url||''; return; }
+  // [1.949] — checked by the rule before it is sent; refused, it is said here and the words stay to be put right
+  var c=_linkClean(url);
+  if(!c.url){ LIB_URL_TYPED[id]=typed; actFail('lib:'+id, _linkWhy(c.error)); _libRedraw(); return; }
+  url=c.url;
+  if(url===it.url){ delete LIB_URL_TYPED[id]; actClear('lib:'+id); el.value=it.url; return; }
   var was=it.url;
-  it.url=url;
+  it.url=url; delete LIB_URL_TYPED[id];
   _libRedraw();
   api({action:'saveLibraryLink', data:{linkId:id, url:url,
        teacherId:TEACHER_ID, teacherToken:TOKEN}}, function(e,r){
     if(e||!r||!r.ok){
       it.url=was;
+      LIB_URL_TYPED[id]=typed;   // [1.949] — "Already saved as …" (or any refusal) keeps what was typed
       actFail('lib:'+id,(r&&r.error)||TLIB_COPY.linkSaveFailed);   // [1.824] — a link, not a file
       _libRedraw();
       return;
@@ -12661,8 +12866,8 @@ function libUnshelve(id){
   api({action:'setLibrary', data:{attachmentId:id, remove:true,
        teacherId:TEACHER_ID, teacherToken:TOKEN}}, function(e,r){
     if(e||!r||!r.ok){ actFail('lib:'+id,(r&&r.error)||TLIB_COPY.unshelveFailed); return; }   // [1.824]
+    LIB_EDIT=''; LIB_DEL='';   // [1.947] — closed before the line is drawn: the box stayed open over a file already removed
     actDone('lib:'+id, TLIB_COPY.unshelved);
-    LIB_EDIT=''; LIB_DEL='';
     _libRefresh();
   });
 }
@@ -12695,7 +12900,8 @@ function _libGoneLines(band){
 var LIB_GOING={};   // [1.824] — ids whose delete is on its way: kept out of a reload that lands before it
 // [1.824] — what is still on its way belongs to the teacher who started it: signing out (or a session ending) drops
 // it, and every answer that comes back afterwards checks the session it was sent with.
-function _libWorkClear(){ _tagHideQ=[]; _customQ=[]; _customResync=false; _tplDelQ=[]; _tplGoing={}; LIB_GOING={}; }
+function _libWorkClear(){ _tagHideQ=[]; _customQ=[]; _customResync=false; _tplDelQ=[]; _tplGoing={}; LIB_GOING={};
+  MAT_IN={}; }   // [1.947] — what this teacher put in their library from Materials is not the next teacher's
 // A refused delete goes back into the list as it is NOW (a reload may have replaced it), where it was.
 function _libPutBack(f, link, at){
   var cur=link?LIB_MY_LINKS:LIB_MINE;
@@ -12750,6 +12956,7 @@ function libFileTag(id, tagId, el){
     el.classList.toggle('on', on);
     el.classList.remove('some');
     el.setAttribute('aria-pressed', on?'true':'false');
+    _libChipCk(el, on); _libAddedChipSync(tagId);   // [1.947] — the ✓ with the shade, and the batch's chip for this tag
   } else { _libRedraw(); }   // [1.620] — the PANEL, not the page
   if(f.kind==='link'){
     api({action:'saveLibraryLink', data:{linkId:id, tags:tags,
@@ -12767,6 +12974,21 @@ function libFileTag(id, tagId, el){
     if(e||!r||!r.ok){ actFail('lib:'+id,(r&&r.error)||TLIB_COPY.tagSaveFailed); _libRefresh(); return; }   // [1.824]
     f.tags=r.tags||tags;   // [1.620] — no second draw; see the link branch above
   });
+}
+// [1.947] — the ✓ an on chip carries ([1.826]), put on or taken off where the chip stands; the shade changed without it.
+function _libChipCk(el, on){
+  var ck=el.querySelector?el.querySelector('.lib-tag-ck'):null;
+  if(on && !ck) el.insertAdjacentHTML('afterbegin', _libTagCk(true));
+  else if(!on && ck) ck.parentNode.removeChild(ck);
+}
+// [1.947] — the Just added batch's "Tags for the N ticked" chip for one tag, patched to what the ticked rows now carry.
+function _libAddedChipSync(tagId){
+  var b=document.getElementById('lib-at-'+tagId); if(!b) return;
+  var sel=_libAddedSelected();
+  var all=!!sel.length && sel.every(function(f){ return (f.tags||[]).indexOf(tagId)>-1; });
+  var some=!all && sel.some(function(f){ return (f.tags||[]).indexOf(tagId)>-1; });
+  b.classList.toggle('on', all); b.classList.toggle('some', some);
+  b.setAttribute('aria-pressed', all?'true':(some?'mixed':'false'));
 }
 function libPrivateAdd(id){
   var el=document.getElementById('lib-pt-'+id);
@@ -13039,7 +13261,8 @@ function libAddFileOne(file){
   actStart(key, TLIB_COPY.addingOne);
   var reader=new FileReader();
   var stop=function(msg){
-    if(LIBADD && LIBADD.seq===mine){ LIBADD.uploading=false; LIBADD.waiting=false; }
+    // [1.947] — the card goes and the reason stays in its place, as when several files fail: its Add had nothing to add
+    if(LIBADD && LIBADD.seq===mine) LIBADD=null;
     actFail(key, msg);
   };
   reader.onerror=function(){ stop(TLIB_COPY.addFailed); };
@@ -13122,6 +13345,8 @@ function libAddOpen(o){
   LIBADD.key = LIBADD.at==='lib' ? 'libadd'
              : (LIBADD.kind==='file' || LIBADD.attachmentId) ? 'libadd:'+LIBADD.attachmentId
              : (LIBADD.kind==='pick' ? 'libadd:'+LIBADD.at : 'libadd:link');   // [1.868] — a kept Master Library item's own slot
+  if(String(LIBADD.at).indexOf('mat:')===0) LIBADD.key='libadd:'+LIBADD.at;   // [1.947] — a Materials link's own line, drawn beside it
+  if(LIBADD.kind==='pick' && String(LIBADD.at).indexOf('link:')===0) LIBADD.key='libadd:link';   // [1.949] — a kept Master Library link says so where the message's offer does
   actClear(LIBADD.key);
   _libAddRedraw();
   // The box is open because somebody means to type in it — the address for a
@@ -13230,6 +13455,9 @@ function libAddGo(){
         LIB_ADD_SEL[l.linkId]=true;
       });
     }
+    // [1.949] — the server's answer for each line, said under the card; a refused line stays in the box to be put right.
+    // An older server sends no `results`, and gets the counts below.
+    if(Array.isArray(r.results)){ _libAddResults(key, r.results, lines); _libRefresh(); return; }
     // What happened to the ones that did NOT land is said, not swallowed: a
     // paste of twenty that adds fourteen has to account for the other six.
     var note;
@@ -13244,11 +13472,45 @@ function libAddGo(){
     // a green tick over "Added 0 link(s)" is the quiet lie this project has a
     // rule about.
     var where=LIBADD?LIBADD.at:'lib';
+    // [1.947] — a Materials link is in My Library now (or already was, which is said as that): its question stops
+    var mk=String(where).indexOf('mat:')===0?where.slice(4):'';
+    if(mk && !added.length && r.skipped) note=TLIB_COPY.alreadyNamed(text||lines[0]);
+    if(mk && (added.length || r.skipped)) MAT_IN[mk]=true;
     LIBADD=null;
-    if(!added.length) actFail(key, note);
+    if(!added.length && !(mk && r.skipped)) actFail(key, note);
     else { if(where!=='lib') render(); actDone(key, note); }
     _libRefresh();
   });
+}
+// [1.949] — one line each, as the server answered it: added; already saved (as what); or why not, with that line left in
+// the box (the added and the already-saved leave it). Nothing added and nothing to put right stays said, as before.
+function _libAddResults(key, res, lines){
+  var where=LIBADD?LIBADD.at:'lib', mk=String(where).indexOf('mat:')===0?where.slice(4):'';
+  var rows=[], left=[];
+  res.forEach(function(x, i){
+    x=x||{};
+    var line=String(x.line!=null?x.line:x.input!=null?x.input:lines[i]!=null?lines[i]:(x.url||'')).trim();
+    var st=String(x.status||x.result||'').toLowerCase();
+    if(/^(dup|already|skip)/.test(st) || (!st && x.duplicateOf)){ rows.push({state:'info', text:TLIB_COPY.alreadyAs(_libDupName(x)||line)}); return; }
+    if(st==='added' || (!st && x.linkId && !x.error)){ rows.push({state:'done', text:TLIB_COPY.savedNamed(x.name||x.label||line)}); return; }
+    var why=String(x.error||x.reason||'');
+    why=/^(empty|invalid|scheme|long)$/.test(why) ? _linkWhy(why) : (why || _linkWhy(_linkClean(line).error));
+    rows.push({state:'failed', text:TLIB_COPY.badLine(line, why)}); left.push(line);
+  });
+  var some=rows.some(function(x){ return x.state==='done'; });
+  if(mk && rows.some(function(x){ return x.state!=='failed'; })) MAT_IN[mk]=true;   // [1.947]'s question stops
+  if(left.length && LIBADD) LIBADD.url=left.join('\n');
+  else LIBADD=null;
+  actRows(key, rows, !!left.length || (!some && !mk));
+}
+// [1.949] — the name the address is already saved as: the server's `name`, else the link it names (`id`/duplicateOf) as
+// the Library has it
+function _libDupName(x){
+  if(x.name) return String(x.name);
+  var d=x.duplicateOf||x.id;
+  if(d && typeof d==='object') return d.label||d.name||d.fileName||'';
+  var f=d?_libFind(String(d)):null;
+  return f ? (f.fileName||f.label||'') : '';
 }
 // A FILE is already uploaded by the time it is offered — the bytes went up when
 // it was attached — so this shelves, renames and tags one row in one write
@@ -13301,7 +13563,7 @@ function rLibAddCard(at){
           '<div class="lib-fld" id="libadd-text-wrap"'+
             (_libAddLines(LIBADD.url).length>1?' hidden':'')+'>'+
             '<div class="lib-lbl">'+esc(TLIB_COPY.lblDisplay)+'</div>'+
-            '<input id="libadd-text" value="'+esc(LIBADD.text)+'"'+
+            '<input id="libadd-text" value="'+esc(LIBADD.text)+'" maxlength="200"'+   // [1.949] — the server's cap on a link's name
               ' placeholder="'+esc(CMP_COPY.linkTextPlaceholder)+'"'+
               ' aria-label="'+esc(CMP_COPY.linkTextPlaceholder)+'"'+
               ' oninput="libAddTextIn(this)">'+
@@ -13509,7 +13771,7 @@ function libAddedRename(id){
     : {action:'renameLibraryFile', data:{attachmentId:id, fileName:name,
        teacherId:TEACHER_ID, teacherToken:TOKEN}};
   api(req, function(e,r){
-    if(e||!r||!r.ok){ actFail('lib:'+id,(r&&r.error)||TLIB_COPY.renameFailed); _libRefresh(); return; }
+    if(e||!r||!r.ok){ actFail('libbn:'+id,(r&&r.error)||TLIB_COPY.renameFailed); _libRefresh(); return; }   // [1.947] — on the batch row it was typed in
     // The server cleans a filename ([1.465]), so what it stored is what is
     // drawn — not what was typed.
     it.fileName=r.fileName||r.label||name;
@@ -13557,7 +13819,7 @@ function _libBulk(ids, change){
     }
     // Refused rows are named rather than swallowed: a selection that reached
     // somebody else's file is a thing to know about.
-    if(r.refused) showMsg(TLIB_COPY.someRefused.replace('{n}', String(r.refused)),'e');
+    if(r.refused) actFail('libadd', TLIB_COPY.someRefused.replace('{n}', String(r.refused)));   // [1.947] — beside the batch it was pressed in, not the corner
   });
 }
 // [1.469] — a teacher's OWN word, across the ticked files. **This reverses the
@@ -13630,8 +13892,8 @@ function libAddedDelete(){
         done++;
         // Out of the batch as well as off the shelf: a row left behind would be
         // a file that cannot be tagged, renamed or attached.
-        LIB_ADDED=LIB_ADDED.filter(function(x){ return x.attachmentId!==f.attachmentId; });
-        delete LIB_ADD_SEL[f.attachmentId];
+        LIB_ADDED=LIB_ADDED.filter(function(x){ return x.attachmentId!==f.id; });   // [1.947] — by id: a link has no attachmentId, so it stayed until the Library was read again
+        delete LIB_ADD_SEL[f.id];
       } else { failed++; }
       if(!--left){
         // **Partial failure is reported as partial**, not as success: admin
@@ -13714,6 +13976,7 @@ function rLibraryAdded(){
               var all=sel.length && sel.every(function(f){ return (f.tags||[]).indexOf(t.tagId)>-1; });
               var some=!all && sel.some(function(f){ return (f.tags||[]).indexOf(t.tagId)>-1; });
               return '<button type="button" class="lib-tag'+(all?' on':(some?' some':''))+'"'+
+                ' id="lib-at-'+esc(t.tagId)+'"'+   // [1.947] — found by a row's chip, which patches it in place
                 ' aria-pressed="'+(all?'true':(some?'mixed':'false'))+'"'+
                 (sel.length?'':' disabled')+
                 ' onclick="libAddedTagAll('+jsq(t.tagId)+')">'+esc(t.name)+'</button>';
@@ -13748,6 +14011,7 @@ function rLibraryAdded(){
               ' onkeydown="if(event.key===\'Enter\'){event.preventDefault();this.blur();}"'+
               ' onblur="libAddedRename('+jsq(f.id)+')">'+
           '</div>'+
+          rAct('libbn:'+f.id)+   // [1.947] — a refused rename, under the name that was typed
           (_lk?'<div class="lib-row-foot"><span class="lib-meta">'+esc(_libLinkHost(f.url))+'</span></div>':'')+
           // [1.487] — ONE row. The likely tag leads it, a tag the name nearly
           // says is outlined, and there is nothing to read. [1.824] — A–Z, with
@@ -14165,7 +14429,7 @@ function libTplTagOff(id, v){
   _ttplSaveQuiet(function(err){
     if(!err) return;
     _libSetTags(f, undo.tags); _libSetPriv(f, undo.priv);
-    actFail('tpl', err); _libRedraw();
+    actFail('lib:t:'+f.templateId, err); _libRedraw();   // [1.947] — on that template's row; it went to the foot of the list
   });
 }
 // The one writer. A template's tags land on the TEMPLATE, not on the copy that
@@ -14767,7 +15031,8 @@ function _libMyTagApply(op, before, to, working){
   // word, and the stored list. Done here first so the rows answer the press, and put back if refused.
   // [1.824] — put back by ROW, not by position: a delete takes a row out of the list at the click, and put-back by
   // position then gave every later row the tags of the one before it.
-  var keep={c:(LIB_CUSTOM||[]).slice(), rows:(LIB_MINE||[]).concat(LIB_MY_LINKS||[], TSET.tpls||[], TSET.tplBackup?[TSET.tplBackup]:[])
+  // [1.947] — the Keylab Master Library items they keep carry their words too: a deleted word stayed on those, and in My Tags.
+  var keep={c:(LIB_CUSTOM||[]).slice(), rows:(LIB_MINE||[]).concat(LIB_MY_LINKS||[], TSET.tpls||[], TSET.tplBackup?[TSET.tplBackup]:[], _libKeptStudio())
     .map(function(x){ return [x, (x.privateTags||[]).slice()]; })};
   var low=function(x){ return String(x==null?'':x).replace(/\s+/g,' ').trim().toLowerCase(); };   // [1.823] — as the server matches
   var swap=function(list){
@@ -14778,7 +15043,7 @@ function _libMyTagApply(op, before, to, working){
     if(op==='rename' && !w.some(function(x){ return low(x)===low(to); })) w.push(to);
     return w;
   };
-  (LIB_MINE||[]).concat(LIB_MY_LINKS||[], TSET.tpls||[], TSET.tplBackup?[TSET.tplBackup]:[]).forEach(function(x){ x.privateTags=swap(x.privateTags); });
+  (LIB_MINE||[]).concat(LIB_MY_LINKS||[], TSET.tpls||[], TSET.tplBackup?[TSET.tplBackup]:[], _libKeptStudio()).forEach(function(x){ x.privateTags=swap(x.privateTags); });
   LIB_CUSTOM=(LIB_CUSTOM||[]).filter(function(w){ return w!==before; });
   if(op==='rename' && LIB_CUSTOM.indexOf(to)<0) LIB_CUSTOM.push(to);
   var fi=LIB_FILTER.indexOf('p:'+before);
@@ -15035,7 +15300,7 @@ function rLibRow(f, mine, where){
     (LIB_STANDALONE&&!mine?(LIBADD&&LIBADD.at==='pick:'+id?rLibAddCard('pick:'+id):rAct('libadd:pick:'+id)):'')+
     // [1.824] — the delete question on the row where Delete was clicked, asked once.
     (_asking?rLibConfirmDelete(f):'')+
-    (!mine&&LIB_STANDALONE?rAct('lib:'+id):'')+
+    (!mine&&LIB_STANDALONE&&LIB_EDIT!==id?rAct('lib:'+id):'')+   // [1.947] — not while its Edit box is open and says it
   '</div>';
   // ── [1.467] — ONE box, never three ──────────────────────────────────
   //
@@ -15050,7 +15315,7 @@ function rLibRow(f, mine, where){
   // Keep it puts them back. Done and failed still draw outside it, because they
   // have to survive the panel closing.
   var st=ACT['lib:'+id];
-  if(st && st.state!=='working') h+=rAct('lib:'+id);
+  if(st && st.state!=='working' && (mine||!LIB_STANDALONE)) h+=rAct('lib:'+id);   // [1.947] — a Master Library row says it once, above
   // [1.585] — the editor is an OVERLAY now, drawn on the body by
   // rLibEditOverlay, not inside this row. `.lib-list` is a 230px scroller, so
   // an editor opened on the fourth file of a shelf sat below the fold of a box
@@ -15101,7 +15366,7 @@ function rLibEdit(f){
       '<div class="lib-fld-row">'+
         // [1.488] — Enter leaves the field, and leaving the field is what
         // saves. One behaviour, and the same one the just-added block has.
-        '<input id="lib-rn-'+esc(id)+'" value="'+esc(f.fileName)+'" style="flex:1"'+
+        '<input id="lib-rn-'+esc(id)+'" value="'+esc(f.fileName)+'" style="flex:1"'+(link?' maxlength="200"':'')+   // [1.949] — a link's name, the server's cap
           ' aria-label="'+esc(TLIB_COPY.lblName)+'"'+
           ' onkeydown="if(event.key===\'Enter\'){event.preventDefault();this.blur();}"'+
           ' onblur="libRename('+jsq(id)+')">'+
@@ -15121,7 +15386,7 @@ function rLibEdit(f){
       ? '<div class="lib-fld">'+
           '<div class="lib-lbl">'+esc(TLIB_COPY.lblUrl)+'</div>'+
           '<div class="lib-fld-row">'+
-            '<input id="lib-url-'+esc(id)+'" value="'+esc(f.url||'')+'" style="flex:1"'+
+            '<input id="lib-url-'+esc(id)+'" value="'+esc(LIB_URL_TYPED[id]!=null?LIB_URL_TYPED[id]:(f.url||''))+'" style="flex:1"'+   // [1.949] — a refused address stays as typed
               ' aria-label="'+esc(TLIB_COPY.lblUrl)+'" inputmode="url" spellcheck="false"'+
               ' onkeydown="if(event.key===\'Enter\'){event.preventDefault();this.blur();}"'+
               ' onblur="libLinkUrl('+jsq(id)+')">'+
@@ -15828,6 +16093,7 @@ function _composerLinkOpen(id){
   var u=document.getElementById(id+'-linkurl');
   if(t) t.value=st.text;
   if(u){ u.value=st.url; u.classList.remove('bad'); u.placeholder=CMP_COPY.linkUrlPlaceholder; }
+  var _why=document.getElementById(id+'-linkbad'); if(_why) _why.innerHTML='';   // [1.949] — a new start says nothing about the last one
   _cmpLinkRowSync(id);
   row.classList.add('open');
   if(u) u.focus();
@@ -15851,39 +16117,86 @@ function _composerLinkKey(ev,id){
 // _sanitizeMessageHtml_() in Code.js re-checks every href server-side and
 // assumes this file was bypassed, because it can be. Strictness here buys
 // nothing and costs teachers working links.
-function _composerNormalizeUrl(raw){
-  var u=String(raw||'').trim();
-  if(!u) return '';
-  if(/[\s"'<>\\]/.test(u)) return '';          // spaces or quotes: not an address
-  if(/^mailto:/i.test(u)) return u;
-  if(!/^https?:\/\//i.test(u)){
-    // Any other scheme (javascript:, data:, file:) is refused outright rather
-    // than having https:// glued in front of it.
-    if(/^[a-z][a-z0-9+.-]*:/i.test(u)) return '';
-    u='https://'+u;
+// [1.949] — ONE rule for every address this page takes (Add link, a paste, a drop, the Library's and Materials' Edit,
+// the words of a sent message), the same rule as the server's, and it says WHY it refused so the box can say it:
+// {url} or {error:'empty'|'invalid'|'scheme'|'long'}. It replaces _composerNormalizeUrl, which only said no.
+function _linkClean(raw, opts){
+  var s=String(raw||'').trim();
+  if(!s) return {error:'empty'};
+  if(/\s/.test(s)) return {error:'invalid'};
+  if(/^mailto:/i.test(s)){
+    var who=s.slice(7);
+    return (opts && opts.mailto && /^[^\s@<>"']+@[^\s@<>"']+\.[^\s@<>"']+$/.test(who)) ? {url:'mailto:'+who} : {error:'scheme'};
   }
-  // Must have a dot somewhere in the host, or "https://notes" would pass.
-  var host=u.replace(/^https?:\/\//i,'').split(/[\/?#]/)[0];
-  if(host.indexOf('.')===-1) return '';
-  return u;
+  var web=/^https?:\/\//i.test(s);
+  // Any other scheme (javascript:, data:, ftp:) is refused rather than having https:// glued in front; host:port is not one.
+  if(!web && /^[a-z][a-z0-9+.-]*:/i.test(s) && !/^[a-z0-9.-]+\.[a-z]{2,}:\d+/i.test(s)) return {error:'scheme'};
+  if(!web) s='https://'+s.replace(/^\/+/,'');
+  s=s.replace(/^https?:/i, function(x){ return x.toLowerCase(); });
+  var at=s.indexOf('//')+2, tail=s.slice(at), cut=tail.search(/[\/?#]/), auth=cut<0?tail:tail.slice(0,cut);
+  if(auth.indexOf('@')>-1) return {error:'invalid'};   // good.com@evil.com goes to evil.com
+  var host=auth.replace(/:\d+$/,'');
+  if(host.indexOf('.')<0 || !/^[a-z0-9.\p{L}-]+$/iu.test(host) || /^[.-]|[.-]$/.test(host)) return {error:'invalid'};
+  s=s.slice(0,at)+auth.toLowerCase()+(cut<0?'':tail.slice(cut));
+  s=s.replace(/['"<>\\`]/g, function(c){ return '%'+c.charCodeAt(0).toString(16).toUpperCase(); });
+  if(s.length>2000) return {error:'long'};   // never cut: a shortened address is a different page
+  return {url:s};
+}
+// [1.949] — when two addresses are one link: http/https, a leading www., a trailing /, tracking words (utm_…, si, fbclid…)
+// and the #part do not make a different one; the case of the path and the query does. An empty path is "/", so
+// keylab.nyc and keylab.nyc/ are one.
+function _linkKey(url){
+  var s=String(url||'').trim(); if(!s) return '';
+  if(/^mailto:/i.test(s)) return s.toLowerCase();
+  s=s.replace(/^[a-z][a-z0-9+.-]*:\/\//i,'');
+  var h=s.indexOf('#'); if(h>-1) s=s.slice(0,h);
+  var q='', qi=s.indexOf('?'); if(qi>-1){ q=s.slice(qi+1); s=s.slice(0,qi); }
+  var p=s.indexOf('/'), host=(p<0?s:s.slice(0,p)).toLowerCase().replace(/^www\./,''), path=p<0?'/':s.slice(p);
+  if(path.length>1) path=path.replace(/\/$/,'');
+  var keep=q.split('&').filter(function(x){
+    var n=x.split('=')[0].toLowerCase();
+    return x && !/^utm_/.test(n) && !/^(fbclid|gclid|si|igshid|mc_cid|mc_eid|ref_src)$/.test(n);
+  });
+  return host+path+(keep.length?'?'+keep.join('&'):'');
+}
+// [1.949] — the words for a refusal, said beside the box: an address that is not one, a scheme that is not the web, too long.
+function _linkWhy(code){ return code==='scheme'?CMP_COPY.linkScheme:code==='long'?CMP_COPY.linkLong:CMP_COPY.linkRejected; }
+// [1.949] — Choice B, AC: a bare address typed in a message or an assignment is a link once SENT. Only text outside an <a>,
+// only words starting http(s):// or www., with .,;:!?)] after it left outside; the words stay as typed, the href is the
+// rule's (refused, the words stay words). No library offer: nothing was asked for.
+function _linkifyBare(html){
+  var inA=0, dec=function(t){ return t.replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#0*39;|&apos;/g,"'").replace(/&amp;/g,'&'); };
+  return String(html||'').split(/(<[^>]*>)/).map(function(part){
+    if(part.charAt(0)==='<'){ if(/^<a[\s>]/i.test(part)) inA++; else if(/^<\/a\s*>/i.test(part)) inA=Math.max(0,inA-1); return part; }
+    if(inA) return part;
+    return part.replace(/(^|\s|&nbsp;)((?:https?:\/\/|www\.)(?:(?!&nbsp;)\S)+)/gi, function(all, lead, tok){
+      var raw=dec(tok), core=raw.replace(/[.,;:!?)\]]+$/,''), c=core?_linkClean(core):{};
+      if(!c.url) return all;
+      return lead+'<a href="'+esc(c.url)+'">'+esc(core)+'</a>'+esc(raw.slice(core.length));
+    });
+  }).join('');
 }
 
-function _composerLinkInsert(id){
+function _composerLinkInsert(id, given){
   var el=document.getElementById(id); if(!el) return;
   var uIn=document.getElementById(id+'-linkurl');
   var tIn=document.getElementById(id+'-linktext');
-  var url=_composerNormalizeUrl(uIn?uIn.value:'');
+  // [1.949] — `given` is a link dropped on the box ({url, text}): it goes in by this same path, offer and all.
+  var typed=given?given.url:(uIn?uIn.value:'');
+  var _lc=_linkClean(typed, {mailto:true}), url=_lc.url||'';
   if(!url){
     // Corrected in place instead of thrown as a page-level toast -- the error
     // belongs next to the field that caused it.
-    var stBad=_cmpLinkState(id); stBad.bad=true; stBad.url='';
-    if(uIn){ uIn.classList.add('bad'); uIn.value=''; uIn.placeholder=CMP_COPY.linkRejected; uIn.focus(); }
+    // [1.949] — what was typed STAYS (it was erased), and why it was refused is said under the row.
+    var stBad=_cmpLinkState(id); stBad.bad=_linkWhy(_lc.error); stBad.url=String(typed||'');
+    if(uIn){ uIn.classList.add('bad'); uIn.focus(); }
+    var _why=document.getElementById(id+'-linkbad'); if(_why) _why.innerHTML=_cmpLinkBadHtml(stBad.bad);
     return;
   }
-  var label=(tIn && tIn.value.trim()) || url.replace(/^https?:\/\//i,'');
+  var label=(given ? String(given.text||'').trim() : (tIn && tIn.value.trim())) || url.replace(/^https?:\/\//i,'');
   // [1.844] — Change: the link the bubble was on takes the new words and address where it stands. Gone meanwhile
   // (the words were edited), it goes in where the cursor was, as a new link would.
-  var ed=CMP_LINKEDIT[id]; delete CMP_LINKEDIT[id];
+  var ed=given?null:CMP_LINKEDIT[id]; if(!given) delete CMP_LINKEDIT[id];   // [1.949] — a drop is a new link, never a Change
   var was=ed?_cmpLinkAt(el, ed.idx):null;
   if(was){ _cmpLinkSet(el, was, url, label); _cmpRemember(id); }
   else _composerInsertLink(id, url, label);
@@ -15905,6 +16218,7 @@ function _composerLinkInsert(id){
   // inserted by `_composerInsertLink` straight from the tick and never reaches
   // this function, so the shelf check is the whole of the question now.
   if(!_libHasUrl(url)){ LINK_OFFER={composerId:id, url:url, text:label}; LINK_OFFER_AT=id; }
+  if(given){ render(); return; }   // [1.949] — a drop opened no Add link box, so there is none to close or empty
   // [1.494] — the picker stays open for the next link; the fields clear.
   // [1.844] — ~~stays open~~: AC, 9 October 2026, "the link box doesn't disappear after adding the link, but it
   // should go away." It closes, and the cursor goes back to just after the link, to carry on writing.
@@ -15922,15 +16236,24 @@ function _cmpLinkDone(id){
 // Is this address already on a shelf? Asked before the offer is made, over both
 // shelves, because a studio link a teacher pastes by hand is one they already
 // have — it is just not theirs.
+// [1.949] — ~~over both shelves~~: in MY library means the teacher's own links and the Keylab Master Library links they
+// KEPT, matched as one link (_linkKey), not as the same letters. A Master Library link not kept is offered, and its Add
+// keeps the studio's (libOfferYes).
 function _libHasUrl(url){
-  var u=String(url||'').toLowerCase();
-  if(!u) return false;
-  var hit=false;
-  [LIB_MY_LINKS, LIB_STUDIO_LINKS].forEach(function(list){
-    (list||[]).forEach(function(l){ if(String(l.url||'').toLowerCase()===u) hit=true; });
-  });
-  return hit;
+  var f=_libLinkFind(url);
+  return !!(f && f.on);
 }
+// [1.949] — the link an address already is: {on:true, item} in My Library (own, kept, or an older quick link), {on:false,
+// item} a Keylab Master Library link not kept, or null.
+function _libLinkFind(url){
+  var k=_linkKey(url); if(!k) return null;
+  var same=function(l){ return _linkKey(l.url)===k; };
+  var mine=_pickLinks(true, true).filter(same)[0];
+  if(mine) return {on:true, item:mine};
+  var st=(LIB_STUDIO_LINKS||[]).filter(function(l){ return !_libPicked(l) && same(l); })[0];
+  return st ? {on:false, item:st} : null;
+}
+function _libStudioUnkept(url){ var f=_libLinkFind(url); return (f && !f.on) ? f.item : null; }   // [1.949]
 // The two answers to the offer. Handlers with nothing to pass, so no address
 // and no display text is ever written into an onclick attribute — a URL with a
 // quote in it would end the attribute and take the rest of the row with it.
@@ -15938,6 +16261,9 @@ var LINK_OFFER=null;   // {composerId, url, text}
 function libOfferYes(){
   if(!LINK_OFFER) return;
   var o=LINK_OFFER; LINK_OFFER=null;
+  // [1.949] — a Keylab Master Library link is KEPT (the keep-a-pick path, with its "Assign tags?"), never copied
+  var st=_libStudioUnkept(o.url);
+  if(st){ libAddOpen({kind:'pick', at:'link:'+o.composerId, itemId:st.id, name:st.fileName||st.label||''}); return; }
   libAddOpen({kind:'link', at:'link:'+o.composerId, url:o.url, text:o.text});
 }
 function libOfferNo(){ LINK_OFFER=null; render(); }
@@ -16270,6 +16596,8 @@ var TCH_COPY={
   // [1.457] — AC's own words for the section, 9 September 2026: "a list of My
   // Students". The empty line is a PLACEHOLDER, flagged.
   searchPlaceholder:'Search by student or parent, or type a name to start\u2026',
+  searching:'Searching\u2026',   // PLACEHOLDER — [1.947], AC to word
+  searchFailed:'The search didn\'t work. Try again.',   // PLACEHOLDER — [1.947], AC to word
   // [1.568] — AC's own word for admin's twin of this control, so one thing is
   // not called two things in two seats.
   newMessage:'New Message',
@@ -16296,6 +16624,9 @@ var TCH_COPY={
   // portal's, for the reason every other pair in here is.
   linkClaimed:'This link has already been used on another device. Please log in.',
   linkExpired:'This link has expired. Please log in.',
+  // [1.947] — no answer from the server is not an expired link.
+  linkNoAnswer:'The portal could not be reached to open this link. Please try again, or log in.',   // PLACEHOLDER — [1.947], AC to word
+  linkUnchecked:'This link could not be checked. Check your connection and try again.',   // PLACEHOLDER — [1.947], AC to word
   attachTooMany:'You can add 10 files to one message.',
   // ── [1.404] — the working/done/failed wording. PLACEHOLDERS, flagged. ──
   // ── AC's wording, 8 September 2026. FINAL, not placeholders. ─────────
@@ -16438,6 +16769,7 @@ var TCH_COPY={
   // [1.861] — PLACEHOLDER, AC to word: under a message to a test family whose "Send emails for this test student" is off.
   notEmailedTest:'Not emailed: emails are off for this test student.',
   markSeen:'Mark seen',
+  markingSeen:'Marking\u2026',   // PLACEHOLDER — [1.947], AC to word
   // [1.934] — AC's words, 26 October 2026: the 👍 on admin's message, here and in the email.
   ackBtn:'\uD83D\uDC4D Got it',
   ackSeen:'{name} has seen your message',   // AC, 27 October 2026
@@ -16528,6 +16860,11 @@ var CMP_COPY={
   linkChange:'Change',
   linkRemove:'Remove',
   linkRejected:'That doesn’t look like a web address. Try something like keylab.nyc/lessons.',
+  // [1.949] — why else an address is refused, beside the box it was typed in.
+  // PLACEHOLDER — [1.949], AC to word
+  linkScheme:'Only web addresses can be added here.',
+  // PLACEHOLDER — [1.949], AC to word
+  linkLong:'That address is too long.',
   linkSharing:'Set sharing to “Anyone with the link” before you send, or ask admin for the parent’s email to share it privately.',
   // [1.561] — the toolbar's own object, which is what `rComposerToolbar` reads.
   formatting:'Formatting',   // [1.552] — AC's word, final
@@ -16778,7 +17115,9 @@ function rComposerToolbar(id,opts){
 // ('les:…') — and its panel opens under that list (Attached files, Materials, Materials & Resources). Add link keeps the
 // selection in the box (mousedown is held), so highlighted words become the link; Add file does not, so on a phone the
 // keyboard goes away and the panel is in sight. Each button, pressed again, closes what it opened.
+var CMP_HAS_LINK={};   // [1.949] — box id -> true: an Add link is drawn under it, so Cmd+K opens one
 function rComposerAddRow(id,fileTarget,link){
+  if(link) CMP_HAS_LINK[id]=true;
   if(!fileTarget&&!link) return '';
   var fOn=!!(fileTarget&&MS.pick&&MS.pick.target===fileTarget&&MS.pick.kind==='file');
   return '<div class="cmp-tb cmp-addrow">'+
@@ -16856,7 +17195,7 @@ function rComposerLinkRow(id,menu){
   // here. Keep the placeholder text for clarity."
   return '<div class="cmp-linkrow open" id="'+id+'-linkrow">'+
     '<label class="cmp-ll"><span>'+esc(MST_COPY.pasteLink)+'</span><input id="'+id+'-linkurl" class="'+(st.bad?'bad':'')+'" value="'+esc(st.url)+'"'+
-      ' placeholder="'+esc(st.bad?CMP_COPY.linkRejected:CMP_COPY.linkUrlPlaceholder)+'"'+
+      ' placeholder="'+esc(CMP_COPY.linkUrlPlaceholder)+'"'+   // [1.949] — the reason is said under the row; the field keeps what was typed
       ' aria-label="'+esc(CMP_COPY.linkUrlPlaceholder)+'"'+
       ' oninput="_cmpLinkState(\''+id+'\').url=this.value"'+
       ' onkeydown="_composerLinkKey(event,\''+id+'\')"></label>'+
@@ -16897,8 +17236,12 @@ function rComposerLinkRow(id,menu){
     // [1.844] — moved to rLinkOffer, under the message box: the row closes once the link is in.
     (_cmpNeedsSharing((_cmpLinkState(id)||{}).url)
       ? '<div class="cmp-guide">'+esc(CMP_COPY.linkSharing)+'</div>' : '')+
-  '</div>';
+  '</div>'+
+  // [1.949] — why Insert link refused, under the fields it is about (outside the row, which does not wrap in a panel)
+  '<div id="'+id+'-linkbad">'+_cmpLinkBadHtml(st.bad)+'</div>';
 }
+// [1.949] — the refusal in the shape every refused press is said in (rAct's)
+function _cmpLinkBadHtml(why){ return why ? '<div class="act-note act-failed">! '+esc(why)+'</div>' : ''; }
 
 // [1.276] — while a message is being edited the composer's action row is the
 // edit's own row, not the send row. One function, used by both tabs, so the
@@ -17435,7 +17778,21 @@ function _attDrop(e,el){
   e.preventDefault(); e.stopPropagation();
   _attDropOff(el);
   var dt=e.dataTransfer; if(!dt) return;
+  if(!(dt.files&&dt.files.length) && _attDropLinkIn(el, dt, e)) return;   // [1.949]
   _attFilesInto(el, dt.files);   // [1.823]
+}
+// [1.949] — a link dragged onto a message box (text/uri-list, or words that are one address) goes in as a link by Add
+// link's own path, the library question and all; it was ignored.
+function _attDropLinkIn(el, dt, ev){
+  var get=function(t){ try{ return String(dt.getData(t)||''); }catch(e){ return ''; } };
+  var raw=get('text/uri-list').split(/\r?\n/).map(function(x){ return x.trim(); }).filter(function(x){ return x && x.charAt(0)!=='#'; })[0] || get('text/plain').trim();
+  var box=el&&el.querySelector?el.querySelector('.cmp-rich'):null;
+  if(!box || !box.id || !_linkClean(raw, {mailto:true}).url) return false;
+  // where it was dropped, when the browser can say; otherwise where the cursor last was, as Add link does
+  try{ var at=document.caretRangeFromPoint?document.caretRangeFromPoint(ev.clientX, ev.clientY):null;
+    if(at && box.contains(at.startContainer)){ var sel=window.getSelection(); sel.removeAllRanges(); sel.addRange(at); _cmpRemember(box.id); } }catch(x){}
+  _composerLinkInsert(box.id, {url:raw, text:''});
+  return true;
 }
 
 function attachChosen(input){
@@ -18017,6 +18374,7 @@ function openSendLater(){
   // Nothing to schedule is not an error state, it is simply not a thing to do.
   var c=_amendCtx(); if(!c) return;
   SCHED={mode:'picking', messageId:'', at:_schedDefault()};
+  actClear('sched');   // [1.947] — the panel opens without the last one's reason
   render();
   _klIntoView('.sched-panel');   // [1.823] — opened under Send, where it can be below the fold
 }
@@ -18034,7 +18392,7 @@ function _klIntoView(sel){
     try{ el.scrollIntoView({block:'nearest', inline:'nearest'}); }catch(e){ try{ el.scrollIntoView(false); }catch(x){} }
   },0);
 }
-function closeSchedule(){ SCHED={mode:'', messageId:'', at:''}; render(); }
+function closeSchedule(){ SCHED={mode:'', messageId:'', at:''}; actClear('sched'); render(); }   // [1.947] — the reason goes with the panel
 function _schedSetAt(v){
   SCHED.at=v;
   // [1.809] — the read-back follows the typing, without a redraw.
@@ -18060,7 +18418,7 @@ function rSendLaterPanel(){
       '<button type="button" class="btn btn-p" onclick="confirmSendLater()">'+
         esc(TCH_COPY.scheduleGo)+'</button>'+
       '<button type="button" class="btn btn-s" onclick="closeSchedule()">'+esc(TCH_COPY.scheduleCancel)+'</button>'+
-    '</div></div>';
+    '</div>'+rAct('sched')+'</div>';   // [1.947] — a time that cannot be used is said here, under Schedule Message
 }
 // Sends the composer's contents with a sendAt. Everything else about sending —
 // what is in the box, which parents are ticked, the files — is read by the
@@ -18068,10 +18426,10 @@ function rSendLaterPanel(){
 // a second copy of the send path.
 function confirmSendLater(){
   var at=_schedLocalInputToMs(SCHED.at);   // [1.809] — what the typed date and time joined to
-  if(!at || at < Date.now()+60*1000){ showMsg(TCH_COPY.schedulePast,'e'); return; }
+  if(!at || at < Date.now()+60*1000){ actFail('sched', TCH_COPY.schedulePast); return; }   // [1.947] — in the panel, not the corner
   // Almost always a typo in the year. A question, not a refusal.
   if(at > Date.now()+14*24*60*60*1000 && !confirm(TCH_COPY.scheduleFar)) return;
-  SCHED={mode:'', messageId:'', at:''};
+  SCHED={mode:'', messageId:'', at:''}; actClear('sched');   // [1.947]
   // [1.404] — AC: scheduling "works, but no success banner 'message
   // scheduled'". The bubble says what it IS; this says the act SUCCEEDED,
   // which is a different thing and the one that was missing.
@@ -18102,7 +18460,7 @@ function rScheduledBubble(m){
   var settled = !m._pending && !!m.messageId;
   // Exactly rMessageBubble's line: messageHtml has already been through the
   // server's sanitizer, and a plain message keeps the escaped path.
-  var body=m.messageHtml?m.messageHtml:esc(m.messageText||'').replace(/\n/g,'<br>');
+  var body=m.messageHtml?_linksOpenNew(m.messageHtml):esc(m.messageText||'').replace(/\n/g,'<br>');   // [1.949] — as rMessageBubble
   var acts;
   // [1.537] — the Send now and Delete confirms went with their controls. Both
   // asked "are you sure" about an action that no longer exists; Cancel Send is
@@ -18164,6 +18522,7 @@ function rScheduledBubble(m){
     '<div class="bubble-text">'+body+'</div>'+
     rAttachments(m)+
     acts+
+    (m.messageId?rAct('msg:'+m.messageId):'')+   // [1.947] — why Cancel Send was refused, on the bubble it was pressed on
     '</div></div>';
 }
 // ── Cancel Send (AC, 7 September) ──────────────────────────────────────
@@ -18607,6 +18966,7 @@ function startEditMessage(id){
   var el=document.getElementById(c.composerId);
   var cur=el?_composerClean(el):(c.t.draft||'');
   AMEND={messageId:id, kind:'edit', stash:cur, t:c.t, req:c.req};   // [1.782] — which thread it belongs to
+  actClear('edit'); if(ACT.send && ACT.send.state==='failed') actClear('send');   // [1.947] — no earlier reason stands under this edit's buttons
   // [1.276] — told to the server, not decided here: opening an edit buys two
   // minutes and holds the family's email with it. Fired in the BACKGROUND and
   // the composer opens immediately — a round trip before the box opens would
@@ -18637,9 +18997,9 @@ function saveEditMessage(){
   if(!_oncePress('edit:'+AMEND.messageId)) return;   // [1.534]
   var id=AMEND.messageId;
   var el=document.getElementById(c.composerId);
-  var html=el?_composerClean(el):(c.t.draft||'');
+  var html=_linkifyBare(el?_composerClean(el):(c.t.draft||''));   // [1.949] — an edit is sent too: its bare addresses go as links
   var text=_composerPlain(html);
-  if(!text) return;
+  if(!text){ _onceDone('edit:'+id); actFail('edit', TCH_COPY.dayNoWords); return; }   // [1.947] — an emptied edit says why, as an empty Send does
   var m=_amendFind(id);
   var before=m?{messageText:m.messageText, messageHtml:m.messageHtml}:null;
   if(m){ m.messageText=text; m.messageHtml=html; }
@@ -18650,6 +19010,7 @@ function saveEditMessage(){
   _threadCacheWrite(c);
   render();
   api({action:'editMessage', data:Object.assign({}, c.req, {messageId:id, messageText:text, messageHtml:html})}, function(e,r){
+    _onceDone('edit:'+id);   // [1.947] — answered, so the next save of this message is a press again
     if(e||!r||!r.ok){
       if(m&&before){ m.messageText=before.messageText; m.messageHtml=before.messageHtml; }
       _threadCacheWrite(c);
@@ -18669,13 +19030,17 @@ function saveEditMessage(){
       // bubble that had just changed back under it. So the words come back into
       // the box, the message goes back to what it was, AND the row that asked
       // says why.
-      actFail('edit',(r&&r.error)||TCH_COPY.editFailed);
+      // [1.947] — beside Send, where the words now are: the edit's own row is gone by this answer (AMEND cleared on the press)
+      if(c.t===ACTIVE_THREAD||c.t===ACTIVE_STAFF_THREAD) actFail('send',(r&&r.error)||TCH_COPY.editFailed);
+      else showMsg((r&&r.error)||TCH_COPY.editFailed,'e');
       render();
       return;
     }
     // The server re-sanitizes, so what it returns is authoritative — the
     // composer's own cleaning is a convenience, never the boundary.
-    if(m&&r.message){ m.messageText=r.message.messageText; m.messageHtml=r.message.messageHtml; _threadCacheWrite(c); render(); }
+    if(m&&r.message){ m.messageText=r.message.messageText; m.messageHtml=r.message.messageHtml;
+      if(r.message.amendUntil) m.amendUntil=r.message.amendUntil;   // [1.947] — the server's shorter window, so Edit and Unsend leave when it shuts
+      _threadCacheWrite(c); render(); }
     // [1.782] — saved after its time had passed, so it was not sent ([1.424]):
     // the edited words go back in the box as a draft, and AC's line says why,
     // beside Send. Before this the bubble went on saying it was scheduled.
@@ -18715,7 +19080,7 @@ function rMessageBubble(m, prev, next){
   // has already been through _sanitizeMessageHtml_() server-side. Plain
   // messages (and everything sent before 1.33) keep the escaped path.
   var body = m.messageHtml
-    ? m.messageHtml
+    ? _linksOpenNew(m.messageHtml)   // [1.949] — the copy kept after a send is the editor's, whose links had no target
     : esc(m.messageText||'').replace(/\n/g,'<br>');
   // AC, 1 Sept: an auto-response collapses to one line and opens on click.
   // Away replies repeat the same words to the same family every time; left
@@ -19025,16 +19390,18 @@ function ackMsg(id){
 function rMsgTools(m, mine){
   var saved = !!m.reviewAt;
   var h = '<div class="msg-tools" onclick="event.stopPropagation()">'+   // [1.811] — a press here is not a press on an assignment's bubble
-    '<label class="rev-check'+(saved?' on':'')+'"><input type="checkbox"'+(saved?' checked':'')+
+    // [1.947] — no tick until the message has an id: the server can only save a message it has
+    (!m.messageId ? '' : '<label class="rev-check'+(saved?' on':'')+'"><input type="checkbox"'+(saved?' checked':'')+
       ' onclick="event.stopPropagation();toggleReview('+jsq(m.messageId)+',this.checked)"> '+
       // AC, 3 Sept (second pass): the label follows its state.
-      esc(saved?TCH_COPY.savedForReview:TCH_COPY.saveForReview)+'</label>';
+      esc(saved?TCH_COPY.savedForReview:TCH_COPY.saveForReview)+'</label>');
   // Only on a message someone else sent: marking your own message "seen" says
   // nothing to anybody.
   if(!mine){
+    var _seen=(ACTIVE_THREAD||ACTIVE_STAFF_THREAD||{}).seenSending;   // [1.947] — on its way: every Mark seen waits, the pressed one says so
     h += '<span class="msg-tools-sep">·</span>'+
-      '<button type="button" class="lnk-btn" onclick="event.stopPropagation();markSeen()">'+
-      esc(TCH_COPY.markSeen)+'</button>';
+      '<button type="button" class="lnk-btn"'+(_seen?' disabled':'')+' onclick="event.stopPropagation();markSeen('+jsq(m.messageId)+')">'+
+      esc(_seen&&_seen===m.messageId?TCH_COPY.markingSeen:TCH_COPY.markSeen)+'</button>';
     // [1.934] — the 👍 on admin's message: the same record the email's button writes, so a teacher reading it here
     // says so the same way. Once given it is the time it was given, not a button.
     if(_ackable(m)) h += '<span class="msg-tools-sep">·</span>'+(m.ackAt
@@ -19137,6 +19504,7 @@ function sendStaffMessage(sendAt){
   // reaching another member of staff is the same fault with a smaller
   // audience. Same merge, same gate.
   html=_tplMerge(html);
+  html=_linkifyBare(html);   // [1.949] — as in sendFamilyMessage
   var _unfilledS=_tplUnfilledTags(html);
   if(_unfilledS.length){
     actFail('send', TCH_COPY.tagUnfilled.replace('{tags}',
@@ -19145,7 +19513,7 @@ function sendStaffMessage(sendAt){
   }
   var text=_composerPlain(html);
   var _att=_attTakeIds();   // [1.277]
-  if(!text && !_att.length) return;
+  if(!text && !_att.length){ actFail('send', TCH_COPY.dayNoWords); return; }   // [1.947] — said beside Send, and never leaves Schedule Send's working state behind
   // [1.402] — as in sendFamilyMessage above, sendAt included.
   // [1.428] — as in sendFamilyMessage above.
   if(_attAnyFailed()){ actFail('send', TCH_COPY.sendBlocked); render(); return; }
@@ -19200,6 +19568,7 @@ function sendStaffMessage(sendAt){
   _shouldScrollMsgList=true;
   // [1.371] — a scheduled reply does not answer anybody yet.
   var _rowUndo=sendAt ? null : _setRowAnswered(t);   // [1.325] — same rule on a staff row
+  if(!sendAt) _setRowReopened(t, _rowUndo);   // [1.947] — a staff message never ends its conversation, so it reopens one that was
   render();
 
   api({action:'sendMessage', data:reqData}, function(e,r){
@@ -19411,6 +19780,7 @@ function doSignOut(){
   LIB_MINE=[]; LIB_SHELF_STUDIO=[]; LIB_TAGS=[]; LIB_PICKS={}; LIB_CUSTOM=[]; LIB_SEL={}; _libLoaded=false; _libInFlight=false;   // [1.818] [1.822]
   // [1.823] — and the templates: the one list, and the studio's, are this teacher's until they sign out.
   TSET.tpls=null; TSET.tplsAt=0; TSET.tplEdit=-1; TSET.tplDel=-1; TSET.tplBackup=null; TSET._delUndo=null;
+  TSET.loaded=false; TSET.awayEnabled=false; TSET.absentUntil=''; TSET.saving=false; actClear('away');   // [1.947] — the next teacher on this page does not see this one's Away, or its note
   SAVED_TPLS=[]; STUDIO_TPLS=[]; _savedTplsLoaded=false; _savedTplsInFlight=false;
   _libWorkClear();   // [1.824]
   _attClear(); ATT_OWNER='';
@@ -19504,7 +19874,8 @@ function boot(){
                                           deviceId:_ktDeviceId()}}, function(ce,cr){
         if(ce||!cr||!cr.ok){
           _magicRefused=true;
-          showMsg((cr&&cr.reason==='claimed') ? TCH_COPY.linkClaimed : TCH_COPY.linkExpired, 'e');
+          // [1.947] — no answer says so; the link stays in the address bar, so a reload asks again.
+          showMsg((ce||!cr) ? TCH_COPY.linkNoAnswer : (cr.reason==='claimed') ? TCH_COPY.linkClaimed : TCH_COPY.linkExpired, 'e');
         }
         boot();
       });
@@ -19543,18 +19914,7 @@ function boot(){
 
     RESET_TOKEN = resetTokenFromUrl;
     PAGE = 'setpw';
-    SPW.checking = true;
-    render();
-    api({action:'teacherValidateResetToken', data:{resetToken:resetTokenFromUrl}}, function(e2,r2){
-      SPW.checking = false;
-      if(e2||!r2||!r2.ok){
-        SPW.invalid = true;
-        SPW.email = (r2&&r2.email)||'';
-      } else {
-        SPW.email = r2.email||'';
-      }
-      render();
-    });
+    _spwCheck();
     return;
   }
 

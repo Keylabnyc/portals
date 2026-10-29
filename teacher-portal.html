@@ -2423,6 +2423,9 @@ var busy = false;
 var RESET_TOKEN = '';
 var _pollTimer = null;
 var _pendingOpenFamilyId = '';   // set by boot() from ?openFamilyId=, consumed once by loadFamilyThreads()
+// [1.951] — the office or another teacher, from ?openStaff= ('admin', or that teacher's id): an email about a staff
+// message opens that conversation, as a family's email opens theirs. Consumed once, by loadThreads().
+var _pendingOpenStaff = '';
 var _lastPickState='';   // [1.512] — which picker was open on the previous render
 var _lastAttCount=0;     // [1.448] — how many files were on the composer on the previous render
 var _shouldScrollMsgList = false; // see render() — scroll-to-newest, set only when messages actually change
@@ -2743,6 +2746,7 @@ function api(payload, cb){
 function _ktFirstLoads(){
   loadMyStudents();
   loadFamilyThreads();
+  _linkPrefetch();   // [1.951] — an emailed link's conversation, beside the list rather than after it
   // Both rosters at sign-in, not just the visible one: a badge that only
   // becomes true once you visit the tab is not a badge (1.161 #1).
   loadStaffThreads(true);
@@ -2805,6 +2809,7 @@ function _ktToSignIn(){
   PAGE='login'; render();
 }
 function _apiFetch(payload, cb){
+  if(_klGuard(payload, cb)) return;   // [1.952] — a change counted, or a list that crossed one asked again
   var _cb=cb;
   // [1.794] — the request that found the session ended is answered FIRST, then the page
   // goes to sign-in. It went straight to sign-in: a send's own failure path never ran, so
@@ -2828,6 +2833,63 @@ function _apiAnswerOnce(cb, e, r){
   if(cb._klAnswered) return;
   cb._klAnswered=true;
   try{ cb(e, r); }catch(x){ try{ console.error('[teacher portal] a reply handler failed:', x); }catch(y){} }
+}
+// ── [1.952] 2 — a list that crossed a change on its way is asked for again ─────────────────────────────────────────────
+// The server answers a list without waiting for anyone's save (a read takes no lock), so a list asked for while a change
+// is on its way, or answered after one was sent, can come back without it — and drawn, it undoes the change on screen:
+// the star went off again a moment after it was pressed. Each change names the lists it changes (KL_CHANGES); a list of
+// that kind which overlapped one is asked again once those changes have been answered, up to three times, and only the
+// last answer is handed on. The guards the lists already have (drafts, cleared replies, the Library's own, the cards')
+// stay as they are; this is under all of them, so a list added later is born with it by naming its kind here.
+var KL_CHANGES={
+  teacherSetFollowUp:'stu', teacherSaveAsgDraft:'stu', teacherDeleteAsgDraft:'stu', teacherSaveStudentNote:'stu', teacherSaveLessonNote:'stu',
+  teacherClearReplyNeeded:'stu thr',
+  sendMessage:'thr stu sch', sendMessageBatch:'thr stu sch', unscheduleMessage:'thr stu sch', retractMessage:'thr stu sch',
+  retractMessageBatch:'thr stu sch', editMessage:'thr sch', beginMessageEdit:'thr sch', cancelMessageEdit:'thr sch',
+  setMessageReview:'thr', clearConversationReviews:'thr', setConversationClosed:'thr', markConversationRead:'thr', markMessageSeen:'thr', ackMessage:'thr',
+  teacherSaveSettings:'set',
+  teacherMasterPick:'lib', setLibrary:'lib', setAttachmentTags:'lib', setLibraryTagsBulk:'lib', setTeacherTagHidden:'lib',
+  teacherCustomTag:'lib', renameLibraryFile:'lib', deleteLibraryFile:'lib', deleteLibraryLink:'lib', saveLibraryLink:'lib', addLibraryLinks:'lib',
+  saveTeacherTemplates:'tpl',
+  teacherSubmitTrialReport:'trl', teacherSaveTrialReport:'trl', teacherArchiveTrial:'trl'
+};
+var KL_LISTS={teacherMyStudents:'stu', teacherStudentCard:'stu', teacherDayMaterials:'stu', getTeacherThreads:'thr',
+  getScheduledMessages:'sch', teacherGetSettings:'set', getLibrary:'lib', getTags:'lib', getTeacherLinks:'lib',
+  getTeacherTemplates:'tpl', getStudioTemplates:'tpl', teacherTrials:'trl'};
+var _klCh={n:0, kind:{}, out:{}, waiters:[]}, _klPass=false;   // changes sent (numbered), their kinds, those not answered yet
+function _klHas(kinds, k){ return (' '+(kinds||'')+' ').indexOf(' '+k+' ')>=0; }
+function _klOut(k){ return Object.keys(_klCh.out).some(function(id){ return _klHas(_klCh.out[id], k); }); }
+function _klSendRaw(payload, cb){ _klPass=true; _apiFetch(payload, cb); }
+function _klGuard(payload, cb){
+  if(_klPass){ _klPass=false; return false; }
+  var a=payload && payload.action, ch=KL_CHANGES[a];
+  if(ch){
+    var id=++_klCh.n; _klCh.kind[id]=ch; _klCh.out[id]=ch;
+    _klSendRaw(payload, function(e,r){ delete _klCh.out[id]; try{ cb(e,r); } finally { _klChDone(); } });
+    return true;
+  }
+  if(!KL_LISTS[a]) return false;
+  _klFresh(payload, cb, 0);
+  return true;
+}
+function _klFresh(payload, cb, tries){
+  var k=KL_LISTS[payload.action], at=_klCh.n, busy=_klOut(k);
+  _klSendRaw(payload, function(e,r){
+    var since=false;
+    for(var i=at+1; i<=_klCh.n; i++) if(_klHas(_klCh.kind[i], k)) since=true;
+    if(e || !r || !r.ok || tries>=3 || !(busy || since)){ cb(e,r); return; }
+    // Asked again when the changes are answered — or, if one has not answered in 15 seconds, asked once more and that
+    // answer used: a list is never lost to a change that went nowhere.
+    var went=false, go=function(last){ if(went) return; went=true; _klFresh(payload, cb, last ? 3 : tries+1); };
+    setTimeout(function(){ go(true); }, 15000);
+    _klCh.waiters.push({k:k, go:function(){ go(false); }});
+    _klChDone();
+  });
+}
+// A change answered: every list waiting on its kind, with none of that kind still out, is asked again.
+function _klChDone(){
+  var w=_klCh.waiters; _klCh.waiters=[];
+  w.forEach(function(x){ if(_klOut(x.k)) _klCh.waiters.push(x); else x.go(); });
 }
 // ============================================================
 // HELPERS
@@ -3088,10 +3150,95 @@ var _rendering = false;
 function render(){
   if(_klWaitForFocus('render', render)) return;   // [1.822]
   if(_rendering) return;
-  _rendering=true;
+  var _bg=!_klByTeacher();   // [1.952] — nobody pressed for this one
+  if(_bg && _klHolding()){ _klHold(); return; }   // [1.952] — a press, a dropdown or selected words first
+  _rendering=true; _klBg.bg=_bg; _klBg.drew=false;
   try{ _renderBody(); } finally { _rendering=false; }
+  _klBg.bg=false;
+  if(!_klBg.drew) return;   // [1.952] — nothing was drawn
   if(CMP_LINKBUB) _cmpLinkBubDraw();   // [1.844] — the link it sits under was just drawn again
+  _klSettled();   // [1.952]
 }
+// ── [1.952] — a redraw the teacher did not ask for never undoes what they are doing ──────────────────────────────────
+// AC, 28 October 2026: "when I click on something it immediately reverts to the previous state other than what I want it
+// to be ... selecting dropdowns etc and then reverting back immediately or having to revert back three or four times
+// until the change actually takes place after the background rendering has finished." Two causes, both found in the
+// preview with a slow server.
+// 1. render() rebuilds #app wholesale, and most redraws are not the teacher's: the poll, a list arriving, a card fetched
+//    behind. 10 of 14 drew exactly what was already on screen, and each one closed an open dropdown and lost a press
+//    caught between its down and its up (the button it went down on had gone). So a redraw nobody pressed for —
+//    window.event is unset: a timer or an answer, never a press, a key or a change —
+//      draws nothing when it would draw what is already there and nothing has written into the page since (a list
+//        that redraws itself, a box ticked by hand: _klBg.dirty, from a MutationObserver), and
+//      waits while a press is down, a dropdown is open or words on the page are selected, then draws once that ends.
+//        Capped (KL_HOLD_MS), so a dropdown closed without the page hearing of it holds nothing for long.
+//    The teacher's own presses, keys and changes draw at once, as ever; so does a redraw carrying a move the page asked
+//    for (the newest message, a marked one, a student's page from its top).
+// 2. A list asked for before a change reached the server comes back without it, and drawn, undoes it: the star went
+//    off a moment after it was pressed and on again at the next look. _klGuard, below _apiFetch.
+var KL_HOLD_MS=8000;
+var _klBg={bg:false, drew:false, dirty:true, obs:null, down:0, sel:null, selAt:0, words:0, pending:false, timer:null};
+function _klByTeacher(){ try{ return !!window.event; }catch(e){ return false; } }
+function _klHolding(){
+  var now=Date.now();
+  return !!((_klBg.down && now-_klBg.down<KL_HOLD_MS) || (_klBg.sel && now-_klBg.selAt<KL_HOLD_MS) ||
+    (_klBg.words && now-_klBg.words<KL_HOLD_MS*2));
+}
+function _klHold(){
+  _klBg.pending=true;
+  if(!_klBg.timer) _klBg.timer=setTimeout(_klRelease, 500);
+}
+// Asked for when a hold ends, and every half second while one lasts (for the caps). Always from a timer, so the redraw
+// it lets through is one nobody pressed for, and may still draw nothing.
+function _klRelease(){
+  clearTimeout(_klBg.timer); _klBg.timer=null;
+  if(!_klBg.pending) return;
+  if(_klHolding()){ _klBg.timer=setTimeout(_klRelease, 500); return; }
+  _klBg.pending=false;
+  render();
+}
+function _klLater(){ setTimeout(_klRelease, 0); }
+// After every redraw that drew: what it wrote is not "written since", and a redraw held back is no longer owed.
+function _klSettled(){
+  _klBg.pending=false;
+  var el=document.getElementById('app');
+  if(!el || typeof MutationObserver==='undefined') return;   // no way to know: every redraw draws, as before
+  if(!_klBg.obs){
+    _klBg.obs=new MutationObserver(function(){ _klBg.dirty=true; });
+    _klBg.obs.observe(el, {childList:true, subtree:true, attributes:true, characterData:true});
+  }
+  _klBg.obs.takeRecords(); _klBg.dirty=false;
+}
+// Words selected on the page, to copy — not in a field or a message box, which keep their own selection over a redraw.
+function _klWordsSelected(){
+  try{
+    var s=window.getSelection(); if(!s || s.isCollapsed || !String(s).trim()) return false;
+    var n=s.anchorNode, e=n && (n.nodeType===1 ? n : n.parentNode), app=document.getElementById('app');
+    return !!(e && app && app.contains(e) && !(e.closest && e.closest('input,textarea,[contenteditable="true"]')));
+  }catch(x){ return false; }
+}
+try{
+  // Capture, so the hold is up before the press's own handler runs. A press on a dropdown opens it, and its up can go
+  // to the open list rather than the page, so it holds as a dropdown, not as a press.
+  document.addEventListener('pointerdown', function(ev){
+    var t=ev.target, s=t && t.closest ? t.closest('select') : null;
+    if(s){ _klBg.sel=s; _klBg.selAt=Date.now(); _klBg.down=0; }
+    else { _klBg.sel=null; _klBg.down=Date.now(); }
+  }, true);
+  var _klUp=function(){ _klBg.down=0; _klLater(); };   // after the press's click, which comes in the same turn
+  document.addEventListener('pointerup', _klUp, true);
+  document.addEventListener('pointercancel', _klUp, true);
+  // A dropdown is closed by a choice, by leaving it, or by a key; a press anywhere else closes it too (above).
+  var _klShut=function(){ _klBg.sel=null; _klBg.down=0; _klLater(); };
+  document.addEventListener('change', _klShut, true);
+  document.addEventListener('focusout', function(ev){ if(_klBg.sel && ev.target===_klBg.sel) _klShut(); }, true);
+  document.addEventListener('keydown', function(ev){ if(_klBg.sel && /^(Escape|Enter|Tab)$/.test(ev.key||'')) _klShut(); }, true);
+  document.addEventListener('selectionchange', function(){
+    var on=_klWordsSelected();
+    if(on && !_klBg.words) _klBg.words=Date.now();
+    else if(!on && _klBg.words){ _klBg.words=0; _klLater(); }
+  });
+}catch(e){}
 // ── [1.822] — what a teacher is typing survives every redraw ─────────────
 // AC, 8 October 2026: "Make sure all text fields accept input properly and don't time out." Found in the
 // preview: renaming a file and moving to its tag field, the rename's own redraw wiped the tag field and dropped
@@ -3208,7 +3355,6 @@ function _renderBody(){
   var el=document.getElementById('app');
   if(!el) return;
   _amendOrphanCheck();   // [1.782] — an edit whose thread has gone is cancelled, not left holding a message
-  var _typ=_typingNote(el);   // [1.822]
   _libOverlaySync();   // [1.607]
   var h='';
   if(MSG.m) h+='<div class="msg m'+esc(MSG.t)+'">'+esc(MSG.m)+'</div>';
@@ -3217,6 +3363,11 @@ function _renderBody(){
   else if(PAGE==='forgotpw') h+=rForgotPassword();
   else if(PAGE==='setpw')    h+=rSetPassword();
   else                       h+=rHome();   // [1.607] — the overlays are synced below
+  // [1.952] — a redraw nobody pressed for, of what is already on screen, with nothing written into the page since,
+  // draws nothing: the open dropdown stays open and the press stays on its button. Never one carrying a move the page
+  // asked for. Before _typingNote, which switches off the typed-in field's blur for a rebuild that would not come.
+  if(_klBg.bg && el._klDrawn===h && !_klBg.dirty && !_shouldScrollMsgList && !_focusReview && !MST.top) return;
+  var _typ=_typingNote(el);   // [1.822] — [1.952] after the drawing is built, which reads nothing from the page
   // render() replaces #app wholesale, so a message arriving mid-poll would
   // otherwise yank the teacher's cursor out of a half-typed message — the
   // teacher-side twin of the family bug fixed in 1.32.
@@ -3348,7 +3499,7 @@ function _renderBody(){
   // a student just opened starts at the top of their page.
   var _mstL=document.getElementById('mst-left'), _mstR=document.getElementById('mst-right');
   var _mstLTop=_mstL?_mstL.scrollTop:0, _mstRTop=_mstR?_mstR.scrollTop:0;
-  el.innerHTML=h;
+  el.innerHTML=h; el._klDrawn=h; _klBg.drew=true;   // [1.952]
   var _mstL2=document.getElementById('mst-left'), _mstR2=document.getElementById('mst-right');
   if(_mstL2) _mstL2.scrollTop=_mstLTop;
   if(_mstR2) _mstR2.scrollTop=MST.top?0:_mstRTop;
@@ -7524,6 +7675,7 @@ function rTabBadge(n){
 function switchTab(tab){
   _msNoteFlush();   // [1.849]
   HOME_TAB=tab;
+  _pendingOpenFamilyId=''; _pendingOpenStaff='';   // [1.951] — a tab pressed while an emailed conversation was coming: the teacher has moved on
   // [1.794] — the Library tab is the panel the overlay draws, on its own page.
   if(tab==='library'){ LIBRARY_OPEN=false; LIB_EDIT=''; LIB_DEL=''; loadLibrary(); ttplLoad(); loadSavedTpls(); window.scrollTo(0,0); }   // [1.822] — the studio's templates are in the Library
   render();
@@ -7756,10 +7908,15 @@ function rMessagesPage(){
   if(MSG_LOCK.locked && FAMILY_VIEW==='thread') _openPane('');
   // [1.344] — a third claimant, tested LAST so a conversation always wins.
   var showThread = FAMILY_VIEW==='thread' || STAFF_VIEW==='thread' || DAY_VIEW==='panel';
+  // [1.951] — a conversation on its way (an emailed link, or Message Family before the list came) holds the pane with
+  // its wheel, on a phone too, so the list is not drawn first and then swapped for the conversation.
+  var opening = !showThread && !!(_pendingOpenFamilyId || _pendingOpenStaff);
   var thread = STAFF_VIEW==='thread' ? rStaffThread()
              : FAMILY_VIEW==='thread' ? rFamilyThread()
              : DAY_VIEW==='panel' ? rDaySend()
+             : opening ? '<div class="empty-state"><span class="spin">↻</span></div>'
              : '<div class="pane-empty">Choose a conversation to open it.</div>';
+  if(opening) showThread = true;
   // The notice sits ABOVE the roster, which now holds only Admin and staff —
   // see rSectionedRoster.
   var roster = MSG_LOCK.locked
@@ -8806,6 +8963,7 @@ function loadThreads(silent){
     // The deep link from a notification email, spent the moment the roster
     // arrives — and only once, so a later refresh does not drag the teacher
     // back out of whatever they moved on to.
+    var _hadPending=!!(_pendingOpenFamilyId || _pendingOpenStaff);   // [1.951] — its wheel is on screen: drawn again either way
     if(_pendingOpenFamilyId){
       var _want=_pendingOpenFamilyId;
       _pendingOpenFamilyId='';
@@ -8814,7 +8972,14 @@ function loadThreads(silent){
       if(_row){ HOME_TAB='family'; openFamilyThread(_row.id, _row.parent1Name, _row.parent2Name); return; }
       if(_fromMsgFam) showMsg(MST_COPY.msgFamNo,'e');   // [1.947] — Message Family pressed before the list came: the teacher is on Messages now
     }
-    if(!silent || _changed) render();
+    // [1.951] — and an email about a message from the office or another teacher opens that conversation.
+    if(_pendingOpenStaff){
+      var _sw=_pendingOpenStaff;
+      _pendingOpenStaff='';
+      var _srow=(THREADS.list||[]).filter(function(t){ return t.kind!=='family' && t.id===_sw; })[0];
+      if(_srow){ HOME_TAB='family'; openStaffThread(_srow.kind==='admin'?'admin':'staff', _srow.id, _srow.name||''); return; }
+    }
+    if(!silent || _changed || _hadPending) render();
     _prefetchThreads();   // [1.418] case 1 — the ids are known now, and only now
     _refreshChanged();   // [1.915] — and a conversation with a newer message than its copy is fetched in the background
   });
@@ -8935,6 +9100,29 @@ function _threadReqOf(r){
         ? {conversationType:'teacher_admin', teacherId:TEACHER_ID, teacherToken:TOKEN}
         : {conversationType:'staff_staff', teacherId:TEACHER_ID, staffId2:r.id, teacherToken:TOKEN});
 }
+// ── [1.951] — the conversation an emailed link names is asked for beside the list ─────────────────────────────────────
+// It was asked for only once the list had come, to know the family's name, so a teacher waited for the list and then
+// for the conversation, one after the other. It is asked for at once now. Whichever comes second opens it: the list
+// opens the conversation on this copy, or this copy fills the conversation the list has already opened and is still
+// waiting on. The conversation's own request confirms it either way, as on any open.
+function _linkPrefetch(){
+  var d=_pendingOpenFamilyId ? _threadReqOf({kind:'family', id:_pendingOpenFamilyId})
+      : _pendingOpenStaff ? _threadReqOf({kind:_pendingOpenStaff==='admin'?'admin':'staff', id:_pendingOpenStaff})
+      : null;
+  if(!d || _cachedMessages(d)) return;
+  var k=_threadCacheKey(d);
+  api({action:'getConversation', data:d}, function(e,r){
+    if(e||!r||!r.ok||!(r.messages||[]).length) return;   // [1.291] — an empty answer is not an answer
+    if(!THREAD_CACHE[k]) THREAD_CACHE[k]=r.messages;
+    var t=d.conversationType==='family_teacher'
+      ? (ACTIVE_THREAD && ACTIVE_THREAD.familyId===d.familyId ? ACTIVE_THREAD : null)
+      : (ACTIVE_STAFF_THREAD && (d.conversationType==='teacher_admin' ? ACTIVE_STAFF_THREAD.contactType==='admin'
+          : (ACTIVE_STAFF_THREAD.contactType!=='admin' && ACTIVE_STAFF_THREAD.otherId===d.staffId2)) ? ACTIVE_STAFF_THREAD : null);
+    if(!t || !t.loading) return;
+    t.messages=_mergeLoaded(r.messages, t.messages); t.loading=false; t.refreshing=true;
+    _shouldScrollMsgList=true; render();
+  });
+}
 var _refreshBusy=false, _refreshBusyAt=0;
 function _refreshChanged(){
   if((_refreshBusy&&!_guardStale(_refreshBusyAt))||_prefetchBusy) return;
@@ -9042,6 +9230,7 @@ function openFamilyThread(familyId, p1, p2, focusReview){
   var _wasEditing=AMEND.kind==='edit';
   _amendAbandon();
   _attForThread('family:'+familyId, _wasEditing);   // [1.823]
+  _pendingOpenFamilyId=''; _pendingOpenStaff='';   // [1.951] — a conversation opened is the one wanted; a link's must not replace it later
   _focusReview=!!focusReview;   // [1.235]
   var _row=(FAMILY_THREADS.list||[]).filter(function(x){return x.familyId===familyId;})[0]||{};
   var _req={conversationType:'family_teacher', familyId:familyId, teacherId:TEACHER_ID, teacherToken:TOKEN};
@@ -10719,6 +10908,7 @@ function openStaffThread(contactType, otherId, otherName, focusReview){
   // follow the teacher into another's thread.
   var _wasEditing=AMEND.kind==='edit';
   _amendAbandon();   // [1.782] — leaving an edit is cancelling it; see openFamilyThread
+  _pendingOpenFamilyId=''; _pendingOpenStaff='';   // [1.951] — see openFamilyThread
   _attForThread(contactType==='admin'?'admin':'staff:'+otherId, _wasEditing);   // [1.823]
   _focusReview=!!focusReview;   // [1.235]
   var reqData = contactType==='admin'
@@ -19795,6 +19985,7 @@ function doSignOut(){
   TOKEN=''; TEACHER_ID=''; TEACHER_NAME='';
   LF={email:'', password:'', remember:true};
   HOME_TAB='students';   // [1.794]
+  _pendingOpenFamilyId=''; _pendingOpenStaff='';   // [1.951] — an emailed link was this teacher's
   _openPane('');   // [1.336] — both flags, both threads, one call
   THREADS={loading:false, list:[], _sig:'', locked:false};   // [1.292]
   STAFF_PICKER={loading:false, query:'', all:[]};
@@ -19848,6 +20039,10 @@ function boot(){
     // Consumed once, by loadFamilyThreads(), which is the first point the
     // family's name is known.
     _pendingOpenFamilyId = params.get('openFamilyId') || '';
+    _pendingOpenStaff = params.get('openStaff') || '';   // [1.951]
+    // [1.951] — AC, 28 October 2026: the email's link "first loads the student tab and THEN the message thread". It
+    // opens on Messages, with the wheel where the conversation will be (rMessagesPage), and never on Students first.
+    if(_pendingOpenFamilyId || _pendingOpenStaff) HOME_TAB = 'family';
   } catch(e) { /* URLSearchParams unsupported — treat as no token */ }
 
   // ── [1.137] — settle the emailed link before anything else ────────────

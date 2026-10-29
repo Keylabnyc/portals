@@ -2754,6 +2754,11 @@ function _ktFirstLoads(){
   loadTeacherSettings();
   loadScheduled();   // [1.373] — the count, before they look for it
   _bootTeacher();   // [1.736] — everything else, in one call
+  // [1.954] — the Library, the templates and the saved links at sign-in too. They waited for the conversation list's
+  // first answer, and the Library opened before then said "No files yet".
+  loadLibrary();
+  loadSavedTpls();
+  loadSavedLinks();
 }
 // ── [1.824] — a change that is safe twice, sent once more when nothing answers ──
 // A passing failure on Google's side ("Service Spreadsheets failed while accessing document", in the server's log at
@@ -2768,16 +2773,21 @@ function _apiRetryOnce(payload, cb){
 }
 // Sent once at sign-in, beside the roster. What it brings is held for the
 // clicks above; the trial lessons go straight onto their tab.
-function _bootTeacher(){
-  var tok=TOKEN;
+var _ktBootDay='';   // [1.954] — New York's day the bundle was last asked for
+function _bootTeacher(failed){
+  var tok=TOKEN, sent=Date.now(), gen=Object.assign({},API_KEEP_GEN);
+  _ktBootDay=_nyYmdOf();
   TT.asked=true;   // the trials come in this call; rHome need not ask separately
   _apiFetch({action:'teacherBootstrap',data:{teacherToken:TOKEN}},function(e,r){
     if(tok!==TOKEN) return;
-    if(e||!r||!r.ok){ if(!TT.data) loadTrials(true); return; }   // the old per-click loads still work
+    if(e||!r||!r.ok){ if(!TT.data) loadTrials(true); if(failed) failed(); return; }   // the old per-click loads still work
     var now=Date.now();
+    // [1.954] — never over a week or a page asked for, or saved to, after this was: it is newer than what this read.
+    // Asked again after midnight while the teacher works, the bundle would otherwise put back the words before a save.
+    var keep=function(k,v){ if((API_KEEP_AT[k]||0)>sent || (API_KEEP_GEN[k]||0)!==(gen[k]||0)) return; API_KEEP[k]=v; API_KEEP_AT[k]=now; };
     API_THISWEEK=r.thisWeek||API_THISWEEK;
-    Object.keys(r.weeks||{}).forEach(function(ws){ API_KEEP['w|'+ws]=r.weeks[ws]; API_KEEP_AT['w|'+ws]=now; });
-    Object.keys(r.cards||{}).forEach(function(id){ API_KEEP['c|'+id]=r.cards[id]; API_KEEP_AT['c|'+id]=now; });
+    Object.keys(r.weeks||{}).forEach(function(ws){ keep('w|'+ws, r.weeks[ws]); });
+    Object.keys(r.cards||{}).forEach(function(id){ keep('c|'+id, r.cards[id]); });
     (r.conversations||[]).forEach(function(c){
       var d=Object.assign({teacherToken:TOKEN},c.req);
       var key=_threadCacheKey(d);
@@ -2786,8 +2796,20 @@ function _bootTeacher(){
     var tr=(r.parts||{}).teacherTrials;
     if(tr && !TT.data){ TT.asked=true; TT.loading=false; TT.data=tr;
       (tr.taught||[]).forEach(function(t){ if(!TT.timer[t.key]) TT.ans[t.key]=Object.assign({},t.report||{}); }); }
+    _mstDayWarm();   // [1.954] — the student pages are in
     render();
   });
+}
+// [1.954] — a portal left open past New York midnight asks for the bundle again, in the background, rather than
+// fetching each week and student page on its click. Nothing on screen is closed for it.
+function _ktDayCheck(){
+  if(!TOKEN || !_ktBootDay || _ktBootDay===_nyYmdOf()) return;
+  // Held weeks carry yesterday's "Today": if the bundle cannot come, they go, and each is fetched on its click ([1.762]).
+  _bootTeacher(function(){
+    Object.keys(API_KEEP).forEach(function(k){ if(/^w\|/.test(k)){ delete API_KEEP[k]; delete API_KEEP_AT[k]; } });
+    API_THISWEEK='';
+  });
+  if(!MS.rosterLoading) loadMyStudents();
 }
 // [1.753] stage 6 — a session that has ENDED (revoked by a password reset or
 // the account being made inactive) used to fail every poll silently for ever,
@@ -2806,6 +2828,11 @@ function _ktToSignIn(){
   TSET.tpls=null; TSET.tplsAt=0; TSET.tplEdit=-1; TSET.tplDel=-1; TSET.tplBackup=null; TSET._delUndo=null;
   SAVED_TPLS=[]; STUDIO_TPLS=[]; _savedTplsLoaded=false; _savedTplsInFlight=false;
   _libWorkClear();   // [1.824]
+  // [1.954] — the shelves and the saved links are asked for at sign-in now, so a refused session can leave them
+  // asked for and unanswered: the next sign-in asks again.
+  LIB_MINE=[]; LIB_SHELF_STUDIO=[]; LIB_MY_LINKS=[]; LIB_STUDIO_LINKS=[]; LIB_TAGS=[]; LIB_PICKS={}; _libLoaded=false; _libInFlight=false; _libHad=false;
+  SAVED_LINKS=[]; _savedLinksLoaded=false; _savedLinksInFlight=false; THREADS._inFlight=false;
+  _mstDayWarmed=''; _ktBootDay=''; _savedTplsHad=false;
   PAGE='login'; render();
 }
 function _apiFetch(payload, cb){
@@ -5231,7 +5258,7 @@ function loadMyStudents(){
   api({action:'teacherMyStudents',data:{teacherToken:TOKEN}},function(e,r){
     if(tok!==TOKEN)return;   // [1.824] — signed out while it came: it is not the next teacher's list
     MS.rosterLoading=false;
-    if(!e&&r&&r.ok){_mstKeepLocal(r);MS.roster=r;MST.listErr='';}
+    if(!e&&r&&r.ok){_mstKeepLocal(r);MS.roster=r;MST.listErr='';_mstDayWarm();}   // [1.954]
     else if(!MS.roster)MST.listErr=(r&&r.error)||MST_COPY.failed;
     render();
   });
@@ -5513,6 +5540,34 @@ function _mstDayAiAsk(e){
   });
 }
 function mstDayAiRetry(sig){var e=_mstAi[sig];if(e){_mstDayAiAsk(e);render();}}
+// The lessons a day's materials list reads, and every material attached to them. [1.954] — one place, so the list asked
+// for in the background is the one Select Day View draws.
+function _mstDayLessons(list){
+  var asked=[],att=[];
+  list.forEach(function(s){
+    var L=_mstDayLesson(s);
+    if(!L.n)return;
+    asked.push({studentId:s.studentId,lessonDate:L.d,sig:_mstLessonSig(L.n)});
+    var all=(L.n.materials||[]).concat(_msNotesLinks(L.n.notesHtml));   // [1.899] — a link written into the notes too
+    (L.n.sent||[]).forEach(function(y){if(!y.pending)all=all.concat(y.materials||[]);});
+    all.forEach(function(m){att.push({s:s,m:m});});
+  });
+  return {asked:asked,att:att};
+}
+// [1.954] — the materials list for the first day from today that has lessons is asked for in the background once that
+// day's student pages are in, so Select Day View finds it read. One day only: each lesson read is a request to Claude
+// (the server keeps what it has read, so a lesson whose words have not changed is not read again).
+var _mstDayWarmed='';   // today|day, once asked
+function _mstDayWarm(){
+  if(!MS.roster||!TOKEN)return;
+  var today=_mstToday(),day='';
+  for(var i=0;i<7&&!day;i++){var nm=_MS_DAY[_msDow(_msAdd(today,i))];if(_mstDayHas(nm))day=nm;}
+  if(!day||_mstDayWarmed===today+'|'+day)return;
+  var list=_mstDayStudents(day);
+  if(list.some(function(s){return !API_KEEP['c|'+s.studentId];}))return;   // a page not in yet: asked when the bundle is
+  _mstDayWarmed=today+'|'+day;
+  _mstDayAi(_mstDayLessons(list).asked);
+}
 // [1.894] — AC, 21 October 2026: *"materials for tuesday should say for the date of the next scheduled lessons, like
 // materials for tuesday october 27th"*. The next date on that weekday from today on, passing over a studio closure or the
 // teacher's absence when the week loaded at sign-in says so.
@@ -5558,15 +5613,7 @@ function mstDayMats(day,list){
   // pages listed on their own line underneath"*. So: one line per book, piece, song or session — books, then sheet music,
   // then sessions, then other files and links — and under it each page or part, with the students who need it. No tick
   // boxes and no "No file" marks (AC: *"Don't make the teacher do more than they need to"*).
-  var asked=[],att=[];   // the lessons read, and every material attached to them
-  list.forEach(function(s){
-    var L=_mstDayLesson(s);
-    if(!L.n)return;
-    asked.push({studentId:s.studentId,lessonDate:L.d,sig:_mstLessonSig(L.n)});
-    var all=(L.n.materials||[]).concat(_msNotesLinks(L.n.notesHtml));   // [1.899] — a link written into the notes too
-    (L.n.sent||[]).forEach(function(y){if(!y.pending)all=all.concat(y.materials||[]);});
-    all.forEach(function(m){att.push({s:s,m:m});});
-  });
+  var got=_mstDayLessons(list),asked=got.asked,att=got.att;
   var open=!MST.matsShut;
   var h='<div class="ms-day mst-mats"><button type="button" class="ms-day-h ms-hbtn" aria-expanded="'+(open?'true':'false')+'" onclick="MST.matsShut=!MST.matsShut;render()">'+
     '<span>'+esc(MST_COPY.matsFor(_mstLongDate(_mstNextLessonDay(day))))+'</span><span class="mst-hstate">'+esc(open?MS_COPY.close:MS_COPY.open)+'</span></button>';
@@ -6759,7 +6806,7 @@ function _msPickPanel(p){
           (t.length?'<span class="ms-pick-ft">'+esc(t.join(' · '))+'</span>':'')+'</span>'+
         (rank[fid]?'<span class="ms-pick-tag">'+esc(MST_COPY.usedWith(first))+'</span>':'')+
         (_libIsStudio(f)?'<span class="lib-kind lib-keylab">'+esc(TLIB_COPY.keylabBadge)+'</span>':'')+'</div>';
-    }).join('')+'</div>':'<div class="lib-empty">'+esc(q||sel.length?TLIB_COPY.emptyFiltered:MST_COPY.noFilesYet)+'</div>');
+    }).join('')+'</div>':!_libHad?_libWheel():'<div class="lib-empty">'+esc(q||sel.length?TLIB_COPY.emptyFiltered:MST_COPY.noFilesYet)+'</div>');   // [1.954] — loading, not empty
   return h+'<div class="ms-pick-foot"><button type="button" class="ms-pick-done" onclick="msPickClose()">'+esc(TLIB_COPY.editMessage)+'</button>'+
     '<button type="button" class="ms-pick-lib" onclick="libraryOpen()">'+esc(TLIB_COPY.manageGo)+'</button></div></div>';
 }
@@ -7180,6 +7227,7 @@ function rLibTplBody(){
   h+=_libGoneLines('templates');   // [1.824] — what is being deleted, above the list
   h+=items.length
     ? '<div class="lib-list">'+items.map(rLibTplRow).join('')+'</div>'
+    : !_libAnswered('templates') ? _libWheel()   // [1.954] — loading, not empty
     : '<div class="lib-empty">'+esc(_libFiltering()?TLIB_COPY.noMatch:TTPL_COPY.empty)+'</div>';
   h+=(TSET.tplEdit>=0?'':rAct('tpl'));
   if(TSET.tplsErr) h+='<div class="lib-err">'+esc(TSET.tplsErr)+'</div>';
@@ -7688,6 +7736,7 @@ function switchTab(tab){
   if(tab==='students' && MS.roster && MS.roster.today && MS.roster.today!==_nyYmdOf()){
     Object.keys(API_KEEP).forEach(function(k){ if(/^[wc]\|/.test(k)){ delete API_KEEP[k]; delete API_KEEP_AT[k]; } });
     API_THISWEEK=''; MS.cardStu=''; MS.card=null; MST.view=''; MS.asg=null;
+    _ktDayCheck();   // [1.954] — and the bundle asked for again, rather than each week and page on its click
   }
   if(tab==='students' && !MS.rosterLoading) loadMyStudents();   // [1.732]/[1.793] — fresh each visit
   if(tab==='staff' && STAFF_VIEW==='list'){
@@ -8929,14 +8978,17 @@ function loadThreads(silent){
   THREADS._inFlight=true;
   THREADS._inFlightAt=Date.now();
   var _askedAt=Date.now();   // [1.908]
+  var _tok=TOKEN;   // [1.954]
   if(!silent){ THREADS.loading=true; render(); }
   api({action:'getTeacherThreads', data:{teacherToken:TOKEN}}, function(e,r){
     THREADS._inFlight=false;
     THREADS.loading=false;
+    // [1.954] — asked at sign-in beside the session check now: a session refused meanwhile says nothing on the sign-in screen
+    if(_tok!==TOKEN) return;
     // [1.753] stage 6 — a failed BACKGROUND refresh changes nothing on screen,
     // so it draws nothing: on weak signal this redrew the whole page, the box
     // being typed in included, every five seconds.
-    if(e||!r||!r.ok){ if(!silent){ showMsg((r&&r.error)||'Could not load conversations.','e'); render(); } return; }
+    if(e||!r||!r.ok){ if(!silent && PAGE==='home'){ showMsg((r&&r.error)||'Could not load conversations.','e'); render(); } return; }   // [1.954] — offline at reopening, the boot screen says so
     // [1.176], AC: "The browser reloads when navigating away to another tab and
     // back." It was not a reload — every focus event re-rendered the whole page
     // whether or not anything had changed, which looks identical. The roster is
@@ -11643,8 +11695,10 @@ var _savedLinksInFlight = false;
 function loadSavedLinks(){
   if(_savedLinksLoaded || _savedLinksInFlight) return;
   _savedLinksInFlight = true;
-  _linkApi(function(list){
-    _savedLinksInFlight = false; _savedLinksLoaded = true;
+  var tok=TOKEN;
+  _linkApi(function(list, e){
+    if(tok!==TOKEN) return;   // [1.954] — signed out while it came
+    _savedLinksInFlight = false; _savedLinksLoaded = !e;   // [1.954] — no answer at all is asked again by the next call
     SAVED_LINKS = list || [];
     render();
   });
@@ -12229,6 +12283,9 @@ function rLibPickEdit(f){
   '</div>';
 }
 var _libLoaded=false, _libInFlight=false;
+// [1.954] — the shelves have answered once for this teacher. Until they have, the Library, Materials and the Master
+// Library show the wheel, not "No files yet": they are asked for at sign-in, and opened before they came said there were none.
+var _libHad=false;
 
 // THE FILTER REMEMBERS — saving #1, and the only piece of this that survives a
 // reload. Kept where the drafts and the session are kept, and read through the
@@ -12268,8 +12325,11 @@ function loadLibrary(force, shelvesOnly){
   if(force){ _libLoaded=false; _libInFlight=false; }
   if(_libLoaded || _libInFlight) return;
   _libInFlight=true;
+  var tok=TOKEN;
   api({action:'getLibrary', data:{teacherId:TEACHER_ID, teacherToken:TOKEN}}, function(e,r){
-    _libInFlight=false; _libLoaded=true;
+    if(tok!==TOKEN) return;   // [1.954] — signed out while it came (a refused session's sign-in loads): not the next teacher's
+    // [1.954] — no answer at all (offline) is asked again by the next call; an answer, even a refusal, is the answer.
+    _libInFlight=false; _libLoaded=!e; if(!e) _libHad=true;
     if(!e && r && r.ok){
       // [1.824] — a row being deleted stays out: this read does not wait for the delete, so it can land first and
       // bring the row back for good (found by the review of the build).
@@ -12294,6 +12354,7 @@ function loadLibrary(force, shelvesOnly){
   // after a rename does not need to ask AC's tag list again.
   if(shelvesOnly && LIB_TAGS.length) return;
   api({action:'getTags', data:{teacherId:TEACHER_ID, teacherToken:TOKEN}}, function(e,r){
+    if(tok!==TOKEN) return;   // [1.954]
     // [1.824] — while a Hide or a custom tag change is still going, the page's own list is newer than this answer.
     if(!e && r && r.ok){ LIB_TAGS=r.tags||[];
       if(!_tagHideQ.length) LIB_TAGS_HIDDEN=r.hiddenTagIds||[];
@@ -14387,7 +14448,7 @@ function rLibArea(which){
     '<div class="lib-band lib-band-wrap">'+
       '<button type="button" class="lib-band-btn" aria-expanded="'+(open?'true':'false')+'" onclick="libSee(\''+which+'\')">'+
         '<span class="lib-band-t">'+esc(TLIB_COPY[LIB_BANDS[which]])+'</span>'+
-        '<span class="zcount">'+_libCount(which)+'</span></button>'+
+        (_libAnswered(which)?'<span class="zcount">'+_libCount(which)+'</span>':'')+'</button>'+   // [1.954] — no count before there is one
       (host?rLibBulkCtl():'')+
       (add?'<button type="button" class="lib-band-add" onclick="libAddFor(\''+which+'\')">'+esc(TLIB_COPY[add])+'</button>':'')+
     '</div>'+
@@ -15303,13 +15364,18 @@ function libMyTagDelete(w){
 // not about the whole library.
 // [1.822] — one list per band, sorted by the bar. Nothing at all and nothing MATCHING are two different facts,
 // and each band says which.
+// [1.954] — a shelf that has not answered yet is loading, not empty: the wheel, and no count on its band.
+function _libWheel(){ return '<div class="lib-empty"><span class="spin">↻</span></div>'; }
+function _libAnswered(which){ return which==='templates' ? (_savedTplsHad || TSET.tplsAt>0) : _libHad; }
 function rLibraryBodyFiles(){
   var items=_libSecItems('files'), gone=_libGoneLines('files');   // [1.824] — what is being deleted, above the list
+  if(!items.length && !_libHad) return gone+_libWheel();   // [1.954]
   if(!items.length) return gone+'<div class="lib-empty">'+esc(_libFiltering()?TLIB_COPY.noMatch:TLIB_COPY.emptyFiles)+'</div>';
   return gone+'<div class="lib-list">'+items.map(function(f){ return rLibRow(f, !_libIsStudio(f), 'mine'); }).join('')+'</div>';
 }
 function rLibraryBodyLinks(){
   var items=_libSecItems('links'), gone=_libGoneLines('links');   // [1.824]
+  if(!items.length && !_libHad) return gone+_libWheel();   // [1.954]
   if(!items.length) return gone+'<div class="lib-empty">'+esc(_libFiltering()?TLIB_COPY.noMatch:TLIB_COPY.emptyLinks)+'</div>';
   return gone+'<div class="lib-list">'+items.map(function(f){ return rLibRow(f, !_libIsStudio(f), 'mine'); }).join('')+'</div>';
 }
@@ -15317,6 +15383,7 @@ function rLibraryBodyLinks(){
 function rLibMasterBody(){
   var all=_libSecItems('master');
   var h='<p class="lib-blurb">'+esc(TLIB_COPY.masterNote)+'</p>';
+  if(!(LIB_SHELF_STUDIO.length+LIB_STUDIO_LINKS.length) && !_libHad) return h+_libWheel();   // [1.954]
   if(!(LIB_SHELF_STUDIO.length+LIB_STUDIO_LINKS.length)) return h+'<div class="lib-empty">'+esc(TLIB_COPY.emptyStudio)+'</div>';
   if(!all.length) return h+'<div class="lib-empty">'+esc(TLIB_COPY.noMatch)+'</div>';
   var grp=function(head, list, links){
@@ -15774,20 +15841,25 @@ function tplTagToggle(tag){
   render();
 }
 
+// [1.954] — both lists have answered once for this teacher: until then the template lists show the wheel, not "none".
+var _savedTplsHad=false;
 function loadSavedTpls(){
   if(_savedTplsLoaded || _savedTplsInFlight) return;
   _savedTplsInFlight=true;
-  var done=0;
-  function fin(){ if(++done===2){ _savedTplsInFlight=false; _savedTplsLoaded=true; render(); } }
+  var done=0, lost=false, tok=TOKEN;
+  // [1.954] — no answer at all (offline) is asked again by the next call, as the shelves are.
+  function fin(e){ if(tok!==TOKEN) return; if(e) lost=true; if(++done===2){ _savedTplsInFlight=false; _savedTplsLoaded=!lost; if(!lost) _savedTplsHad=true; render(); } }
   api({action:'getTeacherTemplates', data:{teacherToken:TOKEN}}, function(e,r){
+    if(tok!==TOKEN) return;   // [1.954] — signed out while it came
     SAVED_TPLS=(!e&&r&&r.ok&&r.templates)||[];
     if(!e&&r&&r.ok&&r.templates&&!TSET.tplsAt&&TSET.tplEdit<0) _tplsFromServer(r.templates);   // [1.823] — and the Library's, if it has none yet
-    fin();
+    fin(e);
   });
   api({action:'getStudioTemplates', data:{teacherId:TEACHER_ID, teacherToken:TOKEN}}, function(e,r){
+    if(tok!==TOKEN) return;   // [1.954]
     // Only the ones AC marked for teachers ever reach here — the filter is on
     // the server, so an admin-only template is not in this payload at all.
-    STUDIO_TPLS=(!e&&r&&r.ok&&r.templates)||[]; fin();
+    STUDIO_TPLS=(!e&&r&&r.ok&&r.templates)||[]; fin(e);
   });
 }
 // [1.794] — one open thing under the row at a time: Templates closes Add file and Add link.
@@ -16236,7 +16308,7 @@ function tplSaveAsDo(id){
 // 5 September — "teachers do not keep my links. Admin keeps admin links.
 // Teachers keep teacher links." getMessageLinks is admin-only now and would
 // refuse this token anyway.
-function _linkApi(cb){ api({action:'getTeacherLinks', data:{teacherToken:TOKEN}}, function(e,r){ cb(e||!r||!r.ok?[]:(r.links||[])); }); }
+function _linkApi(cb){ api({action:'getTeacherLinks', data:{teacherToken:TOKEN}}, function(e,r){ cb(e||!r||!r.ok?[]:(r.links||[]), e); }); }
 // [1.328] — the same one back control the family portal builds, for the same
 // reason. AC, 5 September: "Back link on every portal should be a button, not
 // text link." This file's two thread Backs were already buttons and its "Back
@@ -17327,6 +17399,7 @@ function rTplPanel(id){
         return '<button type="button" class="cmp-tpl" onmousedown="event.preventDefault()" title="'+esc(t.label+' \u2014 '+_ttplPreview(t.body))+'"'+
           ' onclick="tplUse('+jsq(id)+','+jsq(t.templateId)+')">'+esc(t.label)+'</button>';
       }).join('')+'</div>'
+    :!_savedTplsHad?'<div class="cmp-tpl-none"><span class="spin">\u21bb</span></div>'   // [1.954] — loading, not empty
     :'<div class="cmp-tpl-none">'+esc(TTPL_COPY.empty)+'</div>';
   // [1.904] — choosing a template closes the list. [1.905] — Templates pressed again closes it without one, as Add link's
   // panel closes (AC, 23 October 2026: "no need for a cancel button, as clicking the "add link" button again closes the
@@ -19884,6 +19957,7 @@ var _thrPollBusy=false;
 var _thrPollBusyAt=0;   // [1.400] — when, so the guard can expire
 function _pollTick(){
   if(document.hidden || !TOKEN) return;
+  _ktDayCheck();   // [1.954] — past New York midnight: the bundle again, in the background
   _schedSweepDue();   // [1.410] — no request unless something is actually due
   if(_openKind()==='family'){   // [1.782]
     // BACKLOG 1.124 #1. This was gated on FAMILY_VIEW==='list', which was
@@ -19968,6 +20042,7 @@ function doSignOut(){
   // two clicks instead of four.
   PICK=''; PICK_Q=''; LINK_ADDED={}; LIBRARY_OPEN=false; LIB_EDIT=''; LIB_DEL=''; LIB_KEPT={};
   LIB_MINE=[]; LIB_SHELF_STUDIO=[]; LIB_TAGS=[]; LIB_PICKS={}; LIB_CUSTOM=[]; LIB_SEL={}; _libLoaded=false; _libInFlight=false;   // [1.818] [1.822]
+  LIB_MY_LINKS=[]; LIB_STUDIO_LINKS=[]; _libHad=false; _mstDayWarmed=''; _ktBootDay=''; _savedTplsHad=false;   // [1.954]
   // [1.823] — and the templates: the one list, and the studio's, are this teacher's until they sign out.
   TSET.tpls=null; TSET.tplsAt=0; TSET.tplEdit=-1; TSET.tplDel=-1; TSET.tplBackup=null; TSET._delUndo=null;
   TSET.loaded=false; TSET.awayEnabled=false; TSET.absentUntil=''; TSET.saving=false; actClear('away');   // [1.947] — the next teacher on this page does not see this one's Away, or its note
@@ -20116,6 +20191,11 @@ function boot(){
   var saved = _ktReadSession();
   if(saved && saved.token){
     TOKEN = saved.token;
+    // [1.954] — the loads go out beside the check, not after it: every reopening waited one round trip for the
+    // check before asking for anything. A session the server refuses refuses each of them too, and goes to sign-in.
+    // Only when the remembered session says whose it is: a link's first use on this device saves none.
+    var _early=String(saved.teacherId||'');
+    if(_early){ TEACHER_ID=_early; TEACHER_NAME=saved.teacherName||''; }
     api({action:'teacherCheckSession', data:{teacherToken:saved.token}}, function(e,r){
       // [1.181] — a failed REQUEST is not an invalid LOGIN. This used to treat
       // them the same and delete the saved session, so a dropped connection,
@@ -20129,7 +20209,9 @@ function boot(){
         _ktSaveSession(TOKEN, TEACHER_ID, TEACHER_NAME);
         PAGE = 'home';
         render();
-        _ktFirstLoads();   // [1.824]
+        if(String(TEACHER_ID)!==_early) _ktFirstLoads();   // [1.824] — [1.954] already on their way when it was known
+      } else if(_early){
+        _ktToSignIn();   // [1.954] — and everything the loads set going goes with it
       } else {
         _ktClearSession();
         TOKEN=''; TEACHER_ID=''; TEACHER_NAME='';
@@ -20137,6 +20219,9 @@ function boot(){
         render();
       }
     });
+    // [1.954] — after the check, so the check is first in line: the portal is drawn when it answers, and a browser
+    // sends only so many requests to one address at a time.
+    if(_early) _ktFirstLoads();
     return;
   }
 

@@ -4785,6 +4785,9 @@ var KL_ATT_TOO_BIG='That file is over the 10 MB limit.';
 // has it, which is a different thing to know than "expired".
 var KL_LINK_CLAIMED='This link has already been used on another device. Please log in.';
 var KL_LINK_EXPIRED='This link has expired. Please log in.';
+// [1.948] — the link got no answer from the server (a dropped connection), so nothing is known about it: not "expired".
+// The same words as the teacher portal's. AC, 29 October: "the most professional and concise language".
+var KL_LINK_NO_ANSWER='This link could not be opened. Please check your connection and try again, or log in.';
 var KL_NOTE_LABEL_SEEN='System Message:';
 var KL_NOTE_LABEL_AUTO='auto-reply:';
 function _rKlNote(label, at, text, html){
@@ -9124,7 +9127,8 @@ function boot(){
         if(cr&&cr.ok&&cr.parentSlot) _magicSlot=cr.parentSlot;   // [1.753]
         if(ce||!cr||!cr.ok){
           _magicRefused=true;
-          showMsg((cr&&cr.reason==='claimed') ? KL_LINK_CLAIMED : KL_LINK_EXPIRED, 'e');
+          // [1.948] — no answer says so; the link stays in the address bar, so a reload asks again.
+          showMsg((ce||!cr) ? KL_LINK_NO_ANSWER : (cr.reason==='claimed') ? KL_LINK_CLAIMED : KL_LINK_EXPIRED, 'e');
         }
         boot();
       });

@@ -4095,9 +4095,11 @@ var GUIDE_COPY={
       {n:'Cancel a Lesson in Opus', btn:'cancel', k:'cancel cancellation cancelling sick makeup make up opus lesson',
        q:'Cancel lessons in Opus: click {{Opus Schedule}}. During cancellation, Opus prompts you to leave a message for the family.'},
       // [1.910] [1.911] [1.912] — PLACEHOLDER sentences for AC to read.
-      {n:'Upcoming Important Dates', k:'holiday closure closed calendar dates no lesson schools recess google',
+      {n:'Upcoming Important Dates', k:'holiday closure closed calendar dates no lesson schools recess google bhms',
        q:'{{Upcoming Important Dates}} lists the studio\u2019s next three dates, and whether the studio is open or closed. Click {{All Important Dates}} to see them all, and {{Hide Dates}} to close the list.', m:[   // [1.913] — every date
-        'Click {{Opus Schedule}} for your full schedule in Opus, and {{Keylab Google Calendar}} for the studio calendar.'
+        'Click {{Opus Schedule}} for your full schedule in Opus, and {{Keylab Google Calendar}} for the studio calendar.',
+        // [1.960] — PLACEHOLDER sentence for AC to read.
+        'If you teach at BHMS, each date on your BHMS days also shows {{BHMS open}} or {{BHMS closed}}, and BHMS\u2019s own closed days on those days are listed too.'
       ]},
       {n:'Birthday', k:'birthday birthdays bd countdown purple',
        q:'A purple number beside a student\u2019s name counts down the days to their birthday, from two weeks before. On the day it says {{BD!}}.'},
@@ -4129,6 +4131,12 @@ var GUIDE_COPY={
         'Scheduled assignments are also listed under {{Scheduled messages}} on the {{Messages}} tab.',
         'An assignment is not sent if the student is no longer yours when its time comes, and is marked {{Not sent: no longer your student}}.'
       ]},
+      // [1.960] — the list beside Drafts and Scheduled ([1.870]). PLACEHOLDER sentences for AC to read.
+      {n:'Reply needed', k:'waiting family answer response assignment track tracking list clear',
+       q:'Click {{Reply needed}} to see the assignments you sent with {{Reply needed}} ticked, oldest first. Click a student to open the lesson.', m:[
+        'An assignment leaves the list when the family writes back. To remove it yourself, click {{Clear}}.',
+        'The list is for your own tracking. Admin and the family do not see it, and it does not affect the reply clock.'
+      ]},
       {n:'Message Family', k:'message family parents contact conversation write',
        q:'Click {{Message Family}} on a student\u2019s page to open that family\u2019s conversation on {{Messages}}.'},
       {n:'Your notes about [student]', k:'private notes student',
@@ -4144,7 +4152,7 @@ var GUIDE_COPY={
         'While editing, click {{Cancel}} to discard your changes. Clicking {{Create Assignment for}} the student also saves the notes you are writing.',
         'The date list shows your weekly lesson day for the past six weeks, and any earlier date with notes or an assignment.'
       ]},
-      {n:'Create Assignment', k:'homework practice assignment parents file link library master template draft schedule preview',
+      {n:'Create Assignment', k:'homework practice assignment parents file link library master template draft schedule preview resend again missed',
        q:'Click {{Create Assignment for}} the student at the bottom of the {{Lesson Summary}}. Write the assignment, tick which parents receive it under {{Sending to}}, and click {{Send to}}.', m:[   // [1.802] \u2014 it opens blank
         'It starts with a greeting to the parents you tick and a numbered list to fill in. Edit or delete any of it. Your lesson notes are not copied in.',
         // [1.897] — PLACEHOLDER sentence for AC to read.
@@ -4152,14 +4160,16 @@ var GUIDE_COPY={
         'Use the formatting buttons, {{Templates}} and {{Add link}} as in a message. Fill in any template field in brackets, such as [studentFirst], before sending.',
         'Click {{Add file}} under the assignment to add up to 10 files, 10 MB each. They are listed under {{Materials}}. The family is asked to share them with the student.',   // [1.905]
         // [1.907] — PLACEHOLDER sentence for AC to read.
-        'Tick {{Reply needed}} above the {{Send to}} button to keep the conversation open and list the assignment under {{Reply needed}} on the {{Students}} tab. Unticked, sending ends the conversation, unless the family has asked something you have not answered.',
+        'Tick {{Reply needed}} above the {{Send to}} button to keep the conversation open and list the assignment under {{Reply needed}} on the {{Students}} tab. Unticked, sending ends the conversation, unless the family has asked something you have not answered or a message in it is saved for review.',   // [1.960]
         'Each parent you tick receives an email with the assignment and its materials. Files open in the family portal, not as email attachments. The assignment also appears in the family\u2019s conversation on {{Messages}}. You do not need to send a separate message.',
         // [1.888] — what Send shows. PLACEHOLDER sentence for AC to read.
         'After you click {{Send to}}, the assignment says it is sending, then that it was sent and to whom. The student is marked {{Assignment sent}} in your list.',
         'Click {{Preview}} to see the family\u2019s email, {{Save Draft}} to come back to it, or {{Schedule Send}} to choose when it goes. {{Cancel}} closes it without saving.',
         'Each lesson has one draft or scheduled assignment at a time. Click {{Delete Draft}} to remove a draft.',
         'To change a scheduled assignment, click {{Cancel Send}}. It returns to {{Drafts}} with nothing lost.',
-        'A sent assignment cannot be edited. Within 10 seconds of sending, click {{Unsend}} on it in {{Messages}} to return it to {{Drafts}}.'
+        'A sent assignment cannot be edited. Within 10 seconds of sending, click {{Unsend}} on it in {{Messages}} to return it to {{Drafts}}.',
+        // [1.960] — Resend ([1.865]). PLACEHOLDER sentence for AC to read.
+        'To send it again, click {{Resend}} on the sent assignment on the student\u2019s page. It opens ready to change, or to send as it is. Click {{Resend}} to send it. The family receives a new assignment, and the original stays as it was.'
       ]},
       // [1.887] — closed lessons, what to show, search and a date. PLACEHOLDER sentences for AC to read.
       {n:'Archived Lessons', k:'history old previous earlier past lessons open trial search date progress assignments notes',
@@ -4174,13 +4184,14 @@ var GUIDE_COPY={
         'The search box above your conversations also finds words in past messages, including in {{Archived Conversations}}.',
         'On the {{Students}} tab, click {{Message Family}} on a student\u2019s page to open the same conversation.'
       ]},
-      {n:'Send', k:'reply answer respond write back read receipt parents child sibling about',
+      {n:'Send', k:'reply answer respond write back read receipt parents child sibling about seen',
        q:'Type your reply in the message box, then click {{Send}}.', m:[
         // [1.907] — PLACEHOLDER sentence for AC to read.
-        'Tick {{Reply needed}} beside {{Send}} to keep the conversation open for the family\u2019s answer. Unticked, the conversation ends when your message is sent and moves to {{Archived Conversations}}. The family\u2019s reply brings it back.',
+        'Tick {{Reply needed}} beside {{Send}} to keep the conversation open for the family\u2019s answer. Unticked, the conversation ends when your message is sent and moves to {{Archived Conversations}}, unless a message in it is saved for review. The family\u2019s reply brings it back.',   // [1.960]
         'Opening a conversation marks it read. There is nothing to click. The reply clock starts when a message arrives, not when you open it. Reading a message or clicking {{Mark seen}} does not stop its timer. Only your reply does.',
         'Both parents are ticked. Untick a parent to stop their email; the message still appears in the family\u2019s conversation. If you teach more than one child in the family, use the {{About}} buttons to choose which child the message is about.',
-        'Once the family reads your message, \u201cRead by\u201d appears with the parents\u2019 names and the time.',
+        // [1.960] — a parent's ✅ Got it ([1.945]) takes the place of Read by. PLACEHOLDER sentence for AC to read.
+        'Once the family reads your message, \u201cRead by\u201d appears with the parents\u2019 names and the time. If a parent clicks \u201c\u2705 Got it\u201d under your message or in its email, \u201c\u2705 [parent] has seen your message\u201d appears in its place. This is not a reply, and it does not end or reopen the conversation.',
         // [1.904] — PLACEHOLDER sentence for AC to read: the files are kept with the words.
         'Anything you type, and any file you attach, stays in that conversation on this device until you send it. {{Draft kept on this device}} shows beside {{Send}}. A file left unsent for a day is removed, and you are asked to add it again.'
       ]},
@@ -4215,6 +4226,13 @@ var GUIDE_COPY={
        q:'Click {{Mark seen}} to post a note telling the family you have seen their message and will reply soon. It does not count as a reply.', m:[
         'The note appears in the conversation; it is not emailed. The reply clock keeps running. Follow up as soon as you can, especially if the message is time sensitive.'
       ]},
+      // [1.960] — the 👍 ([1.934]): AC's "A 👍 is an answer". PLACEHOLDER sentences for AC to read.
+      {n:'\uD83D\uDC4D Got it', k:'thumbs up acknowledge acknowledged admin read received confirm email',
+       q:'Click {{\uD83D\uDC4D Got it}} under a message from admin, or in its email, to show admin you have read it.', m:[
+        'It counts as your answer, so you do not need to reply as well. It does not end the conversation.',
+        'The button in the email does not need a sign-in. A banner confirms that admin can see you have read the message.',
+        'When admin clicks {{\uD83D\uDC4D Got it}} on your message, \u201c\uD83D\uDC4D Admin has seen your message\u201d appears under it.'
+      ]},
       {n:'Save for review', k:'flag bookmark star remember follow up later',
        q:'Click {{Save for review}} under a message to flag it to return to. Only you can see the flag.', m:[
         'Clear the flag when you are done. When you reply to a message, your message queue is cleared, but messages saved for review are not.'
@@ -4226,10 +4244,13 @@ var GUIDE_COPY={
         'Type in the search box, or click {{Tags}}, to find a file. Click a file\u2019s name to open it, tick it to add it, untick it to take it out, and click {{Done}} when finished. In a lesson summary or an assignment, the files used with the student come first.',
         'Click {{Save to Library}} beside a file in any conversation to keep it in your library, including a file a family sends you.'
       ]},
-      {n:'Add link', k:'url website web address edit change remove hyperlink lesson notes summary',
+      {n:'Add link', k:'url website web address edit change remove hyperlink lesson notes summary cmd ctrl keyboard shortcut typed',
        q:'Highlight words in your message or lesson notes and click {{Add link}} under the box, then paste the address under {{Paste Link Here}} and click {{Insert link}}. Click {{Add link}} again to close it.', m:[   // [1.899] — the lesson notes too; [1.905] — under the box, and it closes itself
         'The words in {{Display Text}} become the link. Left empty, the address itself is shown.',
         'To add a link you have saved, or one from the {{Keylab Master Library}}, choose it from {{Choose a saved link}}.',   // [1.905] — the menu has no label above it now
+        // [1.960] — [1.949]. PLACEHOLDER sentences for AC to read.
+        'On a computer, Cmd+K on a Mac or Ctrl+K on Windows also opens {{Add link}}, with any highlighted words in {{Display Text}}.',
+        'A web address typed into a message or an assignment becomes a link when it is sent.',
         // [1.844] — PLACEHOLDER, AC to word: the link bubble.
         'Click a link in your message to see its address. Click the address to open it, {{Change}} to edit the words or the address, or {{Remove}} to keep the words without the link.'
       ]},
@@ -4255,9 +4276,10 @@ var GUIDE_COPY={
         // [1.916] — PLACEHOLDER sentence for AC to read.
         'Use it when a conversation is resolved or a message needs no reply. Ending it stops the reply clock and the reminders. If the family is waiting for a reply, tick {{End without replying}} first, for a conversation settled another way, such as in person. Admin can see it ended without a reply.',
         'If you have messages saved for review, you will be asked to clear them first. Click {{Proceed}} to clear them and end it.',
-        'If anyone writes again, the conversation returns to {{Messages}}. In {{Admin & staff}}, {{End Conversation}} is beside {{Send}}.',
+        // [1.960] — only the conversation with Admin ([1.947]). PLACEHOLDER sentences for AC to read.
+        'If anyone writes again, the conversation returns to {{Messages}}. In your conversation with Admin, {{End Conversation}} is beside {{Send}}. A conversation with another teacher cannot be ended.',
         // [1.907] — PLACEHOLDER sentence for AC to read.
-        'A message or assignment to a family ends the conversation by itself unless you tick {{Reply needed}} beside {{Send}}. Conversations in {{Admin & staff}} end only when you end them.'
+        'A message or assignment to a family ends the conversation by itself unless you tick {{Reply needed}} beside {{Send}}. Your conversation with Admin ends only when one of you ends it.'
       ]},
       {n:'Archived Conversations', k:'archived ended closed old past conversations history',
        q:'Click {{Archived Conversations}} to see the conversations you have ended, and click one to read it.', m:[
@@ -4318,10 +4340,14 @@ var GUIDE_COPY={
         'Type in the search box to find anything in your files, links and templates, and in the {{Keylab Master Library}}. Only the sections with matches are shown.',
         'Tick items to tag or delete several at once. The buttons appear on that section\u2019s heading.',
         'Other teachers cannot see your library, and no one else sees your custom tags.',
-        'In a message, an assignment or a lesson summary, click {{Manage Library}} at the bottom of the {{Add file}} panel to open your library without leaving it.'   // [1.904] — the one panel, everywhere
+        'In a message, an assignment or a lesson summary, click {{Manage Library}} at the bottom of the {{Add file}} panel to open your library without leaving it.',   // [1.904] — the one panel, everywhere
+        // [1.960] — [1.949]. PLACEHOLDER sentence for AC to read.
+        'A link saved to your library with {{Display Text}} left empty is named from its page. Click {{Edit}} to change the name.'
       ]},
-      {n:'Tags', k:'tag tags filter label studio custom grey blue',
+      {n:'Tags', k:'tag tags filter label studio custom grey blue add tagging assign',
        q:'Click {{Tags}}, tick one or more tags, then click {{Done}}. Only items with every ticked tag are shown.', m:[
+        // [1.960] — [1.904]. PLACEHOLDER sentence for AC to read.
+        'To tag something as you add it, click {{Add tags}} under it. To change the tags on an item in your library, click {{Edit}} on it.',
         'Studio tags have a grey background and are added by admin. Your custom tags have a light blue background.',
         'The number beside a tag is how many items it would show. With many tags, type in {{Find a tag}}.',
         'The tags in use are listed under the search box after {{Tagged:}}. Click \u00d7 on one to remove it, or {{Clear all}} to clear the tags and the search. Ticked tags stay ticked on this device next time.'
@@ -4330,7 +4356,8 @@ var GUIDE_COPY={
        q:'Choose an order from {{Sort}}. Your choice stays on this device.'},
       {n:'Keylab Master Library', k:'studio master shared keylab add keep',
        q:'Open {{Keylab Master Library}} to see the files and links the studio shares. Click {{Add to My Library}} to keep one in {{My files}} or {{My links}}.', m:[
-        'Studio items are marked {{KEYLAB}}. You can send them but not change them.'
+        // [1.960] — [1.868]. PLACEHOLDER sentence for AC to read.
+        'Studio items are marked {{KEYLAB}}. You can send them but not change them. To add your own tags to one you keep, click {{Edit}} on it.'
       ]},
       {n:'New template', k:'template templates create new write save',
        q:'Click {{New template}}, enter a {{Template name}}, write the message and click {{Save}}.', m:[
@@ -4364,8 +4391,10 @@ var GUIDE_COPY={
        q:'See your trial lessons for the next 30 days and the summary admin sent for each.', m:[
         'A trial lesson is listed here once admin has sent its summary. Until then, the student is on the {{Students}} tab, labeled {{Trial}}.'
       ]},
-      {n:'Reports sent', k:'trial report past answers archive hide',
+      {n:'Reports sent', k:'trial report past answers archive hide received email verbally not needed marked',
        q:'Click a report to review your answers. Click {{Archive}} to move it to {{Archived}}.', m:[
+        // [1.960] — admin's marks ([1.885]). PLACEHOLDER sentence for AC to read.
+        'If a report reached admin another way, or is not needed, admin marks it {{Received by email}}, {{Received verbally}} or {{Not needed}}. It is listed here with that mark, and there is nothing for you to send.',
         'Sent and archived reports stay on this tab for 14 days after the trial lesson.'
       ]},
       // [1.773]

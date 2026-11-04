@@ -19384,6 +19384,7 @@ function rMessageBubble(m, prev, next){
   // Checked BEFORE the auto branch: it carries isAuto so that nothing counts
   // it as a reply, but it must not collapse like an away message.
   if(m.noteKind==='seen'||m.noteKind==='reminder') return rNoteLine(m);   // [1.759]
+  if(_tIsNudge(m)) return rNudgeLine(m);   // [1.968] — before the auto branch, which drew it as an auto-reply
   if(_tIsTruthy(m.isAuto)) return rAutoBubble(m,mine);
   // [1.232], AC: "Otherwise, the person doesn't know which message they
   // marked, and this will easily get lost." The white circle on the roster
@@ -19609,14 +19610,24 @@ function rNotifyWarn(m){
 // passes — the sender moved into the sentence when AC rewrote it.
 var NOTE_LABEL_SEEN='System Message:';
 var NOTE_LABEL_AUTO='auto-reply:';
+// [1.968] — AC, 3 November 2026: a Nudge was drawn here as "auto-reply:", which it is not — admin sent it. Its own
+// label (AC approved "Nudge:"), and its lines kept: a Nudge about admin's own message carries that message under AC's
+// sentence. A Nudge written before this release has no kind, and is the only automatic row from admin without one.
+var NOTE_LABEL_NUDGE='Nudge:';
+function _tIsNudge(m){
+  return !!m && (m.noteKind==='nudge' || (_tIsTruthy(m.isAuto) && m.senderType==='admin' && !m.noteKind));
+}
+function rNudgeLine(m){
+  return _rNote(NOTE_LABEL_NUDGE, m.sentAt, m.messageText, m.refFamilyId||'', true);
+}
 function rNoteLine(m){
   return _rNote(NOTE_LABEL_SEEN, m.sentAt, m.messageText);
 }
-function _rNote(label, at, text, refFamilyId){
+function _rNote(label, at, text, refFamilyId, lines){
   return '<div class="note-line">'+
     '<div class="note-head">'+esc(fmtMsgTime(at))+'</div>'+
     '<div class="note-body"><span class="note-label">'+esc(label)+'</span>'+
-      esc(text||'')+
+      (lines ? esc(text||'').replace(/\n/g,'<br>') : esc(text||''))+   // [1.968] — a Nudge keeps its lines
       // ── [1.436] — a nudge goes THROUGH to the conversation it names ────
       //
       // AC, 8 September 2026: "nudges work, but it's confusing to see the

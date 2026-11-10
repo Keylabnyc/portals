@@ -2880,7 +2880,7 @@ var KL_CHANGES={
   saveTeacherTemplates:'tpl',
   teacherSubmitTrialReport:'trl', teacherSaveTrialReport:'trl', teacherArchiveTrial:'trl'
 };
-var KL_LISTS={teacherMyStudents:'stu', teacherStudentCard:'stu', teacherDayMaterials:'stu', getTeacherThreads:'thr',
+var KL_LISTS={teacherMyStudents:'stu', teacherStudentCard:'stu', teacherDayMaterials:'stu', getTeacherThreads:'thr', getThreadBundle:'thr',
   getScheduledMessages:'sch', teacherGetSettings:'set', getLibrary:'lib', getTags:'lib', getTeacherLinks:'lib',
   getTeacherTemplates:'tpl', getStudioTemplates:'tpl', teacherTrials:'trl'};
 var _klCh={n:0, kind:{}, out:{}, waiters:[]}, _klPass=false;   // changes sent (numbered), their kinds, those not answered yet
@@ -9061,7 +9061,9 @@ function loadThreads(silent){
       if(_srow){ HOME_TAB='family'; openStaffThread(_srow.kind==='admin'?'admin':'staff', _srow.id, _srow.name||''); return; }
     }
     if(!silent || _changed || _hadPending) render();
-    _prefetchThreads();   // [1.418] case 1 — the ids are known now, and only now
+    // [1.987] — every conversation in one request, the first time the list comes; the four-at-a-time prefetch
+    // ([1.418] case 1) only if that request failed.
+    _loadThreadBundle();
     _refreshChanged();   // [1.915] — and a conversation with a newer message than its copy is fetched in the background
   });
 }
@@ -9207,6 +9209,7 @@ function _linkPrefetch(){
 var _refreshBusy=false, _refreshBusyAt=0;
 function _refreshChanged(){
   if((_refreshBusy&&!_guardStale(_refreshBusyAt))||_prefetchBusy) return;
+  if(_bundleState==='busy' && !_guardStale(_bundleAt)) return;   // [1.987] — every conversation is on its way; asked again when it has come
   var pick=null;
   (THREADS.list||[]).some(function(r){
     if(!r||!r.hasMessages||!r.lastMessageAt) return false;
@@ -9287,6 +9290,40 @@ function _prefetchThreads(){
     });
   })();
 }
+// ── [1.987] — every conversation, in one request, as the portal opens ─────────────────────────────────────────────────
+// AC, 10 November 2026: *"Can't these load upon opening the teacher or admin portal instead of fetching when
+// clicked?"* They can, in ONE request rather than forty (the reason the prefetch above stops at four is that forty
+// separate requests are a burst; see getThreadBundle in Code.js). Asked once, when the conversation list first comes;
+// every conversation it brings goes into THREAD_CACHE, so a click draws at once and the open's own request runs
+// behind it as it always has. A copy this page already holds is kept when it is as new — it may be a whole
+// conversation, where the bundle carries only the newest of a long one. If the request fails, the prefetch above runs
+// as before. After it, _refreshChanged keeps each copy current as the list shows new messages.
+var _bundleState='', _bundleAt=0;   // '' not asked, 'busy', 'done', 'failed'
+function _loadThreadBundle(){
+  // A request that never answered counts as failed once [1.400]'s window has passed, as the list's own guard does.
+  if(_bundleState==='busy' && _guardStale(_bundleAt)) _bundleState='failed';
+  if(_bundleState==='failed'){ _prefetchThreads(); return; }
+  if(_bundleState) return;
+  _bundleState='busy'; _bundleAt=Date.now();
+  var _tok=TOKEN;
+  api({action:'getThreadBundle', data:{teacherToken:TOKEN}}, function(e,r){
+    if(_tok!==TOKEN) return;
+    if(e||!r||!r.ok){ _bundleState='failed'; _prefetchThreads(); return; }
+    (r.threads||[]).forEach(function(t){
+      var msgs=t&&t.messages;
+      if(!msgs||!msgs.length) return;   // [1.291] — an empty answer is not an answer
+      var k=_threadCacheKey(t), had=THREAD_CACHE[k];
+      if(had && had.length && _newestAt(had)>=_newestAt(msgs)) return;
+      THREAD_CACHE[k]=msgs;
+    });
+    _bundleState='done';
+    // No render(): nothing on screen changed. The prefetch has nothing left to do, and a conversation the list shows
+    // newer than what came is fetched now rather than at the next list.
+    _prefetchDone=true;
+    _refreshChanged();
+  });
+}
+
 // Fire and forget. A failure costs an unread badge that clears the next time
 // the thread is opened, so there is nothing here worth interrupting anyone
 // for — and nothing worth making them wait for either.
@@ -19566,6 +19603,8 @@ function rNotifyWarn(m){
   // teacher reading it, who has the message. Every one is emailed now, so a failed one would otherwise say
   // "Message did not send" under a message that plainly did. Admin still sees it, and can fix the address.
   if(m.senderType==='admin' && m.conversationType==='teacher_admin') return '';
+  // [1.984] — and the teacher's own message to the office: its email goes to the office, which reads it here.
+  if(m.senderType==='teacher' && m.conversationType==='teacher_admin') return '';
   var st=m.notifyState||'';
   // [1.861] — a test family with its emails off: a setting, not a failure, so light blue (AC's rule: conflicts red,
   // information light blue) and one line. AC, 9 October 2026, waited on a scheduled message's email that the setting held.

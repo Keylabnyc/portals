@@ -813,55 +813,86 @@ function _familyIsReturning(){
   }
   return false;
 }
-function _fmtFamilyTs(iso){
-  // Server timestamps (tcAcceptedAt, selfReleaseGrantedAt, etc.) are written
-  // via makeTs() as 'M/d/yy h:mm a' (already Eastern local time) -- NOT
-  // ISO 8601. Parsing a non-ISO string via `new Date(str)` is
-  // implementation-defined per spec and was confirmed to produce wrong
-  // dates/times in some browsers, so this parses that exact format
-  // explicitly via regex instead of trusting the Date constructor.
-  // Falls back to genuine-ISO parsing for any legacy/other-format value.
-  if(!iso) return '';
-  var s = String(iso).trim();
-  var months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-  var m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})\s+\d{1,2}:\d{2}\s*[AP]M$/i);
+// [1.1009] — ONE WAY OF WRITING A DAY AND A MOMENT, the admin page's ([1.1003]). AC, 14 November 2026, asked whether the family
+// and teacher pages should write dates the same way as the admin page: *"Yes, match them"*. A day is "Mon Nov 16" and a moment
+// "Fri Nov 13 at 6:20 PM", in New York; either says its year when it is not this one ("Mon Jan 4, 2027"). The five functions
+// below are the admin page's own, character for character, and a check holds all three pages to that, so there is one form to
+// change. Every writer of a single day or a moment on this page comes through fmtDay() and fmtWhen(). Left as they are, as on the
+// admin page: message times (AC chose their full form, [1.249], and the 👍's short one, [1.934]), a date typed into a form such
+// as a birthday ([1.728]), and a span of days ("Nov 16 – Nov 20").
+function _nyTodayYmd(){
+  return _klNyTodayYmd();
+}
+function _nyOffsetMin(ms){
+  try{
+    var p={};new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',hourCycle:'h23',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})
+      .formatToParts(new Date(ms)).forEach(function(x){p[x.type]=x.value;});
+    return (Date.UTC(+p.year,+p.month-1,+p.day,+p.hour%24,+p.minute)-Math.floor(ms/60000)*60000)/60000;
+  }catch(e){ return -new Date(ms).getTimezoneOffset(); }
+}
+function _nyWallMs(y,mo,d,h,mi){
+  var g=Date.UTC(y,mo-1,d,h||0,mi||0);
+  var t=g-_nyOffsetMin(g)*60000;
+  return g-_nyOffsetMin(t)*60000;
+}
+function _tsMs(v){
+  if(v===null||v===undefined||v==='')return 0;
+  if(typeof v==='number')return isFinite(v)?v:0;
+  if(v instanceof Date)return isNaN(v.getTime())?0:v.getTime();
+  var str=String(v).trim();
+  if(/^\d{11,}$/.test(str))return Number(str);
+  // ISO with a zone (Z or +hh:mm) is an instant; a date and time with no zone
+  // ("2026-09-01 10:00", "2026-09-01T10:00") is New York wall time.
+  if(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}.*(Z|[+-]\d{2}:?\d{2})$/.test(str)){var d=new Date(str);return isNaN(d.getTime())?0:d.getTime();}
+  var wl=str.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/);
+  if(wl)return _nyWallMs(+wl[1],+wl[2],+wl[3],+wl[4],+wl[5]);
+  var m=str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})(?:,?\s+(\d{1,2}):(\d{2})(?::\d{2})?\s*(AM|PM)?)?$/i);
   if(m){
-    var mo=parseInt(m[1],10), dy=parseInt(m[2],10), yr=parseInt(m[3],10);
-    if(yr<100) yr+=2000;
-    if(mo>=1&&mo<=12) return months[mo-1]+' '+dy+', '+yr;
+    var yr=+m[3];if(yr<100)yr+=2000;
+    var hh=m[4]?+m[4]:0,mi=m[5]?+m[5]:0,ap=(m[6]||'').toUpperCase();
+    if(ap==='PM'&&hh!==12)hh+=12; if(ap==='AM'&&hh===12)hh=0;
+    return _nyWallMs(yr,+m[1],+m[2],hh,mi);
   }
-  // [1.762] — a bare day (a timestamp cell Sheets flattened) is that calendar
-  // day, never new Date('yyyy-MM-dd') (UTC, the evening before in the US).
-  var dm = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if(dm) return months[+dm[2]-1]+' '+(+dm[3])+', '+dm[1];
-  var d = new Date(iso);
-  if(isNaN(d.getTime())) return String(iso);
-  return months[d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear();
+  var iso=str.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if(iso)return _nyWallMs(+iso[1],+iso[2],+iso[3],0,0);
+  return 0;
 }
-function _fmtFamilyTime(iso){
-  // See _fmtFamilyTs() above -- same explicit-parse fix, same reason.
+function fmtDay(v){
+  var WD=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],MO=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  if(v===null||v===undefined||v==='')return '';
+  var s=String(v).trim(),y,mo,d,m,yr;
+  if(v instanceof Date){if(isNaN(v.getTime()))return '';y=v.getFullYear();mo=v.getMonth()+1;d=v.getDate();}
+  else if(typeof v==='number'||/^\d{11,}$/.test(s)){
+    try{var P={};new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',year:'numeric',month:'numeric',day:'numeric'}).formatToParts(new Date(Number(s))).forEach(function(x){P[x.type]=x.value;});y=+P.year;mo=+P.month;d=+P.day;}catch(e){return '';}}
+  else if((m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/))){y=+m[1];mo=+m[2];d=+m[3];}
+  else if((m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/))){y=+m[3];if(y<100)y+=2000;mo=+m[1];d=+m[2];}
+  else return s;
+  if(!(mo>=1&&mo<=12&&d>=1&&d<=31))return s;
+  try{yr=typeof _nyTodayYmd==='function'?String(_nyTodayYmd()).slice(0,4):String(new Date().getFullYear());}catch(e){yr=String(new Date().getFullYear());}
+  return WD[new Date(Date.UTC(y,mo-1,d)).getUTCDay()]+' '+MO[mo-1]+' '+d+(String(y)!==yr?', '+y:'');
+}
+function fmtWhen(v){
+  var ms=typeof v==='number'?v:typeof _tsMs==='function'?_tsMs(v):Date.parse(v);
+  if(!ms||!isFinite(ms))return v==null?'':String(v);
+  var P={},h;
+  try{new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',year:'numeric',month:'numeric',day:'numeric',hour:'numeric',minute:'2-digit',hour12:true})
+      .formatToParts(new Date(ms)).forEach(function(x){P[x.type]=x.value;});}
+  catch(e){var t=new Date(ms);h=t.getHours();P={year:t.getFullYear(),month:t.getMonth()+1,day:t.getDate(),hour:h%12||12,minute:(t.getMinutes()<10?'0':'')+t.getMinutes(),dayPeriod:h<12?'AM':'PM'};}
+  return fmtDay(P.year+'-'+P.month+'-'+P.day)+' at '+P.hour+':'+P.minute+' '+String(P.dayPeriod||'').toUpperCase();
+}
+// [1.1009] — a server stamp (tcAcceptedAt, selfReleaseGrantedAt: makeTs()'s "9/4/26 6:20 PM", New York's wall time; ISO or
+// epoch from older writers) as a moment, "Fri Sep 4 at 6:20 PM", read by _tsMs() as the admin page reads it. It was the day as
+// "September 4, 2026", with the time ("6:20 PM") joined on by each caller. A stamp with no time (a cell Sheets flattened
+// to a day, [1.762]) is that day, never an invented midnight.
+function _fmtFamilyTs(iso){
   if(!iso) return '';
-  var s = String(iso).trim();
-  var m = s.match(/^\d{1,2}\/\d{1,2}\/\d{2,4}\s+(\d{1,2}):(\d{2})\s*([AP]M)$/i);
-  if(m) return m[1]+':'+m[2]+' '+m[3].toUpperCase();
-  if(/^\d{4}-\d{2}-\d{2}$/.test(s)) return '';   // [1.762] — a day has no time; never invent one
-  var d = new Date(iso);
-  if(isNaN(d.getTime())) return '';
-  var h = d.getHours(), mnt = d.getMinutes();
-  var ampm = h >= 12 ? 'PM' : 'AM';
-  var h12 = h % 12; if (h12 === 0) h12 = 12;
-  var mm = mnt < 10 ? '0' + mnt : String(mnt);
-  return h12 + ':' + mm + ' ' + ampm;
+  var s=String(iso).trim();
+  if(typeof iso==='number'||/^\d{11,}$/.test(s)||/\d{1,2}:\d{2}/.test(s)){ var w=fmtWhen(iso); if(/ at /.test(w)) return w; }
+  return fmtDay(s);
 }
+// [1.1009] — a day, "Mon Nov 16" (it was "Monday, November 16th").
 function _fmtFamilyDate(iso){
-  if(!iso) return '';
-  var d = new Date(iso + 'T12:00:00');
-  if(isNaN(d.getTime())) return iso;
-  var days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-  var months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-  var date = d.getDate();
-  var suffix = date === 1 || date === 21 || date === 31 ? 'st' : date === 2 || date === 22 ? 'nd' : date === 3 || date === 23 ? 'rd' : 'th';
-  return days[d.getDay()] + ', ' + months[d.getMonth()] + ' ' + date + suffix;
+  return fmtDay(iso);
 }
 
 // "Remember me" persistent session — small localStorage wrapper, safe to
@@ -4242,12 +4273,9 @@ function _klAsgShare(a){
   if(!k.link&&!k.file)return '';
   return 'Please share the following '+(k.file&&k.link?'files and links':k.link?'links':'files')+' with '+(a.studentFirst||'')+'.';
 }
+// [1.1009] — a day, "Mon Nov 16" (it was "Monday, November 16th").
 function _klLongDate(ymd){
-  var p=String(ymd||'').split('-');if(p.length!==3)return String(ymd||'');
-  var d=new Date(Date.UTC(+p[0],+p[1]-1,+p[2],12)),n=+p[2];
-  var sfx=(n%10===1&&n!==11)?'st':(n%10===2&&n!==12)?'nd':(n%10===3&&n!==13)?'rd':'th';
-  return ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][d.getUTCDay()]+', '+
-    ['January','February','March','April','May','June','July','August','September','October','November','December'][+p[1]-1]+' '+n+sfx;
+  return fmtDay(ymd);
 }
 function _rKlAssignment(a){
   var ic={book:['BOOK','#8B5CF6'],file:['FILE','#DC2626'],link:['LINK','#059669']};
@@ -4994,10 +5022,9 @@ function _klLsMoney(n){
   var x=Math.round((parseFloat(n)||0)*100)/100;
   return '$'+(x%1?x.toFixed(2):String(x));
 }
-// "June 1st"
+// [1.1009] — a day, "Mon Jun 1" (it was "June 1st").
 function _klLsDay(ymd){
-  var f=_fmtFamilyDate(ymd);
-  return f.replace(/^[A-Za-z]+, /,'');
+  return _fmtFamilyDate(ymd);
 }
 function _klLsLessons(s){
   var l=s&&s.lessonSchedule;
@@ -5045,7 +5072,7 @@ function _klLsBlockHtml(s,canChoose,noPayment){
   var C=KL_LS_COPY,lessons=_klLsLessons(s);
   var locMap={studio:'at Keylab','in-home':'In-home',virtual:'Virtual'};
   var dur=_effDur(s.durationBase,s.durationExtra);
-  var days={},times={};lessons.forEach(function(x){days[_fmtFamilyDate(x.date).split(',')[0]]=1;times[x.time||'']=1;});
+  var days={},times={};lessons.forEach(function(x){var _wd=_parseYMD(x.date);days[isNaN(_wd.getTime())?x.date:['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][_wd.getDay()]]=1;times[x.time||'']=1;});   // [1.1009] the weekday, read from the day rather than cut from its written form
   var oneSlot=Object.keys(days).length===1&&Object.keys(times).length===1;
   var h='<div class="kl-ls-sum">'+(oneSlot?'<b>'+esc(Object.keys(days)[0])+'s, '+esc(Object.keys(times)[0])+'</b><br>':'')+
     esc([dur?dur+' minutes':'',s.teacher?'with '+s.teacher:''].filter(Boolean).join(' ')+(s.lessonLocation?' · '+(locMap[s.lessonLocation]||s.lessonLocation):''))+'</div>';
@@ -5174,7 +5201,7 @@ function _rPolicySelfRelease(s){
   if(!s || !s.selfReleaseGrantedAt) return '';
   var _srId='sr-view-'+esc(s.studentId||'');
   return '<div class="msg ms" style="margin-top:.9rem">\u2713 Self-Release Authorized on '+
-      esc(_fmtFamilyTs(s.selfReleaseGrantedAt))+' at '+esc(_fmtFamilyTime(s.selfReleaseGrantedAt))+'.</div>'+
+      esc(_fmtFamilyTs(s.selfReleaseGrantedAt))+'.</div>'+
     '<div class="agree-box" style="margin-top:.5rem;border-color:var(--green);background:rgba(255,255,255,.5)">'+
       '<input type="checkbox" id="'+_srId+'" checked disabled>'+
       '<label class="agree-lbl" for="'+_srId+'">'+esc(s.selfReleaseText||_selfReleaseText())+'</label></div>';
@@ -5228,7 +5255,7 @@ function _rHomeSelfRelease(s){
   if(open){
     h+='<div style="padding:.5rem 0 .25rem">';
     if(granted){
-      h+='<div class="msg ms">\u2713 Permission granted on '+esc(_fmtFamilyTs(s.selfReleaseGrantedAt))+' at '+esc(_fmtFamilyTime(s.selfReleaseGrantedAt))+' \u2014 '+esc(s.studentName)+' may arrive and depart unaccompanied.</div>';
+      h+='<div class="msg ms">\u2713 Permission granted on '+esc(_fmtFamilyTs(s.selfReleaseGrantedAt))+' \u2014 '+esc(s.studentName)+' may arrive and depart unaccompanied.</div>';
       // What they actually agreed to, not the current live wording where a
       // snapshot exists (BACKLOG 1.107). Falls back to the live text only for
       // grants made before the snapshot field existed.
@@ -5320,7 +5347,7 @@ function _rChildStatusSummary(s, opts){
       h+='<div class="msg ms">\u2713 '+esc(firstName)+' is enrolled! See below for details on how to manage their enrollment.</div>';
     } else if((s.tcAcceptedAt||s.tcAcceptedName)&&!_inDetail){
       h+='<div class="msg ms">\u2713 Proposal and policies accepted'+(s.tcAcceptedName?' by '+esc(s.tcAcceptedName):'')+
-        (s.tcAcceptedAt?' on '+esc(_fmtFamilyTs(s.tcAcceptedAt))+' at '+esc(_fmtFamilyTime(s.tcAcceptedAt)):'')+'.</div>';
+        (s.tcAcceptedAt?' on '+esc(_fmtFamilyTs(s.tcAcceptedAt)):'')+'.</div>';
     }
   } else if(hasTrial){
     var trialDateFmt=_fmtFamilyDate(s.trialDate);
@@ -5501,13 +5528,14 @@ function _nextLessonDate(dayName, startDate, s, fromStart){
   return null;
 }
 
+// [1.1009] — "Mon Nov 16" (the browser wrote "Mon, Nov 16").
 function _fmtLessonDate(d){
-  return d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+  return fmtDay(d);
 }
 
 function _fmtDateRange(a,b){
   var d1=_parseYMD(a);
-  if(a===b) return d1.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+  if(a===b) return fmtDay(d1);   // [1.1009] a day as everywhere; a span stays "Nov 16 – Nov 20"
   var o={month:'short',day:'numeric'};
   return d1.toLocaleDateString('en-US',o)+' – '+_parseYMD(b).toLocaleDateString('en-US',o);
 }
@@ -6203,7 +6231,7 @@ function _klEnrollmentFactsHtml(s){
   if(s.tcAcceptedAt||s.tcAcceptedName){
     h+='<div class="msg ms">\u2713 Proposal and policies accepted'+
       (s.tcAcceptedName?' by '+esc(s.tcAcceptedName):'')+
-      (s.tcAcceptedAt?' on '+esc(_fmtFamilyTs(s.tcAcceptedAt))+' at '+esc(_fmtFamilyTime(s.tcAcceptedAt)):'')+'.</div>';
+      (s.tcAcceptedAt?' on '+esc(_fmtFamilyTs(s.tcAcceptedAt)):'')+'.</div>';
     h+=_klAckCheckboxHtml(s);
   }
   // ── [1.397] — the self-release record sits WITH the acceptance record ──
@@ -8519,7 +8547,7 @@ function rEnrollment(scopeStudentId){
         if(s.tcAcceptedAt||s.tcAcceptedName){
           h+='<div class="msg ms" style="margin-top:1rem">';
           h+='\u2713 Proposal and policies accepted'+(s.tcAcceptedName?' by '+esc(s.tcAcceptedName):'')+
-            (s.tcAcceptedAt?' on '+esc(_fmtFamilyTs(s.tcAcceptedAt))+' at '+esc(_fmtFamilyTime(s.tcAcceptedAt)):'')+'.</div>';
+            (s.tcAcceptedAt?' on '+esc(_fmtFamilyTs(s.tcAcceptedAt)):'')+'.</div>';
           // What they actually ticked (BACKLOG 1.109) — the accepted state
           // used to show who and when but never WHAT. Mirrored as the same
           // checked, disabled checkbox the family actually saw (AC, 26 Aug),

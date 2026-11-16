@@ -5050,7 +5050,10 @@ var TCH_DATES_COPY={head:'Upcoming Important Dates',all:'All Important Dates',hi
   schoolsOpen:'NYC public schools closed, Keylab open',   // AC, 9 October 2026 ([1.875])
   none:'No upcoming dates.',   // PLACEHOLDER
   // [1.917] — a BHMS teacher's own dates. PLACEHOLDERS for AC.
-  bhmsOpen:'BHMS open',bhmsClosed:'BHMS closed',keylabClosed:'Keylab closed',keylabOpen:'Keylab open'};
+  bhmsOpen:'BHMS open',bhmsClosed:'BHMS closed',keylabClosed:'Keylab closed',keylabOpen:'Keylab open',
+  // [1.1024] — a BHMS substitute, to the substitute and to the teacher covered. PLACEHOLDERS for AC.
+  subFor:function(t){return 'Substituting for '+t+' at BHMS';},subBy:function(s){return s+' is substituting for you at BHMS';},
+  subTag:'BHMS substitute',coveredTag:'Covered'};
 function _tdYmdDate(ymd){var p=String(ymd||'').split('-');return p.length===3?new Date(+p[0],+p[1]-1,+p[2]):new Date(NaN);}
 // ── [1.917] — what BHMS is doing, for a teacher who works there ─────────────────────────────────────────────────────────
 // AC, 25 October 2026: *"The portal must differentiate properly and show the correct info. On November 11th, Keylab is
@@ -5059,11 +5062,14 @@ function _tdYmdDate(ymd){var p=String(ymd||'').split('-');return p.length===3?ne
 // use, so the card and the emails agree); nothing for a teacher who is not at BHMS, whose card is as it was. A date on
 // one of their BHMS days inside a BHMS term says BHMS open or BHMS closed beside Keylab's own badge, and BHMS's own
 // closed days on their days are rows of their own.
+// [1.1024] On a date someone substitutes for them, nothing (they are not at BHMS that day); on a date they substitute, BHMS as on
+// their own days.
 function _tdBhmsOn(d){
   var b=_mstR().bhms;if(!b||!b.days)return '';
   var y=d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);
   var dn=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][d.getDay()];
-  if(b.days.indexOf(dn)<0)return '';
+  var sub=(b.subs||[]).filter(function(s){return s&&s.date===y;}),subs=sub.some(function(s){return s.role==='sub';});
+  if(!subs&&(b.days.indexOf(dn)<0||sub.length))return '';
   if(!(b.terms||[]).some(function(t){return t&&t.day===dn&&t.first&&t.last&&y>=t.first&&y<=t.last;}))return '';
   return (b.closed||[]).some(function(c){return c&&c.date===y;})?'closed':'open';
 }
@@ -5080,6 +5086,11 @@ function _tdHits(){
     if(hits.some(function(h){return !h.bhmsOnly&&h.d<=d&&h.end>=d;}))return;
     hits.push({e:{event:String(c.reason||'')||TCH_DATES_COPY.bhmsClosed},d:d,end:d,bhmsOnly:true});
   });
+  // [1.1024] Each BHMS substitute still to come: the dates they substitute, and the dates someone substitutes for them.
+  ((b&&b.subs)||[]).forEach(function(s){
+    var d=_tdYmdDate(s&&s.date);if(isNaN(d.getTime())||d<today)return;
+    hits.push({e:{event:s.role==='sub'?TCH_DATES_COPY.subFor(s.teacher):TCH_DATES_COPY.subBy(s.sub)},d:d,end:d,sub:s});
+  });
   return hits.sort(function(a,b){return a.d-b.d;});
 }
 function _tdWhen(h){
@@ -5089,6 +5100,9 @@ function _tdWhen(h){
 }
 function _tdRow(h){
   var e=h.e,c=TCH_DATES_COPY;
+  if(h.sub){var s=h.sub,me=s.role==='sub';   // [1.1024] the class beside the date: BHMS's room and start
+    return '<div class="td-date"><div><div class="td-ev">'+esc(e.event)+'</div><div class="td-when">'+esc([_tdWhen(h),s.room,s.time].filter(Boolean).join(' \u00b7 '))+'</div></div>'+
+      '<span class="td-tag '+(me?'op':'cl')+'">'+esc(me?c.subTag:c.coveredTag)+'</span></div>';}
   // [1.917] — BHMS on this teacher's BHMS days in the date's range ('' for every teacher not at BHMS).
   var st={};
   if(h.bhmsOnly)st.closed=1;

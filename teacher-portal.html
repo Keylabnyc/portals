@@ -331,6 +331,9 @@ button:active:not(:disabled),
   font-family:"Inter",sans-serif;cursor:pointer;line-height:1.2}
 .day-chip:hover:not(:disabled){background:rgba(0,0,0,.18);border-color:var(--text4)}
 .day-chip.on{background:#1a4fc4;border-color:#1a4fc4;color:#fff}
+/* [1.1026] a chosen chip stays blue under the pointer: the hover rule above outranks .on, so a chosen chip went grey with
+   white text, and on an iPhone the hover stays after the tap, so every chip tapped read as not chosen. */
+.day-chip.on:hover:not(:disabled){background:#1640a3;border-color:#1640a3}
 .day-chip:disabled{opacity:.35;cursor:not-allowed}
 .day-chip b{font-weight:700;opacity:.85}
 /* The list is the check that stops one mistake being eight, so it is never
@@ -2342,18 +2345,32 @@ select.cmp-lsel{font:inherit;font-size:13.5px;font-weight:700;padding:6px 8px;bo
 @media(max-width:560px){
 .cmp-linkpanel .cmp-lpick{height:34px;font-size:16px}
 }
-/* [1.1013] Social — event photos and videos (the Photos tab) */
-.sp-ev .sp-hd{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:.75rem}
-.sp-ev .sp-hd b{font-size:15px}.sp-date{font-size:13px;color:var(--text4);white-space:nowrap}
-.sp-picks{display:flex;gap:8px;flex-wrap:wrap}.sp-picks .btn{flex:1 1 180px;width:auto}
+/* [1.1013] Social — event photos and videos; [1.1026] the Social media tab */
+.sp-top .sp-intro{margin:0 0 .5rem;font-size:14px}
+.sp-steps{margin:0 0 .9rem;padding-left:1.25rem;font-size:13.5px;color:var(--text2)}.sp-steps li{margin:.15rem 0}
+.sp-picks{display:flex;gap:8px;flex-wrap:wrap}.sp-picks .btn{flex:1 1 160px;width:auto}
+.sp-muted{font-size:13px;color:var(--text4);margin:.6rem 0 0}
 .sp-lab{font-size:12px;font-weight:600;color:var(--text4);margin:1rem 0 .25rem}
 .sp-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--border2);font-size:13px;flex-wrap:wrap}
+.card>.sp-row:first-child{border-top:0;padding-top:0}
 .sp-name{flex:1 1 140px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.sp-meta{color:var(--text4);white-space:nowrap}.sp-row .btn,.sp-ask .btn{width:auto;padding:6px 10px;font-size:12px}
+.sp-meta{color:var(--text4);white-space:nowrap}.sp-row .btn,.sp-ask .btn,.sp-sub-hd .btn{width:auto;padding:6px 10px;font-size:12px}
 .sp-bar{flex:0 0 100%;height:6px;border-radius:3px;background:var(--border2);overflow:hidden}
 .sp-bar>span{display:block;height:100%;background:#1a4fc4}
 .sp-err{color:var(--red)}.sp-keep{font-size:13px;color:var(--text3);margin:.75rem 0 0}
 .sp-ask{flex:0 0 100%;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.sp-sub .day-sec{margin:.9rem 0 0}.sp-new{border-color:#1a4fc4}
+.sp-sub-hd{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:13.5px;font-weight:600;margin-bottom:.25rem}
+.sp-subnote{font-size:13px;color:var(--text3);margin-bottom:.25rem}
+.sp-other{font:inherit;font-size:12.5px;padding:6px 8px;border:1px solid var(--border2);border-radius:20px;background:#fff;color:var(--text);max-width:100%}
+.sp-note{width:100%;margin-top:.5rem;font:inherit;font-size:14px;padding:8px 10px;border:1px solid var(--border2);border-radius:var(--r);box-sizing:border-box}
+.sp-save{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:.9rem}.sp-save .btn{width:auto}
+.sp-rec-hd{display:flex;align-items:center;gap:8px;font-size:15px}.sp-rt{margin-left:auto;font-variant-numeric:tabular-nums}
+.sp-dot{width:10px;height:10px;border-radius:50%;background:var(--red);display:inline-block}
+.sp-lvlbar{height:8px;border-radius:4px;background:var(--border2);overflow:hidden;margin:.75rem 0}
+.sp-lvlbar>span{display:block;height:100%;width:0;background:#1a4fc4;transition:width .08s linear}
+.sp-stop{width:100%}
+@media(max-width:560px){.sp-other,.sp-note{font-size:16px}}
 </style>
 </head>
 <body>
@@ -2891,7 +2908,8 @@ var KL_CHANGES={
   teacherCustomTag:'lib', renameLibraryFile:'lib', deleteLibraryFile:'lib', deleteLibraryLink:'lib', saveLibraryLink:'lib', addLibraryLinks:'lib',
   saveTeacherTemplates:'tpl',
   teacherSubmitTrialReport:'trl', teacherSaveTrialReport:'trl', teacherArchiveTrial:'trl',
-  teacherSocialPiece:'soc', teacherSocialDelete:'soc'   // [1.1013] — a file's last piece adds it to the list
+  teacherSocialPiece:'soc', teacherSocialDelete:'soc',   // [1.1013] — a file's last piece adds it to the list
+  teacherSocialDetails:'soc'   // [1.1026] — who, where and what, for a teacher's files
 };
 var KL_LISTS={teacherMyStudents:'stu', teacherStudentCard:'stu', teacherDayMaterials:'stu', getTeacherThreads:'thr', getThreadBundle:'thr',
   getScheduledMessages:'sch', teacherGetSettings:'set', getLibrary:'lib', getTags:'lib', getTeacherLinks:'lib',
@@ -4757,31 +4775,51 @@ var TT_COPY={
 };
 var TT={showArch:false,asked:false,loading:false,data:null,guideOpen:false,ans:{},timer:{},sending:{},err:{},open:{},miss:{}};
 // ══════════════════════════════════════════════════════════════════════════════════════════════════════════════════
-// [1.1013] SOCIAL — EVENT PHOTOS AND VIDEOS (the Photos tab)
+// [1.1013] SOCIAL — EVENT PHOTOS AND VIDEOS; [1.1026] the Social media tab
 // AC, 14 November 2026: teachers send photos and videos of studio events into the studio's Drive, for Keylab's social
-// posts — "teachers don't want to store media on their devices or accounts, and there are privacy issues". A teacher sees
-// the events from a week before to a month after their date, adds files by taking them or choosing them, and sees and can
-// delete only what they sent. Each file goes up in pieces of 4 MB (spec C10); a piece that fails is sent again three
-// times, then the file waits with Try again, which carries on from where it got to. Files go one at a time, in order.
+// posts — "teachers don't want to store media on their devices or accounts, and there are privacy issues". Each file goes
+// up in pieces of 4 MB (spec C10); a piece that fails is sent again three times, then the file waits with Try again, which
+// carries on from where it got to. Files go one at a time, in order. A teacher sees and can delete only what they sent.
+// [1.1026] AC, 16 November 2026: the tab is *Social media* ("if it's confined to social media, maybe rename the tab social
+// media and include instructions"), it takes audio ("teachers will need to be able to add photos video or audio files"),
+// with *Record audio* beside *Take photo or video* ("you should also add a record audio function"), and each submission
+// carries who is in it and what it is ("the admin will need context also, so there needs to be a way to link it to a
+// student and include context info"), as quickly as it can be done ("make it as useful as possible, and as quick and easy
+// as possible for teachers"). So: three buttons and nothing to fill first; the files start sending at once; one small card
+// asks Who (the student whose lesson is on now already picked), Where (a lesson, or an event open now) and What (one tap,
+// and a note), remembered for the rest of the day; files from a lesson as well as an event.
 // ══════════════════════════════════════════════════════════════════════════════════════════════════════════════════
-var SP_COPY={   // teacher-facing — PLACEHOLDER wording throughout, AC's to write (spec C9)
-  tab:'Photos',
-  intro:'Photos and videos of studio events, for Keylab\'s social media. They go straight to the studio\'s Drive: nothing is kept in your account, and nothing is shared.',
-  none:'No events are taking photos right now.',
-  loadFailed:'Events could not be loaded.',retryLoad:'Try again',
-  take:'Take photo or video',choose:'Choose photos or videos',
+var SP_COPY={   // teacher-facing — PLACEHOLDER wording throughout, AC's to write (spec C9; [1.1026])
+  tab:'Social media',
+  intro:'Send photos, videos and audio from lessons and studio events for Keylab\'s social media. Files are saved to the studio\'s Google Drive, not to your phone or account.',
+  steps:['Click Take photo or video, Record audio or Choose files.','Choose who is in it, where it is from and what it is, then click Done.','Keep this page open until each file appears under You sent.'],
+  other:'To send anything else, use Messages.',
+  loadFailed:'Social media could not be loaded.',retryLoad:'Try again',
+  take:'Take photo or video',record:'Record audio',choose:'Choose files',
+  who:'Who',group:'Group or no student',lessonNow:'Lesson now',another:'Another student…',
+  where:'Where',lesson:'Lesson',what:'What',notePh:'Note (optional)',
+  done:'Done',saving:'Saving…',edit:'Edit',save:'Save',editCancel:'Cancel',noDetails:'Details not added',
+  sendingNow:'Sending',noWho:'Choose who is in it.',noWhat:'Choose what it is.',
   waiting:'Waiting',sending:function(p){return 'Sending · '+p+'%';},
   failed:'Not sent',retry:'Try again',remove:'Remove',cancel:'Cancel',
   keepOpen:'Keep this page open until every file is sent.',
   yours:'You sent',del:'Delete',delAsk:'Delete this file?',delYes:'Delete',delNo:'Cancel',deleting:'Deleting…',
   delFailed:'Could not delete. Try again.',
   tooBig:'This file is too large to add.',empty:'This file is empty.',
-  offline:'Not sent. Check your connection and try again.',readFailed:'This file could not be read from your phone.'
+  offline:'Not sent. Check your connection and try again.',readFailed:'This file could not be read from your phone.',
+  kind:{photo:'Photo',video:'Video',audio:'Audio'},
+  rec:{asking:'Allow the microphone to start recording.',on:'Recording',stop:'Stop',play:'Play',stopPlay:'Stop playing',
+    send:'Send',discard:'Discard',keepOn:'Keep the screen on and this page open while recording.',
+    denied:'The microphone is not allowed. Allow it in your browser settings, then try again.',
+    none:'Recording is not available in this browser. Use Choose files instead.',name:'Recording'}
 };
-var SP={data:null,loading:false,err:'',queue:[],seq:0,busy:false,pickFor:'',delAsk:'',delBusy:'',delErr:{}};
-// "image/*,video/*", spelled with \x2a for the star: a slash and a star together in this file read as a comment opening to
-// the check suite's scanners, which then lose every function after it.
+var SP={data:null,loading:false,err:'',queue:[],seq:0,busy:false,delAsk:'',delBusy:'',delErr:{},
+  open:null,edit:null};   // [1.1026] — open: the new submission whose card is showing; edit: one from You sent being changed
+// The two accept lists (photos and videos for the camera; with audio for Choose files) spell the star as \x2a: a slash and
+// a star together in this file read as a comment opening to the check suite's scanners, which then lose every function
+// after it — and this comment says so without writing the pair.
 var SP_ACCEPT='image/\x2a,video/\x2a';
+var SP_ACCEPT_ALL='image/\x2a,video/\x2a,audio/\x2a';
 function loadSocialPhotos(){
   SP.loading=true;SP.err='';
   api({action:'teacherSocialEvents',data:{teacherToken:TOKEN}},function(e,r){
@@ -4790,29 +4828,80 @@ function loadSocialPhotos(){
     SP.data=r;render();
   });
 }
-function _spEvent(id){return ((SP.data&&SP.data.events)||[]).filter(function(x){return x.eventId===id;})[0]||null;}
 function _spSize(n){n=Number(n)||0;return n>=1048576?(n/1048576).toFixed(n>=10485760?0:1)+' MB':Math.max(1,Math.round(n/1024))+' KB';}
-// One picker for taking and one for choosing, both kept on the page; the event is remembered for the moment of choosing.
-function spOpen(eventId,how){SP.pickFor=eventId;var el=document.getElementById(how==='cam'?'sp-cam':'sp-lib');if(el)el.click();}
-function spPicked(input){
-  var files=[].slice.call(input.files||[]),ev=SP.pickFor,max=(SP.data&&SP.data.maxBytes)||0;
-  input.value='';
-  if(!ev||!files.length)return;
+function _spMine(){return (SP.data&&SP.data.mine)||[];}
+function _spEventName(id){
+  var e=((SP.data&&SP.data.events)||[]).filter(function(x){return x.eventId===id;})[0];
+  if(e)return e.name;
+  var m=_spMine().filter(function(x){return x.eventId===id&&x.eventName;})[0];
+  return m?m.eventName:'';
+}
+function _spStuName(id){var s=((SP.data&&SP.data.students)||[]).filter(function(x){return x.studentId===id;})[0];return s?s.name:'';}
+
+// ── The card's starting choices ──────────────────────────────────────────────────────────────────────────────────────
+// The phone's own day and clock (teachers are in New York). A lesson is "on" from 10 minutes before it starts to 15
+// minutes after it ends; a trial lesson the same, on its date.
+function _spYmd(d){return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);}
+function _spMin(t){var m=String(t||'').match(/(\d{1,2}):(\d{2})\s*([AaPp][Mm])?/);if(!m)return null;var h=+m[1]%12;if(m[3]&&/p/i.test(m[3]))h+=12;else if(!m[3])h=+m[1];return h*60+(+m[2]);}
+function _spToday(now){
+  var d=now||new Date(),day=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][d.getDay()],ymd=_spYmd(d);
+  return ((SP.data&&SP.data.students)||[]).map(function(s){
+    var t=s.trialDate?(s.trialDate===ymd?_spMin(s.trialTime):null):(s.day===day?_spMin(s.time):null);
+    return t==null?null:{s:s,start:t,end:t+(Number(s.minutes)||30)};
+  }).filter(Boolean).sort(function(a,b){return a.start-b.start;});
+}
+function _spNowStudent(now){
+  var d=now||new Date(),m=d.getHours()*60+d.getMinutes(),on=_spToday(d).filter(function(x){return m>=x.start-10&&m<=x.end+15;});
+  return on.length?on[on.length-1].s.studentId:'';   // two overlapping: the one that started last
+}
+var SP_LAST_KEY='kl_social_last';
+function _spLast(){try{var v=JSON.parse(localStorage.getItem(SP_LAST_KEY)||'null');return v&&v.day===_spYmd(new Date())?v:null;}catch(e){return null;}}
+function _spKeepLast(b){try{localStorage.setItem(SP_LAST_KEY,JSON.stringify({day:_spYmd(new Date()),who:b.who,group:b.group,place:b.place,eventId:b.eventId,tag:b.tag}));}catch(e){}}
+function _spBatchId(){var a='abcdefghijklmnopqrstuvwxyz0123456789',s='b';for(var i=0;i<16;i++)s+=a.charAt(Math.floor(Math.random()*a.length));return s;}
+function _spNewBatch(){
+  var last=_spLast(),now=_spNowStudent(),ev=(SP.data&&SP.data.events)||[],today=_spYmd(new Date());
+  var mine={};((SP.data&&SP.data.students)||[]).forEach(function(s){mine[s.studentId]=1;});
+  var b={batchId:_spBatchId(),who:[],group:false,place:'lesson',eventId:'',tag:'',note:'',busy:false,err:''};
+  // Who: the lesson on now; else the day's last choice, while those are still the teacher's students.
+  if(now)b.who=[now];
+  else if(last){b.who=(last.who||[]).filter(function(id){return mine[id];});b.group=!!last.group&&!b.who.length;}
+  // Where: the day's last choice while that event is still open; else an event dated today; else a lesson.
+  var open=function(id){return ev.some(function(e){return e.eventId===id;});};
+  if(last&&last.place==='event'&&open(last.eventId)){b.place='event';b.eventId=last.eventId;}
+  else if(last&&last.place==='lesson'){b.place='lesson';}
+  else{var t=ev.filter(function(e){return e.date===today;})[0];if(t){b.place='event';b.eventId=t.eventId;}}
+  if(last&&(SP.data&&SP.data.tags||[]).indexOf(last.tag)>-1)b.tag=last.tag;
+  return b;
+}
+
+// ── Adding files ───────────────────────────────────────────────────────────────────────────────────────────────────
+// Take photo or video opens the camera; Choose files opens the phone's own picker, which takes audio as well. Files added
+// while a card is open join that submission.
+function spOpen(how){var el=document.getElementById(how==='cam'?'sp-cam':'sp-lib');if(el)el.click();}
+function spPicked(input){var files=[].slice.call(input.files||[]);input.value='';spAdd(files);}
+function spAdd(files){
+  if(!files.length||!SP.data)return;
+  if(!SP.open)SP.open=_spNewBatch();
+  var b=SP.open,max=SP.data.maxBytes||0;
   files.forEach(function(f){
-    var j={id:++SP.seq,eventId:ev,file:f,name:f.name||'Photo',size:f.size,sent:0,state:'wait',err:'',uploadId:''};
+    var j={id:++SP.seq,batchId:b.batchId,file:f,name:f.name||'File',size:f.size,sent:0,state:'wait',err:'',uploadId:''};
     if(!f.size){j.state='fail';j.err=SP_COPY.empty;j.dead=true;}
     else if(max&&f.size>max){j.state='fail';j.err=SP_COPY.tooBig;j.dead=true;}
     SP.queue.push(j);
   });
   render();spRun();
 }
+function _spBatch(id){return SP.open&&SP.open.batchId===id?SP.open:null;}
 function spRun(){
   if(SP.busy)return;
   var j=SP.queue.filter(function(x){return x.state==='wait';})[0];
   if(!j)return;
   SP.busy=true;j.state='send';j.err='';render();
   if(j.uploadId){_spPiece(j,j.sent,0);return;}
-  api({action:'teacherSocialStart',data:{teacherToken:TOKEN,eventId:j.eventId,fileName:j.name,mimeType:j.file.type||'',sizeBytes:j.size}},function(e,r){
+  // Where the file starts: the card's choice at this moment; a later change moves it when the card is saved.
+  var b=_spBatch(j.batchId)||j.at||{place:'lesson',eventId:''};j.at={place:b.place,eventId:b.eventId};
+  api({action:'teacherSocialStart',data:{teacherToken:TOKEN,batchId:j.batchId,place:b.place,eventId:b.place==='event'?b.eventId:'',
+      fileName:j.name,mimeType:j.file.type||'',sizeBytes:j.size}},function(e,r){
     if(e||!r){_spFail(j,SP_COPY.offline);return;}
     if(!r.ok){j.dead=!_spSignedOut(r);_spFail(j,r.error);return;}
     j.uploadId=r.uploadId;j.piece=r.pieceBytes;j.sent=r.next||0;
@@ -4822,6 +4911,7 @@ function spRun(){
 // A failure that is the connection or a busy Drive is tried again; one the server explains is said, and waits.
 function _spSignedOut(r){return /Session|authenticated/i.test(String((r&&r.error)||''));}
 function _spTransient(e,r){return !!e||!r||(!r.ok&&!r.ended&&!_spSignedOut(r));}
+function _spLanded(m){if(SP.data&&m){SP.data.mine=_spMine().filter(function(x){return x.mediaId!==m.mediaId;}).concat([m]);}}
 function _spPiece(j,off,tries){
   if(j.state!=='send')return;
   var rd=new FileReader();
@@ -4831,7 +4921,7 @@ function _spPiece(j,off,tries){
     api({action:'teacherSocialPiece',data:{teacherToken:TOKEN,uploadId:j.uploadId,offset:off,dataBase64:b}},function(e,r){
       // Cancelled while this piece was on its way. Had it been the last, the file is in the folder after all, so it is listed
       // under You sent, where it can be deleted; nothing else about the uploads moves.
-      if(j.state!=='send'){var evc=_spEvent(j.eventId);if(r&&r.ok&&r.done&&evc&&r.media){evc.mine.push(r.media);render();}return;}
+      if(j.state!=='send'){if(r&&r.ok&&r.done&&r.media){_spLanded(r.media);render();}return;}
       if(_spTransient(e,r)){
         if(tries<3){setTimeout(function(){_spPiece(j,off,tries+1);},[2000,5000,10000][tries]);return;}   // _spPiece stops if cancelled
         _spFail(j,(r&&r.error)||SP_COPY.offline);return;
@@ -4841,7 +4931,7 @@ function _spPiece(j,off,tries){
       if(!r.ok){if(r.ended){j.uploadId='';j.sent=0;}_spFail(j,r.error);return;}
       if(r.done){
         SP.queue=SP.queue.filter(function(x){return x!==j;});
-        var ev=_spEvent(j.eventId);if(ev&&r.media)ev.mine.push(r.media);
+        _spLanded(r.media);
         SP.busy=false;render();spRun();return;
       }
       j.sent=Number(r.next)||0;render();
@@ -4852,7 +4942,7 @@ function _spPiece(j,off,tries){
 }
 function _spFail(j,msg){j.state='fail';j.err=String(msg||SP_COPY.offline).replace(/^Error:\s*/,'');SP.busy=false;render();spRun();}
 function spRetry(id){SP.queue.forEach(function(j){if(j.id===id&&j.state==='fail'&&!j.dead){j.state='wait';j.err='';}});render();spRun();}
-function spRemove(id){SP.queue=SP.queue.filter(function(j){return !(j.id===id&&j.state==='fail');});render();}
+function spRemove(id){SP.queue=SP.queue.filter(function(j){return !(j.id===id&&j.state==='fail');});_spCloseEmpty();render();}
 // A file waiting or on its way is dropped from the list; Drive makes no file from an upload that never finishes.
 function spCancel(id){
   var j=SP.queue.filter(function(x){return x.id===id;})[0];
@@ -4860,7 +4950,13 @@ function spCancel(id){
   var was=j.state;j.state='cancel';
   SP.queue=SP.queue.filter(function(x){return x!==j;});
   if(was==='send')SP.busy=false;
-  render();spRun();
+  _spCloseEmpty();render();spRun();
+}
+// A card whose every file was cancelled or removed, and none landed, has nothing to describe.
+function _spCloseEmpty(){
+  var b=SP.open;if(!b)return;
+  var any=SP.queue.some(function(j){return j.batchId===b.batchId;})||_spMine().some(function(m){return m.batchId===b.batchId;});
+  if(!any)SP.open=null;
 }
 function spDelete(id){
   if(SP.delBusy)return;
@@ -4869,51 +4965,229 @@ function spDelete(id){
     SP.delBusy='';
     if(e||!r||!r.ok){SP.delErr[id]=(r&&r.error)||SP_COPY.delFailed;render();return;}
     SP.delAsk='';
-    ((SP.data&&SP.data.events)||[]).forEach(function(ev){ev.mine=ev.mine.filter(function(m){return m.mediaId!==id;});});
+    if(SP.data)SP.data.mine=_spMine().filter(function(m){return m.mediaId!==id;});
     render();
   });
+}
+
+// ── The card: Who, Where, What ─────────────────────────────────────────────────────────────────────────────────────
+function _spCard(){return SP.edit||SP.open;}
+function spWho(id){var b=_spCard();if(!b)return;b.err='';
+  if(id==='group'){b.group=!b.group;if(b.group)b.who=[];}
+  else{b.group=false;var i=b.who.indexOf(id);if(i>-1)b.who.splice(i,1);else b.who.push(id);}
+  render();}
+function spWhere(place,id){var b=_spCard();if(!b)return;b.err='';b.place=place;b.eventId=place==='event'?id:'';render();}
+function spWhat(tag){var b=_spCard();if(!b)return;b.err='';b.tag=b.tag===tag?'':tag;render();}
+function spNote(v){var b=_spCard();if(b)b.note=String(v||'');}
+function spSave(){
+  var b=_spCard();if(!b||b.busy)return;
+  if(!b.who.length&&!b.group){b.err=SP_COPY.noWho;render();return;}
+  if(!b.tag){b.err=SP_COPY.noWhat;render();return;}
+  b.busy=true;b.err='';render();
+  api({action:'teacherSocialDetails',data:{teacherToken:TOKEN,batchId:b.batchId,studentIds:b.who.slice(),group:b.group,
+      place:b.place,eventId:b.eventId,tag:b.tag,note:b.note}},function(e,r){
+    b.busy=false;
+    if(e||!r||!r.ok){b.err=String((r&&r.error)||SP_COPY.offline).replace(/^Error:\s*/,'');render();return;}
+    SP.data=r;_spKeepLast(b);
+    // Files of it still waiting start where the card now says.
+    SP.queue.forEach(function(j){if(j.batchId===b.batchId&&!j.uploadId)j.at={place:b.place,eventId:b.eventId};});
+    if(SP.edit===b)SP.edit=null;else SP.open=null;
+    render();
+  });
+}
+function spEdit(batchId){
+  var m=_spMine().filter(function(x){return x.batchId===batchId;})[0];if(!m)return;
+  SP.edit={batchId:batchId,who:m.studentIds.slice(),group:!!m.detailsAt&&!m.studentIds.length,place:m.place,eventId:m.eventId,
+    tag:m.tag,note:String(m.note||''),busy:false,err:''};
+  render();
+}
+function _spCardHtml(b){
+  var C=SP_COPY,S=(SP.data&&SP.data.students)||[],today=_spToday(),now=_spNowStudent(),shown={},h='';
+  var chip=function(on,click,label,sub){return '<button type="button" class="day-chip'+(on?' on':'')+'" onclick="'+click+'">'+esc(label)+(sub?' <b>'+esc(sub)+'</b>':'')+'</button>';};
+  // Who: the day's students in lesson order, then any chosen from the rest; the rest in Another student.
+  var whoChips='';
+  today.forEach(function(x){shown[x.s.studentId]=1;whoChips+=chip(b.who.indexOf(x.s.studentId)>-1,'spWho('+jsq(x.s.studentId)+')',x.s.name,x.s.studentId===now?C.lessonNow:'');});
+  b.who.forEach(function(id){if(!shown[id]){shown[id]=1;whoChips+=chip(true,'spWho('+jsq(id)+')',_spStuName(id)||id);}});
+  whoChips+=chip(b.group,"spWho('group')",C.group);
+  var rest=S.filter(function(s){return !shown[s.studentId];});
+  if(rest.length)whoChips+='<select class="sp-other" onchange="if(this.value)spWho(this.value)"><option value="">'+esc(C.another)+'</option>'+
+    rest.map(function(s){return '<option value="'+esc(s.studentId)+'">'+esc(s.name)+'</option>';}).join('')+'</select>';
+  h+='<div class="day-sec"><div class="day-lbl">'+esc(C.who)+'</div><div class="day-chips">'+whoChips+'</div></div>';
+  // Where: a lesson, or an event open to teachers now (and the one the files are already in, when that has closed).
+  var evs=((SP.data&&SP.data.events)||[]).slice();
+  if(b.place==='event'&&b.eventId&&!evs.some(function(e){return e.eventId===b.eventId;}))evs.push({eventId:b.eventId,name:_spEventName(b.eventId)});
+  h+='<div class="day-sec"><div class="day-lbl">'+esc(C.where)+'</div><div class="day-chips">'+chip(b.place==='lesson',"spWhere('lesson')",C.lesson)+
+    evs.map(function(e){return chip(b.place==='event'&&b.eventId===e.eventId,"spWhere('event',"+jsq(e.eventId)+')',e.name);}).join('')+'</div></div>';
+  h+='<div class="day-sec"><div class="day-lbl">'+esc(C.what)+'</div><div class="day-chips">'+
+    ((SP.data&&SP.data.tags)||[]).map(function(t){return chip(b.tag===t,'spWhat('+jsq(t)+')',t);}).join('')+'</div>'+
+    '<input type="text" class="sp-note" maxlength="500" placeholder="'+esc(C.notePh)+'" value="'+esc(b.note)+'" oninput="spNote(this.value)"></div>';
+  h+='<div class="sp-save"><button type="button" class="btn btn-p" onclick="spSave()"'+(b.busy?' disabled':'')+'>'+esc(b.busy?C.saving:(SP.edit===b?C.save:C.done))+'</button>'+
+    (SP.edit===b?'<button type="button" class="btn btn-s" onclick="SP.edit=null;render()">'+esc(C.editCancel)+'</button>':'')+
+    (b.err?'<span class="sp-err">'+esc(b.err)+'</span>':'')+'</div>';
+  return h;
+}
+
+// ── Record audio ([1.1026]) ────────────────────────────────────────────────────────────────────────────────────────
+// Recorded in the page, so nothing is kept on the phone. The phone asks once for the microphone. Recording stops by Stop,
+// after 30 minutes, or when the page is hidden (the screen locks, another app opens), keeping what was recorded. Then it
+// can be played, sent (as a file of the submission, like any other) or discarded.
+var SR={state:'',err:'',rec:null,stream:null,chunks:[],mime:'',t0:0,tick:null,blob:null,url:'',player:null,playing:false,ac:null,an:null,raf:0};
+var SR_MAX_MS=30*60*1000;
+function spRecStart(){
+  var C=SP_COPY.rec;SR.err='';
+  var md=typeof navigator!=='undefined'&&navigator.mediaDevices;
+  if(!md||!md.getUserMedia||typeof MediaRecorder==='undefined'){SR.err=C.none;render();return;}
+  SR.state='asking';render();
+  md.getUserMedia({audio:true}).then(function(stream){
+    var types=['audio/mp4','audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus'];
+    var mt=types.filter(function(t){try{return MediaRecorder.isTypeSupported&&MediaRecorder.isTypeSupported(t);}catch(e){return false;}})[0]||'';
+    var rec;
+    try{rec=mt?new MediaRecorder(stream,{mimeType:mt}):new MediaRecorder(stream);}
+    catch(e){stream.getTracks().forEach(function(t){t.stop();});SR.state='';SR.err=C.none;render();return;}
+    SR.stream=stream;SR.rec=rec;SR.chunks=[];SR.mime=String(rec.mimeType||mt||'audio/webm').split(';')[0];
+    rec.ondataavailable=function(e){if(e.data&&e.data.size)SR.chunks.push(e.data);};
+    rec.onstop=function(){
+      _spRecRelease();
+      SR.blob=new Blob(SR.chunks,{type:SR.mime});SR.chunks=[];
+      if(!SR.blob.size){SR.state='';SR.blob=null;render();return;}
+      SR.state='done';render();
+    };
+    rec.start(1000);SR.t0=Date.now();SR.state='rec';
+    SR.tick=setInterval(function(){
+      var el=document.getElementById('sp-rt');if(el)el.textContent=_spClock(Date.now()-SR.t0);
+      if(Date.now()-SR.t0>=SR_MAX_MS)spRecStop();
+    },500);
+    _spRecLevel(stream);
+    render();
+  }).catch(function(e){SR.state='';SR.err=(e&&(e.name==='NotAllowedError'||e.name==='SecurityError'))?C.denied:C.none;render();});
+}
+function _spClock(ms){var s=Math.floor(ms/1000);return Math.floor(s/60)+':'+('0'+s%60).slice(-2);}
+// The sound-level bar, so the teacher can see it is hearing the piano. Drawn straight into its bar, not by render().
+function _spRecLevel(stream){
+  try{
+    var AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;
+    SR.ac=new AC();SR.an=SR.ac.createAnalyser();SR.an.fftSize=512;SR.ac.createMediaStreamSource(stream).connect(SR.an);
+    var buf=new Uint8Array(SR.an.fftSize);
+    var draw=function(){
+      if(SR.state!=='rec'||!SR.an)return;
+      SR.an.getByteTimeDomainData(buf);var peak=0;for(var i=0;i<buf.length;i++){var v=Math.abs(buf[i]-128);if(v>peak)peak=v;}
+      var el=document.getElementById('sp-lvl');if(el)el.style.width=Math.min(100,Math.round(peak/128*160))+'%';
+      SR.raf=window.requestAnimationFrame(draw);
+    };
+    SR.raf=window.requestAnimationFrame(draw);
+  }catch(e){}
+}
+function _spRecRelease(){
+  if(SR.tick){clearInterval(SR.tick);SR.tick=null;}
+  if(SR.raf){try{window.cancelAnimationFrame(SR.raf);}catch(e){}SR.raf=0;}
+  if(SR.ac){try{SR.ac.close();}catch(e){}SR.ac=null;SR.an=null;}
+  if(SR.stream){SR.stream.getTracks().forEach(function(t){t.stop();});SR.stream=null;}
+}
+function spRecStop(){if(SR.rec&&SR.rec.state!=='inactive'){try{SR.rec.stop();}catch(e){}}}
+function spRecPlay(){
+  if(!SR.blob)return;
+  if(SR.playing&&SR.player){SR.player.pause();SR.playing=false;render();return;}
+  if(!SR.url)SR.url=URL.createObjectURL(SR.blob);
+  // Played from outside the page's drawing, so an upload's progress redrawing the tab does not stop it.
+  SR.player=SR.player||new Audio(SR.url);SR.player.currentTime=0;SR.player.onended=function(){SR.playing=false;render();};
+  var p=SR.player.play();if(p&&p.catch)p.catch(function(){SR.playing=false;render();});
+  SR.playing=true;render();
+}
+function _spRecReset(){
+  if(SR.player){try{SR.player.pause();}catch(e){}}
+  if(SR.url){try{URL.revokeObjectURL(SR.url);}catch(e){}}
+  SR.state='';SR.blob=null;SR.url='';SR.player=null;SR.playing=false;SR.rec=null;
+}
+function spRecDiscard(){_spRecReset();render();}
+function spRecSend(){
+  if(!SR.blob)return;
+  var d=new Date(),h=d.getHours(),ext={'audio/mp4':'.m4a','audio/webm':'.webm','audio/ogg':'.ogg'}[SR.mime]||'.m4a';
+  var name=SP_COPY.rec.name+' '+_spYmd(d)+' '+((h%12)||12)+'.'+('0'+d.getMinutes()).slice(-2)+(h<12?' AM':' PM')+ext;
+  var f=SR.blob;
+  try{f=new File([SR.blob],name,{type:SR.mime});}catch(e){f.name=name;}   // an older iPhone has no File(): the Blob, named
+  _spRecReset();spAdd([f]);
+}
+if(typeof document!=='undefined'&&document.addEventListener){
+  document.addEventListener('visibilitychange',function(){if(document.hidden&&SR.state==='rec')spRecStop();});
+}
+function _spRecHtml(){
+  var C=SP_COPY.rec;
+  if(SR.state==='asking')return '<div class="card sp-rec"><span class="sp-muted">'+esc(C.asking)+'</span></div>';
+  if(SR.state==='rec')return '<div class="card sp-rec"><div class="sp-rec-hd"><span class="sp-dot"></span><b>'+esc(C.on)+'</b><span id="sp-rt" class="sp-rt">'+_spClock(Date.now()-SR.t0)+'</span></div>'+
+    '<div class="sp-lvlbar"><span id="sp-lvl"></span></div>'+
+    '<button type="button" class="btn btn-danger sp-stop" onclick="spRecStop()">'+esc(C.stop)+'</button><p class="sp-muted">'+esc(C.keepOn)+'</p></div>';
+  if(SR.state==='done')return '<div class="card sp-rec"><div class="sp-picks">'+
+    '<button type="button" class="btn btn-s" onclick="spRecPlay()">'+esc(SR.playing?C.stopPlay:C.play)+'</button>'+
+    '<button type="button" class="btn btn-p" onclick="spRecSend()">'+esc(C.send)+'</button>'+
+    '<button type="button" class="btn btn-s" onclick="spRecDiscard()">'+esc(C.discard)+'</button></div></div>';
+  return SR.err?'<div class="card sp-rec"><span class="sp-err">'+esc(SR.err)+'</span></div>':'';
+}
+
+// ── The tab ────────────────────────────────────────────────────────────────────────────────────────────────────────
+function _spRows(list){
+  var C=SP_COPY;
+  return list.map(function(j){
+    var pct=j.size?Math.floor(j.sent*100/j.size):0;
+    var said=j.state==='send'?esc(C.sending(pct)):j.state==='wait'?esc(C.waiting):'<span class="sp-err">'+esc(j.err||C.failed)+'</span>';
+    return '<div class="sp-row"><span class="sp-name">'+esc(j.name)+'</span><span class="sp-meta">'+said+'</span>'+
+      (j.state==='fail'?(j.dead?'':'<button type="button" class="btn btn-p" onclick="spRetry('+j.id+')">'+esc(C.retry)+'</button>')+
+        '<button type="button" class="btn btn-s" onclick="spRemove('+j.id+')">'+esc(C.remove)+'</button>'
+        :'<button type="button" class="btn btn-s" onclick="spCancel('+j.id+')">'+esc(C.cancel)+'</button>')+
+      (j.state==='send'?'<div class="sp-bar"><span style="width:'+pct+'%"></span></div>':'')+'</div>';
+  }).join('');
+}
+function _spSentHtml(){
+  var C=SP_COPY,order=[],by={},mine=_spMine().filter(function(m){return !(SP.open&&m.batchId===SP.open.batchId);});
+  mine.forEach(function(m){if(!by[m.batchId]){by[m.batchId]=[];order.push(m.batchId);}by[m.batchId].push(m);});
+  if(!order.length)return '';
+  var h='<div class="sp-lab">'+esc(C.yours)+' · '+mine.length+'</div>';
+  order.reverse().forEach(function(id){
+    var list=by[id],m=list[0];
+    if(SP.edit&&SP.edit.batchId===id){h+='<div class="card sp-sub">'+_spRowsMine(list)+_spCardHtml(SP.edit)+'</div>';return;}
+    var who=m.detailsAt?(m.studentIds.length?m.studentIds.map(function(x){return _spStuName(x)||'';}).filter(Boolean).join(', '):C.group):C.noDetails;
+    var where=m.place==='lesson'?C.lesson:(m.eventName||_spEventName(m.eventId)||'');
+    h+='<div class="card sp-sub"><div class="sp-sub-hd"><span>'+esc([who,where,m.tag].filter(Boolean).join(' · '))+'</span>'+
+      (SP.open&&SP.open.batchId===id?'':'<button type="button" class="btn btn-s" onclick="spEdit('+jsq(id)+')">'+esc(C.edit)+'</button>')+'</div>'+
+      (m.note?'<div class="sp-subnote">'+esc(m.note)+'</div>':'')+_spRowsMine(list)+'</div>';
+  });
+  return h;
+}
+function _spRowsMine(list){
+  var C=SP_COPY;
+  return list.map(function(m){
+    var ask=SP.delAsk===m.mediaId,busy=SP.delBusy===m.mediaId,err=SP.delErr[m.mediaId];
+    return '<div class="sp-row"><span class="sp-name">'+esc(m.fileName)+'</span><span class="sp-meta">'+esc((C.kind[m.kind]||'')+' · '+_spSize(m.sizeBytes))+'</span>'+
+      (ask?'':'<button type="button" class="btn btn-s" onclick="SP.delAsk='+jsq(m.mediaId)+';render()">'+esc(C.del)+'</button>')+
+      (ask?'<div class="sp-ask">'+esc(C.delAsk)+' <button type="button" class="btn btn-danger" onclick="spDelete('+jsq(m.mediaId)+')"'+(busy?' disabled':'')+'>'+esc(busy?C.deleting:C.delYes)+'</button>'+
+        '<button type="button" class="btn btn-s" onclick="SP.delAsk=\'\';render()">'+esc(C.delNo)+'</button>'+(err?'<span class="sp-err">'+esc(err)+'</span>':'')+'</div>':'')+
+      '</div>';
+  }).join('');
 }
 function rSocialPhotos(){
   var C=SP_COPY;
   var h='<input type="file" id="sp-cam" class="att-input" accept="'+SP_ACCEPT+'" capture="environment" onchange="spPicked(this)">'+
-        '<input type="file" id="sp-lib" class="att-input" accept="'+SP_ACCEPT+'" multiple onchange="spPicked(this)">';
+        '<input type="file" id="sp-lib" class="att-input" accept="'+SP_ACCEPT_ALL+'" multiple onchange="spPicked(this)">';
   if(!SP.data){
     if(SP.err)return h+'<div class="empty-state">'+esc(SP.err)+' <button type="button" class="lnk-btn" onclick="loadSocialPhotos()">'+esc(C.retryLoad)+'</button></div>';
     return h+'<div class="empty-state"><span class="spin">&#8635;</span></div>';
   }
-  h+='<div class="card">'+esc(C.intro)+'</div>';
-  var evs=SP.data.events||[];
-  if(!evs.length)return h+'<div class="empty-state">'+esc(C.none)+'</div>';
-  var going=SP.queue.some(function(j){return j.state==='wait'||j.state==='send';});
-  evs.forEach(function(ev){
-    h+='<div class="card sp-ev"><div class="sp-hd"><b>'+esc(ev.name)+'</b><span class="sp-date">'+esc(fmtDay(ev.date))+'</span></div>'+
-      '<div class="sp-picks"><button type="button" class="btn btn-p" onclick="spOpen('+jsq(ev.eventId)+',\'cam\')">'+esc(C.take)+'</button>'+
-      '<button type="button" class="btn btn-s" onclick="spOpen('+jsq(ev.eventId)+',\'lib\')">'+esc(C.choose)+'</button></div>';
-    var q=SP.queue.filter(function(j){return j.eventId===ev.eventId;});
-    if(q.length){
-      h+='<div class="sp-list">'+q.map(function(j){
-        var pct=j.size?Math.floor(j.sent*100/j.size):0;
-        var said=j.state==='send'?esc(C.sending(pct)):j.state==='wait'?esc(C.waiting):'<span class="sp-err">'+esc(j.err||C.failed)+'</span>';
-        return '<div class="sp-row"><span class="sp-name">'+esc(j.name)+'</span><span class="sp-meta">'+said+'</span>'+
-          (j.state==='fail'?(j.dead?'':'<button type="button" class="btn btn-p" onclick="spRetry('+j.id+')">'+esc(C.retry)+'</button>')+
-            '<button type="button" class="btn btn-s" onclick="spRemove('+j.id+')">'+esc(C.remove)+'</button>'
-            :'<button type="button" class="btn btn-s" onclick="spCancel('+j.id+')">'+esc(C.cancel)+'</button>')+
-          (j.state==='send'?'<div class="sp-bar"><span style="width:'+pct+'%"></span></div>':'')+'</div>';
-      }).join('')+'</div>';
-    }
-    if(ev.mine.length){
-      h+='<div class="sp-lab">'+esc(C.yours)+' · '+ev.mine.length+'</div>'+ev.mine.slice().reverse().map(function(m){
-        var ask=SP.delAsk===m.mediaId,busy=SP.delBusy===m.mediaId,err=SP.delErr[m.mediaId];
-        return '<div class="sp-row"><span class="sp-name">'+esc(m.fileName)+'</span><span class="sp-meta">'+esc(_spSize(m.sizeBytes))+'</span>'+
-          (ask?'':'<button type="button" class="btn btn-s" onclick="SP.delAsk='+jsq(m.mediaId)+';render()">'+esc(C.del)+'</button>')+
-          (ask?'<div class="sp-ask">'+esc(C.delAsk)+' <button type="button" class="btn btn-danger" onclick="spDelete('+jsq(m.mediaId)+')"'+(busy?' disabled':'')+'>'+esc(busy?C.deleting:C.delYes)+'</button>'+
-            '<button type="button" class="btn btn-s" onclick="SP.delAsk=\'\';render()">'+esc(C.delNo)+'</button>'+(err?'<span class="sp-err">'+esc(err)+'</span>':'')+'</div>':'')+
-          '</div>';
-      }).join('');
-    }
-    h+='</div>';
-  });
-  if(going)h+='<p class="sp-keep">'+esc(C.keepOpen)+'</p>';
+  var recOn=SR.state==='rec'||SR.state==='asking';
+  h+='<div class="card sp-top"><p class="sp-intro">'+esc(C.intro)+'</p><ol class="sp-steps">'+C.steps.map(function(s){return '<li>'+esc(s)+'</li>';}).join('')+'</ol>'+
+    '<div class="sp-picks"><button type="button" class="btn btn-p" onclick="spOpen(\'cam\')"'+(recOn?' disabled':'')+'>'+esc(C.take)+'</button>'+
+    '<button type="button" class="btn btn-p" onclick="spRecStart()"'+(SR.state?' disabled':'')+'>'+esc(C.record)+'</button>'+
+    '<button type="button" class="btn btn-s" onclick="spOpen(\'lib\')"'+(recOn?' disabled':'')+'>'+esc(C.choose)+'</button></div>'+
+    '<p class="sp-muted">'+esc(C.other)+'</p></div>';
+  h+=_spRecHtml();
+  // The open card: its files, then Who, Where and What.
+  if(SP.open){
+    var b=SP.open,mineB=_spMine().filter(function(m){return m.batchId===b.batchId;});
+    h+='<div class="card sp-sub sp-new">'+_spRows(SP.queue.filter(function(j){return j.batchId===b.batchId;}))+_spRowsMine(mineB)+_spCardHtml(b)+'</div>';
+  }
+  // Files of a saved card still on their way.
+  var going=SP.queue.filter(function(j){return !(SP.open&&j.batchId===SP.open.batchId);});
+  if(going.length)h+='<div class="sp-lab">'+esc(C.sendingNow)+'</div><div class="card">'+_spRows(going)+'</div>';
+  h+=_spSentHtml();
+  if(SP.queue.some(function(j){return j.state==='wait'||j.state==='send';}))h+='<p class="sp-keep">'+esc(C.keepOpen)+'</p>';
   return h;
 }
 function loadTrials(quiet){
@@ -7061,7 +7335,8 @@ function _msPickPanel(p){
     // [1.904] — a message's limits and the drag-and-drop hint, here where a file is added (they sat under every message box)
     (msg?'<div class="att-guide">'+esc(TCH_COPY.attachHint)+
       ' <button type="button" class="att-formats" onclick="attToggleFormats()">'+esc(TCH_COPY.attachFormats)+'</button>'+
-      (ATT_FORMATS_OPEN?'<span class="att-formats-list">'+esc(_attFormatList())+'</span>':'')+'</div><div class="att-guide">'+esc(TLIB_COPY.dropHint)+'</div>':'');
+      (ATT_FORMATS_OPEN?'<span class="att-formats-list">'+esc(_attFormatList())+'</span>':'')+'</div><div class="att-guide">'+esc(TLIB_COPY.dropHint)+'</div>'+
+      '<div class="att-guide">'+esc(TCH_COPY.socialHintA)+' <button type="button" class="att-formats" onclick="switchTab(\'photos\');window.scrollTo(0,0)">'+esc(SP_COPY.tab)+'</button> '+esc(TCH_COPY.socialHintB)+'</div>':'');   // [1.1026]
   if(p.busy)h+='<div class="att-guide"><span class="spin">&#8635;</span> '+esc(TCH_COPY.attachOne)+'</div>';
   h+=_msPickDevHtml(p);
   if(p.err)h+='<div class="tt-err">'+esc(p.err)+'</div>';
@@ -17202,6 +17477,8 @@ var TCH_COPY={
   // list of file types accepted", so it cannot drift from what is accepted.
   attach:'Add file',
   attachHint:'Send a file. 10 MB limit. Maximum 10 files.',
+  // [1.1026] — teacher-facing, PLACEHOLDER, AC's to write: under a message's attach, the way to the Social media tab
+  socialHintA:'Photos, videos and audio for social media go in the',socialHintB:'tab.',
   attachKeptGone:'This file was removed after a day unsent. Add it again.',   // [1.904] PLACEHOLDER — AC's to word
   draftKept:'Draft kept on this device',   // [1.904] PLACEHOLDER — the save line beside Send
   rnTitle:'Leave unticked to end the conversation when this is sent. A reply opens it again.',   // [1.907] PLACEHOLDER — the hover on Reply needed

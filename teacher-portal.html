@@ -2342,6 +2342,18 @@ select.cmp-lsel{font:inherit;font-size:13.5px;font-weight:700;padding:6px 8px;bo
 @media(max-width:560px){
 .cmp-linkpanel .cmp-lpick{height:34px;font-size:16px}
 }
+/* [1.1013] Social — event photos and videos (the Photos tab) */
+.sp-ev .sp-hd{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:.75rem}
+.sp-ev .sp-hd b{font-size:15px}.sp-date{font-size:13px;color:var(--text4);white-space:nowrap}
+.sp-picks{display:flex;gap:8px;flex-wrap:wrap}.sp-picks .btn{flex:1 1 180px;width:auto}
+.sp-lab{font-size:12px;font-weight:600;color:var(--text4);margin:1rem 0 .25rem}
+.sp-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--border2);font-size:13px;flex-wrap:wrap}
+.sp-name{flex:1 1 140px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sp-meta{color:var(--text4);white-space:nowrap}.sp-row .btn,.sp-ask .btn{width:auto;padding:6px 10px;font-size:12px}
+.sp-bar{flex:0 0 100%;height:6px;border-radius:3px;background:var(--border2);overflow:hidden}
+.sp-bar>span{display:block;height:100%;background:#1a4fc4}
+.sp-err{color:var(--red)}.sp-keep{font-size:13px;color:var(--text3);margin:.75rem 0 0}
+.sp-ask{flex:0 0 100%;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 </style>
 </head>
 <body>
@@ -2878,11 +2890,12 @@ var KL_CHANGES={
   teacherMasterPick:'lib', setLibrary:'lib', setAttachmentTags:'lib', setLibraryTagsBulk:'lib', setTeacherTagHidden:'lib',
   teacherCustomTag:'lib', renameLibraryFile:'lib', deleteLibraryFile:'lib', deleteLibraryLink:'lib', saveLibraryLink:'lib', addLibraryLinks:'lib',
   saveTeacherTemplates:'tpl',
-  teacherSubmitTrialReport:'trl', teacherSaveTrialReport:'trl', teacherArchiveTrial:'trl'
+  teacherSubmitTrialReport:'trl', teacherSaveTrialReport:'trl', teacherArchiveTrial:'trl',
+  teacherSocialPiece:'soc', teacherSocialDelete:'soc'   // [1.1013] — a file's last piece adds it to the list
 };
 var KL_LISTS={teacherMyStudents:'stu', teacherStudentCard:'stu', teacherDayMaterials:'stu', getTeacherThreads:'thr', getThreadBundle:'thr',
   getScheduledMessages:'sch', teacherGetSettings:'set', getLibrary:'lib', getTags:'lib', getTeacherLinks:'lib',
-  getTeacherTemplates:'tpl', getStudioTemplates:'tpl', teacherTrials:'trl'};
+  getTeacherTemplates:'tpl', getStudioTemplates:'tpl', teacherTrials:'trl', teacherSocialEvents:'soc'};
 var _klCh={n:0, kind:{}, out:{}, waiters:[]}, _klPass=false;   // changes sent (numbered), their kinds, those not answered yet
 function _klHas(kinds, k){ return (' '+(kinds||'')+' ').indexOf(' '+k+' ')>=0; }
 function _klOut(k){ return Object.keys(_klCh.out).some(function(id){ return _klHas(_klCh.out[id], k); }); }
@@ -4619,12 +4632,13 @@ function rHome(){
   // [1.794] — AC, 7 October 2026: "My students should be the main tab for teachers", "move My
   // Library to a new tab after messages tab", and "buttons can be condenses: students messages
   // library trials guide". So: Students · Messages · Library · Trials · Guide.
-  var T=MST_COPY.tabs,msgOn=['students','trials','guide','library'].indexOf(HOME_TAB)<0;
+  var T=MST_COPY.tabs,msgOn=['students','trials','guide','library','photos'].indexOf(HOME_TAB)<0;   // [1.1013] photos
   var tabs='<div class="tabbar">'+
     '<div class="tab'+(HOME_TAB==='students'?' on':'')+'" onclick="switchTab(\'students\')">'+esc(T.students)+'</div>'+   // [1.732]
     '<div class="tab'+(msgOn?' on':'')+'" onclick="switchTab(\'family\')">'+esc(T.messages)+rTabBadge(famUnread+staffUnread)+'</div>'+
     '<div class="tab'+(HOME_TAB==='library'?' on':'')+'" onclick="switchTab(\'library\')">'+esc(T.library)+'</div>'+
     '<div class="tab'+(HOME_TAB==='trials'?' on':'')+'" onclick="switchTab(\'trials\')">'+esc(T.trials)+rTabBadge(_ttDueCount())+'</div>'+   // [1.731]
+    '<div class="tab'+(HOME_TAB==='photos'?' on':'')+'" onclick="switchTab(\'photos\')">'+esc(SP_COPY.tab)+'</div>'+   // [1.1013]
     // [1.792] — no Settings tab. AC, 6 October 2026: "With the new design
     // improvements there is no need for a settings tab at all in the teacher
     // portal the away busy button should just be on the messages panel like it
@@ -4640,6 +4654,7 @@ function rHome(){
            : HOME_TAB==='trials' ? rTrialsTab()
            : HOME_TAB==='students' ? rMyStudents()
            : HOME_TAB==='library' ? mstLibraryPage()   // [1.794]
+           : HOME_TAB==='photos' ? rSocialPhotos()   // [1.1013]
            : rTimerKey()+rMessagesPage();
   return '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">'+
     '<div class="login-brand" style="margin:0">KEYLAB</div>'+
@@ -4741,6 +4756,166 @@ var TT_COPY={
   markedOn:function(m,w){return ({email:'Received by email',verbal:'Received verbally',notNeeded:'Not needed'})[m]+(w?' '+w:'');}
 };
 var TT={showArch:false,asked:false,loading:false,data:null,guideOpen:false,ans:{},timer:{},sending:{},err:{},open:{},miss:{}};
+// ══════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+// [1.1013] SOCIAL — EVENT PHOTOS AND VIDEOS (the Photos tab)
+// AC, 14 November 2026: teachers send photos and videos of studio events into the studio's Drive, for Keylab's social
+// posts — "teachers don't want to store media on their devices or accounts, and there are privacy issues". A teacher sees
+// the events from a week before to a month after their date, adds files by taking them or choosing them, and sees and can
+// delete only what they sent. Each file goes up in pieces of 4 MB (spec C10); a piece that fails is sent again three
+// times, then the file waits with Try again, which carries on from where it got to. Files go one at a time, in order.
+// ══════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+var SP_COPY={   // teacher-facing — PLACEHOLDER wording throughout, AC's to write (spec C9)
+  tab:'Photos',
+  intro:'Photos and videos of studio events, for Keylab\'s social media. They go straight to the studio\'s Drive: nothing is kept in your account, and nothing is shared.',
+  none:'No events are taking photos right now.',
+  loadFailed:'Events could not be loaded.',retryLoad:'Try again',
+  take:'Take photo or video',choose:'Choose photos or videos',
+  waiting:'Waiting',sending:function(p){return 'Sending · '+p+'%';},
+  failed:'Not sent',retry:'Try again',remove:'Remove',cancel:'Cancel',
+  keepOpen:'Keep this page open until every file is sent.',
+  yours:'You sent',del:'Delete',delAsk:'Delete this file?',delYes:'Delete',delNo:'Cancel',deleting:'Deleting…',
+  delFailed:'Could not delete. Try again.',
+  tooBig:'This file is too large to add.',empty:'This file is empty.',
+  offline:'Not sent. Check your connection and try again.',readFailed:'This file could not be read from your phone.'
+};
+var SP={data:null,loading:false,err:'',queue:[],seq:0,busy:false,pickFor:'',delAsk:'',delBusy:'',delErr:{}};
+// "image/*,video/*", spelled with \x2a for the star: a slash and a star together in this file read as a comment opening to
+// the check suite's scanners, which then lose every function after it.
+var SP_ACCEPT='image/\x2a,video/\x2a';
+function loadSocialPhotos(){
+  SP.loading=true;SP.err='';
+  api({action:'teacherSocialEvents',data:{teacherToken:TOKEN}},function(e,r){
+    SP.loading=false;
+    if(e||!r||!r.ok){SP.err=(r&&r.error)||SP_COPY.loadFailed;render();return;}
+    SP.data=r;render();
+  });
+}
+function _spEvent(id){return ((SP.data&&SP.data.events)||[]).filter(function(x){return x.eventId===id;})[0]||null;}
+function _spSize(n){n=Number(n)||0;return n>=1048576?(n/1048576).toFixed(n>=10485760?0:1)+' MB':Math.max(1,Math.round(n/1024))+' KB';}
+// One picker for taking and one for choosing, both kept on the page; the event is remembered for the moment of choosing.
+function spOpen(eventId,how){SP.pickFor=eventId;var el=document.getElementById(how==='cam'?'sp-cam':'sp-lib');if(el)el.click();}
+function spPicked(input){
+  var files=[].slice.call(input.files||[]),ev=SP.pickFor,max=(SP.data&&SP.data.maxBytes)||0;
+  input.value='';
+  if(!ev||!files.length)return;
+  files.forEach(function(f){
+    var j={id:++SP.seq,eventId:ev,file:f,name:f.name||'Photo',size:f.size,sent:0,state:'wait',err:'',uploadId:''};
+    if(!f.size){j.state='fail';j.err=SP_COPY.empty;j.dead=true;}
+    else if(max&&f.size>max){j.state='fail';j.err=SP_COPY.tooBig;j.dead=true;}
+    SP.queue.push(j);
+  });
+  render();spRun();
+}
+function spRun(){
+  if(SP.busy)return;
+  var j=SP.queue.filter(function(x){return x.state==='wait';})[0];
+  if(!j)return;
+  SP.busy=true;j.state='send';j.err='';render();
+  if(j.uploadId){_spPiece(j,j.sent,0);return;}
+  api({action:'teacherSocialStart',data:{teacherToken:TOKEN,eventId:j.eventId,fileName:j.name,mimeType:j.file.type||'',sizeBytes:j.size}},function(e,r){
+    if(e||!r){_spFail(j,SP_COPY.offline);return;}
+    if(!r.ok){j.dead=!_spSignedOut(r);_spFail(j,r.error);return;}
+    j.uploadId=r.uploadId;j.piece=r.pieceBytes;j.sent=r.next||0;
+    _spPiece(j,j.sent,0);
+  });
+}
+// A failure that is the connection or a busy Drive is tried again; one the server explains is said, and waits.
+function _spSignedOut(r){return /Session|authenticated/i.test(String((r&&r.error)||''));}
+function _spTransient(e,r){return !!e||!r||(!r.ok&&!r.ended&&!_spSignedOut(r));}
+function _spPiece(j,off,tries){
+  if(j.state!=='send')return;
+  var rd=new FileReader();
+  rd.onerror=function(){j.dead=true;_spFail(j,SP_COPY.readFailed);};
+  rd.onload=function(){
+    var b=String(rd.result||'');b=b.slice(b.indexOf(',')+1);
+    api({action:'teacherSocialPiece',data:{teacherToken:TOKEN,uploadId:j.uploadId,offset:off,dataBase64:b}},function(e,r){
+      // Cancelled while this piece was on its way. Had it been the last, the file is in the folder after all, so it is listed
+      // under You sent, where it can be deleted; nothing else about the uploads moves.
+      if(j.state!=='send'){var evc=_spEvent(j.eventId);if(r&&r.ok&&r.done&&evc&&r.media){evc.mine.push(r.media);render();}return;}
+      if(_spTransient(e,r)){
+        if(tries<3){setTimeout(function(){_spPiece(j,off,tries+1);},[2000,5000,10000][tries]);return;}   // _spPiece stops if cancelled
+        _spFail(j,(r&&r.error)||SP_COPY.offline);return;
+      }
+      // The upload has ended on the server's side: Try again starts the file from the beginning. Signed out instead: it
+      // carries on from where it got to once the teacher is signed in again.
+      if(!r.ok){if(r.ended){j.uploadId='';j.sent=0;}_spFail(j,r.error);return;}
+      if(r.done){
+        SP.queue=SP.queue.filter(function(x){return x!==j;});
+        var ev=_spEvent(j.eventId);if(ev&&r.media)ev.mine.push(r.media);
+        SP.busy=false;render();spRun();return;
+      }
+      j.sent=Number(r.next)||0;render();
+      _spPiece(j,j.sent,0);
+    });
+  };
+  rd.readAsDataURL(j.file.slice(off,Math.min(j.size,off+(j.piece||4194304))));
+}
+function _spFail(j,msg){j.state='fail';j.err=String(msg||SP_COPY.offline).replace(/^Error:\s*/,'');SP.busy=false;render();spRun();}
+function spRetry(id){SP.queue.forEach(function(j){if(j.id===id&&j.state==='fail'&&!j.dead){j.state='wait';j.err='';}});render();spRun();}
+function spRemove(id){SP.queue=SP.queue.filter(function(j){return !(j.id===id&&j.state==='fail');});render();}
+// A file waiting or on its way is dropped from the list; Drive makes no file from an upload that never finishes.
+function spCancel(id){
+  var j=SP.queue.filter(function(x){return x.id===id;})[0];
+  if(!j||(j.state!=='wait'&&j.state!=='send'))return;
+  var was=j.state;j.state='cancel';
+  SP.queue=SP.queue.filter(function(x){return x!==j;});
+  if(was==='send')SP.busy=false;
+  render();spRun();
+}
+function spDelete(id){
+  if(SP.delBusy)return;
+  SP.delBusy=id;SP.delErr[id]='';render();
+  api({action:'teacherSocialDelete',data:{teacherToken:TOKEN,mediaId:id}},function(e,r){
+    SP.delBusy='';
+    if(e||!r||!r.ok){SP.delErr[id]=(r&&r.error)||SP_COPY.delFailed;render();return;}
+    SP.delAsk='';
+    ((SP.data&&SP.data.events)||[]).forEach(function(ev){ev.mine=ev.mine.filter(function(m){return m.mediaId!==id;});});
+    render();
+  });
+}
+function rSocialPhotos(){
+  var C=SP_COPY;
+  var h='<input type="file" id="sp-cam" class="att-input" accept="'+SP_ACCEPT+'" capture="environment" onchange="spPicked(this)">'+
+        '<input type="file" id="sp-lib" class="att-input" accept="'+SP_ACCEPT+'" multiple onchange="spPicked(this)">';
+  if(!SP.data){
+    if(SP.err)return h+'<div class="empty-state">'+esc(SP.err)+' <button type="button" class="lnk-btn" onclick="loadSocialPhotos()">'+esc(C.retryLoad)+'</button></div>';
+    return h+'<div class="empty-state"><span class="spin">&#8635;</span></div>';
+  }
+  h+='<div class="card">'+esc(C.intro)+'</div>';
+  var evs=SP.data.events||[];
+  if(!evs.length)return h+'<div class="empty-state">'+esc(C.none)+'</div>';
+  var going=SP.queue.some(function(j){return j.state==='wait'||j.state==='send';});
+  evs.forEach(function(ev){
+    h+='<div class="card sp-ev"><div class="sp-hd"><b>'+esc(ev.name)+'</b><span class="sp-date">'+esc(fmtDay(ev.date))+'</span></div>'+
+      '<div class="sp-picks"><button type="button" class="btn btn-p" onclick="spOpen('+jsq(ev.eventId)+',\'cam\')">'+esc(C.take)+'</button>'+
+      '<button type="button" class="btn btn-s" onclick="spOpen('+jsq(ev.eventId)+',\'lib\')">'+esc(C.choose)+'</button></div>';
+    var q=SP.queue.filter(function(j){return j.eventId===ev.eventId;});
+    if(q.length){
+      h+='<div class="sp-list">'+q.map(function(j){
+        var pct=j.size?Math.floor(j.sent*100/j.size):0;
+        var said=j.state==='send'?esc(C.sending(pct)):j.state==='wait'?esc(C.waiting):'<span class="sp-err">'+esc(j.err||C.failed)+'</span>';
+        return '<div class="sp-row"><span class="sp-name">'+esc(j.name)+'</span><span class="sp-meta">'+said+'</span>'+
+          (j.state==='fail'?(j.dead?'':'<button type="button" class="btn btn-p" onclick="spRetry('+j.id+')">'+esc(C.retry)+'</button>')+
+            '<button type="button" class="btn btn-s" onclick="spRemove('+j.id+')">'+esc(C.remove)+'</button>'
+            :'<button type="button" class="btn btn-s" onclick="spCancel('+j.id+')">'+esc(C.cancel)+'</button>')+
+          (j.state==='send'?'<div class="sp-bar"><span style="width:'+pct+'%"></span></div>':'')+'</div>';
+      }).join('')+'</div>';
+    }
+    if(ev.mine.length){
+      h+='<div class="sp-lab">'+esc(C.yours)+' · '+ev.mine.length+'</div>'+ev.mine.slice().reverse().map(function(m){
+        var ask=SP.delAsk===m.mediaId,busy=SP.delBusy===m.mediaId,err=SP.delErr[m.mediaId];
+        return '<div class="sp-row"><span class="sp-name">'+esc(m.fileName)+'</span><span class="sp-meta">'+esc(_spSize(m.sizeBytes))+'</span>'+
+          (ask?'':'<button type="button" class="btn btn-s" onclick="SP.delAsk='+jsq(m.mediaId)+';render()">'+esc(C.del)+'</button>')+
+          (ask?'<div class="sp-ask">'+esc(C.delAsk)+' <button type="button" class="btn btn-danger" onclick="spDelete('+jsq(m.mediaId)+')"'+(busy?' disabled':'')+'>'+esc(busy?C.deleting:C.delYes)+'</button>'+
+            '<button type="button" class="btn btn-s" onclick="SP.delAsk=\'\';render()">'+esc(C.delNo)+'</button>'+(err?'<span class="sp-err">'+esc(err)+'</span>':'')+'</div>':'')+
+          '</div>';
+      }).join('');
+    }
+    h+='</div>';
+  });
+  if(going)h+='<p class="sp-keep">'+esc(C.keepOpen)+'</p>';
+  return h;
+}
 function loadTrials(quiet){
   TT.asked=true;if(!quiet)TT.loading=true;
   api({action:'teacherTrials',data:{teacherToken:TOKEN}},function(e,r){
@@ -7841,6 +8016,7 @@ function switchTab(tab){
   if(tab==='library'){ LIBRARY_OPEN=false; LIB_EDIT=''; LIB_DEL=''; loadLibrary(); ttplLoad(); loadSavedTpls(); window.scrollTo(0,0); }   // [1.822] — the studio's templates are in the Library
   render();
   if(tab==='trials' && !TT.loading) loadTrials(!!TT.data);   // [1.731] — fresh each visit
+  if(tab==='photos' && !SP.loading) loadSocialPhotos();   // [1.1013] — fresh each visit
   // [1.762] — a tab left open across midnight held the old week and its
   // "Today" (the cache answered first and its refresh never reached the
   // screen): when New York's day has moved on, forget the held weeks and cards

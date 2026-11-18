@@ -4340,7 +4340,8 @@ var GUIDE_COPY={
         // [1.898] [1.904] — PLACEHOLDER sentences for AC to read: one panel everywhere.
         'Click {{Add from your device}}, or tick a file in the list under it: your files and the {{Keylab Master Library}}\u2019s, each once. Click {{Accepted file types}} to see supported formats.',
         'Type in the search box, or click {{Tags}}, to find a file. Click a file\u2019s name to open it, tick it to add it, untick it to take it out, and click {{Done}} when finished. In a lesson summary or an assignment, the files used with the student come first.',
-        'Click {{Save to Library}} beside a file in any conversation to keep it in your library, including a file a family sends you.'
+        'Click {{Save to Library}} beside a file in any conversation to keep it in your library, including a file a family sends you.',
+        'To send photos, videos or audio for social media, use the {{Social media}} tab.'   // [1.1029]
       ]},
       {n:'Add link', k:'url website web address edit change remove hyperlink lesson notes summary cmd ctrl keyboard shortcut typed',
        q:'Highlight words in your message or lesson notes and click {{Add link}} under the box, then paste the address under {{Paste Link Here}} and click {{Insert link}}. Click {{Add link}} again to close it.', m:[   // [1.899] — the lesson notes too; [1.905] — under the box, and it closes itself
@@ -4498,6 +4499,29 @@ var GUIDE_COPY={
       // [1.773]
       {n:'Archived', k:'trial report archive restore hide',
        q:'Click {{Archived}} to see your archived reports. Click {{Restore}} to move one back to {{Reports sent}}.'}
+    ]},
+    // [1.1029] — AC, 17 November 2026: "rewrite the photos tab for teachers". The tab had no section here; this one follows
+    // it top to bottom, each row named as its button or label shows, every {{label}} one the tab draws (a check holds it).
+    {id:'social', h:'Social media', topics:[
+      {n:'Take photo or video', k:'camera picture photo video film social media instagram upload',
+       q:'Click {{Take photo or video}} to open your camera. Each photo or video starts sending to the studio as soon as you take it.'},
+      {n:'Record audio', k:'record recording audio sound microphone mic voice social media',
+       q:'Click {{Record audio}} and allow microphone access. Click {{Stop}} when you are done, then {{Play}} to listen, {{Send}} to send it, or {{Discard}} to delete it.', m:[
+        'Recording stops after 30 minutes, or if the screen locks or you leave the page. What was recorded is kept.'
+      ]},
+      {n:'Choose files', k:'upload choose pick gallery camera roll existing photo video audio size limit social media',
+       q:'Click {{Choose files}} to send photos, videos or audio already on your device. You can select several at once. Files can be up to 2 GB.'},
+      {n:'Students / From / Category', k:'details student who where what event lesson category note context group',
+       q:'While your files send, select the students in them under {{Students}}, a lesson or event under {{From}}, and a {{Category}}, then click {{Done}}. You can also add a note for admin.', m:[
+        'The student whose lesson is on now is already selected and marked {{Lesson now}}. Your other students today follow in lesson order. Choose {{Another student\u2026}} to select anyone else.',
+        'Select {{Group or none}} for a group of students, or when no student is in it.',
+        'An event is listed under {{From}} from a week before its date until a month after.',
+        'Your last choices are kept for the rest of the day.'
+      ]},
+      {n:'Sent', k:'sent sending history list edit change delete remove details try again failed not sent keep open',
+       q:'Files you sent in the last 30 days are listed under {{Sent}} with their details. Click {{Edit}} to change the details, or {{Delete}} to remove a file.', m:[
+        'Keep this page open until every file is sent. If a file says {{Not sent}}, click {{Try again}}.'
+      ]}
     ]}
   ]
 };
@@ -4789,29 +4813,38 @@ var TT={showArch:false,asked:false,loading:false,data:null,guideOpen:false,ans:{
 // asks Who (the student whose lesson is on now already picked), Where (a lesson, or an event open now) and What (one tap,
 // and a note), remembered for the rest of the day; files from a lesson as well as an event.
 // ══════════════════════════════════════════════════════════════════════════════════════════════════════════════════
-var SP_COPY={   // teacher-facing — PLACEHOLDER wording throughout, AC's to write (spec C9; [1.1026])
-  tab:'Social media',
-  intro:'Send photos, videos and audio from lessons and studio events for Keylab\'s social media. Files are saved to the studio\'s Google Drive, not to your phone or account.',
-  steps:['Click Take photo or video, Record audio or Choose files.','Choose who is in it, where it is from and what it is, then click Done.','Keep this page open until each file appears under You sent.'],
-  other:'To send anything else, use Messages.',
+// [1.1029] AC, 17 November 2026: "rewrite the photos tab for teachers". Every line below is written for a teacher, in the
+// Teacher Guide's voice (one plain instruction that starts with what the teacher does, "Click", the function named as it
+// shows on screen), with shapes taken from real products: Brightwheel's teacher app (select the students in a photo, an
+// optional note), Slack ("Files can be up to 1 GB"), Google Forms ("no longer accepting responses"). The card's labels are
+// Students, From and Category (they were Who, Where and What, the build's words, not AC's); "You sent" is "Sent", beside
+// "Sending". The tab's name and Record audio are AC's own words. {{Label}} in a step is drawn as the Guide draws it, and
+// each one must be a label on this tab (a check holds that). The four Category choices are the server's (SOCIAL_TAGS_).
+var SP_COPY={   // teacher-facing — [1.1029], written for AC's read
+  tab:'Social media',   // AC, 16 November 2026
+  intro:'Send photos, videos and audio from lessons and studio events for Keylab\u2019s social media. Files are saved to the studio\u2019s Google Drive, not your own, and only you and admin can see them.',
+  steps:['Click {{Take photo or video}}, {{Record audio}} or {{Choose files}}. Each file starts sending right away.',
+    'Under {{Students}}, {{From}} and {{Category}}, select what applies, then click {{Done}}.',
+    'Keep this page open until each file is listed under {{Sent}}.'],
+  other:'To send a file to a family or admin, use {{Messages}}.',
   loadFailed:'Social media could not be loaded.',retryLoad:'Try again',
   take:'Take photo or video',record:'Record audio',choose:'Choose files',
-  who:'Who',group:'Group or no student',lessonNow:'Lesson now',another:'Another student…',
-  where:'Where',lesson:'Lesson',what:'What',notePh:'Note (optional)',
+  who:'Students',group:'Group or none',lessonNow:'Lesson now',another:'Another student…',
+  where:'From',lesson:'Lesson',what:'Category',notePh:'Add a note for admin (optional)',
   done:'Done',saving:'Saving…',edit:'Edit',save:'Save',editCancel:'Cancel',noDetails:'Details not added',
-  sendingNow:'Sending',noWho:'Choose who is in it.',noWhat:'Choose what it is.',
-  waiting:'Waiting',sending:function(p){return 'Sending · '+p+'%';},
+  sendingNow:'Sending',noWho:'Select at least one student, or Group or none.',noWhat:'Select a category.',
+  waiting:'Waiting to send',sending:function(p){return 'Sending · '+p+'%';},
   failed:'Not sent',retry:'Try again',remove:'Remove',cancel:'Cancel',
   keepOpen:'Keep this page open until every file is sent.',
-  yours:'You sent',del:'Delete',delAsk:'Delete this file?',delYes:'Delete',delNo:'Cancel',deleting:'Deleting…',
-  delFailed:'Could not delete. Try again.',
-  tooBig:'This file is too large to add.',empty:'This file is empty.',
-  offline:'Not sent. Check your connection and try again.',readFailed:'This file could not be read from your phone.',
+  yours:'Sent',del:'Delete',delAsk:'Delete this file?',delYes:'Delete',delNo:'Cancel',deleting:'Deleting…',
+  delFailed:'The file could not be deleted. Try again.',
+  tooBig:'This file is too large. Files can be up to 2 GB.',empty:'This file is empty.',   // 2 GB: SOCIAL_MAX_BYTES_ (a check holds it)
+  offline:'Not sent. Check your connection and try again.',readFailed:'This file could not be read from your device.',
   kind:{photo:'Photo',video:'Video',audio:'Audio'},
-  rec:{asking:'Allow the microphone to start recording.',on:'Recording',stop:'Stop',play:'Play',stopPlay:'Stop playing',
-    send:'Send',discard:'Discard',keepOn:'Keep the screen on and this page open while recording.',
-    denied:'The microphone is not allowed. Allow it in your browser settings, then try again.',
-    none:'Recording is not available in this browser. Use Choose files instead.',name:'Recording'}
+  rec:{asking:'Allow microphone access to start recording.',on:'Recording',stop:'Stop',play:'Play',stopPlay:'Stop playing',
+    send:'Send',discard:'Discard',keepOn:'Recording stops after 30 minutes, or if the screen locks or you leave this page. What was recorded is kept.',
+    denied:'Microphone access is blocked. Allow it in your browser settings, then click Record audio again.',
+    none:'This browser cannot record audio. Record in another app, then click Choose files to add the recording.',name:'Recording'}
 };
 var SP={data:null,loading:false,err:'',queue:[],seq:0,busy:false,delAsk:'',delBusy:'',delErr:{},
   open:null,edit:null};   // [1.1026] — open: the new submission whose card is showing; edit: one from You sent being changed
@@ -5172,11 +5205,11 @@ function rSocialPhotos(){
     return h+'<div class="empty-state"><span class="spin">&#8635;</span></div>';
   }
   var recOn=SR.state==='rec'||SR.state==='asking';
-  h+='<div class="card sp-top"><p class="sp-intro">'+esc(C.intro)+'</p><ol class="sp-steps">'+C.steps.map(function(s){return '<li>'+esc(s)+'</li>';}).join('')+'</ol>'+
+  h+='<div class="card sp-top"><p class="sp-intro">'+esc(C.intro)+'</p><ol class="sp-steps">'+C.steps.map(function(s){return '<li>'+_guideText(s)+'</li>';}).join('')+'</ol>'+
     '<div class="sp-picks"><button type="button" class="btn btn-p" onclick="spOpen(\'cam\')"'+(recOn?' disabled':'')+'>'+esc(C.take)+'</button>'+
     '<button type="button" class="btn btn-p" onclick="spRecStart()"'+(SR.state?' disabled':'')+'>'+esc(C.record)+'</button>'+
     '<button type="button" class="btn btn-s" onclick="spOpen(\'lib\')"'+(recOn?' disabled':'')+'>'+esc(C.choose)+'</button></div>'+
-    '<p class="sp-muted">'+esc(C.other)+'</p></div>';
+    '<p class="sp-muted">'+_guideText(C.other)+'</p></div>';   // [1.1029] {{Messages}} drawn as the Guide draws it
   h+=_spRecHtml();
   // The open card: its files, then Who, Where and What.
   if(SP.open){
@@ -17477,8 +17510,8 @@ var TCH_COPY={
   // list of file types accepted", so it cannot drift from what is accepted.
   attach:'Add file',
   attachHint:'Send a file. 10 MB limit. Maximum 10 files.',
-  // [1.1026] — teacher-facing, PLACEHOLDER, AC's to write: under a message's attach, the way to the Social media tab
-  socialHintA:'Photos, videos and audio for social media go in the',socialHintB:'tab.',
+  // [1.1026] under a message's attach, the way to the Social media tab; [1.1029] written for teachers, for AC's read
+  socialHintA:'To send photos, videos or audio for social media, use the',socialHintB:'tab.',
   attachKeptGone:'This file was removed after a day unsent. Add it again.',   // [1.904] PLACEHOLDER — AC's to word
   draftKept:'Draft kept on this device',   // [1.904] PLACEHOLDER — the save line beside Send
   rnTitle:'Leave unticked to end the conversation when this is sent. A reply opens it again.',   // [1.907] PLACEHOLDER — the hover on Reply needed

@@ -2745,6 +2745,15 @@ function api(payload, cb){
   if(k && API_KEEP[k]){
     var held=_apiCopy(API_KEEP[k]);
     setTimeout(function(){ cb(null, held); },0);
+    // [1.1031] — a student page drawn from the device's copy is asked for at once, and the answer drawn too: it can be
+    // hours old. Asked through the path below (the page is held again the moment the request is sent).
+    if(API_KEEP_COPY[k]){
+      var was=API_KEEP[k];
+      delete API_KEEP_COPY[k]; delete API_KEEP[k];
+      api(payload, function(e,r){ if(!e&&r&&r.ok) cb(e,r); });
+      if(!API_KEEP[k]){ API_KEEP[k]=was; API_KEEP_AT[k]=Date.now(); }
+      return;
+    }
     _apiRefreshKept(payload,k);
     return;
   }
@@ -2813,7 +2822,7 @@ function _bootTeacher(failed){
     var now=Date.now();
     // [1.954] — never over a week or a page asked for, or saved to, after this was: it is newer than what this read.
     // Asked again after midnight while the teacher works, the bundle would otherwise put back the words before a save.
-    var keep=function(k,v){ if((API_KEEP_AT[k]||0)>sent || (API_KEEP_GEN[k]||0)!==(gen[k]||0)) return; API_KEEP[k]=v; API_KEEP_AT[k]=now; };
+    var keep=function(k,v){ if((API_KEEP_AT[k]||0)>sent || (API_KEEP_GEN[k]||0)!==(gen[k]||0)) return; API_KEEP[k]=v; API_KEEP_AT[k]=now; delete API_KEEP_COPY[k]; };   // [1.1031] — and no longer the device's copy
     API_THISWEEK=r.thisWeek||API_THISWEEK;
     Object.keys(r.weeks||{}).forEach(function(ws){ keep('w|'+ws, r.weeks[ws]); });
     Object.keys(r.cards||{}).forEach(function(id){ keep('c|'+id, r.cards[id]); });
@@ -2825,6 +2834,7 @@ function _bootTeacher(failed){
     var tr=(r.parts||{}).teacherTrials;
     if(tr && !TT.data){ TT.asked=true; TT.loading=false; TT.data=tr;
       (tr.taught||[]).forEach(function(t){ if(!TT.timer[t.key]) TT.ans[t.key]=Object.assign({},t.report||{}); }); }
+    _ktKeepDay=_ktBootDay; _ktCopySoon(true);   // [1.1031] — the weeks and student pages, and the day they were read
     _mstDayWarm();   // [1.954] — the student pages are in
     render();
   });
@@ -3213,20 +3223,172 @@ function _ktReadSession(){
 }
 function _ktClearSession(){
   try{ localStorage.removeItem('kl_teacher_session'); }catch(e){}
+  _ktCopyDrop();   // [1.1031] — the device's copy goes with the remembered sign-in, as the family portal's does ([1.743])
+  if(_ktCopyShown) _ktCopyUndo();   // [1.1031] — and what it drew, when the server refused the session before saying yes
+}
+// ── [1.1031] — a returning teacher sees the portal at once ─────────────────
+// AC, 18 November 2026: *"check load time for the teacher portal. If it's slow loading, let's speed it up so teacher's
+// can load and use as quickly as possible for reading and sending messages"*. Measured that day, signed out: every
+// request to the server takes 2 to 3 seconds before it does any work, so reopening the portal showed the wheel for at
+// least one whole round trip, and the students and conversations after their own reads. The family portal has drawn
+// home from a copy kept on the device since [1.743]; this is the same rule for teachers. The last student list,
+// conversation list, conversations (the newest KT_COPY_MSGS of each), Away status and, from the same New York day only,
+// the weeks and student pages are kept on this device beside a remembered sign-in, drawn the moment the page opens, and
+// replaced as each fresh answer comes. Never kept when the sign-in is not remembered; forgotten on sign-out and whenever
+// the server refuses the session; not used once a week old.
+// IndexedDB, not localStorage: the conversations can run to megabytes, and localStorage is shared with the family
+// portal (the same address) and holds this page's unsent drafts, which must never be refused for want of room.
+var KT_COPY_DB='kl_teacher_copy', KT_COPY_DAYS=7, KT_COPY_MSGS=100;
+var _ktCopyShown=false;   // drawn from the copy, and the server has not yet said the session is good
+var _ktCopyRaw={};        // the newest answer of each part, as the server gave it (roster, threads, settings)
+var API_KEEP_COPY={};     // a held week or student page that came from the copy and has not been asked for since
+var _ktKeepDay='';        // New York's day the held weeks and student pages were read
+var _ktCopyTimer=null, _ktCopyLast=0, _ktCopyWired=false, _ktCopyDbH=null;
+function _ktCopyDb(cb){
+  if(_ktCopyDbH){ cb(_ktCopyDbH); return; }
+  var done=false, once=function(db){ if(done) return; done=true; cb(db); };
+  try{
+    if(typeof indexedDB==='undefined'||!indexedDB){ once(null); return; }
+    var q=indexedDB.open(KT_COPY_DB, 1);
+    q.onupgradeneeded=function(){ try{ q.result.createObjectStore('copy'); }catch(e){} };
+    q.onsuccess=function(){
+      var db=q.result; _ktCopyDbH=db;
+      db.onversionchange=function(){ try{ db.close(); }catch(e){} _ktCopyDbH=null; };
+      once(db);
+    };
+    q.onerror=function(){ once(null); };
+    q.onblocked=function(){ once(null); };
+  }catch(e){ once(null); }
+}
+// Answered once, by the copy or by nothing: a store that does not answer in a second and a half is not waited for.
+function _ktCopyRead(teacherId, cb){
+  var done=false, once=function(c){ if(done) return; done=true; cb(c); };
+  setTimeout(function(){ once(null); }, 1500);
+  _ktCopyDb(function(db){
+    if(!db){ once(null); return; }
+    try{
+      var g=db.transaction('copy','readonly').objectStore('copy').get('t');
+      g.onsuccess=function(){ var c=g.result; once(c&&String(c.teacherId)===String(teacherId)?c:null); };
+      g.onerror=function(){ once(null); };
+    }catch(e){ once(null); }
+  });
+}
+function _ktCopyDrop(){
+  if(_ktCopyTimer){ clearTimeout(_ktCopyTimer.id); _ktCopyTimer=null; }
+  _ktCopyRaw={};
+  _ktCopyDb(function(db){ if(!db) return; try{ db.transaction('copy','readwrite').objectStore('copy').clear(); }catch(e){} });
+}
+function _ktCopyKeep(part, v){ _ktCopyRaw[part]=v; _ktCopySoon(); }
+// At most every 30 seconds while the page is used (the conversation list is asked for every few), and at once when it is
+// put away: leaving the page is the moment that matters, and the copy then holds what the teacher last saw. The answers
+// that come once a sign-in (every conversation, every student page) are written three seconds after they come.
+function _ktCopySoon(soon){
+  if(!TOKEN) return;
+  var wait=soon ? 3000 : Math.max(3000, 30000-(Date.now()-_ktCopyLast));
+  if(_ktCopyTimer){ if(!soon||_ktCopyTimer.at<=Date.now()+wait) return; clearTimeout(_ktCopyTimer.id); }
+  var t={at:Date.now()+wait};
+  t.id=setTimeout(function(){ if(_ktCopyTimer===t) _ktCopyTimer=null; _ktCopySave(); }, wait);
+  _ktCopyTimer=t;
+}
+function _ktCopyWire(){
+  if(_ktCopyWired) return;
+  _ktCopyWired=true;
+  document.addEventListener('visibilitychange', function(){ if(document.visibilityState==='hidden') _ktCopySave(); });
+  window.addEventListener('pagehide', function(){ _ktCopySave(); });
+}
+function _ktCopySave(){
+  if(_ktCopyTimer){ clearTimeout(_ktCopyTimer.id); _ktCopyTimer=null; }
+  if(!TOKEN||!TEACHER_ID||_ktCopyShown) return;   // nothing before the server has said the session is good
+  var s=_ktReadSession();
+  if(!s||s.token!==TOKEN||String(s.teacherId)!==String(TEACHER_ID)) return;   // a sign-in not remembered keeps nothing
+  if(!_ktCopyRaw.roster&&!_ktCopyRaw.threads) return;
+  _ktCopyLast=Date.now();
+  var c=_ktCopyMake();
+  _ktCopyDb(function(db){
+    if(!db||TOKEN!==s.token) return;
+    try{ db.transaction('copy','readwrite').objectStore('copy').put(c,'t'); }catch(e){}
+  });
+}
+function _ktCopyMake(){
+  var c={v:1, teacherId:String(TEACHER_ID), at:Date.now(), day:_nyYmdOf(), keepDay:_ktKeepDay, thisWeek:API_THISWEEK, keep:{}, cache:{}};
+  ['roster','threads','settings'].forEach(function(p){ if(_ktCopyRaw[p]) c[p]=_ktCopyRaw[p]; });
+  Object.keys(API_KEEP).forEach(function(k){ if(/^[wc]\|/.test(k)&&API_KEEP[k]) c.keep[k]=API_KEEP[k]; });
+  Object.keys(THREAD_CACHE).forEach(function(k){
+    // Only what the server has said: a message on its way has no id yet.
+    var m=(THREAD_CACHE[k]||[]).filter(function(x){ return x&&x.messageId; });
+    if(m.length>KT_COPY_MSGS){
+      var cut=m.map(function(x){ return Number(x.sentAt)||0; }).sort(function(a,b){ return a-b; })[m.length-KT_COPY_MSGS];
+      m=m.filter(function(x){ return (Number(x.sentAt)||0)>=cut; });
+    }
+    if(m.length) c.cache[k]=m;
+  });
+  return c;
+}
+// Each part goes in only where nothing fresher has come; a part the server has already answered is never put back.
+function _ktCopyApply(c){
+  if(!c||!TOKEN||String(c.teacherId)!==String(TEACHER_ID)) return false;
+  if(Date.now()-(Number(c.at)||0)>KT_COPY_DAYS*864e5){ _ktCopyDrop(); return false; }
+  var today=_nyYmdOf(), any=false;
+  if(c.roster&&!MS.roster){
+    _ktCopyRaw.roster=c.roster;
+    var R=_apiCopy(c.roster); R.today=today;   // a copy from an earlier day: each student's latest lesson is from today
+    _mstKeepLocal(R); MS.roster=R; any=true;
+  }
+  if(c.threads&&!THREADS._loadedAt&&!(THREADS.list||[]).length){
+    _ktCopyRaw.threads=c.threads;
+    THREADS.list=c.threads.threads||[];
+    MSG_LOCK.locked=_tIsTruthy(c.threads.messagingLocked); MSG_LOCK.msg=c.threads.messagingLockedMsg||'';
+    any=true;
+  }
+  Object.keys(c.cache||{}).forEach(function(k){
+    var m=c.cache[k];
+    if(THREAD_CACHE[k]||!m||!m.length) return;
+    m.forEach(function(x){ x._kc=1; });   // from the copy: the server's answer replaces it rather than merging with it
+    THREAD_CACHE[k]=m;
+  });
+  if(c.settings&&!TSET.loaded){ _ktCopyRaw.settings=c.settings; _tsetApply(c.settings); TSET.loaded=true; TSET._copy=true; }
+  // [1.762] — the weeks and student pages carry their day's "Today"; from another day they are not used.
+  if(c.keepDay&&c.keepDay===today){
+    Object.keys(c.keep||{}).forEach(function(k){
+      if(API_KEEP[k]) return;
+      API_KEEP[k]=c.keep[k]; API_KEEP_AT[k]=1;   // old: the sign-in bundle replaces it, and a click asks again
+      if(/^c\|/.test(k)) API_KEEP_COPY[k]=true;
+    });
+    if(!API_THISWEEK&&c.thisWeek) API_THISWEEK=c.thisWeek;
+    if(!_ktKeepDay) _ktKeepDay=today;
+  }
+  return any;
+}
+// The server said this session is not good (or is somebody else's): nothing the copy drew stays on the page.
+function _ktCopyUndo(){
+  _ktCopyShown=false;
+  MS.roster=null; THREADS.list=[]; THREADS._sig=''; THREAD_CACHE={};
+  Object.keys(API_KEEP_COPY).forEach(function(k){ delete API_KEEP[k]; delete API_KEEP_AT[k]; });
+  API_KEEP_COPY={}; _ktKeepDay=''; _ktCopyRaw={};
+  if(TSET._copy){ TSET._copy=false; TSET.loaded=false; TSET.awayEnabled=false; TSET.absentUntil=''; }
+}
+// The session is good: if it is the teacher the copy was for, the copy stays on screen until each part is answered.
+function _ktCopyConfirmed(early){
+  if(_ktCopyShown&&String(TEACHER_ID)!==String(early)) _ktCopyUndo();
+  _ktCopyShown=false;
+  _ktCopySoon();
 }
 // [1.181] — the server could not be reached, which says nothing about whether
 // this login is good. The session is kept, the teacher is told plainly, and it
 // retries by itself. Backs off so a long outage does not hammer the server,
 // and never gives up: coming back from a dead spot should just work.
+// [1.1031] — a portal drawn from the device's copy stays on screen while it tries again: the teacher can read.
 var _ktRetryMs=4000;
 function _ktBootRetry(saved){
-  PAGE='boot'; BOOT_OFFLINE=true; render();
+  if(!_ktCopyShown) PAGE='boot';
+  BOOT_OFFLINE=true; render();
   setTimeout(function(){
     api({action:'teacherCheckSession', data:{teacherToken:saved.token}}, function(e2,r2){
       if(e2||!r2){ _ktRetryMs=Math.min(_ktRetryMs*2, 60000); _ktBootRetry(saved); return; }
       BOOT_OFFLINE=false; _ktRetryMs=4000;
       if(r2.ok){
         TEACHER_ID=r2.teacherId; TEACHER_NAME=r2.teacherName||'';
+        _ktCopyConfirmed(saved.teacherId);   // [1.1031]
         _ktSaveSession(TOKEN, TEACHER_ID, TEACHER_NAME);
         PAGE='home'; render();
         _ktFirstLoads();   // [1.824]
@@ -5695,9 +5857,13 @@ function msOpen(stuId,date,time){
 }
 function _msLoadCard(){
   MS.cardLoading=true;
+  var stu=MS.cardStu;
   api({action:'teacherStudentCard',data:{teacherToken:TOKEN,studentId:MS.cardStu}},function(e,r){
+    if(MS.cardStu!==stu) return;   // [1.1031] — another student opened meanwhile: this page is not theirs (a page from the device's copy is answered twice)
     MS.cardLoading=false;
     if(!e&&r&&r.ok){
+      // [1.1031] — the private note, if the teacher has not changed it since the copy drew it, is the server's.
+      if(MS.card&&MS.note!==null&&MS.note===String(MS.card.myNote||'')&&!_msStuNote[stu])MS.note=null;
       MS.card=r;
       // [1.849] — words this page has not had confirmed are what the teacher wrote; one that failed is sent again.
       if(MS.note===null){var _np=_msStuNote[MS.cardStu];MS.note=_np?_np.v:(r.myNote||'');
@@ -5855,7 +6021,7 @@ function loadMyStudents(){
   api({action:'teacherMyStudents',data:{teacherToken:TOKEN}},function(e,r){
     if(tok!==TOKEN)return;   // [1.824] — signed out while it came: it is not the next teacher's list
     MS.rosterLoading=false;
-    if(!e&&r&&r.ok){_mstKeepLocal(r);MS.roster=r;MST.listErr='';_mstDayWarm();}   // [1.954]
+    if(!e&&r&&r.ok){_ktCopyKeep('roster',_apiCopy(r));_mstKeepLocal(r);MS.roster=r;MST.listErr='';_mstDayWarm();}   // [1.954]; [1.1031] — as the server gave it, before this page's own drafts go in
     else if(!MS.roster)MST.listErr=(r&&r.error)||MST_COPY.failed;
     render();
   });
@@ -6160,7 +6326,7 @@ function _mstDayWarm(){
   for(var i=0;i<7&&!day;i++){var nm=_MS_DAY[_msDow(_msAdd(today,i))];if(_mstDayHas(nm))day=nm;}
   if(!day||_mstDayWarmed===today+'|'+day)return;
   var list=_mstDayStudents(day);
-  if(list.some(function(s){return !API_KEEP['c|'+s.studentId];}))return;   // a page not in yet: asked when the bundle is
+  if(list.some(function(s){return !API_KEEP['c|'+s.studentId]||API_KEEP_COPY['c|'+s.studentId];}))return;   // a page not in yet: asked when the bundle is; [1.1031] — nor one from the device's copy
   _mstDayWarmed=today+'|'+day;
   _mstDayAi(_mstDayLessons(list).asked);
 }
@@ -8247,20 +8413,26 @@ function loadTeacherSettings(n){
     TSET.loading=false;
     if(tok!==TOKEN) return;   // [1.947] — signed out meanwhile: this teacher's status is not the next one's
     // [1.947] — the switch is drawn only once its state is known, so one failed read left no switch until a reload: asked again, three times.
-    if(e||!r||!r.ok){ if(n<3) setTimeout(function(){ if(tok===TOKEN&&!TSET.loaded) loadTeacherSettings(n+1); }, 5000*(n+1)); return; }   // silent: a settings read must never block messaging
+    if(e||!r||!r.ok){ if(n<3) setTimeout(function(){ if(tok===TOKEN&&(!TSET.loaded||TSET._copy)) loadTeacherSettings(n+1); }, 5000*(n+1)); return; }   // silent: a settings read must never block messaging; [1.1031] — nor is the device's copy taken for an answer
     var st=r.settings||{};
-    TSET.awayEnabled=!!st.awayEnabled;
-    TSET.absentUntil=st.absentUntil||'';   // [1.759]
-    TSET.awayMessage=st.awayMessage||'';
-    TSET.afterHoursMessage=st.afterHoursMessage||'';
-    TSET.awayDefaultCopy=st.awayDefaultCopy||TSET.awayDefaultCopy;TSET.afterHoursDefaultCopy=st.afterHoursDefaultCopy||TSET.afterHoursDefaultCopy;
-    TSET.notifyOpen=st.notifyOpen; TSET.notifyClose=st.notifyClose;
-    TSET.notifyDerived=!!st.notifyDerived;
-    TSET.draftAway=TSET.awayMessage;
-    TSET.draftAfter=TSET.afterHoursMessage;
+    _ktCopyKeep('settings', st);   // [1.1031]
+    _tsetApply(st);
+    TSET._copy=false;
     TSET.loaded=true;
     render();
   });
+}
+// The teacher's settings as the server keeps them; [1.1031] — from the device's copy too, until the server answers.
+function _tsetApply(st){
+  TSET.awayEnabled=!!st.awayEnabled;
+  TSET.absentUntil=st.absentUntil||'';   // [1.759]
+  TSET.awayMessage=st.awayMessage||'';
+  TSET.afterHoursMessage=st.afterHoursMessage||'';
+  TSET.awayDefaultCopy=st.awayDefaultCopy||TSET.awayDefaultCopy;TSET.afterHoursDefaultCopy=st.afterHoursDefaultCopy||TSET.afterHoursDefaultCopy;
+  TSET.notifyOpen=st.notifyOpen; TSET.notifyClose=st.notifyClose;
+  TSET.notifyDerived=!!st.notifyDerived;
+  TSET.draftAway=TSET.awayMessage;
+  TSET.draftAfter=TSET.afterHoursMessage;
 }
 function setAway(on){
   // [1.756] — the switch alone; the wording is the studio's.
@@ -9596,6 +9768,8 @@ function loadThreads(silent){
     THREADS._sig=_sig;
     THREADS.list=r.threads||[];
     THREADS._loadedAt=Date.now();   // [1.947] — the list has come at least once (Message Family reads it)
+    _ktCopyRaw.threads={threads:THREADS.list, messagingLocked:r.messagingLocked, messagingLockedMsg:r.messagingLockedMsg||''};   // [1.1031]
+    if(_changed) _ktCopySoon();   // [1.1031] — a poll that changed nothing is not a reason to write the copy
     // [1.333] — warm the link library here, minutes before anyone presses
     // Link, rather than making the first press pay for it. Guarded inside
     // loadSavedLinks(), so the poll running every few seconds costs one call.
@@ -9880,10 +10054,11 @@ function _loadThreadBundle(){
       var msgs=t&&t.messages;
       if(!msgs||!msgs.length) return;   // [1.291] — an empty answer is not an answer
       var k=_threadCacheKey(t), had=THREAD_CACHE[k];
-      if(had && had.length && _newestAt(had)>=_newestAt(msgs)) return;
+      if(had && had.length && _newestAt(had)>=_newestAt(msgs) && !had.some(function(x){ return x._kc; })) return;   // [1.1031] — the device's copy is replaced, however new
       THREAD_CACHE[k]=msgs;
     });
     _bundleState='done';
+    _ktCopySoon(true);   // [1.1031]
     // No render(): nothing on screen changed. The prefetch has nothing left to do, and a conversation the list shows
     // newer than what came is fetched now rather than at the next list.
     _prefetchDone=true;
@@ -11635,7 +11810,7 @@ function openStaffThread(contactType, otherId, otherName, focusReview){
 function _mergeLoaded(server, local){
   var have={};
   (server||[]).forEach(function(m){ if(m.messageId) have[m.messageId]=true; });
-  var keep=(local||[]).filter(function(m){ return !m.messageId || !have[m.messageId]; });
+  var keep=(local||[]).filter(function(m){ return !m._kc && (!m.messageId || !have[m.messageId]); });   // [1.1031] — the device's copy is replaced, not merged: a message unsent since must not stay
   return (server||[]).concat(keep);
 }
 
@@ -20681,6 +20856,7 @@ function doSignOut(){
   _amendAbandon();   // [1.782] — while the session can still tell the server the edit ended
   _msNoteFlush();   // [1.849] — and the note being typed, while the sign-in still works
   API_KEEP={}; API_KEEP_AT={}; API_THISWEEK='';   // [1.736] — nothing held survives signing out
+  API_KEEP_COPY={}; _ktKeepDay='';   // [1.1031]
   _ktClearSession();
   // [1.336] — drafts are this teacher's unsent words on a shared machine.
   DRAFTS={}; try{ localStorage.removeItem('kl_teacher_drafts'); localStorage.removeItem('kl_teacher_draft_files'); }catch(e){}   // [1.904] — and the files kept with them
@@ -20746,6 +20922,7 @@ function boot(){
   // handler catches it makes the browser open it, and the message being written
   // goes with the page. The composer's own zone opts out of this.
   _attDropGuard();
+  _ktCopyWire();   // [1.1031] — the device's copy is written as the page is put away, however it was signed in
   _draftsLoad();   // [1.336] — anything unsent from last time is back before the first render
   // [1.465] — and the remembered library filter, which is the biggest of the
   // four savings AC scoped: a piano teacher's "piano" is still on when they
@@ -20854,6 +21031,7 @@ function boot(){
       if(r.ok){
         TEACHER_ID = r.teacherId;
         TEACHER_NAME = r.teacherName||'';
+        _ktCopyConfirmed(_early);   // [1.1031]
         _ktSaveSession(TOKEN, TEACHER_ID, TEACHER_NAME);
         PAGE = 'home';
         render();
@@ -20870,6 +21048,13 @@ function boot(){
     // [1.954] — after the check, so the check is first in line: the portal is drawn when it answers, and a browser
     // sends only so many requests to one address at a time.
     if(_early) _ktFirstLoads();
+    // [1.1031] — and drawn at once from this device's copy, if it has one, while all of that is on its way.
+    if(_early) _ktCopyRead(_early, function(c){
+      if(TOKEN!==saved.token||(PAGE!=='boot'&&PAGE!=='home')) return;   // signed out, or sent to sign-in, meanwhile
+      if(!_ktCopyApply(c)) return;
+      if(PAGE==='boot'){ _ktCopyShown=true; PAGE='home'; }
+      render();
+    });
     return;
   }
 

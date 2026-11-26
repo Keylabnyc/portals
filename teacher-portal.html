@@ -2369,7 +2369,8 @@ select.cmp-lsel{font:inherit;font-size:13.5px;font-weight:700;padding:6px 8px;bo
 .sp-sub-hd{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:13.5px;font-weight:600;margin-bottom:.25rem}
 .sp-subnote{font-size:13px;color:var(--text3);margin-bottom:.25rem}
 .sp-other{font:inherit;font-size:12.5px;padding:6px 8px;border:1px solid var(--border2);border-radius:20px;background:#fff;color:var(--text);max-width:100%}
-.sp-note{width:100%;margin-top:.5rem;font:inherit;font-size:14px;padding:8px 10px;border:1px solid var(--border2);border-radius:var(--r);box-sizing:border-box}
+.sp-unfin{margin:0 0 .6rem;font-size:14px;color:var(--red)}
+.sp-note{resize:vertical;width:100%;margin-top:.5rem;font:inherit;font-size:14px;padding:8px 10px;border:1px solid var(--border2);border-radius:var(--r);box-sizing:border-box}
 .sp-save{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:.9rem}.sp-save .btn{width:auto}
 .sp-rec-hd{display:flex;align-items:center;gap:8px;font-size:15px}.sp-rt{margin-left:auto;font-variant-numeric:tabular-nums}
 .sp-dot{width:10px;height:10px;border-radius:50%;background:var(--red);display:inline-block}
@@ -4679,10 +4680,12 @@ var GUIDE_COPY={
       ]},
       {n:'Choose files', k:'upload choose pick gallery camera roll existing photo video audio size limit social media',
        q:'Click {{Choose files}} to send photos, videos or audio already on your device. You can select several at once. Files can be up to 2 GB.'},
-      {n:'Students / From / Category', k:'details student who where what event lesson category note context group',
-       q:'While your files send, select the students in them under {{Students}}, a lesson or event under {{From}}, and a {{Category}}, then click {{Done}}. You can also add a note for admin.', m:[
+      {n:'Students / From / Category', k:'details student who where what event lesson category note context group no student required',
+       q:'While your files send, select the students in them under {{Students}}, a lesson or event under {{From}}, and a {{Category}}, add a note for admin, then click {{Done}}.', m:[
         'The student whose lesson is on now is already selected and marked {{Lesson now}}. Your other students today follow in lesson order. Choose {{Another student\u2026}} to select anyone else.',
-        'Select {{Group or none}} for a group of students, or when no student is in it.',
+        'Select {{No student}} when no particular student is in it.',   // [1.1045]
+        'The note is required. Tell admin what the files show and anything they should know.',
+        'If you leave before clicking {{Done}}, the details are asked for again the next time you come back.',
         'An event is listed under {{From}} from a week before its date until a month after.',
         'Your last choices are kept for the rest of the day.'
       ]},
@@ -4992,15 +4995,19 @@ var SP_COPY={   // teacher-facing — [1.1029], written for AC's read
   tab:'Social media',   // AC, 16 November 2026
   intro:'Send photos, videos and audio from lessons and studio events for Keylab\u2019s social media. Files are saved to the studio\u2019s Google Drive, not your own, and only you and admin can see them.',
   steps:['Click {{Take photo or video}}, {{Record audio}} or {{Choose files}}. Each file starts sending right away.',
-    'Under {{Students}}, {{From}} and {{Category}}, select what applies, then click {{Done}}.',
+    'Under {{Students}}, {{From}} and {{Category}}, select what applies, add a note for admin, then click {{Done}}.',   // [1.1045]
     'Keep this page open until each file is listed under {{Sent}}.'],
   other:'To send a file to a family or admin, use {{Messages}}.',
   loadFailed:'Social media could not be loaded.',retryLoad:'Try again',
   take:'Take photo or video',record:'Record audio',choose:'Choose files',
-  who:'Students',group:'Group or none',lessonNow:'Lesson now',another:'Another student…',
-  where:'From',lesson:'Lesson',what:'Category',notePh:'Add a note for admin (optional)',
+  who:'Students',group:'No student',lessonNow:'Lesson now',another:'Another student…',   // [1.1045] AC: "optionally select no student"
+  where:'From',lesson:'Lesson',what:'Category',
+  // [1.1045] — AC, 25 November 2026: *"It needs to tell the teacher that the note is required. Placeholder text can say add notes for
+  // admin here about this submission."*
+  note:'Note for admin (required)',notePh:'Add notes for admin here about this submission',noNote:'Add a note for admin.',
+  unfinished:'Details not added yet. Select what applies, add a note for admin, then click {{Done}}.',
   done:'Done',saving:'Saving…',edit:'Edit',save:'Save',editCancel:'Cancel',noDetails:'Details not added',
-  sendingNow:'Sending',noWho:'Select at least one student, or Group or none.',noWhat:'Select a category.',
+  sendingNow:'Sending',noWho:'Select at least one student, or No student.',noWhat:'Select a category.',
   waiting:'Waiting to send',sending:function(p){return 'Sending · '+p+'%';},
   failed:'Not sent',retry:'Try again',remove:'Remove',cancel:'Cancel',
   keepOpen:'Keep this page open until every file is sent.',
@@ -5026,7 +5033,7 @@ function loadSocialPhotos(){
   api({action:'teacherSocialEvents',data:{teacherToken:TOKEN}},function(e,r){
     SP.loading=false;
     if(e||!r||!r.ok){SP.err=(r&&r.error)||SP_COPY.loadFailed;render();return;}
-    SP.data=r;render();
+    SP.data=r;_spReopen();render();   // [1.1045]
   });
 }
 function _spSize(n){n=Number(n)||0;return n>=1048576?(n/1048576).toFixed(n>=10485760?0:1)+' MB':Math.max(1,Math.round(n/1024))+' KB';}
@@ -5098,16 +5105,74 @@ function spRun(){
   var j=SP.queue.filter(function(x){return x.state==='wait';})[0];
   if(!j)return;
   SP.busy=true;j.state='send';j.err='';render();
-  if(j.uploadId){_spPiece(j,j.sent,0);return;}
+  if(j.uploadId){if(j.drive&&SP.direct!==false)_spAsk(j,0);else _spPiece(j,j.sent,0);return;}   // [1.1047] straight to Drive: ask where it got to first
   // Where the file starts: the card's choice at this moment; a later change moves it when the card is saved.
   var b=_spBatch(j.batchId)||j.at||{place:'lesson',eventId:''};j.at={place:b.place,eventId:b.eventId};
   api({action:'teacherSocialStart',data:{teacherToken:TOKEN,batchId:j.batchId,place:b.place,eventId:b.place==='event'?b.eventId:'',
       fileName:j.name,mimeType:j.file.type||'',sizeBytes:j.size}},function(e,r){
     if(e||!r){_spFail(j,SP_COPY.offline);return;}
     if(!r.ok){j.dead=!_spSignedOut(r);_spFail(j,r.error);return;}
-    j.uploadId=r.uploadId;j.piece=r.pieceBytes;j.sent=r.next||0;
-    _spPiece(j,j.sent,0);
+    j.uploadId=r.uploadId;j.piece=r.pieceBytes;j.sent=r.next||0;j.drive=r.driveUrl||'';j.dpiece=r.directBytes||0;
+    _spGo(j);
   });
+}
+// [1.1047] — AC, 25 November 2026: "Okay let's build it", on a 64 MB video taking 2 minutes 47 seconds as 17 pieces
+// through the server. The file's own bytes go straight to the Drive upload the server opened for it, 16 MB at a time;
+// once Drive has them all, the server is asked to record the file. A page that has never reached Drive and cannot
+// sends through the server from then on, as before, so no upload is slower than it was.
+function _spGo(j){if(j.drive&&j.dpiece&&SP.direct!==false)_spDirect(j,j.sent);else _spPiece(j,j.sent,0);}
+function _spDirect(j,off){
+  if(j.state!=='send')return;
+  var end=Math.min(j.size,off+j.dpiece),x=new XMLHttpRequest();j.xhr=x;
+  x.open('PUT',j.drive,true);
+  x.timeout=600000;   // a piece stalled for ten minutes is a connection gone, tried again from where Drive got to
+  x.setRequestHeader('Content-Range','bytes '+off+'-'+(end-1)+'/'+j.size);
+  if(x.upload)x.upload.onprogress=function(ev){if(j.state==='send'&&ev&&ev.loaded>=0){j.sent=Math.min(end,off+ev.loaded);_spBar(j);}};
+  x.onload=function(){
+    j.xhr=null;
+    var st=x.status;
+    // Cancelled, but Drive had every byte: ask the server to record it, so it is listed under You sent, where it can be deleted.
+    if(j.state!=='send'){if(st===200||st===201)api({action:'teacherSocialPiece',data:{teacherToken:TOKEN,uploadId:j.uploadId,check:true}},function(e,r){if(r&&r.ok&&r.done&&r.media){_spLanded(r.media);render();}});return;}
+    if(st===308){SP.directOk=true;j.dfail=0;var m=String(x.getResponseHeader('Range')||'').match(/bytes=0-(\d+)/);j.sent=m?Number(m[1])+1:0;render();_spDirect(j,j.sent);return;}
+    if(st===200||st===201){SP.directOk=true;j.dfail=0;j.sent=j.size;_spAsk(j,0);return;}
+    _spDirectFail(j,st);
+  };
+  x.onerror=x.ontimeout=function(){j.xhr=null;if(j.state==='send')_spDirectFail(j,0);};
+  x.send(j.file.slice(off,end));
+}
+// A piece that did not go: before any piece has reached Drive from this page, through the server from here on; after,
+// the connection, tried three times from where Drive says it got to, then said, as a piece through the server is.
+function _spDirectFail(j,st){
+  if(!SP.directOk)SP.direct=false;
+  if(SP.direct===false){_spAsk(j,0);return;}
+  j.dfail=(j.dfail||0)+1;
+  if(j.dfail>3){j.dfail=0;_spFail(j,SP_COPY.offline);return;}
+  setTimeout(function(){if(j.state==='send')_spAsk(j,0);},[2000,5000,10000][j.dfail-1]);
+}
+// The server asks Drive where the upload has got to, and records the file once Drive has every byte; then the next
+// piece goes from there, straight to Drive or through the server.
+function _spAsk(j,tries){
+  if(j.state!=='send')return;
+  api({action:'teacherSocialPiece',data:{teacherToken:TOKEN,uploadId:j.uploadId,check:true}},function(e,r){
+    if(j.state!=='send'){if(r&&r.ok&&r.done&&r.media){_spLanded(r.media);render();}return;}
+    if(_spTransient(e,r)){
+      if(tries<3){setTimeout(function(){_spAsk(j,tries+1);},[2000,5000,10000][tries]);return;}
+      _spFail(j,(r&&r.error)||SP_COPY.offline);return;
+    }
+    if(!r.ok){if(r.ended){j.uploadId='';j.sent=0;j.drive='';}_spFail(j,r.error);return;}
+    if(r.done){
+      SP.queue=SP.queue.filter(function(x){return x!==j;});
+      _spLanded(r.media);
+      SP.busy=false;render();spRun();return;
+    }
+    j.sent=Number(r.next)||0;render();_spGo(j);
+  });
+}
+// How far a file has got, between pieces, without drawing the page again (a note being typed keeps its place).
+function _spBar(j){
+  var el=document.getElementById('sp-j-'+j.id);if(!el)return;
+  var pct=j.size?Math.floor(j.sent*100/j.size):0,t=el.querySelector('.sp-meta'),bar=el.querySelector('.sp-bar span');
+  if(t)t.textContent=SP_COPY.sending(pct);if(bar)bar.style.width=pct+'%';
 }
 // A failure that is the connection or a busy Drive is tried again; one the server explains is said, and waits.
 function _spSignedOut(r){return /Session|authenticated/i.test(String((r&&r.error)||''));}
@@ -5129,7 +5194,7 @@ function _spPiece(j,off,tries){
       }
       // The upload has ended on the server's side: Try again starts the file from the beginning. Signed out instead: it
       // carries on from where it got to once the teacher is signed in again.
-      if(!r.ok){if(r.ended){j.uploadId='';j.sent=0;}_spFail(j,r.error);return;}
+      if(!r.ok){if(r.ended){j.uploadId='';j.sent=0;j.drive='';}_spFail(j,r.error);return;}
       if(r.done){
         SP.queue=SP.queue.filter(function(x){return x!==j;});
         _spLanded(r.media);
@@ -5149,6 +5214,7 @@ function spCancel(id){
   var j=SP.queue.filter(function(x){return x.id===id;})[0];
   if(!j||(j.state!=='wait'&&j.state!=='send'))return;
   var was=j.state;j.state='cancel';
+  if(j.xhr){try{j.xhr.abort();}catch(e){}j.xhr=null;}   // [1.1047] a piece on its way to Drive stops at once
   SP.queue=SP.queue.filter(function(x){return x!==j;});
   if(was==='send')SP.busy=false;
   _spCloseEmpty();render();spRun();
@@ -5184,17 +5250,28 @@ function spSave(){
   var b=_spCard();if(!b||b.busy)return;
   if(!b.who.length&&!b.group){b.err=SP_COPY.noWho;render();return;}
   if(!b.tag){b.err=SP_COPY.noWhat;render();return;}
+  if(!String(b.note||'').trim()){b.err=SP_COPY.noNote;render();return;}   // [1.1045]
   b.busy=true;b.err='';render();
+  // [1.1045] files: how many the submission has, those still on their way too, so the office's email waits for the last
+  var files=SP.queue.filter(function(j){return j.batchId===b.batchId&&!j.dead;}).length+_spMine().filter(function(m){return m.batchId===b.batchId;}).length;
   api({action:'teacherSocialDetails',data:{teacherToken:TOKEN,batchId:b.batchId,studentIds:b.who.slice(),group:b.group,
-      place:b.place,eventId:b.eventId,tag:b.tag,note:b.note}},function(e,r){
+      place:b.place,eventId:b.eventId,tag:b.tag,note:b.note,files:files}},function(e,r){
     b.busy=false;
     if(e||!r||!r.ok){b.err=String((r&&r.error)||SP_COPY.offline).replace(/^Error:\s*/,'');render();return;}
     SP.data=r;_spKeepLast(b);
     // Files of it still waiting start where the card now says.
     SP.queue.forEach(function(j){if(j.batchId===b.batchId&&!j.uploadId)j.at={place:b.place,eventId:b.eventId};});
     if(SP.edit===b)SP.edit=null;else SP.open=null;
-    render();
+    _spReopen();render();
   });
+}
+// [1.1045] — files sent without the card's Done (the page left, or closed): the card opens again at the top, the newest first,
+// until the details and the note are in. Files added while it is open join it, as they join any open card.
+function _spReopen(){
+  if(SP.open||!SP.data)return;
+  var busy={};SP.queue.forEach(function(j){busy[j.batchId]=1;});
+  var m=_spMine().filter(function(x){return !x.detailsAt&&!busy[x.batchId];}).sort(function(a,b){return b.uploadedAt-a.uploadedAt;})[0];
+  if(m)SP.open={batchId:m.batchId,who:[],group:false,place:m.place,eventId:m.place==='event'?m.eventId:'',tag:'',note:'',busy:false,err:'',unfin:true};
 }
 function spEdit(batchId){
   var m=_spMine().filter(function(x){return x.batchId===batchId;})[0];if(!m)return;
@@ -5220,8 +5297,10 @@ function _spCardHtml(b){
   h+='<div class="day-sec"><div class="day-lbl">'+esc(C.where)+'</div><div class="day-chips">'+chip(b.place==='lesson',"spWhere('lesson')",C.lesson)+
     evs.map(function(e){return chip(b.place==='event'&&b.eventId===e.eventId,"spWhere('event',"+jsq(e.eventId)+')',e.name);}).join('')+'</div></div>';
   h+='<div class="day-sec"><div class="day-lbl">'+esc(C.what)+'</div><div class="day-chips">'+
-    ((SP.data&&SP.data.tags)||[]).map(function(t){return chip(b.tag===t,'spWhat('+jsq(t)+')',t);}).join('')+'</div>'+
-    '<input type="text" class="sp-note" maxlength="500" placeholder="'+esc(C.notePh)+'" value="'+esc(b.note)+'" oninput="spNote(this.value)"></div>';
+    ((SP.data&&SP.data.tags)||[]).map(function(t){return chip(b.tag===t,'spWhat('+jsq(t)+')',t);}).join('')+'</div></div>';
+  // [1.1045] the note, required: its own label, as Students, From and Category have
+  h+='<div class="day-sec"><div class="day-lbl">'+esc(C.note)+'</div>'+
+    '<textarea class="sp-note" rows="2" maxlength="500" placeholder="'+esc(C.notePh)+'" oninput="spNote(this.value)">'+esc(b.note)+'</textarea></div>';
   h+='<div class="sp-save"><button type="button" class="btn btn-p" onclick="spSave()"'+(b.busy?' disabled':'')+'>'+esc(b.busy?C.saving:(SP.edit===b?C.save:C.done))+'</button>'+
     (SP.edit===b?'<button type="button" class="btn btn-s" onclick="SP.edit=null;render()">'+esc(C.editCancel)+'</button>':'')+
     (b.err?'<span class="sp-err">'+esc(b.err)+'</span>':'')+'</div>';
@@ -5330,7 +5409,7 @@ function _spRows(list){
   return list.map(function(j){
     var pct=j.size?Math.floor(j.sent*100/j.size):0;
     var said=j.state==='send'?esc(C.sending(pct)):j.state==='wait'?esc(C.waiting):'<span class="sp-err">'+esc(j.err||C.failed)+'</span>';
-    return '<div class="sp-row"><span class="sp-name">'+esc(j.name)+'</span><span class="sp-meta">'+said+'</span>'+
+    return '<div class="sp-row" id="sp-j-'+j.id+'"><span class="sp-name">'+esc(j.name)+'</span><span class="sp-meta">'+said+'</span>'+
       (j.state==='fail'?(j.dead?'':'<button type="button" class="btn btn-p" onclick="spRetry('+j.id+')">'+esc(C.retry)+'</button>')+
         '<button type="button" class="btn btn-s" onclick="spRemove('+j.id+')">'+esc(C.remove)+'</button>'
         :'<button type="button" class="btn btn-s" onclick="spCancel('+j.id+')">'+esc(C.cancel)+'</button>')+
@@ -5382,7 +5461,8 @@ function rSocialPhotos(){
   // The open card: its files, then Who, Where and What.
   if(SP.open){
     var b=SP.open,mineB=_spMine().filter(function(m){return m.batchId===b.batchId;});
-    h+='<div class="card sp-sub sp-new">'+_spRows(SP.queue.filter(function(j){return j.batchId===b.batchId;}))+_spRowsMine(mineB)+_spCardHtml(b)+'</div>';
+    h+='<div class="card sp-sub sp-new">'+(b.unfin?'<p class="sp-unfin">'+_guideText(C.unfinished)+'</p>':'')+   // [1.1045]
+      _spRows(SP.queue.filter(function(j){return j.batchId===b.batchId;}))+_spRowsMine(mineB)+_spCardHtml(b)+'</div>';
   }
   // Files of a saved card still on their way.
   var going=SP.queue.filter(function(j){return !(SP.open&&j.batchId===SP.open.batchId);});
